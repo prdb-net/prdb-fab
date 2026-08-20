@@ -101,6 +101,12 @@ Where SABnzbd leaves what it finished, and where nothing is expected to be
 tidy.
 _Avoid_: Incoming, Staging, Source directory
 
+**Leftover**:
+A file in a download directory that carries no video — the `.nfo`, `.par2`,
+`.sfv` and cover images an unpacker leaves behind. Never moved into the
+library.
+_Avoid_: Junk, Sidecar, Residue, Extra
+
 **Scan Directory**:
 A mounted directory outside the download directory whose files are candidates
 for the library — typically a collection that existed before this tool did.
@@ -115,6 +121,11 @@ One video as the library holds it, together with the files that carry it. A
 second quality of the same video is another file of one entry, never a second
 entry.
 _Avoid_: Item, Record, Copy
+
+**Filing**:
+Moving an identified video file out of a download directory into the library,
+under the name and path the layout dictates.
+_Avoid_: Import, Sorting, Organising, Ingest
 
 **Video File**:
 A file on disk that carries a video.

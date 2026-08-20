@@ -164,16 +164,27 @@ Beyond those two, **additional mounted directories can be scanned**: the
 existing collection someone accumulated before installing this, sitting on a NAS
 share. Everything in them that identifies against prdb can be taken into the
 sorted library. That first bulk run over thousands of files is a different
-problem from a handful of new downloads a day, and both have to work.
+problem from a handful of new downloads a day, and both have to work — which is
+why scanning is not in the first release, while the shape of the tool allows for
+it from the start.
 
 Files are moved, not copied — the download directory is meant to empty itself.
 Where source and target sit on different filesystems, a move is a copy, a
 verification and a delete, and the documentation has to say so, because that is
 the difference between instant and overnight.
 
-Moving applies to scan directories too, and that has to be said out loud rather
-than discovered: a first run over a collection someone spent years arranging
-takes the identified files out of it and leaves the rest behind. One library,
+Only video files move. What an unpacker leaves behind — `.nfo`, `.par2`, cover
+images — is not carried into a directory the media server reads. It is deleted
+from the download directory instead, once nothing in there is still waiting on a
+decision, under a setting that ships switched on and can be turned off. That
+list is fixed rather than something the user writes patterns into: a delete
+pattern in a text field is how someone loses a download directory. Anyone who
+wants more has SABnzbd's own cleanup list, at the right layer.
+
+Moving will apply to scan directories too, and that has to be said out loud
+rather than discovered when they arrive: a first run over a collection someone
+spent years arranging takes the identified files out of it and leaves the rest
+behind. One library,
 in one place, is the point — but a bulk operation over files the user already
 considers sorted is the most dangerous thing this tool does. It is why the
 first run over a scan directory shows what it would do before it does anything,
@@ -184,7 +195,9 @@ Jellyfin: a sorted library here should be a Jellyfin library, directly. The
 layout work is not open research — `prdb-ordeno` validated one against a real
 Jellyfin instance, and the rules it found (exact `yyyy-MM-dd` dates, `<actor>`
 with a `<name>` child, quality suffixes) apply here unchanged. There is no
-reason to discover them twice.
+reason to discover them twice — and no reason to file into some simpler shape
+first, since adopting the layout afterwards would be a rename across the entire
+library.
 
 ## Duplicates
 
@@ -293,11 +306,15 @@ exists rather than a search page. Bandwidth, Usenet retention and disk are all
 finite, and spending them twice on the same video is the failure the user is
 trying to avoid.
 
-**Files are irreplaceable.** Destructive operations are opt-in, cross-filesystem
-moves are copy-verify-delete, nothing is filed on a failed lookup, and every
-move is logged with what it was and why — which is also what makes an undo
-possible. A button is easier to press than a command is to type, so a web UI
-raises the stakes rather than lowering them.
+**Files are irreplaceable.** Video files, and anything that carries a video, are
+never deleted without being asked for — duplicates included, which are reported
+rather than removed. That is the whole of the principle, and it is deliberately
+about content: clearing a `.par2` file out of a download directory is not what
+it protects against. Cross-filesystem moves are copy-verify-delete, nothing is
+filed on a failed lookup, and every move and every deletion is logged with what
+it was and why — which is also what makes an undo possible. A button is easier
+to press than a command is to type, so a web UI raises the stakes rather than
+lowering them.
 
 **Set up once, then leave it alone.** The value is in unattended running. A tool
 that needs weekly babysitting has failed at its actual job — which is why the
@@ -365,23 +382,32 @@ layer under every string for no one's benefit.
 The first release has to be the whole loop and nothing else: onboarding that
 ends with a working key, indexer and SABnzbd; continuous indexer sync; matching
 against prdb, with duplicate detection against what is already in the library;
-sending to SABnzbd and
-following the job; a library view with artwork, search and filters; the sync
+sending to SABnzbd and following the job; filing what arrives into the library
+in the layout below; a library view with artwork, search and filters; the sync
 status page; and backup and restore. Automation may start narrow — the wanted
 list — as long as every decision it makes is visible and reversible.
 
 Deliberately after that, not before:
 
-- **Automatic filing into the Jellyfin layout** for everything downloaded,
-  building on what `prdb-ordeno` established.
+- **Filing everything downloaded, however weakly it identified.** The first
+  release files what identifies well enough to act on and queues the rest for
+  the user; lowering that bar until nothing is left over is the later step.
+  Filing itself, and the layout it files into, are in the first release.
+- **Scan directories.** Absorbing a collection that existed before this tool
+  needs a dry run, an undo across thousands of files, and a review queue that
+  survives that volume — a second product beside the download loop, and the
+  most dangerous thing the tool will ever do.
 - **Notifications**, so an unattended tool can say something went wrong without
   the user thinking to look.
 - **Perceptual hashes and thumbnails for unknown files**, optionally submitted
-  to prdb — which is how recognition gets better for everyone. This is where
-  `ffmpeg` enters the image, since a perceptual hash decodes 25 frames, and it
-  belongs in a background queue that never holds up an import. The plain
-  `osHash` is not in this bucket: it reads 64 KiB from each end of a file,
-  costs nothing even on a large library, and is part of the first release.
+  to prdb — which is how recognition gets better for everyone. A perceptual
+  hash decodes 25 frames, so it belongs in a background queue that never holds
+  up filing. `ffmpeg` and `ffprobe` are in the image from the first release
+  regardless, because quality is read from the file rather than guessed from a
+  release name; what arrives later is this use of them, not the tools. The
+  plain `osHash` is not in this bucket either: it reads 64 KiB from each end of
+  a file, costs nothing even on a large library, and is part of the first
+  release.
 - **An MCP server**, so an agent can drive the tool.
 - **Optional 2FA.** Optional is the operative word: a mandatory second factor
   on a self-hosted box is how people lock themselves out of their own NAS.
@@ -392,9 +418,8 @@ Deliberately after that, not before:
 
 - How far automation should go on its own before the first release, and what the
   smallest useful rule set looks like.
-- How the review queue behaves at scale: a first scan of an existing collection
-  is thousands of decisions, and the design has to survive that as well as the
-  steady state.
+- What the review queue holds and how an entry leaves it, given that an
+  undecided file also holds up the cleanup of the directory it sits in.
 - How much indexer history to keep locally, and when to drop it.
 - What the backup file contains exactly, and how restore behaves when the
   library it describes is no longer there.
