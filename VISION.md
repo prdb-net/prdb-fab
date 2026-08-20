@@ -1,6 +1,6 @@
 # Vision
 
-`prdb-fab` finds the scenes someone actually wants on Usenet, sends them to
+`prdb-fab` finds the videos someone actually wants on Usenet, sends them to
 SABnzbd, and files what comes back into a library their media server can present
 — using prdb to know what a release is before it is downloaded, and what a file
 is after.
@@ -15,7 +15,7 @@ the media server, is set up once, and then keeps working on its own.
 ## The problem
 
 Usenet indexers answer the question "what releases exist with this text in the
-name?". They do not answer "is this the scene I am looking for", "do I already
+name?". They do not answer "is this the video I am looking for", "do I already
 have it", or "is this the same release under a different name". For films and
 series, Sonarr and Radarr close that gap because TVDB and TMDB exist. For this
 material, nothing does.
@@ -26,7 +26,7 @@ of something already on disk under another name. What lands in the download
 directory is a pile of releases whose names say little and whose contents are
 unknown.
 
-prdb knows this material — the scenes, the sites, the performers, and the file
+prdb knows this material — the videos, the sites, the actors, and the file
 hashes that tie all of it to actual files. What is missing is the piece that
 puts prdb's knowledge in front of the indexer search instead of after it.
 
@@ -55,11 +55,11 @@ One installation follows one prdb identity.
 The loop, running continuously:
 
 1. **Sync** from prdb: favourite sites, favourite actors, the wanted list, new
-   scenes, artwork, and the hashes that tie all of it to real files.
+   videos, artwork, and the hashes that tie all of it to real files.
 2. **Sync** from the configured indexers: new releases, pulled through their
    APIs and kept locally, the way Sonarr keeps a cache rather than searching
    live every time.
-3. **Match** releases against prdb, so a release is a known scene — or is not —
+3. **Match** releases against prdb, so a release is a known video — or is not —
    before anything is downloaded.
 4. **Decide**: automatically for what the user's rules cover, or by presenting
    it for a decision.
@@ -74,7 +74,7 @@ be able to explain what it did and why.
 
 This is the part that makes the tool different from an indexer front end. A
 search result is little more than a release name, and prdb often knows what
-scene that name belongs to. Asking before the download rather than after is
+video that name belongs to. Asking before the download rather than after is
 what turns a list of releases into a decision — and a download not started
 costs nothing to undo.
 
@@ -84,7 +84,7 @@ After it there is the file itself, which can be hashed, and a hash is the
 strongest answer there is.
 
 So the promise is graded, and stating it honestly matters more than stating it
-strongly. Some releases resolve to a scene before anything is fetched, which
+strongly. Some releases resolve to a video before anything is fetched, which
 saves the download entirely. Others resolve only to a candidate, or to nothing,
 and those become a decision the user makes — silently guessing would fill the
 library with the wrong files, which is the one outcome worse than not matching
@@ -127,7 +127,7 @@ fetch it without being asked, which is the entire reason to run an unattended
 service rather than search by hand.
 
 Automation is off until the user turns it on, and it is scoped: by site, by
-performer, by the wanted list, with quality and size limits. Every automatic
+actor, by the wanted list, with quality and size limits. Every automatic
 decision is written down with the rule that caused it, so "why is this on my
 disk" always has an answer.
 
@@ -171,6 +171,14 @@ Where source and target sit on different filesystems, a move is a copy, a
 verification and a delete, and the documentation has to say so, because that is
 the difference between instant and overnight.
 
+Moving applies to scan directories too, and that has to be said out loud rather
+than discovered: a first run over a collection someone spent years arranging
+takes the identified files out of it and leaves the rest behind. One library,
+in one place, is the point — but a bulk operation over files the user already
+considers sorted is the most dangerous thing this tool does. It is why the
+first run over a scan directory shows what it would do before it does anything,
+and why the operation log has to be able to put every file back.
+
 The target structure follows what a media server expects, starting with
 Jellyfin: a sorted library here should be a Jellyfin library, directly. The
 layout work is not open research — `prdb-ordeno` validated one against a real
@@ -183,17 +191,17 @@ reason to discover them twice.
 Duplicate detection happens twice, at different strengths, and both are needed.
 
 **Before the download** it is as good as the evidence allows, which is usually
-scene level: is this scene already in the library? That is a reason to ask
-rather than to fetch silently — a scene already owned is exactly what a better
+video level: is this video already in the library? That is a reason to ask
+rather than to fetch silently — a video already owned is exactly what a better
 encode of it looks like.
 
 **After the download** it is exact for everything, because the file is here and
 its `osHash` can be computed locally. That is the check that decides whether a
 file is filed into the library or set aside.
 
-Where two files are the same scene at different quality, both are kept — someone
+Where two files are the same video at different quality, both are kept — someone
 holding the 1080p and the 2160p version usually meant to. Where they are the
-same scene at the same quality, the library does not hold it twice, and the
+same video at the same quality, the library does not hold it twice, and the
 redundant file is reported rather than deleted. Deleting is a decision the user
 makes, never a default.
 
@@ -202,12 +210,12 @@ makes, never a default.
 The tool is also how the user looks at prdb, because deciding what to download
 and seeing what exists are the same activity:
 
-- **What's new** — the newest scenes prdb knows about, as the landing page for
+- **What's new** — the newest videos prdb knows about, as the landing page for
   "is there anything for me today".
 - **Sites**, **actors** and **wanted videos** — browsable, with prdb's artwork,
   and with the obvious action attached: find this on the indexers.
 - **The library** — what has actually been downloaded, with prdb's thumbnails,
-  filtered by site and performer, searchable by title, filterable by quality.
+  filtered by site and actor, searchable by title, filterable by quality.
 
 Artwork comes from prdb and is cached locally, because a grid of thumbnails
 that fetches on every scroll is a grid nobody scrolls.
@@ -282,7 +290,7 @@ a schema that never anticipated it is how people lose their configuration.
 
 **Do not download what is already there.** The hashes are the reason this tool
 exists rather than a search page. Bandwidth, Usenet retention and disk are all
-finite, and spending them twice on the same scene is the failure the user is
+finite, and spending them twice on the same video is the failure the user is
 trying to avoid.
 
 **Files are irreplaceable.** Destructive operations are opt-in, cross-filesystem
@@ -300,7 +308,7 @@ channel, and what each one sends is stated in the UI. The default posture of a
 self-hosted tool is that data stays home.
 
 **prdb is the only metadata source, and its public API is the only door.**
-Everything the tool knows about scenes, sites, performers and hashes comes from
+Everything the tool knows about videos, sites, actors and hashes comes from
 the documented public API — no scraping, no private endpoints, no database
 access, no metadata corpus of its own. A wrong title is a prdb problem with a
 prdb fix.
