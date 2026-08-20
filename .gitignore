@@ -1,0 +1,9 @@
+# Secrets and local configuration
+*.local
+.env
+.env.*
+!.env.example
+
+# Local agent instructions (not part of the public repository)
+.claude/settings.local.json
+CLAUDE.local.md
