@@ -9,7 +9,7 @@ constraints here are in service of.
 
 ### Issue tracker
 
-GitHub Issues in `prdb-net/prdb-fab`, via the `gh` CLI. See
+Local markdown under `.scratch/`, which is not committed. See
 `docs/agents/issue-tracker.md`.
 
 ### Domain docs
