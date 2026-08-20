@@ -16,3 +16,14 @@ Local markdown under `.scratch/`, which is not committed. See
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See
 `docs/agents/domain.md`.
+
+## Working with prdb
+
+prdb's public API is the only interface this project can influence, and the
+people behind it are approachable. So when a design here is being bent around
+something the API does not offer, the change is worth proposing upstream rather
+than only worked around — a limitation nobody reports is a limitation nobody
+fixes.
+
+That is not true of the other interfaces. SABnzbd and the Newznab API are what
+they are, and this project adapts to them.
