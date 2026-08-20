@@ -81,13 +81,22 @@ Deciding which video a release or a file belongs to.
 _Avoid_: Matching, Lookup, Recognition
 
 **Confidence**:
-How strongly an identification is carried by the evidence behind it.
+How strongly an identification is carried by the evidence behind it. A set of
+named outcomes, not an order: `Ambiguous` sits above `Exact` in the API's
+numbering while meaning the opposite, so confidences are matched against a
+listed set and never compared.
 _Avoid_: Score, Certainty, Probability
 
 **Candidate**:
 One of several videos that fit equally well, so that none of them can be
 chosen.
 _Avoid_: Suggestion, Guess, Possible match
+
+**Site-Only Match**:
+An identification that reached the site a release or a file belongs to and no
+further. Its own outcome rather than a weak identification: there is no video,
+so there is nothing to file.
+_Avoid_: Partial match, Weak match
 
 **Review Queue**:
 Everything that could not be identified confidently and waits for the user to
