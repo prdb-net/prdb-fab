@@ -70,8 +70,9 @@ release for the same video afterwards is a second download.
 _Avoid_: Job, Task, Fetch, Grab
 
 **Automation Rule**:
-A standing instruction that decides which releases may be downloaded without
-being asked.
+A standing instruction that permits releases to be downloaded without being
+asked. A rule only ever permits: it never forbids what another rule allows, so
+rules have no order and cannot conflict.
 _Avoid_: Filter, Profile, Trigger
 
 ### Identification
