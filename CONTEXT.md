@@ -168,6 +168,25 @@ The continuous catching-up with what prdb, the indexers and SABnzbd currently
 say.
 _Avoid_: Refresh, Poll, Update, Crawl
 
+### Getting set up
+
+**Onboarding**:
+The guided path from a fresh installation to a working one, with two entry
+points: setting up fresh, or restoring a backup.
+_Avoid_: Setup wizard, First run, Installer
+
+**Password**:
+The single secret the user signs in with, set during onboarding and belonging
+to the installation rather than to an account. Never the passphrase a backup is
+encrypted under.
+_Avoid_: Credentials, Passphrase, PIN
+
+**Gap**:
+A part of the loop that is missing or no longer usable — a connection never
+configured, or one that stopped verifying. Named and carried where the user can
+see it, never silently worked around.
+_Avoid_: Warning, Error, Issue, Todo
+
 ### Keeping it safe
 
 **Backup**:

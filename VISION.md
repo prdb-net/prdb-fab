@@ -270,13 +270,20 @@ recovers rather than submitting again.
 ## Setup, and getting the user to the first download
 
 Onboarding is a guided path, and it is the feature most likely to decide whether
-someone keeps the tool: prdb API key, then SABnzbd, then at least one indexer,
-then the download and library directories.
+someone keeps the tool: prdb API key, then SABnzbd, then the indexers, then the
+library.
 
 **The prdb API key is not optional.** Without it there is no identification, no
 wanted list, no artwork and no duplicate detection — the tool is an indexer
 search box with extra steps. Setup cannot be completed without a working key,
 and that has to be said before installation rather than discovered at first run.
+
+**SABnzbd and the indexers are not conditions of setup.** They are what
+downloading needs, not what a working installation needs, and a step nobody has
+an answer for yet must not stand between someone and a tool that runs. Either
+can be skipped and added later; what is skipped is named where the user will see
+it, so an installation that downloads nothing says why rather than sitting
+quiet.
 
 The container is given only what it needs to start — where its data lives, which
 port, which user it runs as. Everything else is answered in the browser and kept
@@ -373,14 +380,18 @@ layer under every string for no one's benefit.
 ## Prerequisites for the user
 
 - A prdb account with an API key. Non-negotiable, and stated before install.
+- Docker, and storage that can be mounted into a container.
+
+For downloading — which is the point, but not a condition of getting set up:
+
 - A Usenet provider and a working SABnzbd.
 - At least one Usenet indexer with API access.
-- Docker, and storage that can be mounted into a container.
 
 ## The first release, and what comes after
 
 The first release has to be the whole loop and nothing else: onboarding that
-ends with a working key, indexer and SABnzbd; continuous indexer sync; matching
+ends with a working key, and with SABnzbd and an indexer wherever the user has
+them; continuous indexer sync; matching
 against prdb, with duplicate detection against what is already in the library;
 sending to SABnzbd and following the job; filing what arrives into the library
 in the layout below; a library view with artwork, search and filters; the sync
