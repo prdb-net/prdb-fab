@@ -167,3 +167,21 @@ _Avoid_: Copy, Repeat
 The continuous catching-up with what prdb, the indexers and SABnzbd currently
 say.
 _Avoid_: Refresh, Poll, Update, Crawl
+
+### Keeping it safe
+
+**Backup**:
+The single file the tool exports, holding everything about this installation
+that cannot be fetched again, and nothing that can be.
+_Avoid_: Archive, Snapshot, Dump, Export
+
+**Restore**:
+Turning a backup back into a working installation, on an installation that
+holds nothing yet.
+_Avoid_: Import, Recovery, Migration
+
+**Passphrase**:
+What the secrets inside a backup are encrypted under, chosen when it is
+exported and needed again to restore it. Never the password the user signs in
+with.
+_Avoid_: Password, Key
