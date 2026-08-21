@@ -69,6 +69,17 @@ One release handed to SABnzbd, and what became of it. Fetching a different
 release for the same video afterwards is a second download.
 _Avoid_: Job, Task, Fetch, Grab
 
+**Release Ranking**:
+The order over the releases of one video that says which of them is fetched
+next. It is total and deterministic, so after a failure it names a next release
+rather than only a winner.
+_Avoid_: Candidate list, Shortlist, Score, Priority
+
+**Consumed**:
+Said of a release that was fetched for a video and did not leave that video
+held. The ranking never offers it for that video again.
+_Avoid_: Failed, Tried, Blacklisted
+
 **Automation Rule**:
 A standing instruction that permits releases to be downloaded without being
 asked. A rule only ever permits: it never forbids what another rule allows, so
