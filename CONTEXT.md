@@ -197,6 +197,25 @@ re-reading pinned videos to learn about corrections prdb published and artwork
 it removed, neither of which is announced anywhere.
 _Avoid_: Reconcile, Backfill, Re-sync, Refresh
 
+**Routine**:
+One named piece of work the tool runs on a schedule of its own, carrying its
+own position so a restart continues it, and its own record of when it last
+succeeded. Recurring or one-shot; a one-shot routine retires when it is done.
+_Avoid_: Job, Task, Cron, Timer
+
+**Wanted Sweep**:
+The routine that searches the indexers for wanted videos directly, rather than
+waiting for them to appear among an indexer's newest releases. The only way an
+older video is ever found, since no indexer will order its results by when it
+was indexed.
+_Avoid_: Backfill, Deep search, Rescan
+
+**Governor**:
+What decides whether a prdb request is sent now or deferred, from the rate
+limit read off the last response rather than from a number known in advance.
+Every request passes it, including one a person asked for.
+_Avoid_: Throttle, Limiter, Budget
+
 ### Getting set up
 
 **Onboarding**:
