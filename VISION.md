@@ -55,7 +55,9 @@ One installation follows one prdb identity.
 The loop, running continuously:
 
 1. **Sync** from prdb: favourite sites, favourite actors, the wanted list, new
-   videos, artwork, and the hashes that tie all of it to real files.
+   videos, and artwork. File hashes are not synced — prdb identifies a file
+   from its hash on request, and holding a copy of its hashes would buy nothing
+   that ask does not already answer.
 2. **Sync** from the configured indexers: new releases, pulled through their
    APIs and kept locally, the way Sonarr keeps a cache rather than searching
    live every time.

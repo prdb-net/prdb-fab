@@ -179,6 +179,24 @@ The continuous catching-up with what prdb, the indexers and SABnzbd currently
 say.
 _Avoid_: Refresh, Poll, Update, Crawl
 
+**Catalogue**:
+The copy of prdb's videos, sites and actors the tool holds locally. A cache of
+what has been looked at rather than a complete copy, and never the library,
+which is what the tool writes to disk.
+_Avoid_: Mirror, Corpus, Metadata store, Cache
+
+**Pinned**:
+Said of a catalogue video the tool must keep because something local points at
+it — a library entry, a wanted video, a download, a review queue entry. What is
+not pinned may be dropped to keep the catalogue bounded.
+_Avoid_: Locked, Retained, Held, Kept
+
+**Repair**:
+The part of the sync that stands in for a change feed that does not exist:
+re-reading pinned videos to learn about corrections prdb published and artwork
+it removed, neither of which is announced anywhere.
+_Avoid_: Reconcile, Backfill, Re-sync, Refresh
+
 ### Getting set up
 
 **Onboarding**:
