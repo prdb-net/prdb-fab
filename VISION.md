@@ -201,16 +201,19 @@ library.
 
 ## Duplicates
 
-Duplicate detection happens twice, at different strengths, and both are needed.
+The library never holds one video twice at the same quality. Only the arriving
+file can answer that, because the quality is read from the file — so the two
+things that happen here are not one check at two strengths.
 
-**Before the download** it is as good as the evidence allows, which is usually
-video level: is this video already in the library? That is a reason to ask
-rather than to fetch silently — a video already owned is exactly what a better
-encode of it looks like.
+**Before the download** the tool says what it already holds: this video, and at
+what quality. That is a reason to ask rather than to fetch silently — a video
+already owned is exactly what a better encode of it looks like — and it stays a
+sentence rather than a refusal, because nothing at that point can tell the two
+apart.
 
-**After the download** it is exact for everything, because the file is here and
-its `osHash` can be computed locally. That is the check that decides whether a
-file is filed into the library or set aside.
+**After the download** the file is here: its `osHash` can be computed locally
+and its quality measured. That is the check that decides whether a file is filed
+into the library or set aside.
 
 Where two files are the same video at different quality, both are kept — someone
 holding the 1080p and the 2160p version usually meant to. Where they are the

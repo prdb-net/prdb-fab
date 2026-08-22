@@ -111,8 +111,9 @@ so there is nothing to file.
 _Avoid_: Partial match, Weak match
 
 **Review Queue**:
-Everything that could not be identified confidently and waits for the user to
-decide.
+Every video file the tool declined to move, waiting for the user to decide —
+what could not be identified confidently, and what was identified perfectly and
+turned out to be redundant.
 _Avoid_: Inbox, Backlog, Unmatched
 
 ### On disk
@@ -148,17 +149,27 @@ Moving an identified video file out of a download directory into the library,
 under the name and path the layout dictates.
 _Avoid_: Import, Sorting, Organising, Ingest
 
+**Replacing**:
+Putting an arriving video file in the place of the one the library holds at that
+quality, and deleting the file it displaces. The only thing the tool does that
+writes against content already filed, and never something it does by itself.
+_Avoid_: Overwrite, Upgrade, Swap
+
 **Video File**:
 A file on disk that carries a video.
 _Avoid_: Media file, Asset
 
 **Quality**:
 The resolution class a video file was encoded at, read from the file itself
-rather than from prdb.
+rather than from prdb. Named by a label — `1080p`, `2160p` — taken from a fixed
+ladder, and compared only as that label, never as the pixel dimensions behind
+it.
 _Avoid_: Resolution, Format, Encode
 
 **Duplicate**:
-A release or a file whose video the library already holds at the same quality.
+An arriving video file whose video the library already holds under the same
+quality label. Never a release: before a download there is no file, and so no
+quality to compare.
 _Avoid_: Copy, Repeat
 
 ### Keeping up to date
