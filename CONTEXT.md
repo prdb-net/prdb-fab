@@ -64,6 +64,23 @@ _Avoid_: Item, Result, Post, Grab
 **NZB**:
 The file that tells SABnzbd how to fetch a release.
 
+**Indexer Cache**:
+The copy of the releases the indexers offer that the tool holds locally. Only
+ever added to, bounded, and disposable — it can be thrown away and refilled,
+which is what separates it from the library.
+_Avoid_: Local index, Release database, Mirror, Corpus
+
+**Indexer Walk**:
+The routine that pages an indexer's newest releases into the indexer cache. It
+sees only what is new, which is why the wanted sweep exists beside it.
+_Avoid_: Crawl, Poll, RSS sync, Scrape
+
+**Watermark**:
+How far an indexer walk has already come, and therefore where it stops asking.
+Made of a post date together with a release identity, because either alone
+stops too early. It says nothing about what the tool has looked at.
+_Avoid_: Cursor, Bookmark, Offset, Position
+
 **Download**:
 One release handed to SABnzbd, and what became of it. Fetching a different
 release for the same video afterwards is a second download.
@@ -186,9 +203,11 @@ which is what the tool writes to disk.
 _Avoid_: Mirror, Corpus, Metadata store, Cache
 
 **Pinned**:
-Said of a catalogue video the tool must keep because something local points at
-it — a library entry, a wanted video, a download, a review queue entry. What is
-not pinned may be dropped to keep the catalogue bounded.
+Said of a row the tool must keep because something local points at it — a
+catalogue video behind a library entry, a wanted video, a download or a review
+queue entry, or a cached release that was downloaded, consumed, or identified as
+a video still wanted. What is not pinned may be dropped to keep the catalogue
+and the indexer cache bounded.
 _Avoid_: Locked, Retained, Held, Kept
 
 **Repair**:
