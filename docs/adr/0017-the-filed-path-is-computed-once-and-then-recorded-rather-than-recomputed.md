@@ -5,6 +5,12 @@ moment of filing**, and from then on the recorded path is the truth. Nothing
 recomputes a name to find what was written earlier, and no correction arriving
 from prdb renames anything on disk.
 
+> **Note.** This decision calls the directory a video is filed into a *scene
+> directory*, and the file beside it a *poster*. Both were renamed by
+> [ADR 0027](0027-the-sidecar-and-the-entry-image-are-overwritten-until-they-match-the-catalogue.md):
+> they are the **entry directory** and the **entry image**, and the image is
+> written as `fanart.jpg`. Nothing decided here changes.
+
 ADR 0005 settled that the first release files into the Jellyfin layout and that
 `prdb-ordeno`'s rules apply unchanged. Those rules assume their inputs exist and
 say nothing about a library that has been running for a year. This decision

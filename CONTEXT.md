@@ -228,10 +228,16 @@ second quality of the same video is another file of one entry, never a second
 entry.
 _Avoid_: Item, Record, Copy
 
+**Entry Directory**:
+The one directory a library entry occupies, holding its video files, its
+sidecar and its entry image. Named for the entry rather than for what prdb
+catalogues, because the glossary reserves _scene_ against **Video**.
+_Avoid_: Scene directory, Movie folder, Item directory
+
 **Filing**:
 Moving an identified video file out of a download directory into the library,
 under the name and path the layout dictates, and writing the sidecar and the
-poster that belong beside it.
+entry image that belong beside it.
 _Avoid_: Import, Sorting, Organising, Ingest
 
 **Filed Path**:
@@ -242,11 +248,20 @@ and not what anything is called on disk.
 _Avoid_: Target path, Destination, Location
 
 **Sidecar**:
-The `movie.nfo` this tool writes beside a filed video file, and where the media
+The `movie.nfo` this tool writes into an entry directory, and where the media
 server reads the video's title, date and cast from. It wins over the file name
 wherever the two disagree, which is what makes the name on disk cosmetic. Never
 the `.nfo` an unpacker left in a download directory, which is a leftover.
 _Avoid_: Metadata file, NFO, Manifest
+
+**Entry Image**:
+The one image this tool writes into an entry directory, so the media server has
+a picture for the entry. Named for the entry rather than for a slot: it is
+written as `fanart.jpg` because prdb's images have the shape of the video, and
+the slot whose name suggests itself is measured to look worse than none.
+Distinct from the artwork the browse surfaces show, which is served from the
+cache and never read back off the library.
+_Avoid_: Poster, Fanart, Backdrop, Thumbnail, Cover
 
 **Replacing**:
 Putting an arriving video file in the place of the one the library holds at that

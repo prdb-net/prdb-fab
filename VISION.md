@@ -187,9 +187,13 @@ pattern in a text field is how someone loses a download directory. Anyone who
 wants more has SABnzbd's own cleanup list, at the right layer.
 
 Only video files *move*, but the library holds more than video files: beside
-each one the tool writes a sidecar and a poster of its own, because for this
+each one the tool writes a sidecar and an image of its own, because for this
 material there is no metadata provider a media server could ask instead. Those
-are written, not carried over — nothing from a download directory is.
+are written, not carried over — nothing from a download directory is. Both stay
+in step with prdb: a correction that arrives after the file is on disk rewrites
+them, so the library displays what is true now even though nothing is renamed.
+The flip side has to be said out loud — the tool owns those two files, and hand
+edits to them do not survive.
 
 Moving will apply to scan directories too, and that has to be said out loud
 rather than discovered when they arrive: a first run over a collection someone

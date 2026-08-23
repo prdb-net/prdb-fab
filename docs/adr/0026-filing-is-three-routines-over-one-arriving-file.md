@@ -7,6 +7,11 @@ minutes or hours. They are three routines in three lanes over **one row per
 arriving video file**, and that row is the review queue entry before it has a
 reason.
 
+> **Note.** This decision says *scene directory* and *poster*; they are the
+> **entry directory** and the **entry image** since
+> [ADR 0027](0027-the-sidecar-and-the-entry-image-are-overwritten-until-they-match-the-catalogue.md),
+> which also settles what those two files carry and who rewrites them.
+
 None of the three remembers a position. Each one's work set is a query over a
 state, which is the shape [ADR 0016](0016-a-download-is-followed-by-polling-and-a-failure-is-the-releases-or-the-installations.md)
 already chose for the outstanding set — and it is what answers this question's
