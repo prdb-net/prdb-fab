@@ -330,6 +330,12 @@ port, which user it runs as. Everything else is answered in the browser and kept
 by the tool, so changing an indexer key is a form, not a YAML edit and a
 restart.
 
+One arrangement is worth recommending rather than leaving to be discovered: run
+SABnzbd and this tool with the same storage mounted at the same path. SABnzbd
+reports the paths it sees, and this tool has to open them; where the two agree,
+the translation between them is nothing at all, and the most common way for a
+finished download to go nowhere stops existing.
+
 ## Backup, from the first release
 
 Everything that would be painful to lose is small: settings, indexer URLs and
