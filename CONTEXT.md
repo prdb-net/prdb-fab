@@ -196,9 +196,16 @@ _Avoid_: Folder mapping, Path translation, Remote path
 
 **Collecting**:
 Finding the video files a finished download left behind, by resolving the path
-SABnzbd reports and looking at what is actually there. The end of a download
-and the beginning of filing.
+SABnzbd reports and looking at what is actually there, and reading each of them
+once. The end of a download and the beginning of filing.
 _Avoid_: Pickup, Harvest, Import
+
+**Arriving File**:
+One video file a download left behind, from the moment it is collected until it
+is filed or a person has decided what becomes of it. The same thing a review
+queue entry is, seen before it has a reason: a file that stops acquires a
+reason, rather than becoming a second kind of thing.
+_Avoid_: Pending file, Candidate file, Incoming file, Staged file
 
 **Leftover**:
 A file in a download directory that carries no video — the `.nfo`, `.par2`,
@@ -306,10 +313,17 @@ it removed, neither of which is announced anywhere.
 _Avoid_: Reconcile, Backfill, Re-sync, Refresh
 
 **Routine**:
-One named piece of work the tool runs on a schedule of its own, carrying its
-own position so a restart continues it, and its own record of when it last
-succeeded. Recurring or one-shot; a one-shot routine retires when it is done.
+One named piece of work the tool runs on a schedule of its own, and its own
+record of when it last succeeded. A restart continues it, either from a position
+it carries or from a work set it can ask for again. Recurring or one-shot; a
+one-shot routine retires when it is done.
 _Avoid_: Job, Task, Cron, Timer
+
+**Lane**:
+One of the queues the routines are divided between, each running one routine at
+a time. What keeps an obligation measured in seconds from waiting behind work
+measured in hours.
+_Avoid_: Worker, Thread, Pool, Channel
 
 **Wanted Sweep**:
 The routine that searches the indexers for wanted videos directly, by their

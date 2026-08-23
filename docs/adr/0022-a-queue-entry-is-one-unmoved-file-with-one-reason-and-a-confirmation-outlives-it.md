@@ -219,6 +219,16 @@ than asking it five times.
 An entry is created at collecting, after the probe and the identification, and
 is closed **only** by a user action. Nothing expires.
 
+(*Amended by
+[ADR 0026](0026-filing-is-three-routines-over-one-arriving-file.md): not in
+every case. The row exists from collecting for every arriving video file, and a
+reason is written by whichever step reached one — `IdenticalFile` and
+`UnreadableQuality` during collecting, before any prdb request exists;
+`Unidentified` by the identification; `Duplicate` and `EntryMissing` immediately
+before the move, where the `stat`s this ADR and ADR 0017 require are still
+fresh. An entry is a row **with a reason**, which is what keeps a file merely
+waiting to be asked about out of the count in the header.*)
+
 **Delete removes the one video file and never a directory.** The directory is
 then ADR 0005's business: leftovers go once no video file in it is still
 undecided. That cleanup is a **routine** in the bulk lane rather than something a

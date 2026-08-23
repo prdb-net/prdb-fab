@@ -188,14 +188,24 @@ person sees the stall, and the tool does not claim it.
   status, `fail_message` and `stage_log`, the consecutive-absence count and the
   time it went outstanding. It is exported, since it carries the consumed state.
   The submitted name is kept because it is the only fallback for matching a
-  download whose id became unresolvable.
+  download whose id became unresolvable. (*Amended by
+  [ADR 0026](0026-filing-is-three-routines-over-one-arriving-file.md), which
+  adds a nullable tidied-at stamp for the directory sweep to work through. The
+  four states above are untouched: they describe following the download, and the
+  stamp describes its directory, which is why it is not a fifth one.*)
 - **A failed download's files are left where SABnzbd left them.** The tool does
   not collect them, does not delete them, and does not ask SABnzbd to. What a
   failed job leaves in the incomplete tree is SABnzbd's own cleanup.
 - **The seam to filing is Collected.** Identification, `ffprobe` and the
   duplicate check are not part of following a download; the collecting routine
   hands over the video files it found. Which routine files them, and in which
-  lane, is not settled here.
+  lane, is not settled here. (*Answered by
+  [ADR 0026](0026-filing-is-three-routines-over-one-arriving-file.md): three
+  routines over one row per arriving video file — collect and probe in bulk,
+  identification in sync, filing in a fourth lane of its own — none of which
+  keeps a position, each working a query over a state exactly as the outstanding
+  set above does. The probe moved to the early side of this seam with ADR 0021,
+  so collecting reads the file as well as finding it.*)
 
 ## Considered options
 

@@ -73,6 +73,16 @@ and reachability), **sync** (prdb feeds, indexer walks, the wanted sweep) and
 a time, so each stays predictable. ADR 0004's single writer is untouched: writes
 are short and batched, and no transaction spans an HTTP call.
 
+(*Amended by
+[ADR 0026](0026-filing-is-three-routines-over-one-arriving-file.md), which adds
+a fourth lane, **file**, holding filing alone. The argument above is made
+against minutes; a cross-filesystem copy of a 40 GB release is hours, and the
+bulk lane holds collecting, so filing there would stop the tool noticing that
+any other download had finished for as long as one large move ran. That ADR also
+adds two routines — identifying arriving files (sync) and filing (file) — whose
+cadences it deliberately does not fix, because what makes each of them due is
+the arrival of rows rather than a clock.*)
+
 ## Consequences
 
 - **Backoff and Gap are different mechanisms.** Backoff is the routine's own
