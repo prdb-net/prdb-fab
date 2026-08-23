@@ -148,6 +148,12 @@ deletion — so the UI can show the state of a download without the user opening
 another tab, and so a failed job becomes a retry against another release rather
 than silence.
 
+Every submission and what became of it is listed on a downloads view of its own
+— outstanding, failed, collected — where a failed job shows what SABnzbd said
+about it and an outstanding one can be let go of. Letting go stops the tool
+following the job; it never reaches into SABnzbd's queue, which belongs to the
+user.
+
 SABnzbd being unreachable is a visible, recoverable condition, not a crash: the
 queue waits and the status page says so.
 

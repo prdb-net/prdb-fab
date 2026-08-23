@@ -90,7 +90,12 @@ message needs.
 
 - The release view has two entry points and one implementation. The difference
   is one line: what the library holds of this video, which is the pre-download
-  statement ADR 0011 requires and which never blocks.
+  statement ADR 0011 requires and which never blocks. (*Amended by
+  [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md):
+  this view is also the per-video downloads surface. It gains a head carrying
+  the retry budget as *n of three spent* and ADR 0008's reset beside it, and a
+  consumed release shows its download's state as the reason it is struck
+  through. The two entry points and the one implementation are unchanged.*)
 - Nothing offers the release view from a card. An action that spends bandwidth
   does not belong on a grid people scroll past; it belongs on the entry page.
 - A card carries artwork, title, site, and the quality labels held — up to two,

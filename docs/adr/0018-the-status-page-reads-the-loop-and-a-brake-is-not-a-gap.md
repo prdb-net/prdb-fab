@@ -217,7 +217,13 @@ bypassed at exactly the moment a person is impatient.
   the last cached release are already rows.
 - **A downloads surface is now required and is not the dashboard.** The full
   outstanding and failed list has to live somewhere, and `VISION.md` does not
-  put the dashboard in the first release. That is left open here.
+  put the dashboard in the first release. That is left open here. (*Answered by
+  [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md):
+  a table of download rows on a route of its own, beside the library and the
+  review queue, with `fail_message` and `stage_log` on the row and *stop
+  following* as its one action. Nothing of the dashboard is pulled forward. The
+  per-video half — the retry budget and its reset — goes to ADR 0012's release
+  view instead, which is where this page's spent-budget Brake now routes.*)
 - **Everything on the page is derived.** There is no condition table: a Gap and
   a Brake are both computed from routine rows, download rows and counts at read
   time, so nothing has to be kept in step and a restart invents no state.

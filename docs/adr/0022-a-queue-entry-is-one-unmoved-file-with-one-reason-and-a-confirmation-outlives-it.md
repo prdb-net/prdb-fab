@@ -337,3 +337,8 @@ themselves.** Rejected again, as in ADR 0011: it picks a winner nobody chose.
   causes work*: a search is work the user asked for, not a page reading itself.
 - `VISION.md`'s operation log is now a named requirement with no home. It is
   pulled out as its own question rather than settled in passing here.
+- The queue's rows have to be addressable one at a time, so that the Brake above
+  and a download row can both route to a single entry. (*Added by
+  [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md),
+  which needs both directions; it is a filter on the table this section
+  describes, not an entry page.*)

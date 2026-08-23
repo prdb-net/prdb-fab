@@ -192,7 +192,12 @@ person sees the stall, and the tool does not claim it.
   [ADR 0026](0026-filing-is-three-routines-over-one-arriving-file.md), which
   adds a nullable tidied-at stamp for the directory sweep to work through. The
   four states above are untouched: they describe following the download, and the
-  stamp describes its directory, which is why it is not a fifth one.*)
+  stamp describes its directory, which is why it is not a fifth one.* Amended
+  again by [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md),
+  which adds the **origin** — the automation rule that permitted the submission,
+  as a reference and as the name it carried at the time, or the person who
+  started it. Exported, and deliberately not called a cause, since that word is
+  already spent on the six above.*)
 - **A failed download's files are left where SABnzbd left them.** The tool does
   not collect them, does not delete them, and does not ask SABnzbd to. What a
   failed job leaves in the incomplete tree is SABnzbd's own cleanup.
