@@ -307,6 +307,14 @@ quality label. Never a release: before a download there is no file, and so no
 quality to compare.
 _Avoid_: Copy, Repeat
 
+**Operation Log**:
+The record of what the tool did to content: one entry per video file moved,
+relabelled, replaced or deleted, and one per download directory swept of its
+leftovers. Every entry names who acted and why. Nothing in the tool reads it —
+it exists so a person can be told, and so a later release has something to undo
+from.
+_Avoid_: Audit log, History, Activity, Journal
+
 ### Keeping up to date
 
 **Sync**:

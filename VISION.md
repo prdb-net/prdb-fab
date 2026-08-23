@@ -357,7 +357,9 @@ rather than removed. That is the whole of the principle, and it is deliberately
 about content: clearing a `.par2` file out of a download directory is not what
 it protects against. Cross-filesystem moves are copy-verify-delete, nothing is
 filed on a failed lookup, and every move and every deletion is logged with what
-it was and why — which is also what makes an undo possible. A button is easier
+it was and why. That log is readable from the first release, because a tool that
+moves files unattended has to be able to say what it moved; the undo it also
+makes possible belongs to scan directories, which come later. A button is easier
 to press than a command is to type, so a web UI raises the stakes rather than
 lowering them.
 
@@ -433,7 +435,8 @@ them; continuous indexer sync; matching
 against prdb, with duplicate detection against what is already in the library;
 sending to SABnzbd and following the job; filing what arrives into the library
 in the layout below; a library view with artwork, search and filters; the
-status page; and backup and restore. Automation may start narrow — the wanted
+status page, with the downloads view and the operation log the two of them
+between them require; and backup and restore. Automation may start narrow — the wanted
 list — as long as every decision it makes is visible and reversible.
 
 Deliberately after that, not before:

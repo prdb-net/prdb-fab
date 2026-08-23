@@ -336,7 +336,11 @@ themselves.** Rejected again, as in ADR 0011: it picks a winner nobody chose.
   governor may defer. That does not contradict ADR 0018's *refreshing never
   causes work*: a search is work the user asked for, not a page reading itself.
 - `VISION.md`'s operation log is now a named requirement with no home. It is
-  pulled out as its own question rather than settled in passing here.
+  pulled out as its own question rather than settled in passing here. (*Answered
+  by [ADR 0029](0029-the-operation-log-records-one-act-per-video-file-and-nothing-reads-it-back.md):
+  one entry per act on content, so Delete is one entry per file and Replace is
+  one entry naming both. It is a read-only route, nothing prunes it, and nothing
+  in the tool reads it back.*)
 - The queue's rows have to be addressable one at a time, so that the Brake above
   and a download row can both route to a single entry. (*Added by
   [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md),
