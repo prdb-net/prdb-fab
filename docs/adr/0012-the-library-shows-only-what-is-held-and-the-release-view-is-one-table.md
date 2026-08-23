@@ -95,8 +95,12 @@ message needs.
   does not belong on a grid people scroll past; it belongs on the entry page.
 - A card carries artwork, title, site, and the quality labels held — up to two,
   then `+N`. Site is on the card because two videos sharing a title are common.
-  Release date, actors and duration are on the entry page and in the hover
-  overlay.
+  Release date, actors and runtime are on the entry page and in the hover
+  overlay. (*Amended by
+  [ADR 0021](0021-a-video-file-is-read-once-and-what-is-read-decides-nothing.md),
+  which settles **Runtime** as the word — this bullet said "duration" while the
+  next one said "runtime" — and answers which file's runtime a card of two
+  shows: the one carrying the highest quality label.*)
 - prdb bounds how noisy a card can get on its own: `VideoDetailDto` carries
   title, site, release date, actors, images and pre-names, and no runtime, tags
   or description. Anything else a card might show is local knowledge, not prdb's.

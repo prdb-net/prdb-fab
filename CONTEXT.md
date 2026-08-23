@@ -219,12 +219,24 @@ _Avoid_: Overwrite, Upgrade, Swap
 A file on disk that carries a video.
 _Avoid_: Media file, Asset
 
+**Probe**:
+The single reading of a video file, done once when a download is collected and
+never repeated. It measures the file and describes it; nothing it produces
+decides anything by itself.
+_Avoid_: Scan, Analysis, Inspection, Media info
+
 **Quality**:
 The resolution class a video file was encoded at, read from the file itself
 rather than from prdb. Named by a label — `1080p`, `2160p` — taken from a fixed
 ladder, and compared only as that label, never as the pixel dimensions behind
 it.
 _Avoid_: Resolution, Format, Encode
+
+**Runtime**:
+How long a video file plays, read from the file because prdb publishes no such
+figure. A property of the file rather than of the video: two files of one entry
+may disagree, and neither is corrected against the other.
+_Avoid_: Duration, Length, Playtime
 
 **Duplicate**:
 An arriving video file whose video the library already holds under the same
