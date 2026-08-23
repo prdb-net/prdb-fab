@@ -115,6 +115,15 @@ cache — is not in the file.
 
 ## Consequences
 
+- The identity every exported row needs is settled by
+  [ADR 0033](0033-the-schema-is-the-glossary-made-physical-and-the-export-boundary-runs-between-tables.md):
+  a UUIDv7 where one must be minted, a natural key where one already exists, and
+  — for every reference from an exported row to a non-exported one — an
+  identifier some outside authority owns, prdb's or an indexer's, never a local
+  surrogate. That rule is what closes the boundary without exporting the caches.
+  The root-relative path below is a property of the **export**; the database
+  holds absolute paths, so that nothing recomputes one on a read.
+
 - The schema carries backup in mind from the start, as `VISION.md` demands:
   every exported table needs a stable identity that survives a round trip, and
   filed paths are stored so that a root can be substituted.

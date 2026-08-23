@@ -227,6 +227,15 @@ directory unattended.
 
 ## Consequences
 
+- The entry directory is recorded **once, on the library entry**, not beside each
+  file. (*Settled by
+  [ADR 0033](0033-the-schema-is-the-glossary-made-physical-and-the-export-boundary-runs-between-tables.md):
+  `CONTEXT.md` defines an entry directory as the one directory an entry occupies
+  and ADR 0012 makes a second quality another file of one entry, so per file it
+  would be the same string repeated with the ability to disagree — undetectably,
+  since this decision makes the record the authority. Each file keeps its own
+  filed path, which lies inside that directory.*)
+
 - `CONTEXT.md` gains **Sidecar** and narrows **Replacing** to writing against
   filed *content*, so that the relabel rename is not read as a violation of it.
   `VISION.md` gains a sentence, because "only video files move" reads as "the

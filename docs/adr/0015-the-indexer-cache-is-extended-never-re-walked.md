@@ -85,6 +85,16 @@ prevent.
 
 ## Consequences
 
+- The pin on a release row is not a stored column. (*Amended by
+  [ADR 0033](0033-the-schema-is-the-glossary-made-physical-and-the-export-boundary-runs-between-tables.md),
+  for the reason it amends ADR 0013: pinning is computed from what points at the
+  row. Nothing this decision says about which releases are pinned changes.*)
+- **The derived identity below is load-bearing for the backup**, which was not
+  visible when it was chosen. (*Recorded by ADR 0033: ADR 0016 exports download
+  rows and not the cache, so after a restore a release is a key without a row.
+  It stays consumed only because the ladder derives the same id from the same
+  guid when a walk re-sees it. A locally minted release id would free every
+  consumed release on every restore.*)
 - **Release identity is derived by a three-step ladder**: `newznab:attr guid`
   when present, otherwise the last path segment of `<guid>` when it carries a
   scheme, otherwise `<guid>` verbatim — Spotweb's is a Message-ID and must not

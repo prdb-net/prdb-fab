@@ -122,6 +122,14 @@ window of pages has a stated ceiling.
   that timestamp — precisely the bulk-import case. The mark is set back by an
   overlap window and every result is applied as an idempotent upsert, the same
   rule the change-feed cursors already need.
+- Pinning is not a stored column. (*Amended by
+  [ADR 0033](0033-the-schema-is-the-glossary-made-physical-and-the-export-boundary-runs-between-tables.md):
+  this decision speaks of a pin reason per video row, and the schema stores
+  neither the pin nor the reason. Both are computed from what points at the row,
+  which is how `CONTEXT.md` already defines **Pinned** — a stored flag would have
+  six writers and no reader that would notice a mistake, and eviction reads it
+  over the candidates it walks rather than over the whole table. What is pinned
+  and what may not be evicted is untouched.*)
 - An unpinned catalogue row is never repaired, so its artwork URL may be dead
   before the row is evicted. A missing image on a browse grid is the accepted
   cost; a pinned row is never in that state.
