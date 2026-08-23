@@ -146,7 +146,7 @@ another tab, and so a failed job becomes a retry against another release rather
 than silence.
 
 SABnzbd being unreachable is a visible, recoverable condition, not a crash: the
-queue waits and the sync status page says so.
+queue waits and the status page says so.
 
 ## Downloads and the sorted library
 
@@ -243,7 +243,7 @@ and seeing what exists are the same activity:
 Artwork comes from prdb and is cached locally, because a grid of thumbnails
 that fetches on every scroll is a grid nobody scrolls.
 
-## Dashboard and sync status
+## Dashboard and status
 
 Two views, and they answer different questions.
 
@@ -251,11 +251,26 @@ The **dashboard** answers "what is happening": downloads over time, what
 arrived recently, how the wanted list is doing, how much of the library is
 identified, what is waiting in the review queue.
 
-The **sync status** page answers "is anything broken": when each indexer was
-last polled and what it returned, the state of the prdb sync and the remaining
+The **status** page answers "is anything broken": when each indexer was last
+polled and what it returned, the state of the prdb sync and the remaining
 rate-limit budget, whether SABnzbd is reachable, what failed and when. An
 unattended tool that cannot say whether it is still working is one the user has
 to check by hand, which defeats it.
+
+It is laid out as the loop above, stage by stage, because "is anything broken"
+is in practice "where does it stop". And it keeps apart two things that look
+alike from a distance: something broken or missing, which it counts and asks to
+have fixed, and something the tool is deliberately not doing because that is how
+it was set up — a size limit, a confidence gate, a spent retry budget. The
+second is not a fault and must never be presented as one, or an installation
+that is working exactly as intended reports problems every day until the user
+stops reading the page.
+
+The hardest case is neither: a tool with nothing broken and nothing to do looks
+exactly like a tool that has stopped. So the page says plainly when it last
+managed to do anything — the last file put in the library, the last download
+started — and leaves the judgement to the person, who is the only one who knows
+whether a quiet week is normal for their list.
 
 ## Reporting back to prdb
 
@@ -335,7 +350,7 @@ lowering them.
 
 **Set up once, then leave it alone.** The value is in unattended running. A tool
 that needs weekly babysitting has failed at its actual job — which is why the
-sync status page and, later, notifications are not decoration.
+status page and, later, notifications are not decoration.
 
 **Nothing leaves without permission.** Reporting to prdb is a switch, per
 channel, and what each one sends is stated in the UI. The default posture of a
@@ -404,7 +419,7 @@ ends with a working key, and with SABnzbd and an indexer wherever the user has
 them; continuous indexer sync; matching
 against prdb, with duplicate detection against what is already in the library;
 sending to SABnzbd and following the job; filing what arrives into the library
-in the layout below; a library view with artwork, search and filters; the sync
+in the layout below; a library view with artwork, search and filters; the
 status page; and backup and restore. Automation may start narrow — the wanted
 list — as long as every decision it makes is visible and reversible.
 

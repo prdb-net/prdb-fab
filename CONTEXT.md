@@ -283,11 +283,26 @@ to the installation rather than to an account. Never the passphrase a backup is
 encrypted under.
 _Avoid_: Credentials, Passphrase, PIN
 
+### Knowing it works
+
+**Status**:
+The surface that answers whether anything is broken, cut into the six stages of
+the loop. Never the dashboard, which answers what is happening.
+_Avoid_: Health, Sync status, Diagnostics, System page
+
 **Gap**:
 A part of the loop that is missing or no longer usable — a connection never
-configured, or one that stopped verifying. Named and carried where the user can
-see it, never silently worked around.
+configured, one that stopped verifying, or a routine that has failed enough
+times to count. Named and carried where the user can see it, never silently
+worked around.
 _Avoid_: Warning, Error, Issue, Todo
+
+**Brake**:
+A place where the tool, working exactly as configured, is deliberately not
+acting — carrying a count, the reason, and a route to the setting behind it.
+Never a Gap: nothing is broken, and what it holds back may be exactly what was
+asked for.
+_Avoid_: Warning, Limit, Block, Throttle
 
 ### Keeping it safe
 
