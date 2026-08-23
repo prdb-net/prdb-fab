@@ -254,7 +254,9 @@ and seeing what exists are the same activity:
   filtered by site and actor, searchable by title, filterable by quality.
 
 Artwork comes from prdb and is cached locally, because a grid of thumbnails
-that fetches on every scroll is a grid nobody scrolls.
+that fetches on every scroll is a grid nobody scrolls. What the library holds is
+kept; the rest is fetched when a grid asks for it and dropped again to stay
+inside a ceiling, because it can always be fetched a second time.
 
 ## Dashboard and status
 

@@ -295,7 +295,13 @@ than the picture.
   new term.
 - **The library grid gains no dependency on the filesystem**, and the artwork
   cache gains one requirement: a held video's image should be on disk. The map's
-  artwork-caching question is bounded to the cache alone.
+  artwork-caching question is bounded to the cache alone. (*Met by
+  [ADR 0030](0030-artwork-is-cached-by-image-id-fetched-for-what-is-pinned-and-on-sight-for-the-rest.md):
+  a bulk-lane routine fetches the image of every pinned catalogue video, newly
+  pinned first, so it is normally on disk before a cross-filesystem copy
+  finishes. It caches the same image this decision picks, stored under that
+  image's own id, which is what makes the comparison by identity free on both
+  sides.*)
 - **The repair pass becomes a writer.** It was a reader of prdb and a writer of
   the catalogue; it now also writes into directories a media server reads. Its
   budget is unchanged — the writes are local and follow work it was already

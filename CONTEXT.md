@@ -328,6 +328,14 @@ what has been looked at rather than a complete copy, and never the library,
 which is what the tool writes to disk.
 _Avoid_: Mirror, Corpus, Metadata store, Cache
 
+**Artwork Cache**:
+The image files the tool holds locally, one per video, so that a grid does not
+fetch on every scroll. Disposable in both directions: it is never backed up, and
+what nothing points at is evicted to hold a ceiling. The source for every grid,
+and the source filing copies an entry image from — never read back off the
+library.
+_Avoid_: Thumbnail store, Image cache, Media cache
+
 **Pinned**:
 Said of a row the tool must keep because something local points at it — a
 catalogue video behind a library entry, a wanted video, a download or a review

@@ -83,6 +83,14 @@ adds two routines — identifying arriving files (sync) and filing (file) — wh
 cadences it deliberately does not fix, because what makes each of them due is
 the arrival of rows rather than a clock.*)
 
+(*Amended again by
+[ADR 0030](0030-artwork-is-cached-by-image-id-fetched-for-what-is-pinned-and-on-sight-for-the-rest.md),
+which adds one routine to the **bulk** lane: fetching the artwork of pinned
+catalogue videos and evicting the unpinned part of the cache down to its
+ceiling. It is deliberately not folded into ADR 0013's repair pass, which is
+steered by a prdb request budget this work never spends. Its cadence is left
+with the same open question, and its work set is a query over a state.*)
+
 ## Consequences
 
 - **Backoff and Gap are different mechanisms.** Backoff is the routine's own
