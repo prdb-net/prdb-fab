@@ -93,9 +93,15 @@ rather than only a winner.
 _Avoid_: Candidate list, Shortlist, Score, Priority
 
 **Consumed**:
-Said of a release that was fetched for a video and did not leave that video
-held. The ranking never offers it for that video again.
+Said of a release that was fetched for a video, whatever became of it. The
+ranking never offers it for that video again.
 _Avoid_: Failed, Tried, Blacklisted
+
+**Retry Budget**:
+How many downloads one video may be given before the tool stops fetching for
+it. Spent by every download, whatever became of that download, and cleared only
+by the user.
+_Avoid_: Attempts, Quota, Limit
 
 **Automation Rule**:
 A standing instruction that permits releases to be downloaded without being
@@ -139,6 +145,18 @@ _Avoid_: Inbox, Backlog, Unmatched
 Where SABnzbd leaves what it finished, and where nothing is expected to be
 tidy.
 _Avoid_: Incoming, Staging, Source directory
+
+**Path Mapping**:
+What turns a path as SABnzbd reports it into a path this tool can open. Needed
+because the two see different filesystems whenever SABnzbd runs in its own
+container.
+_Avoid_: Folder mapping, Path translation, Remote path
+
+**Collecting**:
+Finding the video files a finished download left behind, by resolving the path
+SABnzbd reports and looking at what is actually there. The end of a download
+and the beginning of filing.
+_Avoid_: Pickup, Harvest, Import
 
 **Leftover**:
 A file in a download directory that carries no video — the `.nfo`, `.par2`,
