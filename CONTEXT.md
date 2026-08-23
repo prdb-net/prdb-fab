@@ -51,6 +51,11 @@ The hash computed from a video file's frames, which describes what the picture
 looks like rather than what the bytes are.
 _Avoid_: Perceptual fingerprint, Visual hash
 
+**Pre-Name**:
+A scene release title prdb records for a video. A video may have several or
+none, and the same title is what an indexer names a release after.
+_Avoid_: PreDB entry, Scene name, Release title
+
 ### Indexers and acquisition
 
 **Indexer**:
@@ -126,7 +131,9 @@ _Avoid_: Filter, Profile, Trigger
 ### Identification
 
 **Identification**:
-Deciding which video a release or a file belongs to.
+Deciding which video a release or a file belongs to. Always prdb's answer,
+never one this tool worked out for itself — before a download from the name,
+after one from the hash.
 _Avoid_: Matching, Lookup, Recognition
 
 **Confidence**:
@@ -146,6 +153,18 @@ An identification that reached the site a release or a file belongs to and no
 further. Its own outcome rather than a weak identification: there is no video,
 so there is nothing to file.
 _Avoid_: Partial match, Weak match
+
+**Screening**:
+The local pass over cached releases that decides which of them are worth asking
+prdb about, by comparing their names against the pre-names and titles the
+catalogue holds. It never identifies anything: a hit is a reason, not an answer.
+_Avoid_: Matching, Pre-match, Filtering, Triage
+
+**Identification State**:
+What has been done to a cached release and what came of it. The tool's own
+position over the indexer cache rather than a claim about what prdb holds — a
+release nothing has remarked on is not a release prdb does not know.
+_Avoid_: Match status, Verdict, Result
 
 **Review Queue**:
 Every video file the tool declined to move, waiting for the user to decide. Each

@@ -87,11 +87,14 @@ strongest answer there is.
 
 So the promise is graded, and stating it honestly matters more than stating it
 strongly. Some releases resolve to a video before anything is fetched, which
-saves the download entirely. Others resolve only to a candidate, or to nothing,
-and those become a decision the user makes — silently guessing would fill the
-library with the wrong files, which is the one outcome worse than not matching
-at all. What the tool must never do is present a guess as a fact: a match
-carries how strongly it matched, and the UI shows it.
+saves the download entirely. Others resolve only to a candidate, or to nothing.
+Where that happens after the download it becomes a decision the user makes,
+because there is then a file to decide about; before the download it does not,
+because a person asked which of four videos a name is would be answering from
+the same name the tool already had. Silently guessing would fill the library
+with the wrong files, which is the one outcome worse than not matching at all.
+What the tool must never do is present a guess as a fact: a match carries how
+strongly it matched, and the UI shows it.
 
 Exactly how far pre-download matching reaches is a design question to settle
 against prdb's API when this is built, not a promise to make in advance. The
