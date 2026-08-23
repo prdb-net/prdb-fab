@@ -93,7 +93,14 @@ page.
   page, since ADR 0014 makes the wanted sweep the only route by which an older
   wanted video is ever found.
 - **Match** — when identification last ran, and how much of the indexer cache is
-  still unidentified.
+  still unidentified. (*Generalised by
+  [ADR 0032](0032-a-routine-with-a-work-set-is-due-when-the-set-is-not-empty.md):
+  this line was the first instance of a rule, and now it is the rule. A routine
+  paced by a work set rather than a clock is drawn as **two facts** — the size
+  of the set and when an item last completed — because an empty tick is not a
+  run, so *last success* would age forever on a tool that is merely caught up.
+  An empty set is neither a Gap nor a Brake. The file lane adds what is being
+  filed and since when, read off the `Filing` row ADR 0026 already writes.*)
 - **Decide** — the two gate tallies and the automation Brakes. (*Amended by
   [ADR 0022](0022-a-queue-entry-is-one-unmoved-file-with-one-reason-and-a-confirmation-outlives-it.md),
   which adds one: automation held for a video because that video has an open

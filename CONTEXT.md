@@ -361,10 +361,19 @@ _Avoid_: Reconcile, Backfill, Re-sync, Refresh
 
 **Routine**:
 One named piece of work the tool runs on a schedule of its own, and its own
-record of when it last succeeded. A restart continues it, either from a position
-it carries or from a work set it can ask for again. Recurring or one-shot; a
-one-shot routine retires when it is done.
+record of when it last succeeded. Either paced by a clock, or made due by a work
+set that is not empty — in which case its interval says how often to look rather
+than how often to act. A restart continues it: from its work set, which is the
+ordinary case, or from a position, which only the one-shot routines carry.
+Recurring or one-shot; a one-shot routine retires when it is done.
 _Avoid_: Job, Task, Cron, Timer
+
+**Work Set**:
+What a routine has left to do, expressed as a query over a state rather than as
+a list or a position. Not empty is what makes the routine due; empty is the
+healthy idle state and never a Gap. A restart resumes by asking again, so
+nothing about it can be lost.
+_Avoid_: Queue, Backlog, Pending list, Inbox
 
 **Lane**:
 One of the queues the routines are divided between, each running one routine at

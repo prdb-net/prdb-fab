@@ -160,7 +160,14 @@ to move it.
 - **ADR 0014 gains a third routine from ADR 0023's family**: the backwards
   search, in the bulk lane, carrying its position as the point in the stream of
   new pre-names and titles it has already passed over the cache. Its cadence
-  belongs with the schedule rather than here.
+  belongs with the schedule rather than here. (*Amended by
+  [ADR 0032](0032-a-routine-with-a-work-set-is-due-when-the-set-is-not-empty.md):
+  the position becomes a **state on the needle** — a flag beside the normalised
+  pre-name and title this decision already stores — because a needle added while
+  a pass was running would sit behind a position and never be searched, which is
+  ADR 0015's silently skipped row one layer up. The batch argument above is what
+  makes it safe: the pass writes only onto rows it has just read, so a crash
+  leaves the flags set and the batch is simply taken again.*)
 - **A `COUNT` or a lookup on the identified video is what the release view
   costs**, so that column is indexed and the view never touches title text.
 - The two burst figures are the ones to re-measure if this is ever revisited.

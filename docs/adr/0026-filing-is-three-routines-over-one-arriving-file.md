@@ -283,7 +283,15 @@ page already.
   ones ADR 0016 and ADR 0022 already added — identifying arriving files (sync)
   and filing (file lane). Their cadences are not fixed here; they belong with
   the pacing question ADR 0023 and ADR 0025 also left open, because what makes
-  each of them due is the arrival of rows rather than a clock.
+  each of them due is the arrival of rows rather than a clock. (*Settled by
+  [ADR 0032](0032-a-routine-with-a-work-set-is-due-when-the-set-is-not-empty.md),
+  which makes the arrival of rows the trigger for all six such routines. It adds
+  two things the file lane needs and the others do not: the run is **visible
+  while it runs**, read off the intended path this decision writes onto the row
+  at `Filing`, since one item in four hours reports nothing from completed runs;
+  and a **failed arriving file sorts to the back** of the work set, so one item
+  that always fails cannot hold everything behind it. Where the condition is
+  installation-wide every item fails and the Gap above fires regardless.*)
 - **ADR 0016 is amended** twice: its open question — which routine files the
   collected files, and in which lane — is answered, and the download row gains
   a nullable tidied-at stamp beside the four states, which stay as they are.

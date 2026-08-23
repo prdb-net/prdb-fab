@@ -91,6 +91,17 @@ ceiling. It is deliberately not folded into ADR 0013's repair pass, which is
 steered by a prdb request budget this work never spends. Its cadence is left
 with the same open question, and its work set is a query over a state.*)
 
+(*The open question is closed by
+[ADR 0032](0032-a-routine-with-a-work-set-is-due-when-the-set-is-not-empty.md).
+Those six keep the row and the cadence below; for them the cadence is an **idle
+tick** — how often to look, not how often to act — at 10 s in the sync and file
+lanes and 30 s in bulk. A set that is not empty makes the routine due, a run is
+bounded and yields its lane, and the routine is then immediately due again, so a
+lane round-robins rather than letting one routine drain. The resumable position
+narrows to the one-shot routines; none of the six keeps one. Backoff, the
+three-failure Gap, the scarcity order, *run now* and the restart spread are all
+unchanged.*)
+
 ## Consequences
 
 - **Backoff and Gap are different mechanisms.** Backoff is the routine's own
