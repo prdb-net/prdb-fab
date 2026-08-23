@@ -77,6 +77,12 @@ The routine that pages an indexer's newest releases into the indexer cache. It
 sees only what is new, which is why the wanted sweep exists beside it.
 _Avoid_: Crawl, Poll, RSS sync, Scrape
 
+**Daily Query Budget**:
+How many requests one indexer may be sent in a day, set by the user rather than
+discovered, because a Newznab quota belongs to their account and most indexers
+report nothing about it. Never prdb's rate limit, which is read from a response.
+_Avoid_: Quota, Rate limit, Cap
+
 **Watermark**:
 How far an indexer walk has already come, and therefore where it stops asking.
 Made of a post date together with a release identity, because either alone
@@ -278,6 +284,13 @@ _Avoid_: Throttle, Limiter, Budget
 The guided path from a fresh installation to a working one, with two entry
 points: setting up fresh, or restoring a backup.
 _Avoid_: Setup wizard, First run, Installer
+
+**Connection**:
+A configured route to one of the three outside services — prdb, SABnzbd, or one
+indexer — together with the credential it is reached by and the verdict of the
+last check against it. What a Gap names when one is missing or no longer
+verifies.
+_Avoid_: Integration, Endpoint, Service
 
 **Password**:
 The single secret the user signs in with, set during onboarding and belonging
