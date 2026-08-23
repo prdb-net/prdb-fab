@@ -94,7 +94,13 @@ page.
   wanted video is ever found.
 - **Match** — when identification last ran, and how much of the indexer cache is
   still unidentified.
-- **Decide** — the two gate tallies and the automation Brakes.
+- **Decide** — the two gate tallies and the automation Brakes. (*Amended by
+  [ADR 0022](0022-a-queue-entry-is-one-unmoved-file-with-one-reason-and-a-confirmation-outlives-it.md),
+  which adds one: automation held for a video because that video has an open
+  review queue entry. It routes to the entry rather than to a setting, which
+  is the first Brake whose destination is a decision waiting on a person — and
+  it exists because without it the sample case is an unattended loop bounded
+  only by the retry budget.*)
 - **Download** — SABnzbd reachability, whose Gap ADR 0016 raises on the first
   failed contact rather than after three; the four installation conditions as
   Gaps; a Brake for videos whose retry budget is spent; and one summary line for

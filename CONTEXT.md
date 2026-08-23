@@ -35,6 +35,12 @@ claim about the library entry rather than about any one file, and it understates
 where prdb's coarser scale cannot express what is held.
 _Avoid_: Completion, Satisfaction
 
+**Confirmed Assignment**:
+A person's answer to which video a file is, given in the review queue and kept
+as a record of its own. It is what prdb cannot work out for itself, and it
+outlives the entry that produced it.
+_Avoid_: Submission, Vote, Contribution
+
 **osHash**:
 The hash computed from a file's size and its first and last 64 KiB, which
 identifies that exact file whatever it has been renamed to.
@@ -142,10 +148,16 @@ so there is nothing to file.
 _Avoid_: Partial match, Weak match
 
 **Review Queue**:
-Every video file the tool declined to move, waiting for the user to decide —
-what could not be identified confidently, and what was identified perfectly and
-turned out to be redundant.
+Every video file the tool declined to move, waiting for the user to decide. Each
+entry carries one reason for not having been moved, and that reason is what
+decides which actions the entry offers.
 _Avoid_: Inbox, Backlog, Unmatched
+
+**Dismiss**:
+Closing a review queue entry and leaving its file exactly where it lies. The
+decision that unblocks the cleanup of a download directory without anything
+being deleted.
+_Avoid_: Ignore, Skip, Archive
 
 ### On disk
 

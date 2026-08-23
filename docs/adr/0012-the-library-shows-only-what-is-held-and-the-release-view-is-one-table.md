@@ -106,6 +106,11 @@ message needs.
   or description. Anything else a card might show is local knowledge, not prdb's.
 - The header carries a review-queue count on every page, so the count is
   something the sync has to keep current rather than something the library
-  computes.
+  computes. (*Amended by
+  [ADR 0022](0022-a-queue-entry-is-one-unmoved-file-with-one-reason-and-a-confirmation-outlives-it.md):
+  the demand this bullet makes is that the count never be taken from the
+  filesystem, and that stands — but it is read as a `COUNT` over an indexed
+  column rather than kept as a running total, because a maintained counter is
+  a second place the truth lives.*)
 - The data model needs the filed path, quality and size per file readable
   without touching the filesystem, since the entry page lists them.
