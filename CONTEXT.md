@@ -155,9 +155,12 @@ so there is nothing to file.
 _Avoid_: Partial match, Weak match
 
 **Screening**:
-The local pass over cached releases that decides which of them are worth asking
-prdb about, by comparing their names against the pre-names and titles the
-catalogue holds. It never identifies anything: a hit is a reason, not an answer.
+The local pass that decides which cached releases are worth asking prdb about,
+by comparing their names against the pre-names and titles the catalogue holds.
+It runs in both directions — over releases nothing has looked at yet, and
+backwards over the cache whenever a new pre-name or title arrives to reach the
+rows written before it existed. It never identifies anything: a hit is a reason,
+not an answer.
 _Avoid_: Matching, Pre-match, Filtering, Triage
 
 **Identification State**:
