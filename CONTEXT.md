@@ -309,10 +309,12 @@ succeeded. Recurring or one-shot; a one-shot routine retires when it is done.
 _Avoid_: Job, Task, Cron, Timer
 
 **Wanted Sweep**:
-The routine that searches the indexers for wanted videos directly, rather than
-waiting for them to appear among an indexer's newest releases. The only way an
-older video is ever found, since no indexer will order its results by when it
-was indexed.
+The routine that searches the indexers for wanted videos directly, by their
+title, rather than waiting for them to appear among an indexer's newest
+releases. The only way an older video is ever found, since no indexer will order
+its results by when it was indexed. What it finds is identified like any other
+release: having been searched for is a reason to ask about a name, never an
+answer about it.
 _Avoid_: Backfill, Deep search, Rescan
 
 **Governor**:
