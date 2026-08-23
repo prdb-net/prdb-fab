@@ -80,7 +80,13 @@ The one gate worth naming, because it is the tempting one, is a **minimum
 runtime that refuses to file a sample**. It is rejected. prdb publishes no
 runtime, so there is nothing to compare against; an absolute threshold is an
 uncalibrated number of exactly the kind ADR 0011 refused for size, and it is
-wrong for every genuinely short scene. The sample is not shut out, it is made
+wrong for every genuinely short scene. (*The premise expired: `Prdb.Sdk` 0.11.0
+publishes `durationMs`, `durationSpreadMs` and `durationFileCount`.
+[ADR 0031](0031-the-consensus-runtime-is-shown-beside-the-files-own-and-still-decides-nothing.md)
+re-argues the refusal from scratch and it stands — the multiplier and the quorum
+are both still invented, a false refusal brakes the video under ADR 0022, and a
+sixth reason would have no honest exit. The figure is displayed beside the
+file's own runtime instead, which is this section's rule applied to it.*) The sample is not shut out, it is made
 **visible** — four minutes beside `1080p` in the review queue tells the person
 what no threshold could decide for them. The wish for the gate is the argument
 for the field, and it stops there.

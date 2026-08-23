@@ -56,6 +56,14 @@ A scene release title prdb records for a video. A video may have several or
 none, and the same title is what an indexer names a release after.
 _Avoid_: PreDB entry, Scene name, Release title
 
+**Consensus Runtime**:
+The runtime prdb publishes for a video: a median across the files it holds,
+with the spread saying how far those files legitimately disagree and a count
+saying how many stand behind it. A property of the video rather than of any
+file, and never compared against one automatically — nothing here refuses a
+file for disagreeing with it.
+_Avoid_: Duration, Expected runtime, Reference runtime
+
 ### Indexers and acquisition
 
 **Indexer**:
@@ -296,9 +304,10 @@ it.
 _Avoid_: Resolution, Format, Encode
 
 **Runtime**:
-How long a video file plays, read from the file because prdb publishes no such
-figure. A property of the file rather than of the video: two files of one entry
-may disagree, and neither is corrected against the other.
+How long a video file plays, read from the file because that is where this
+file's own answer is. A property of the file rather than of the video: two
+files of one entry may disagree, neither is corrected against the other, and
+neither is corrected against the consensus runtime prdb publishes for the video.
 _Avoid_: Duration, Length, Playtime
 
 **Duplicate**:
