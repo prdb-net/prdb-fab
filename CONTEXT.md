@@ -30,7 +30,9 @@ A site or an actor the user follows in prdb.
 _Avoid_: Subscription, Follow
 
 **Fulfilment**:
-The report to prdb that a wanted video is now held.
+The report to prdb that a wanted video is now held, and at what quality. It is a
+claim about the library entry rather than about any one file, and it understates
+where prdb's coarser scale cannot express what is held.
 _Avoid_: Completion, Satisfaction
 
 **osHash**:

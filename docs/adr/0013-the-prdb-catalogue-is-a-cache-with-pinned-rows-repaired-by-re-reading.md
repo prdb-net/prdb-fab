@@ -135,7 +135,10 @@ window of pages has a stated ceiling.
   data — wanted list, favourites, and those three cursors — and keeps the
   catalogue, which belongs to no account. Library entries stay pinned; ADR 0010
   already settled that the change is confirmed rather than blocked, and that the
-  record of what was reported survives.
+  record of what was reported survives — which
+  [ADR 0019](0019-fulfilment-understates-the-quality-and-is-retracted-only-by-a-person.md)
+  amends to *survives, scoped to the account it was made under*, since that
+  record turned out to be a suppression key rather than a duplicate guard.
 - Candidate videos of an open review queue entry are pinned, so eviction cannot
   empty a choice the user has not made yet. The pin ends when the entry is
   decided: the chosen video is pinned by its library entry, the rest fall back

@@ -96,8 +96,16 @@ entered later that belongs to a **different** account can be recognised: the
 wanted list is swapped out underneath and the local record of what was already
 reported no longer refers to this user. That does not block — people do move
 accounts — but it demands an explicit confirmation that names what stops lining
-up. The record of what was reported is kept regardless; not re-reporting is the
-harmless outcome.
+up. The record of what was reported is kept regardless.
+
+**Amended by [ADR 0019](0019-fulfilment-understates-the-quality-and-is-retracted-only-by-a-person.md).**
+The record is kept, as decided here, but **scoped to the `userHash`** it was
+made under. This paragraph originally added that "not re-reporting is the
+harmless outcome", which was argued against an implicit outbox. ADR 0019 makes
+the record a last-known-state row instead, where it acts as a *suppression key* —
+so an unscoped record would mean the new account's wanted list is never served
+at all. Scoping keeps this decision's conclusion verbatim while removing that
+outcome.
 
 SABnzbd reports paths as it sees them, which need not exist in this container,
 so its step collects the path mapping and **verifies it**: resolve SABnzbd's own
