@@ -183,6 +183,11 @@ list is fixed rather than something the user writes patterns into: a delete
 pattern in a text field is how someone loses a download directory. Anyone who
 wants more has SABnzbd's own cleanup list, at the right layer.
 
+Only video files *move*, but the library holds more than video files: beside
+each one the tool writes a sidecar and a poster of its own, because for this
+material there is no metadata provider a media server could ask instead. Those
+are written, not carried over — nothing from a download directory is.
+
 Moving will apply to scan directories too, and that has to be said out loud
 rather than discovered when they arrive: a first run over a collection someone
 spent years arranging takes the identified files out of it and leaves the rest

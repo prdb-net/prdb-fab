@@ -181,13 +181,30 @@ _Avoid_: Item, Record, Copy
 
 **Filing**:
 Moving an identified video file out of a download directory into the library,
-under the name and path the layout dictates.
+under the name and path the layout dictates, and writing the sidecar and the
+poster that belong beside it.
 _Avoid_: Import, Sorting, Organising, Ingest
+
+**Filed Path**:
+Where a video file was put when it was filed. Computed from what prdb said at
+that moment and then recorded, so it is read from the record and never worked
+out again — a correction prdb publishes later changes what the library displays
+and not what anything is called on disk.
+_Avoid_: Target path, Destination, Location
+
+**Sidecar**:
+The `movie.nfo` this tool writes beside a filed video file, and where the media
+server reads the video's title, date and cast from. It wins over the file name
+wherever the two disagree, which is what makes the name on disk cosmetic. Never
+the `.nfo` an unpacker left in a download directory, which is a leftover.
+_Avoid_: Metadata file, NFO, Manifest
 
 **Replacing**:
 Putting an arriving video file in the place of the one the library holds at that
 quality, and deleting the file it displaces. The only thing the tool does that
-writes against content already filed, and never something it does by itself.
+writes against filed content, and never something it does by itself — renaming
+a filed file to carry its quality label writes against a name rather than
+against content, and is not this.
 _Avoid_: Overwrite, Upgrade, Swap
 
 **Video File**:
