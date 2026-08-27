@@ -111,11 +111,20 @@ public sealed class SkeletonRouteTests(FabApplication application) : IClassFixtu
 
         Assert.True(swept, "the bulk lane did not sweep the item within the timeout");
 
-        var runs = await client.GetFromJsonAsync<RecordedRun[]>(
-            "/api/skeleton/runs", TestContext.Current.CancellationToken);
+        // Waited for rather than read once. The run is recorded after the sweep
+        // has written the row it swept, so a page that already shows the stamp
+        // is not yet evidence that the log has the run -- and asserting on the
+        // second the moment the first is true is a race the lane wins most of
+        // the time and not all of it.
+        var recorded = await EventuallyAsync(async () =>
+        {
+            var logged = await client.GetFromJsonAsync<RecordedRun[]>(
+                "/api/skeleton/runs", TestContext.Current.CancellationToken);
 
-        Assert.NotEmpty(runs!);
-        Assert.Contains(runs!, run => run.Outcome == "Succeeded");
+            return logged!.Any(run => run.Outcome == "Succeeded");
+        });
+
+        Assert.True(recorded, "the sweep happened but no successful run reached the log");
     }
 
     private static async Task<T> PostAsync<T>(HttpClient client, string path, object body)

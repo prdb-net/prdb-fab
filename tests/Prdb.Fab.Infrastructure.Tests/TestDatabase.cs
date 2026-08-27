@@ -27,10 +27,17 @@ public sealed class TestDatabase : IAsyncDisposable
     private readonly ServiceProvider provider;
     private readonly string directory;
 
+    /// <summary>
+    /// Kept here rather than read off <see cref="Location"/> at the end,
+    /// because by then the provider that holds it has been disposed.
+    /// </summary>
+    private readonly string connectionString;
+
     private TestDatabase(ServiceProvider provider, string directory, FakeTimeProvider time)
     {
         this.provider = provider;
         this.directory = directory;
+        connectionString = provider.GetRequiredService<FabDatabaseLocation>().ConnectionString;
         Time = time;
     }
 
@@ -90,8 +97,11 @@ public sealed class TestDatabase : IAsyncDisposable
         await provider.DisposeAsync();
 
         // The pooled connections have to be gone before the file can be
-        // removed on every platform.
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        // removed on every platform. This pool only: clearing every pool in the
+        // process reaches into whatever else is running beside this test, and
+        // one of the things running beside it asserts on what a pool hands back.
+        Microsoft.Data.Sqlite.SqliteConnection.ClearPool(
+            new Microsoft.Data.Sqlite.SqliteConnection(connectionString));
 
         try
         {

@@ -162,7 +162,12 @@ public sealed class FabApplication : WebApplicationFactory<Program>
             return;
         }
 
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        // This installation's pool only. Clearing every pool in the process
+        // would reach into the tests running beside this one, one of which
+        // asserts on what a pool hands back.
+        Microsoft.Data.Sqlite.SqliteConnection.ClearPool(
+            new Microsoft.Data.Sqlite.SqliteConnection(
+                new Prdb.Fab.Infrastructure.Persistence.FabDatabaseLocation(DataDirectory).ConnectionString));
 
         try
         {
