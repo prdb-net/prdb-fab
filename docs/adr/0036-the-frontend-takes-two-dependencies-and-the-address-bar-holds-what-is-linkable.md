@@ -144,10 +144,11 @@ would also ship a look this repository would then spend its CSS overriding.
 
 **CSS Modules, with tokens on `:root` in one global stylesheet** that also
 carries the reset. Modules are built into Vite and cost no dependency. The
-prototype on `prototype/11-library-and-release-views` already produced the visual
-language — a dark palette, dense tables, the quality and confidence pills — and
-it was concrete enough to settle ADR 0012, so it is the seed rather than
-something to redo.
+prototype in
+[`prototypes/11-library-and-release-views.html`](../../prototypes/11-library-and-release-views.html)
+already produced the visual language — a dark palette, dense tables, the
+quality and confidence pills — and it was concrete enough to settle ADR 0012, so
+it is the seed rather than something to redo.
 
 Whether there is ever a light theme is deliberately not decided. With tokens it
 stays a later question instead of a rewrite.
