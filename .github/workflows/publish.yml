@@ -1,0 +1,140 @@
+# ADR 0044: the image goes to Docker Hub, because that is where this audience
+# looks for it — Unraid's Community Applications, Portainer's search box, a
+# Synology dialog. Tagged with the commit SHA always, `latest` on the default
+# branch, and the version on a release.
+#
+# This is also where emulation is actually paid for: one multi-platform build,
+# so the second architecture costs only the runtime stage. Both are timed into
+# the job summary, because ADR 0044 kept the sibling's habit of making that a
+# measurement in every run rather than an assumption.
+name: Publish the image
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two pushes to main in quick succession would otherwise race for `latest`, and
+# the loser is whichever finishes second rather than whichever is newer.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: prdbnet/prdb-fab
+
+jobs:
+  publish:
+    name: Build linux/amd64 and linux/arm64 and push them
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    # A fork has neither the account nor any business publishing under this
+    # name, and would otherwise get a red build for it on every push.
+    if: github.repository == 'prdb-net/prdb-fab'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The credential is an account-level Docker Hub access token in the
+      # repository secrets. Until it is there, this is a warning and a skipped
+      # publish rather than a failure — CI still builds and starts the image on
+      # every push, so what is missing is distribution, not proof.
+      - name: Docker Hub credentials
+        id: credentials
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::warning::DOCKERHUB_USERNAME and DOCKERHUB_TOKEN are not set, so nothing was published."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ADR 0044: the running tool knows its own version and says it in the
+      # first log line, because ADR 0043 made the log a file people send to
+      # strangers. A release carries its tag; anything else carries the version
+      # in Directory.Build.props with the commit appended, so a log from a
+      # `latest` container still names exactly one build.
+      - name: Work out the version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            prefix="$(grep -o '<VersionPrefix>[^<]*' Directory.Build.props | cut -d'>' -f2)"
+            version="${prefix}+${GITHUB_SHA}"
+          fi
+
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "Building $version"
+
+      - uses: docker/setup-qemu-action@v3
+        if: steps.credentials.outputs.present == 'true'
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.credentials.outputs.present == 'true'
+
+      - uses: docker/login-action@v3
+        if: steps.credentials.outputs.present == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # The SHA tag is the one that always exists and always means exactly one
+      # commit; `latest` and the version are conveniences on top of it.
+      - name: Work out the tags
+        id: metadata
+        if: steps.credentials.outputs.present == 'true'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=sha,format=long,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+
+      - name: Build and push
+        if: steps.credentials.outputs.present == 'true'
+        run: |
+          started=$(date +%s)
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --build-arg "VERSION=${{ steps.version.outputs.value }}" \
+            $(echo "${{ steps.metadata.outputs.tags }}" | sed 's/^/--tag /') \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --push \
+            .
+
+          echo "seconds=$(($(date +%s) - started))" >> "$GITHUB_ENV"
+
+      - name: How long the multi-architecture build took
+        if: always() && steps.credentials.outputs.present == 'true'
+        run: |
+          {
+            echo "| Build | Seconds |"
+            echo "| --- | --- |"
+            echo "| linux/amd64 + linux/arm64, one invocation, arm64 runtime stage emulated | ${seconds:-?} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ADR 0044: for a large part of this audience the Docker Hub page is the
+      # landing page, so its text comes from the repository and is reviewed like
+      # anything else here — not typed into a web form.
+      - name: Publish the Docker Hub description
+        if: steps.credentials.outputs.present == 'true' && github.event_name == 'release'
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.IMAGE }}
+          short-description: Finds, downloads and files videos into a library, on its own
+          readme-filepath: docs/running-in-docker.md

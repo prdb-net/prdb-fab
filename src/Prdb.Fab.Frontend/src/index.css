@@ -1,0 +1,35 @@
+/*
+  ADR 0036: CSS Modules with tokens and no component library. This file holds
+  only the tokens and the document defaults; everything with a shape of its own
+  lives in a .module.css beside the component that uses it.
+*/
+:root {
+  --surface: #14161a;
+  --surface-raised: #1c1f25;
+  --border: #2c313a;
+  --text: #e6e8ec;
+  --text-quiet: #9aa2b1;
+  --accent: #5b9dd9;
+  --ok: #6fbf73;
+  --bad: #d9736b;
+
+  --gap: 0.75rem;
+  --radius: 6px;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+button {
+  font: inherit;
+}

@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    ADR 0035: the composition root. It references Core and Infrastructure and
+    wires them together; nothing under src/ references it back.
+  -->
+
+  <PropertyGroup>
+    <FrontendDirectory>$(MSBuildProjectDirectory)\..\Prdb.Fab.Frontend</FrontendDirectory>
+  </PropertyGroup>
+
+  <!--
+    ADR 0040: every build writes the OpenAPI document next to this project, and
+    it is committed. The frontend's types are generated from that file, so a
+    changed response shape shows up as a diff in review and as a build error in
+    the frontend rather than as an empty column in the UI.
+  -->
+  <PropertyGroup>
+    <OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
+    <OpenApiGenerateDocumentsOptions>--file-name openapi</OpenApiGenerateDocumentsOptions>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Prdb.Fab.Core\Prdb.Fab.Core.csproj" />
+    <ProjectReference Include="..\Prdb.Fab.Infrastructure\Prdb.Fab.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Overrides the vulnerable version that pulls in; see Directory.Packages.props. -->
+    <PackageReference Include="Microsoft.OpenApi" />
+    <!-- A build-time tool, not something the application ships with. -->
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+
+  <!--
+    ADR 0036: Vite builds the frontend into this project's wwwroot, so a release
+    build produces the whole application rather than an API with a blank page in
+    front of it. Debug builds leave it alone — the development flow is `npm run
+    dev` next to `dotnet run`, and paying for an npm build on every F5 would only
+    teach people to skip it. Pass -p:SkipFrontendBuild=true to opt out.
+  -->
+  <Target Name="BuildFrontend"
+          BeforeTargets="Build"
+          Condition="'$(Configuration)' == 'Release' AND '$(SkipFrontendBuild)' != 'true'">
+    <Exec Command="npm ci" WorkingDirectory="$(FrontendDirectory)" />
+    <Exec Command="npm run build" WorkingDirectory="$(FrontendDirectory)" />
+    <ItemGroup>
+      <Content Include="wwwroot\**" Exclude="@(Content)" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
+</Project>

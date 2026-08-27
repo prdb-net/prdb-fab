@@ -1,0 +1,26 @@
+# ADR 0034: an example to copy, not a file to run. It pins a version rather than
+# `latest`, because an unattended tool that moves files and upgrades itself when
+# the NAS reboots is a surprise — and ADR 0044 adds the other half of why that
+# matters: a migration only goes forward, so copy the data directory before you
+# change the tag.
+services:
+  prdb-fab:
+    image: prdbnet/prdb-fab:0.1.0
+    container_name: prdb-fab
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # The user your library belongs to. Getting these wrong is the thing
+      # VISION.md names as the mistake people actually make.
+      PUID: "1000"
+      PGID: "1000"
+      UMASK: "022"
+    volumes:
+      # The tool's own state: the database and the log. Keep it on local
+      # storage — SQLite on an SMB or NFS share is a way to corrupt a database.
+      - ./data:/data
+      # Your downloads and your library, mounted at the same paths SABnzbd sees
+      # them at if you can manage it: the path mapping is then the identity, and
+      # ADR 0016 names a broken mapping as the most common failure there is.
+      - /srv/media:/media

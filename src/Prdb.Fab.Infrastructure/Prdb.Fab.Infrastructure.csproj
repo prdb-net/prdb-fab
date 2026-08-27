@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ADR 0035: everything that reaches out lives here — SQLite, the filesystem,
+    prdb, the indexers, SABnzbd and ffmpeg — behind the interfaces
+    Prdb.Fab.Core declares.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Prdb.Fab.Core\Prdb.Fab.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- For the design-time context factory that `dotnet ef` uses; not flowed to consumers. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <!-- ADR 0039: overrides the vulnerable SQLite that EF Core still brings. -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+</Project>

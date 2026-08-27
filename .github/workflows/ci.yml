@@ -1,0 +1,126 @@
+# ADR 0044: the sibling project's chain, minus its ffmpeg step. That step exists
+# there because its tests read a picture size out of a real file; ADR 0042 put
+# ffprobe's output for real files on this project's written list of what is not
+# tested, so a step whose only customer is a test that does not exist would go
+# red for a reason nobody can act on. ffmpeg stays in the image.
+#
+# ADR 0040: the OpenAPI document and the types generated from it are committed,
+# so what this has to catch is an endpoint that changed without them being
+# regenerated. Forgetting is a red build here rather than a stale frontend that
+# compiles against a shape the backend no longer sends.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build, test and check the API contract
+    runs-on: ubuntu-latest
+
+    # The default is six hours, which is long enough for a step that hangs to
+    # look like a step that is working.
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/Prdb.Fab.Frontend/package-lock.json
+
+      - name: Install the frontend's dependencies
+        run: npm ci
+        working-directory: src/Prdb.Fab.Frontend
+
+      # Writes src/Prdb.Fab.Host/openapi.json on the way through.
+      - name: Build
+        run: dotnet build
+
+      # ADR 0004 names this and `dotnet build` as the verification commands.
+      # ADR 0042's xUnit v3 runs on the Microsoft Testing Platform, which
+      # global.json selects.
+      - name: Test
+        run: dotnet test --no-build
+
+      - name: The committed API contract matches the code
+        working-directory: src/Prdb.Fab.Frontend
+        run: |
+          npm run generate:api
+          if ! git diff --exit-code -- ../Prdb.Fab.Host/openapi.json src/api/schema.d.ts; then
+            echo "::error::The API contract is stale. Run 'npm run generate:api' in src/Prdb.Fab.Frontend and commit the result."
+            exit 1
+          fi
+
+      - name: Lint the frontend
+        run: npm run lint
+        working-directory: src/Prdb.Fab.Frontend
+
+      # Compiles the frontend against the committed types, which is where a
+      # response shape it relies on having changed turns into an error.
+      - name: Build the frontend
+        run: npm run build
+        working-directory: src/Prdb.Fab.Frontend
+
+  # ADR 0042 handed "that the image runs" here in as many words, and ADR 0044
+  # agreed: Docker is the supported way to run this, so a broken image is a
+  # broken release whatever the tests above say. The claims worth checking —
+  # that it drops to PUID:PGID, that a dotted logging category survives the
+  # entrypoint's shell, that ADR 0043's log file lands on the data volume, that
+  # `docker stop` reaches PID 1 — are only true or false in a running container.
+  #
+  # Both architectures build natively. ADR 0044's departure from the sibling is
+  # that arm64 is *started* on a native runner, free for public repositories:
+  # under QEMU a setpriv, a signal reaching PID 1 and a shell dropping an oddly
+  # named variable are exactly the class of thing that goes wrong slowly and
+  # ambiguously, and a smoke test whose failures cannot be told from emulation
+  # artefacts is one nobody trusts. What emulation actually costs is measured
+  # where it is actually paid — the publish workflow, which builds both
+  # architectures in one invocation.
+  image:
+    name: Build the image and start it
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build for ${{ matrix.platform }}
+        run: |
+          started=$(date +%s)
+          docker buildx build --platform ${{ matrix.platform }} --load --tag prdb-fab:ci .
+          echo "seconds=$(($(date +%s) - started))" >> "$GITHUB_ENV"
+
+      - name: Start it
+        run: docker/smoke-test.sh prdb-fab:ci
+
+      - name: How long the build took
+        if: always()
+        run: |
+          {
+            echo "| Build | Seconds |"
+            echo "| --- | --- |"
+            echo "| ${{ matrix.platform }}, native | ${seconds:-?} |"
+          } >> "$GITHUB_STEP_SUMMARY"

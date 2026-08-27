@@ -10,3 +10,14 @@ CLAUDE.local.md
 
 # Issue tracking and planning notes, kept out of the public repository
 .scratch/
+
+# .NET
+bin/
+obj/
+*.user
+
+# Node
+node_modules/
+
+# Built frontend assets, produced by Vite into the host project
+src/Prdb.Fab.Host/wwwroot/
