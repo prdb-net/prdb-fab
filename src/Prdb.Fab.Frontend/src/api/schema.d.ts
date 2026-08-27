@@ -185,6 +185,255 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectionsState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/prdb": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PrdbConnectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrdbConnectionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/sabnzbd/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SabnzbdCategoriesRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SabnzbdCategoriesVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/sabnzbd": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SabnzbdConnectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SabnzbdConnectionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/indexers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConfiguredIndexer"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IndexerConnectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IndexerConnectionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/library-root": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LibraryRootRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibraryRootVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skeleton/items": {
         parameters: {
             query?: never;
@@ -331,8 +580,41 @@ export interface components {
             added: null | components["schemas"]["SkeletonItem"];
             refusal: null | string;
         };
+        ConfiguredIndexer: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            url: string;
+            categories: string;
+            lastVerdict: components["schemas"]["IndexerConnectionOutcome"];
+            /** Format: date-time */
+            lastCheckedAt: string;
+        };
+        ConnectionsState: {
+            prdbConfigured: boolean;
+            sabnzbdConfigured: boolean;
+            sabnzbdUrl: null | string;
+            sabnzbdCategory: null | string;
+            completedRoot: null | string;
+            downloadDirectory: null | string;
+            /** Format: int32 */
+            indexerCount: number | string;
+            libraryRoot: null | string;
+        };
         HealthResponse: {
             status: string;
+        };
+        /** @enum {unknown} */
+        IndexerConnectionOutcome: "Saved" | "WrongKey" | "LimitReached" | "NotAnIndexer" | "Refused" | "NotRightNow" | "AlreadyAdded" | "NoCategories";
+        IndexerConnectionRequest: {
+            name: null | string;
+            url: null | string;
+            apiKey: null | string;
+        };
+        IndexerConnectionVerdict: {
+            outcome: components["schemas"]["IndexerConnectionOutcome"];
+            detail: string;
+            categories: string[];
         };
         ItemPage: {
             items: components["schemas"]["SkeletonItem"][];
@@ -344,7 +626,28 @@ export interface components {
             total: number | string;
         };
         /** @enum {unknown} */
+        LibraryRootOutcome: "Saved" | "SavedWithWarning" | "NotAbsolute" | "Missing" | "NotWritable" | "InsideDownloadDirectory" | "ContainsDownloadDirectory";
+        LibraryRootRequest: {
+            path: null | string;
+        };
+        LibraryRootVerdict: {
+            outcome: components["schemas"]["LibraryRootOutcome"];
+            detail: string;
+        };
+        /** @enum {unknown} */
         OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Complete" | null;
+        /** @enum {unknown} */
+        PrdbConnectionOutcome: "Saved" | "WrongKey" | "NoApiAccess" | "QuotaSpent" | "NotRightNow" | "AnotherAccount";
+        PrdbConnectionRequest: {
+            apiKey: null | string;
+            confirmAnotherAccount: boolean;
+        };
+        PrdbConnectionVerdict: {
+            outcome: components["schemas"]["PrdbConnectionOutcome"];
+            detail: string;
+            /** Format: int32 */
+            retryAfterSeconds: null | number | string;
+        };
         RecordedRun: {
             /** Format: int64 */
             id: number | string;
@@ -362,6 +665,32 @@ export interface components {
         };
         /** @enum {unknown} */
         RunOutcome: "Succeeded" | "Failed" | "Interrupted";
+        SabnzbdCategoriesRequest: {
+            url: null | string;
+            apiKey: null | string;
+        };
+        SabnzbdCategoriesVerdict: {
+            outcome: components["schemas"]["SabnzbdConnectionOutcome"];
+            detail: string;
+            categories: components["schemas"]["SabnzbdCategory"][];
+        };
+        SabnzbdCategory: {
+            name: string;
+            completedRoot: string;
+        };
+        /** @enum {unknown} */
+        SabnzbdConnectionOutcome: "Saved" | "WrongKey" | "AccessDenied" | "NotSabnzbd" | "NotRightNow" | "UnknownCategory" | "DownloadDirectoryMissing" | "DownloadDirectoryUnreadable";
+        SabnzbdConnectionRequest: {
+            url: null | string;
+            apiKey: null | string;
+            category: null | string;
+            downloadDirectory: null | string;
+        };
+        SabnzbdConnectionVerdict: {
+            outcome: components["schemas"]["SabnzbdConnectionOutcome"];
+            detail: string;
+            completedRoot: null | string;
+        };
         /** @enum {unknown} */
         SetPasswordOutcome: "Set" | "AlreadySet" | "Refused";
         SetPasswordRequest: {

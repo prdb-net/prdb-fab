@@ -2,6 +2,8 @@ using System.Net.Http.Json;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -20,6 +22,15 @@ namespace Prdb.Fab.Host.Tests;
 public sealed class FabApplication : WebApplicationFactory<Program>
 {
     private readonly IReadOnlyDictionary<string, string> settings;
+
+    /// <summary>
+    /// ADR 0042: the network is replaced at the socket and never at an
+    /// interface, so that the SDK, the timeout, the redirect rule and the
+    /// mapping from a status code to a sentence all still run for real.
+    /// ADR 0041's named transports are what make that unambiguous — there are
+    /// exactly four places a fake can go in, and no argument about where.
+    /// </summary>
+    private readonly Dictionary<string, HttpMessageHandler> transports = [];
 
     /// <summary>
     /// Whoever holds this deletes the directory when it is done. A restart
@@ -44,6 +55,17 @@ public sealed class FabApplication : WebApplicationFactory<Program>
     }
 
     public string DataDirectory { get; }
+
+    /// <summary>
+    /// Puts a fake at one of ADR 0041's transports. Has to be called before the
+    /// first client is created, which is when the host is built.
+    /// </summary>
+    public FabApplication Answering(string transport, HttpMessageHandler handler)
+    {
+        transports[transport] = handler;
+
+        return this;
+    }
 
     /// <summary>
     /// A second start against the same <c>/data</c>, the way an image is
@@ -109,6 +131,17 @@ public sealed class FabApplication : WebApplicationFactory<Program>
         {
             builder.UseSetting(key, value);
         }
+
+        builder.ConfigureTestServices(services =>
+        {
+            foreach (var (transport, handler) in transports)
+            {
+                // The primary handler, so everything the application layers on
+                // top of it — the agent, the redirect rule, the SDK's own
+                // middleware — is still in the chain being exercised.
+                services.AddHttpClient(transport).ConfigurePrimaryHttpMessageHandler(() => handler);
+            }
+        });
     }
 
     protected override void Dispose(bool disposing)

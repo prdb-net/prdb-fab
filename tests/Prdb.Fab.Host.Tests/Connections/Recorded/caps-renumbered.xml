@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server title="Recorded"/>
+  <limits max="100" default="100"/>
+  <registration available="no" open="no"/>
+  <searching>
+    <search available="yes"/>
+  </searching>
+  <categories>
+    <category id="2000" name="Movies">
+      <subcat id="2045" name="HD"/>
+    </category>
+    <category id="7000" name="XXX">
+      <subcat id="7010" name="DVD"/>
+      <subcat id="7050" name="x264"/>
+      <subcat id="7060" name="UHD"/>
+      <subcat id="7070" name="WEB-DL"/>
+    </category>
+  </categories>
+</caps>

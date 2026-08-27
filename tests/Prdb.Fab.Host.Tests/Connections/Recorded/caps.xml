@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server version="0.1" title="Recorded" strapline="" email="" url="" image=""/>
+  <limits max="100" default="100"/>
+  <registration available="no" open="no"/>
+  <searching>
+    <search available="yes" supportedParams="q"/>
+    <tv-search available="yes" supportedParams="q,rid,season,ep"/>
+    <movie-search available="yes" supportedParams="q,imdbid"/>
+    <audio-search available="no" supportedParams=""/>
+  </searching>
+  <categories>
+    <category id="2000" name="Movies">
+      <subcat id="2040" name="HD"/>
+    </category>
+    <category id="5000" name="TV">
+      <subcat id="5040" name="HD"/>
+    </category>
+    <category id="6000" name="XXX">
+      <subcat id="6010" name="DVD"/>
+      <subcat id="6040" name="x264"/>
+      <subcat id="6045" name="UHD"/>
+      <subcat id="6090" name="WEB-DL"/>
+    </category>
+  </categories>
+</caps>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:newznab="http://www.newznab.com/DTD/2010/feeds/attributes/">
+  <channel>
+    <title>Recorded</title>
+    <description>Recorded</description>
+    <link>https://indexer.invalid/</link>
+    <newznab:response offset="0" total="1"/>
+    <item>
+      <title>Some.Release.Name.1080p.WEB-DL</title>
+      <guid isPermaLink="true">https://indexer.invalid/details/0000000000000000</guid>
+      <link>https://indexer.invalid/getnzb/0000000000000000</link>
+      <comments>https://indexer.invalid/details/0000000000000000#comments</comments>
+      <pubDate>Mon, 24 Aug 2026 09:12:00 +0000</pubDate>
+      <category>XXX &gt; x264</category>
+      <description>Some.Release.Name.1080p.WEB-DL</description>
+      <enclosure url="https://indexer.invalid/getnzb/0000000000000000" length="2147483648" type="application/x-nzb"/>
+      <newznab:attr name="category" value="6000"/>
+      <newznab:attr name="category" value="6040"/>
+      <newznab:attr name="size" value="2147483648"/>
+    </item>
+  </channel>
+</rss>

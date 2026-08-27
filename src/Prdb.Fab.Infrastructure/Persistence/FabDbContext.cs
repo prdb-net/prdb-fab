@@ -25,6 +25,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<SessionRow> Sessions => Set<SessionRow>();
 
     /// <summary>
+    /// ADR 0033's exported half of an indexer. See <see cref="IndexerRow"/> for
+    /// where the other half goes.
+    /// </summary>
+    public DbSet<IndexerRow> Indexers => Set<IndexerRow>();
+
+    /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
     /// and the provider refuses a <see cref="DateTimeOffset"/> on either side of
     /// a comparison or in an ORDER BY — which is exactly what the schedule does
@@ -119,6 +125,22 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             // ADR 0010: expiry is a property of the row, and sweeping the dead
             // ones is one delete over this.
             session.HasIndex(row => row.ExpiresAt);
+        });
+
+        builder.Entity<IndexerRow>(indexer =>
+        {
+            indexer.ToTable("indexer");
+            indexer.HasKey(row => row.Id);
+
+            indexer.Property(row => row.Name).IsRequired();
+            indexer.Property(row => row.Url).IsRequired();
+            indexer.Property(row => row.ApiKey).IsRequired();
+            indexer.Property(row => row.LastVerdict).HasConversion<string>();
+
+            // The same indexer added twice is a mistake rather than a
+            // configuration: two rows would walk it twice, spend ADR 0024's
+            // budget twice, and give the same package two release identities.
+            indexer.HasIndex(row => row.Url).IsUnique();
         });
 
         builder.Entity<SkeletonItemRow>(item =>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+  <server title="Recorded"/>
+  <limits max="100" default="100"/>
+  <searching>
+    <search available="yes"/>
+  </searching>
+  <categories>
+    <category id="5000" name="TV">
+      <subcat id="5040" name="HD"/>
+    </category>
+  </categories>
+</caps>
