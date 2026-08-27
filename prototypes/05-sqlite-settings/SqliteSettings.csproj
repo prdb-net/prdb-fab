@@ -6,6 +6,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>SqliteSettings</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <!--
+      A prototype pins its own versions, because the whole point of the numbers
+      in the README is that they were measured against exactly these. Merging it
+      here put it under the repository's central package versions, which forbids
+      a version on a PackageReference and broke the `dotnet run` this project's
+      own README asks for. Opting out restores what it did on its own branch.
+    -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
