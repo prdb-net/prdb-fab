@@ -22,6 +22,7 @@ namespace Prdb.Fab.Infrastructure.Access;
 public sealed class PasswordGate(
     FabDbContext context,
     Installations installations,
+    Sessions sessions,
     ILogger<PasswordGate> logger)
 {
     private static readonly PasswordHasher<InstallationRow> Hasher = new();
@@ -67,6 +68,54 @@ public sealed class PasswordGate(
         logger.LogInformation("The password has been set. Onboarding continues at {Step}.", installation.OnboardingStep);
 
         return (SetPasswordOutcome.Set, null);
+    }
+
+    /// <summary>
+    /// ADR 0010's password change: it requires the current password and
+    /// <em>ends every other session</em>, which is the only lever someone has
+    /// who suspects a session they did not open.
+    /// </summary>
+    /// <param name="currentSessionId">
+    /// The session making the request, which is the one that survives. Signing
+    /// the user out of the browser they are changing it in would make the lever
+    /// cost more than the thing it is pulled against.
+    /// </param>
+    /// <remarks>
+    /// The current password is asked for rather than taken as proven by the
+    /// session: a session left open on a borrowed machine must not be a way to
+    /// lock its owner out of their own installation.
+    /// </remarks>
+    public async Task<(ChangePasswordOutcome Outcome, string? Refusal, int SessionsEnded)> ChangeAsync(
+        string? current,
+        string? next,
+        long currentSessionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (await VerifyAsync(current, cancellationToken) is not true)
+        {
+            return (ChangePasswordOutcome.WrongPassword, null, 0);
+        }
+
+        var refusal = PasswordRule.Refuse(next);
+        if (refusal is not null)
+        {
+            return (ChangePasswordOutcome.Refused, refusal, 0);
+        }
+
+        var installation = await context.Installation.SingleAsync(cancellationToken);
+
+        installation.PasswordHash = Hasher.HashPassword(installation, next!);
+
+        context.Installation.Update(installation);
+        await context.SaveChangesAsync(cancellationToken);
+
+        var ended = await sessions.RevokeAllExceptAsync(currentSessionId, cancellationToken);
+
+        logger.LogInformation(
+            "The password has been changed, and {Count} other session(s) ended with it.",
+            ended);
+
+        return (ChangePasswordOutcome.Changed, null, ended);
     }
 
     /// <summary>

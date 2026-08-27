@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.Connections;
@@ -117,6 +118,33 @@ public static class ConnectionEndpoints
                 save.Outcome,
                 IndexerConnection.Sentence(save.Outcome, save.Said),
                 save.Categories));
+        });
+
+        // ADR 0020: every indexer has its own route, because ADR 0018's Brakes
+        // point at one row rather than at a list. An id that is not there is
+        // the request being wrong rather than a verdict, so it is a 404.
+        group.MapPost("/indexers/{id:guid}", async Task<Results<Ok<IndexerConnectionVerdict>, NotFound>> (
+            Guid id,
+            IndexerConnectionRequest request,
+            Indexers indexers,
+            CancellationToken cancellationToken) =>
+        {
+            var save = await indexers.EditAsync(
+                id,
+                request.Name,
+                request.Url,
+                request.ApiKey,
+                cancellationToken);
+
+            // Declared as the two it answers with, so the document the frontend
+            // is built from carries the verdict's shape rather than an untyped
+            // 200 (ADR 0040).
+            return save is null
+                ? TypedResults.NotFound()
+                : TypedResults.Ok(new IndexerConnectionVerdict(
+                    save.Outcome,
+                    IndexerConnection.Sentence(save.Outcome, save.Said),
+                    save.Categories));
         });
 
         group.MapPost("/library-root", async (

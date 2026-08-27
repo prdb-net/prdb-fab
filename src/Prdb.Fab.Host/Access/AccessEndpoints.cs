@@ -65,6 +65,29 @@ public static class AccessEndpoints
             return TypedResults.Ok(new SetPasswordVerdict(outcome, Refusal: null));
         }).AllowAnonymous();
 
+        // ADR 0020's Account route, and ADR 0010's only lever against a session
+        // somebody did not open. Behind the password like everything else, and
+        // it asks for it again anyway: the session is not the proof here.
+        group.MapPost("/change-password", async (
+            ChangePasswordRequest request,
+            PasswordGate passwords,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            // Present by definition — the fallback policy let this request in —
+            // and read from the claim rather than from the cookie, so that what
+            // survives is the session this request was authenticated by.
+            var sessionId = http.User.SessionId()!.Value;
+
+            var (outcome, refusal, ended) = await passwords.ChangeAsync(
+                request.Current,
+                request.Next,
+                sessionId,
+                cancellationToken);
+
+            return TypedResults.Ok(new ChangePasswordVerdict(outcome, refusal, ended));
+        });
+
         group.MapPost("/sign-in", async (
             SignInRequest request,
             PasswordGate passwords,
@@ -132,6 +155,18 @@ public sealed record SetPasswordRequest(string? Password);
 
 /// <summary>ADR 0040: a verdict is a success with a typed body saying what happened.</summary>
 public sealed record SetPasswordVerdict(SetPasswordOutcome Outcome, string? Refusal);
+
+public sealed record ChangePasswordRequest(string? Current, string? Next);
+
+/// <param name="SessionsEnded">
+/// How many other sessions the change ended. Zero is the ordinary answer and
+/// worth saying out loud, because it is the one that tells the user nothing
+/// else was signed in.
+/// </param>
+public sealed record ChangePasswordVerdict(
+    ChangePasswordOutcome Outcome,
+    string? Refusal,
+    int SessionsEnded);
 
 public sealed record SignInRequest(string? Password);
 

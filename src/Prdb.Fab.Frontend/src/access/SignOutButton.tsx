@@ -8,8 +8,8 @@ import styles from './Access.module.css'
  * ADR 0010: signing out revokes the row, so the cookie it backed is worthless
  * from that moment rather than at its expiry.
  *
- * It sits in a corner because there is no chrome to put it in yet. ADR 0020
- * gives it a home — the Account route — and ticket 10 moves it there.
+ * It lives on ADR 0020's Account route, beside the password it is the other
+ * half of: what a session is, and how to end one.
  */
 export function SignOutButton() {
   const queries = useQueryClient()

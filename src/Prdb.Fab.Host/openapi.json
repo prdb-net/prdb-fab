@@ -73,6 +73,35 @@
         }
       }
     },
+    "/api/access/change-password": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePasswordVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/access/sign-in": {
       "post": {
         "tags": [
@@ -327,6 +356,49 @@
         }
       }
     },
+    "/api/connections/indexers/{id}": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexerConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexerConnectionVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/connections/library-root": {
       "post": {
         "tags": [
@@ -523,6 +595,61 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ChangePasswordOutcome": {
+        "enum": [
+          "Changed",
+          "WrongPassword",
+          "Refused"
+        ]
+      },
+      "ChangePasswordRequest": {
+        "required": [
+          "current",
+          "next"
+        ],
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "next": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ChangePasswordVerdict": {
+        "required": [
+          "outcome",
+          "refusal",
+          "sessionsEnded"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ChangePasswordOutcome"
+          },
+          "refusal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sessionsEnded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

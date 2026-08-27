@@ -75,10 +75,8 @@
   color: var(--text-quiet);
   cursor: pointer;
   font: inherit;
+  margin-top: var(--gap);
   padding: 0.3rem 0.6rem;
-  position: fixed;
-  right: 1rem;
-  top: 1rem;
 }
 
 .signOut:hover:not(:disabled) {

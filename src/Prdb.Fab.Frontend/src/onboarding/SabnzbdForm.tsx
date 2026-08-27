@@ -21,15 +21,26 @@ import styles from './Onboarding.module.css'
  */
 export function SabnzbdForm({
   submitLabel = 'Check and continue',
+  stored,
   onSaved,
 }: {
   submitLabel?: string
+  /**
+   * What is configured, when something is. ADR 0020: the key is not part of it
+   * — keys are write-only, and an empty field means the one that is there.
+   */
+  stored?: {
+    url: string | null
+    category: string | null
+    downloadDirectory: string | null
+    keyIsStored: boolean
+  }
   onSaved?: () => void
 }) {
-  const [url, setUrl] = useState('')
+  const [url, setUrl] = useState(stored?.url ?? '')
   const [apiKey, setApiKey] = useState('')
   const [category, setCategory] = useState('')
-  const [downloadDirectory, setDownloadDirectory] = useState('')
+  const [downloadDirectory, setDownloadDirectory] = useState(stored?.downloadDirectory ?? '')
   const [listing, setListing] = useState<SabnzbdCategoriesVerdict | null>(null)
   const [verdict, setVerdict] = useState<SabnzbdConnectionVerdict | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
@@ -45,7 +56,13 @@ export function SabnzbdForm({
     mutationFn: () => readSabnzbdCategories(url, apiKey),
     onSuccess: (answer) => {
       setListing(answer)
-      setCategory(answer.categories[0]?.name ?? '')
+
+      // The category that is configured, when SABnzbd still has it. A category
+      // it has stopped having is not silently kept: ADR 0020 has this chosen
+      // from SABnzbd's own list, and the list is what just came back.
+      const held = answer.categories.find((candidate) => candidate.name === stored?.category)
+
+      setCategory(held?.name ?? answer.categories[0]?.name ?? '')
     },
     onError: (error) => setFailure(String(error)),
   })
@@ -115,6 +132,13 @@ export function SabnzbdForm({
         }}
       />
       <p className={styles.hint}>
+        {stored?.keyIsStored ? (
+          <>
+            A key is stored. Leave this empty to keep it &mdash; it is kept even
+            when the address changes, since SABnzbd moving to another port is
+            not a new key.{' '}
+          </>
+        ) : null}
         The full API key from Config &rarr; General, not the NZB key. The NZB key
         can submit a download and cannot follow one.
       </p>
@@ -179,7 +203,7 @@ export function SabnzbdForm({
         disabled={
           busy ||
           url.trim().length === 0 ||
-          apiKey.trim().length === 0 ||
+          (apiKey.trim().length === 0 && stored?.keyIsStored !== true) ||
           (answered && (category.length === 0 || downloadDirectory.trim().length === 0))
         }
       >

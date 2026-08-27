@@ -33,3 +33,7 @@ body {
 button {
   font: inherit;
 }
+
+a {
+  color: var(--accent);
+}
