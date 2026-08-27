@@ -38,6 +38,11 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<ArtworkCache>();
         services.AddScoped<ArtworkEviction>();
 
+        // What the browse surfaces read. Registered here because what it reads
+        // is what the routines above write, and there is nothing else to it —
+        // it holds no state and reaches nothing.
+        services.AddScoped<CatalogueBrowse>();
+
         services.AddScoped<ActorFeed>();
         services.AddScoped<VideoImageFeed>();
         services.AddScoped<WantedVideoFeed>();

@@ -219,6 +219,13 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             // error and no Gap.
             video.Property(row => row.TitleSearchedBackwards).HasDefaultValue(false);
 
+            // What's New's order, in both directions, so that the landing page
+            // takes a page of it out of an index rather than by sorting the
+            // catalogue. The id breaks the tie, because two videos created in
+            // the same second must not swap places between two requests for
+            // the same page.
+            video.HasIndex(row => new { row.CreatedAtUtc, row.Id });
+
             video.HasOne(row => row.Site)
                 .WithMany()
                 .HasForeignKey(row => row.SiteId)

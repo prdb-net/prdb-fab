@@ -74,6 +74,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
         video.DurationSpreadMs = detail.DurationSpreadMs;
         video.DurationFileCount = detail.DurationFileCount;
 
+        video.CreatedAtUtc = detail.CreatedAtUtc ?? default;
         video.UpdatedAtUtc = detail.UpdatedAtUtc ?? default;
         video.LastReadAt = time.GetUtcNow();
 

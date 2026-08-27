@@ -63,6 +63,28 @@ public sealed class CatalogueVideoRow
 
     public int? DurationFileCount { get; set; }
 
+    /// <summary>
+    /// When prdb created the row, in prdb's own spelling. What What's New is
+    /// ordered by, in both directions.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// It is what <c>GET /videos</c> sorts by and what <c>CreatedAfter</c>
+    /// walks, so the surface that calls itself What's New is honest only if it
+    /// shows the same order — and nothing else here can stand in for it. The
+    /// surrogate key says when <em>this installation</em> first saw the video,
+    /// which the backfill reading backwards makes exactly wrong: an older video
+    /// discovered later would sit at the top. The release date is when the scene
+    /// came out, which is a different fact and one the card shows beside the
+    /// title.
+    /// </para>
+    /// <para>
+    /// It costs no request. <c>VideoDetailDto</c> carries it, and every
+    /// catalogue row is written from one (ADR 0013).
+    /// </para>
+    /// </remarks>
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
     /// <summary>prdb's stamp, not this tool's. What a correction moves.</summary>
     public DateTimeOffset UpdatedAtUtc { get; set; }
 

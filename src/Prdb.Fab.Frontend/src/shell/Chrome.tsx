@@ -6,8 +6,8 @@ import { accessStateKey } from '../access/state.ts'
 import styles from './Chrome.module.css'
 
 /**
- * The one piece of chrome there is: a way to the settings from wherever the
- * user is.
+ * The way between the surfaces there are, and a way to the settings from
+ * wherever the user is.
  *
  * It appears only once setting up is finished. While the wizard is running it
  * is the whole page — ADR 0010 has each step commit and the path not come back,
@@ -26,6 +26,10 @@ export function Chrome() {
       <Link className={styles.name} to="/">
         prdb-fab
       </Link>
+      {/* Two surfaces are what this release has, and the bar names the one that
+          exists. The wanted list joins it when there is one to link to — a link
+          to a page that is not built is worse than no link. */}
+      <Link to="/">What&rsquo;s new</Link>
       <Link to="/settings">Settings</Link>
     </nav>
   )

@@ -170,6 +170,8 @@ app.MapConnections();
 
 app.MapArtwork();
 
+app.MapCatalogue();
+
 app.MapSkeleton();
 
 // ADR 0036: routing happens in the browser, so unknown paths return index.html
