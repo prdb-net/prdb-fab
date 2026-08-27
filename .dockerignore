@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/node_modules/
+src/Prdb.Fab.Host/wwwroot/
+.git/
+.github/
+.scratch/
+docs/
+tests/
+*.md

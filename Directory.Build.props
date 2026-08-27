@@ -1,0 +1,36 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <!--
+      ADR 0035: nullable reference types and warnings as errors are how the write
+      paths are kept honest, not a style preference.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!--
+    ADR 0044: the running tool knows its own version and says it in the first log
+    line, because ADR 0043 made the log a file people send to strangers. The
+    release workflow overrides this from the tag; a local build carries the
+    number below and an informational suffix saying it was not released.
+  -->
+  <PropertyGroup>
+    <VersionPrefix>0.1.0</VersionPrefix>
+    <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(VersionPrefix)+local</InformationalVersion>
+  </PropertyGroup>
+
+  <!--
+    ADR 0042 chose xUnit v3, which runs on the Microsoft Testing Platform rather
+    than on VSTest. The .NET 10 SDK refuses the old path outright, so this is
+    what keeps `dotnet test` the verification command ADR 0004 named.
+  -->
+  <PropertyGroup>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+</Project>

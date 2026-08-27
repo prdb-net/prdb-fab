@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ADR 0035: this project holds the rules and reaches nothing. It references no
+    package, no database, no HTTP client and no filesystem — what it needs, it
+    declares as an interface for Prdb.Fab.Infrastructure to implement.
+
+    That emptiness is load-bearing rather than tidy. ADR 0043 turned it into an
+    argument: a rule here cannot log, so a rule that refuses has to *return* its
+    reason, and a returned reason is a value a test can read and the UI can show.
+    Adding a reference here — Microsoft.Extensions.Logging.Abstractions above all
+    — is the comfortable way around that, so the architecture tests in
+    Prdb.Fab.Core.Tests fail the build when one appears.
+  -->
+
+</Project>

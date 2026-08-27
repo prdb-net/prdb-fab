@@ -1,0 +1,94 @@
+.screen {
+  margin: 0 auto;
+  max-width: 52rem;
+  padding: 2rem 1rem 4rem;
+}
+
+.lede {
+  color: var(--text-quiet);
+  margin-bottom: 2rem;
+}
+
+.section {
+  margin-bottom: 2.5rem;
+}
+
+.heading {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  margin-bottom: var(--gap);
+}
+
+.row {
+  display: flex;
+  gap: var(--gap);
+}
+
+.field {
+  flex: 1;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+}
+
+.button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.table th {
+  color: var(--text-quiet);
+  font-weight: 500;
+}
+
+.quiet {
+  color: var(--text-quiet);
+}
+
+.swept {
+  color: var(--ok);
+}
+
+.pending {
+  color: var(--text-quiet);
+}
+
+.refusal {
+  color: var(--bad);
+  margin-top: var(--gap);
+}
+
+.note {
+  color: var(--text-quiet);
+  font-size: 0.9em;
+  margin-top: var(--gap);
+}

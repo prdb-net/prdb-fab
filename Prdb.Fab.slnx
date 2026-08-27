@@ -1,0 +1,27 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="AGENTS.md" />
+    <File Path="CHANGELOG.md" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="CONTEXT.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="Dockerfile" />
+    <File Path="README.md" />
+    <File Path="VISION.md" />
+    <File Path="docker-compose.yml" />
+    <File Path="docker/entrypoint.sh" />
+    <File Path="docker/smoke-test.sh" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Prdb.Fab.Core/Prdb.Fab.Core.csproj" />
+    <Project Path="src/Prdb.Fab.Infrastructure/Prdb.Fab.Infrastructure.csproj" />
+    <Project Path="src/Prdb.Fab.Host/Prdb.Fab.Host.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Prdb.Fab.Core.Tests/Prdb.Fab.Core.Tests.csproj" />
+    <Project Path="tests/Prdb.Fab.Infrastructure.Tests/Prdb.Fab.Infrastructure.Tests.csproj" />
+    <Project Path="tests/Prdb.Fab.Host.Tests/Prdb.Fab.Host.Tests.csproj" />
+  </Folder>
+</Solution>
