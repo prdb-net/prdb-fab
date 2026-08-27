@@ -54,6 +54,15 @@ public sealed class FabApplication : WebApplicationFactory<Program>
         this.settings = settings ?? new Dictionary<string, string>();
     }
 
+    /// <summary>
+    /// An application pointed at a data directory that already exists — the way
+    /// an image is started against a <c>/data</c> an older tag has been
+    /// through. Whoever calls this hands the directory over: disposing the
+    /// application deletes it.
+    /// </summary>
+    public static FabApplication On(string dataDirectory) =>
+        new(dataDirectory, ownsDataDirectory: true, settings: null);
+
     public string DataDirectory { get; }
 
     /// <summary>
