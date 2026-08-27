@@ -19,10 +19,15 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
-Nothing released yet. What the image does today is let you set a password,
-configure the tool, and correct what you configured. The loop does not run:
+Nothing since 0.1.0.
+
+## [0.1.0] - 2026-08-27
+
+The first release, and deliberately a small one: you can set a password,
+configure the tool, and correct what you configured. The loop does not run —
 nothing is synced, searched, downloaded, identified or filed, and a finished
-setup is a tool that is ready and idle.
+setup is a tool that is ready and idle. What this release is for is the setup
+path and the connections, tried against the real services on real hardware.
 
 New, and the whole of what a user sees:
 
