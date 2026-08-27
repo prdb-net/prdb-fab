@@ -7,8 +7,8 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public static class SyncServiceCollectionExtensions
 {
     /// <summary>
-    /// ADR 0013's sync: the five change feeds, the drain that bootstraps the
-    /// one of them worth having whole, and the two things they share.
+    /// ADR 0013's sync: the five change feeds, What's New in both directions,
+    /// the two bootstraps that retire, and what they share.
     /// </summary>
     /// <remarks>
     /// Registered apart from <c>AddFabScheduling</c> rather than inside it,
@@ -28,6 +28,11 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<FavouriteSiteFeed>();
         services.AddScoped<FavouriteActorFeed>();
 
+        // The one entity with no change feed, and the write every route into
+        // the catalogue goes through.
+        services.AddScoped<VideoDetails>();
+        services.AddScoped<WhatsNew>();
+
         // The concrete type as well as the interface, so that a routine can be
         // asked for by name in a test without going through the whole set. The
         // schedule only ever sees IRoutine.
@@ -37,6 +42,8 @@ public static class SyncServiceCollectionExtensions
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);
         Routine<FavouriteActorFeedRoutine>(services);
+        Routine<WhatsNewRoutine>(services);
+        Routine<WhatsNewBackfillRoutine>(services);
 
         return services;
     }
