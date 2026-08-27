@@ -21,6 +21,7 @@ public static class SchedulingServiceCollectionExtensions
     public static IServiceCollection AddFabScheduling(this IServiceCollection services)
     {
         services.AddScoped<IRoutineStore, RoutineStore>();
+        services.AddScoped<RoutineRunner>();
         services.AddScoped<RoutineRegistrar>();
         services.AddScoped<RunLog>();
 
@@ -42,8 +43,13 @@ public static class SchedulingServiceCollectionExtensions
     {
         await using var scope = services.CreateAsyncScope();
 
-        await scope.ServiceProvider
-            .GetRequiredService<RoutineRegistrar>()
-            .EnsureRowsExistAsync(cancellationToken);
+        var registrar = scope.ServiceProvider.GetRequiredService<RoutineRegistrar>();
+
+        await registrar.EnsureRowsExistAsync(cancellationToken);
+
+        // ADR 0014: and then nothing fires all at once. This is a restart as
+        // much as a first start — everything in the table has been overdue for
+        // as long as the container was down.
+        await registrar.SpreadOverdueAsync(cancellationToken);
     }
 }

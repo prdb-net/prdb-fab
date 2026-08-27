@@ -105,6 +105,30 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
+    /// ADR 0041, and what ADR 0014 rests on: the governor is a handler on the
+    /// prdb transport, so it only governs requests made through a client built
+    /// on that transport. One place builds one, and a second one built anywhere
+    /// else would be a bypass that spends the rate limit without ever appearing
+    /// to.
+    /// </summary>
+    [Fact]
+    public void Only_the_gateway_builds_a_prdb_client()
+    {
+        foreach (var file in SourceFilesUnder("src"))
+        {
+            if (file.Name == "PrdbGateway.cs")
+            {
+                continue;
+            }
+
+            Assert.False(
+                PrdbClient().IsMatch(CodeIn(file)),
+                $"{file.Name} builds its own prdb client, which is a request the governor "
+                + "never sees (ADR 0014, ADR 0041). Go through PrdbGateway.");
+        }
+    }
+
+    /// <summary>
     /// A file with its comments taken out.
     /// </summary>
     /// <remarks>
@@ -129,6 +153,12 @@ public sealed partial class ArchitectureTests
 
     [GeneratedRegex(@"\b(DateTime|DateTimeOffset)\.(Now|UtcNow|Today)\b")]
     private static partial Regex ClockCall();
+
+    // Anything that builds a client for prdb: the SDK's factory, and the client
+    // type itself. Matched on the name so that a using directive is not needed
+    // to be caught.
+    [GeneratedRegex(@"\bPrdbClient\w*\b")]
+    private static partial Regex PrdbClient();
 
     // A logging call whose template interpolates something whose name ends in
     // Url or Uri. {Host} and {Transport} are what ADR 0043 asks for instead.

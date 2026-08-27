@@ -49,14 +49,20 @@ public static class FabTransports
     /// </summary>
     public static IServiceCollection AddFabTransports(this IServiceCollection services)
     {
-        Register(services, Prdb, PrdbTimeout);
+        Register(services, Prdb, PrdbTimeout)
+            // ADR 0041 puts ADR 0014's governor here, on the transport, rather
+            // than at each call site. Added last, so it is the outermost of the
+            // handlers and a request it turns away is turned away before
+            // anything else has touched it.
+            .AddHttpMessageHandler<PrdbGovernorHandler>();
+
         Register(services, Indexers, IndexerTimeout);
         Register(services, Sabnzbd, SabnzbdTimeout);
 
         return services;
     }
 
-    private static void Register(IServiceCollection services, string name, TimeSpan timeout) =>
+    private static IHttpClientBuilder Register(IServiceCollection services, string name, TimeSpan timeout) =>
         services.AddHttpClient(name, client =>
             {
                 client.Timeout = timeout;

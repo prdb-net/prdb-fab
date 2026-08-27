@@ -11,6 +11,13 @@ public static class ConnectionsServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddFabConnections(this IServiceCollection services)
     {
+        // ADR 0014's governor is one for the process: what it holds is one
+        // account's hourly window, and every routine spends from the same one.
+        // Registered before the transports, because the handler that asks it is
+        // part of the prdb transport's chain.
+        services.AddSingleton<PrdbGovernor>();
+        services.AddTransient<PrdbGovernorHandler>();
+
         services.AddFabTransports();
 
         services.AddScoped<PrdbGateway>();
