@@ -41,8 +41,6 @@ public sealed class UpgradeTests
                 .MigrateAsync(TheFirstRelease, TestContext.Current.CancellationToken);
         }
 
-        SqliteConnection.ClearAllPools();
-
         await using var application = FabApplication.On(directory);
 
         using var client = application.CreateClient();

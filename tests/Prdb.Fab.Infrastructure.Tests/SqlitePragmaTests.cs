@@ -46,10 +46,11 @@ public sealed class SqlitePragmaTests
     public async Task A_connection_to_an_untouched_file_carries_sqlites_defaults()
     {
         var file = Path.Combine(Path.GetTempPath(), $"prdb-fab-{Guid.NewGuid():n}.db");
+        var reachedBy = $"Data Source={file}";
 
         try
         {
-            await using var connection = new SqliteConnection($"Data Source={file}");
+            await using var connection = new SqliteConnection(reachedBy);
             await connection.OpenAsync(TestContext.Current.CancellationToken);
 
             Assert.Equal("delete", await ScalarAsync(connection, "PRAGMA journal_mode;"));
@@ -58,7 +59,9 @@ public sealed class SqlitePragmaTests
         }
         finally
         {
-            SqliteConnection.ClearAllPools();
+            // This file's pool, not the process's. The test below is about what
+            // a pool hands back, and these two run at the same time.
+            SqliteConnection.ClearPool(new SqliteConnection(reachedBy));
             File.Delete(file);
         }
     }
