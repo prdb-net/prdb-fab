@@ -1,0 +1,704 @@
+<!doctype html>
+<!--
+  PROTOTYPE — throwaway. Ticket 11, "What the library and release views look like".
+
+  Three variants of the library view and the release view, switchable via
+  ?variant=A|B|C and ?view=library|release, plus a floating bar at the bottom.
+  Nothing here is production code: no build step, no framework, no data layer,
+  fake data inline. It exists to be reacted to and then thrown away.
+
+  Placeholder data only — invented sites, invented actors, invented titles.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE — library &amp; release views</title>
+<style>
+:root{
+  --bg:#0e1116; --bg2:#151a21; --bg3:#1c232c; --line:#273140;
+  --fg:#e6ebf2; --dim:#8b97a8; --dimmer:#5d6878;
+  --acc:#4da3ff; --ok:#43c08a; --warn:#e0a33c; --bad:#e0655f;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding-bottom:72px;
+}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+h1,h2,h3{margin:0;font-weight:600}
+
+/* ---------- app chrome (same in every variant, so density is judged in context) ---------- */
+.chrome{
+  display:flex;align-items:center;gap:22px;
+  padding:0 20px;height:52px;
+  background:var(--bg2);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:20;
+}
+.brand{font-weight:700;letter-spacing:.02em}
+.brand span{color:var(--acc)}
+.nav{display:flex;gap:18px;font-size:13px;color:var(--dim)}
+.nav .on{color:var(--fg);font-weight:600}
+.chrome .right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 9px;border-radius:99px;font-size:12px;
+  background:var(--bg3);border:1px solid var(--line);color:var(--dim);
+}
+.chip.alert{border-color:#5a3f2a;background:#2a2015;color:var(--warn)}
+.chip b{color:var(--fg)}
+
+/* ---------- shared bits ---------- */
+.art{
+  background:linear-gradient(140deg,var(--h1),var(--h2));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;letter-spacing:.06em;
+  text-shadow:0 1px 4px rgba(0,0,0,.5);
+  flex:none;position:relative;overflow:hidden;
+}
+.art::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent 55%)}
+.q{
+  font:600 11px/1 var(--mono);padding:3px 5px;border-radius:3px;
+  background:#0f1a26;border:1px solid #2b4356;color:#8fc6f5;
+}
+.q.top{background:#13261d;border-color:#2c5340;color:#7bd7a8}
+.pill{font-size:11px;padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.pill.exact{color:#7bd7a8;border-color:#2c5340}
+.pill.strong{color:#8fc6f5;border-color:#2b4356}
+.pill.amb{color:var(--warn);border-color:#5a3f2a}
+.pill.site{color:#c79ae0;border-color:#4a3358}
+.muted{color:var(--dim)}
+.dimmer{color:var(--dimmer)}
+.mono{font-family:var(--mono)}
+.btn{
+  padding:6px 12px;border-radius:6px;border:1px solid var(--line);
+  background:var(--bg3);font-size:13px;
+}
+.btn:hover{border-color:#3a4757}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#06131f;font-weight:600}
+.btn.sm{padding:3px 8px;font-size:12px}
+.banner{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px;border-radius:8px;margin-bottom:16px;
+  background:#2a2015;border:1px solid #5a3f2a;color:#f0cf9a;font-size:13px;
+}
+.banner.stop{background:#2a1817;border-color:#5c3130;color:#f0b0ac}
+.banner .btn{margin-left:auto;background:#00000030}
+.wrap{padding:20px 24px;max-width:1500px;margin:0 auto}
+.head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+.head h2{font-size:19px}
+.head .count{color:var(--dim);font-size:13px}
+input[type=search],select{
+  background:var(--bg3);border:1px solid var(--line);color:var(--fg);
+  border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;
+}
+
+/* ---------- LIBRARY A — poster wall ---------- */
+.la{display:grid;grid-template-columns:210px 1fr;gap:24px}
+.la .facets h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dimmer);margin:18px 0 8px}
+.la .facets h3:first-child{margin-top:0}
+.la .facet{display:flex;justify-content:space-between;padding:3px 0;font-size:13px;color:var(--dim);cursor:pointer}
+.la .facet:hover{color:var(--fg)}
+.la .facet.on{color:var(--acc);font-weight:600}
+.la .qrow{display:flex;flex-wrap:wrap;gap:6px}
+.la .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:18px}
+.la .card{cursor:pointer}
+.la .art{aspect-ratio:16/10;border-radius:8px;font-size:15px}
+.la .card:hover .art{outline:2px solid var(--acc)}
+.la .badges{position:absolute;bottom:6px;left:6px;display:flex;gap:4px;z-index:2}
+.la .t{margin-top:8px;font-size:13px;font-weight:600;line-height:1.3}
+.la .s{font-size:12px;color:var(--dim);margin-top:2px}
+.la .hoverwrap:hover .actors{opacity:1}
+.la .actors{
+  position:absolute;inset:0;z-index:3;opacity:0;transition:opacity .12s;
+  background:rgba(6,10,15,.82);padding:10px;display:flex;flex-direction:column;
+  justify-content:flex-end;gap:4px;font-size:12px;
+}
+
+/* ---------- LIBRARY B — one table, queue pinned on top ---------- */
+.lb table{width:100%;border-collapse:collapse;font-size:13px}
+.lb th{
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--dimmer);font-weight:600;padding:6px 10px;border-bottom:1px solid var(--line);
+  cursor:pointer;white-space:nowrap;
+}
+.lb th.on{color:var(--acc)}
+.lb td{padding:7px 10px;border-bottom:1px solid #1b222b;vertical-align:middle}
+.lb tr.grp td{
+  background:#20180f;color:var(--warn);font-size:11px;text-transform:uppercase;
+  letter-spacing:.07em;font-weight:600;border-bottom:1px solid #5a3f2a;
+}
+.lb tr.pend td{background:#171310}
+.lb tr.pend .name{color:var(--warn)}
+.lb tr:hover td{background:#1a212a}
+.lb .art{width:56px;height:34px;border-radius:4px;font-size:10px}
+.lb .name{font-weight:600}
+.lb .sub{font-size:11.5px;color:var(--dim)}
+.lb .filters{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.lb .qs{display:flex;gap:4px}
+.lb td.num{text-align:right;font-family:var(--mono);font-size:12px;color:var(--dim)}
+.lb .expand{font-size:11px;color:var(--dim);padding-left:76px}
+.lb .frow td{background:#12171e;font-size:12px}
+
+/* ---------- LIBRARY C — lanes by site, queue as a peer lane ---------- */
+.lc .lane{margin-bottom:26px}
+.lc .lanehead{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.lc .lanehead h3{font-size:15px}
+.lc .lanehead .n{font-size:12px;color:var(--dimmer)}
+.lc .lanehead .net{font-size:11px;color:var(--dimmer)}
+.lc .strip{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}
+.lc .card{width:186px;flex:none;cursor:pointer}
+.lc .art{aspect-ratio:16/10;border-radius:8px;font-size:15px}
+.lc .t{margin-top:7px;font-size:13px;line-height:1.3}
+.lc .card.open .t{color:var(--acc)}
+.lc .pendlane .lanehead h3{color:var(--warn)}
+.lc .pendcard .art{background:#241d13;border:1px dashed #5a3f2a;color:var(--warn)}
+.lc .pendcard .art::after{display:none}
+.lc .pendcard .t{word-break:break-all;line-height:1.25}
+.lc .exp{
+  margin-top:12px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:8px;padding:14px;
+}
+.lc .exp .frow{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #1b222b;font-size:12.5px}
+.lc .exp .frow:first-of-type{border-top:0}
+.lc .achips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.lc .achip{font-size:12px;padding:2px 9px;border-radius:99px;background:var(--bg3);border:1px solid var(--line);color:var(--dim);cursor:pointer}
+.lc .achip:hover{color:var(--acc);border-color:var(--acc)}
+.lc .pills{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.lc .fp{font-size:12px;padding:3px 10px;border-radius:99px;background:#12283d;border:1px solid #2b4356;color:#8fc6f5}
+
+/* ---------- RELEASE A — ranked cards ---------- */
+.ra .rcard{
+  display:grid;grid-template-columns:34px 1fr auto;gap:14px;align-items:center;
+  padding:13px 16px;border:1px solid var(--line);border-radius:9px;
+  background:var(--bg2);margin-bottom:9px;
+}
+.ra .rcard.first{border-color:#2c5340;background:#131c19}
+.ra .rank{font:700 17px/1 var(--mono);color:var(--dimmer);text-align:center}
+.ra .rcard.first .rank{color:var(--ok)}
+.ra .rname{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.ra .meta{display:flex;gap:9px;margin-top:6px;align-items:center;flex-wrap:wrap}
+.ra .sz{font:700 16px/1 var(--mono);text-align:right}
+.ra .szsub{font-size:11px;color:var(--dim);text-align:right;margin-top:4px}
+.ra .flag{font-size:11px;color:var(--ok);font-weight:600;margin-bottom:5px;display:block}
+.ra details{margin-top:14px}
+.ra summary{cursor:pointer;color:var(--dim);font-size:13px;padding:8px 0}
+.ra .ex{
+  display:grid;grid-template-columns:34px 1fr auto;gap:14px;align-items:center;
+  padding:9px 16px;border:1px dashed #2d3644;border-radius:8px;margin-bottom:6px;opacity:.72;
+}
+.ra .ex .rname{text-decoration:line-through;color:var(--dim)}
+.ra .why{font-size:12px;color:var(--bad);white-space:nowrap}
+.holds{
+  display:flex;align-items:center;gap:10px;padding:9px 14px;margin-bottom:16px;
+  border-radius:8px;background:var(--bg2);border:1px solid var(--line);font-size:13px;
+}
+
+/* ---------- RELEASE B — table ---------- */
+.rb table{width:100%;border-collapse:collapse;font-size:13px}
+.rb th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dimmer);font-weight:600;padding:6px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rb th.on{color:var(--acc)}
+.rb td{padding:8px 9px;border-bottom:1px solid #1b222b}
+.rb tr.first td{background:#131c19}
+.rb tr.ex td{opacity:.6}
+.rb tr.ex .nm{text-decoration:line-through}
+.rb .nm{font-family:var(--mono);font-size:12px;word-break:break-all}
+.rb td.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+.rb .why{color:var(--bad);font-size:12px;white-space:nowrap}
+.rb .take{font-size:11px;color:var(--ok);font-weight:600;white-space:nowrap}
+
+/* ---------- RELEASE C — one recommendation, the rest compact ---------- */
+.rc .hero{
+  border:1px solid #2c5340;background:linear-gradient(160deg,#152220,#111a17);
+  border-radius:12px;padding:20px;margin-bottom:20px;
+}
+.rc .hero .lab{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ok);font-weight:700}
+.rc .hero .nm{font-family:var(--mono);font-size:14px;margin:9px 0 12px;word-break:break-all}
+.rc .facts{display:flex;gap:26px;margin:14px 0 16px;flex-wrap:wrap}
+.rc .fact .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--dimmer)}
+.rc .fact .v{font:700 17px/1.3 var(--mono)}
+.rc .because{font-size:13px;color:var(--dim);border-left:2px solid #2c5340;padding-left:11px;margin-bottom:16px}
+.rc .acts{display:flex;gap:9px}
+.rc .sechead{
+  font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dimmer);
+  font-weight:700;padding-bottom:8px;border-bottom:1px solid var(--line);margin-bottom:6px;
+}
+.rc .row{display:flex;align-items:center;gap:14px;padding:9px 12px;border-bottom:1px solid #1b222b;font-size:12.5px}
+.rc .row .nm{font-family:var(--mono);flex:1;word-break:break-all}
+.rc .row.ex .nm{text-decoration:line-through;color:var(--dim)}
+.rc .row .why{color:var(--bad);font-size:12px}
+
+/* ---------- prototype switcher (deliberately not part of the design) ---------- */
+.protobar{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99;
+  display:flex;align-items:stretch;gap:0;
+  background:#f2f5f9;color:#0e1116;border-radius:99px;
+  box-shadow:0 6px 26px rgba(0,0,0,.55);font-size:13px;overflow:hidden;
+}
+.protobar button{padding:9px 13px;font-weight:600}
+.protobar button:hover{background:#dde3ec}
+.protobar .lab{padding:9px 14px;font-weight:700;min-width:190px;text-align:center;white-space:nowrap}
+.protobar .sep{width:1px;background:#c8d0dc}
+.protobar .seg{display:flex}
+.protobar .seg button.on{background:#0e1116;color:#f2f5f9}
+</style>
+</head>
+<body>
+
+<header class="chrome">
+  <div class="brand">pr<span>db</span>-fab</div>
+  <nav class="nav">
+    <span>What's new</span><span>Sites</span><span>Actors</span>
+    <span>Wanted</span><span class="on" id="navlib">Library</span><span>Sync status</span>
+  </nav>
+  <div class="right">
+    <span class="chip alert">Review queue <b>3</b></span>
+    <span class="chip">Downloads <b>2</b></span>
+  </div>
+</header>
+
+<main id="stage"></main>
+
+<div class="protobar">
+  <button id="prev">&larr;</button>
+  <div class="lab" id="lab">A</div>
+  <button id="next">&rarr;</button>
+  <div class="sep"></div>
+  <div class="seg">
+    <button data-view="library">Library</button>
+    <button data-view="release">Release</button>
+  </div>
+  <div class="sep"></div>
+  <div class="seg">
+    <button data-state="active">active</button>
+    <button data-state="stopped">stopped</button>
+  </div>
+</div>
+
+<script>
+/* =====================  fake data — placeholder names only  ===================== */
+const NET = {aurora:"Aurora Group", northline:"Northline", harbour:"Coastline Media", vantage:"Vantage", ferrite:"—"};
+const SITES = {
+  aurora:{t:"Aurora Studios", net:"Aurora Group"},
+  northline:{t:"Northline", net:"Northline"},
+  harbour:{t:"Blue Harbour", net:"Coastline Media"},
+  vantage:{t:"Vantage", net:"Vantage"},
+  ferrite:{t:"Ferrite", net:null},
+};
+const GB = n => n.toFixed(1) + " GB";
+
+const LIB = [
+  {id:1, t:"The Long Way Down", site:"aurora", d:"2024-03-14", a:["Mira Vance","Jules Okonkwo"],
+   f:[{q:"2160p",s:6.4,p:"Aurora Studios/2024-03-14 The Long Way Down [2160p].mkv",add:"2024-08-02"},
+      {q:"1080p",s:2.1,p:"Aurora Studios/2024-03-14 The Long Way Down [1080p].mp4",add:"2024-04-01"}]},
+  {id:2, t:"Harbour Lights", site:"harbour", d:"2023-11-02", a:["Ines Bertram"],
+   f:[{q:"1080p",s:3.2,p:"Blue Harbour/2023-11-02 Harbour Lights.mkv",add:"2024-01-19"}]},
+  {id:3, t:"Static", site:"northline", d:"2024-06-21", a:["Ravi Anand","Nora Halden"],
+   f:[{q:"720p",s:1.1,p:"Northline/2024-06-21 Static.mp4",add:"2024-06-30"}]},
+  {id:4, t:"Second Shift", site:"aurora", d:"2024-01-08", a:["Mira Vance"],
+   f:[{q:"1080p",s:2.9,p:"Aurora Studios/2024-01-08 Second Shift.mkv",add:"2024-02-11"}]},
+  {id:5, t:"Cold Open", site:"vantage", d:"2024-05-30", a:["Sasha Pyre","Tomas Vek"],
+   f:[{q:"2160p",s:7.8,p:"Vantage/2024-05-30 Cold Open.mkv",add:"2024-07-04"}]},
+  {id:6, t:"Nightcrossing", site:"northline", d:"2023-08-17", a:["Nora Halden"],
+   f:[{q:"1080p",s:2.4,p:"Northline/2023-08-17 Nightcrossing.mp4",add:"2023-09-02"}]},
+  {id:7, t:"Salt & Iron", site:"ferrite", d:"2024-07-12", a:["Elin Dahl","Ravi Anand"],
+   f:[{q:"2160p",s:5.9,p:"Ferrite/2024-07-12 Salt & Iron [2160p].mkv",add:"2024-08-14"},
+      {q:"1080p",s:2.2,p:"Ferrite/2024-07-12 Salt & Iron [1080p].mp4",add:"2024-07-20"}]},
+  {id:8, t:"The Quiet Part", site:"harbour", d:"2024-02-25", a:["Ines Bertram","Jules Okonkwo"],
+   f:[{q:"1080p",s:3.0,p:"Blue Harbour/2024-02-25 The Quiet Part.mkv",add:"2024-03-08"}]},
+  {id:9, t:"Backroads", site:"vantage", d:"2023-12-19", a:["Tomas Vek"],
+   f:[{q:"720p",s:1.4,p:"Vantage/2023-12-19 Backroads.mp4",add:"2024-01-05"}]},
+  {id:10,t:"Ninety Days", site:"aurora", d:"2024-08-09", a:["Mira Vance","Elin Dahl","Sasha Pyre"],
+   f:[{q:"1080p",s:3.4,p:"Aurora Studios/2024-08-09 Ninety Days.mkv",add:"2024-08-18"}]},
+  {id:11,t:"Undertow", site:"ferrite", d:"2024-04-02", a:["Elin Dahl"],
+   f:[{q:"1080p",s:2.7,p:"Ferrite/2024-04-02 Undertow.mkv",add:"2024-05-16"}]},
+  {id:12,t:"Last Train", site:"northline", d:"2024-07-27", a:["Ravi Anand","Sasha Pyre"],
+   f:[{q:"2160p",s:6.8,p:"Northline/2024-07-27 Last Train.mkv",add:"2024-08-20"}]},
+];
+
+/* the review queue: what the tool declined to move. Two reasons, one queue. */
+const QUEUE = [
+  {id:"q1", kind:"ambiguous", file:"nrthln.24.08.02.1080p.x264-GRP.mkv", size:1.9, q:"1080p",
+   conf:"Ambiguous", note:"2 candidates: Static · Last Train", rel:"nrthln.24.08.02.1080p.x264-GRP", ix:"NzbPorn"},
+  {id:"q2", kind:"duplicate", file:"Aurora.24.03.14.Long.Way.Down.1080p-XX.mp4", size:2.4, q:"1080p",
+   conf:"Exact", vid:1, note:"library holds 1080p (2.1 GB)", rel:"Aurora.24.03.14.Long.Way.Down.1080p-XX", ix:"Dognzb"},
+  {id:"q3", kind:"siteonly", file:"vantage_unknown_2024_2160p.mkv", size:7.1, q:"2160p",
+   conf:"Site-Only Match", note:"Vantage — no video named", rel:"vantage_unknown_2024_2160p", ix:"NzbPorn"},
+];
+
+/* the release view subject: a wanted video, not yet held */
+const SUBJ = {t:"Waiting Room", site:"vantage", d:"2024-08-02", a:["Sasha Pyre","Nora Halden"], wanted:true, holds:null};
+const RELS = [
+  {n:"Vantage.24.08.02.Waiting.Room.2160p.MP4-KTR", s:7.9, ix:"NzbPorn", ixr:1, c:"Exact", ok:true},
+  {n:"Vantage.24.08.02.Waiting.Room.2160p-ABX",     s:7.7, ix:"Dognzb",  ixr:2, c:"Exact", ok:true},
+  {n:"vantage-waiting-room-uhd",                    s:7.4, ix:"NzbPorn", ixr:1, c:"Strong", ok:true},
+  {n:"Vantage.24.08.02.Waiting.Room.1080p-XYZ",     s:3.1, ix:"Dognzb",  ixr:2, c:"Exact", ok:true},
+  {n:"Vantage.24.08.02.Waiting.Room.2160p-RARB",    s:7.6, ix:"NzbPorn", ixr:1, c:"Exact", ok:false, why:"consumed — failed 2 d ago"},
+  {n:"Vantage.24.08.02.2160p.PASSWORD-ZZZ",         s:8.1, ix:"Dognzb",  ixr:2, c:"Exact", ok:false, why:"confessed password"},
+  {n:"Waiting.Room.COMPLETE.PACK-QQQ",              s:41.0,ix:"NzbPorn", ixr:1, c:"Probable", ok:false, why:"over max size (20 GB)"},
+  {n:"vantage_waiting_room_2160p",                  s:7.8, ix:"Althub",  ixr:9, c:"Exact", ok:false, why:"indexer not permitted"},
+];
+
+/* ============================  helpers  ============================ */
+const hues = t => { let h=0; for(const c of t) h=(h*31+c.charCodeAt(0))%360; return [h,(h+42)%360]; };
+const art = (t, cls="") => {
+  const [a,b]=hues(t);
+  return `<div class="art ${cls}" style="--h1:hsl(${a} 42% 34%);--h2:hsl(${b} 46% 20%)">${initials(t)}`;
+};
+const initials = t => t.split(/\s+/).filter(w=>/[a-z0-9]/i.test(w)).slice(0,2).map(w=>w[0].toUpperCase()).join("");
+const qOf = v => v.f.map(f=>f.q);
+const totalSize = v => v.f.reduce((n,f)=>n+f.s,0);
+const confCls = c => ({Exact:"exact",Strong:"strong",Probable:"strong",Ambiguous:"amb"})[c] || "site";
+const esc = s => s.replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const byId = id => LIB.find(v=>v.id===id);
+
+/* ============================  LIBRARY A — poster wall  ============================ */
+function libraryA(){
+  const sites = Object.keys(SITES).map(k=>({k,n:LIB.filter(v=>v.site===k).length})).filter(s=>s.n);
+  const actors = [...new Set(LIB.flatMap(v=>v.a))].sort();
+  const quals  = [...new Set(LIB.flatMap(qOf))].sort();
+  return `<div class="wrap la">
+    <aside class="facets">
+      <input type="search" placeholder="Search titles…" style="width:100%">
+      <h3>Site</h3>
+      ${sites.map(s=>`<div class="facet"><span>${SITES[s.k].t}</span><span class="dimmer">${s.n}</span></div>`).join("")}
+      <h3>Actor</h3>
+      ${actors.map(a=>`<div class="facet"><span>${a}</span><span class="dimmer">${LIB.filter(v=>v.a.includes(a)).length}</span></div>`).join("")}
+      <h3>Quality</h3>
+      <div class="qrow">${quals.map(q=>`<span class="q">${q}</span>`).join("")}</div>
+    </aside>
+    <section>
+      <div class="head"><h2>Library</h2><span class="count">${LIB.length} videos · ${LIB.reduce((n,v)=>n+v.f.length,0)} files</span></div>
+      <div class="banner">
+        <span><b>3 files are waiting for you.</b> One could not be identified, one is redundant, one reached a site only.</span>
+        <button class="btn sm">Open review queue</button>
+      </div>
+      <div class="grid">
+        ${LIB.map(v=>`
+          <div class="card">
+            <div class="hoverwrap" style="position:relative">
+              ${art(v.t)}
+                <div class="badges">
+                  ${v.f.length>1
+                    ? `<span class="q top">${v.f[0].q}</span><span class="q">+${v.f.length-1}</span>`
+                    : `<span class="q">${v.f[0].q}</span>`}
+                </div>
+              </div>
+              <div class="actors">
+                <div class="dimmer" style="font-size:11px">${v.d}</div>
+                ${v.a.map(a=>`<div>${a}</div>`).join("")}
+              </div>
+            </div>
+            <div class="t">${esc(v.t)}</div>
+            <div class="s">${SITES[v.site].t}</div>
+          </div>`).join("")}
+      </div>
+    </section>
+  </div>`;
+}
+
+/* ============================  LIBRARY B — one table  ============================ */
+function libraryB(){
+  const cols = ["","Title","Site","Released","Actors","Held at","Size","Added",""];
+  const row = v => `
+    <tr>
+      <td>${art(v.t)}</div></td>
+      <td><div class="name">${esc(v.t)}</div><div class="sub mono">${esc(v.f[0].p.split("/")[0])}/…</div></td>
+      <td>${SITES[v.site].t}</td>
+      <td class="mono sub">${v.d}</td>
+      <td class="sub">${v.a.join(", ")}</td>
+      <td><div class="qs">${v.f.map((f,i)=>`<span class="q${i===0?" top":""}">${f.q}</span>`).join("")}</div></td>
+      <td class="num">${GB(totalSize(v))}</td>
+      <td class="mono sub">${v.f[0].add}</td>
+      <td><button class="btn sm">Find better</button></td>
+    </tr>
+    ${v.f.length>1 ? v.f.map(f=>`
+      <tr class="frow"><td></td><td colspan="4" class="mono sub" style="padding-left:0">${esc(f.p)}</td>
+      <td><span class="q">${f.q}</span></td><td class="num">${GB(f.s)}</td><td class="mono sub">${f.add}</td><td></td></tr>`).join("") : ""}`;
+
+  const qrow = e => {
+    const v = e.vid ? byId(e.vid) : null;
+    return `
+    <tr class="pend">
+      <td><div class="art" style="--h1:#3a2c18;--h2:#241c11;width:56px;height:34px;border-radius:4px;font-size:14px">!</div></td>
+      <td><div class="name mono" style="font-size:12px">${esc(e.file)}</div>
+          <div class="sub">
+            <span class="pill ${confCls(e.conf)}">${e.conf}</span>
+            ${v?`identified as <b>${esc(v.t)}</b> — `:""}${esc(e.note)}
+          </div></td>
+      <td>${v?SITES[v.site].t:(e.kind==="siteonly"?"Vantage":"—")}</td>
+      <td class="mono sub">${v?v.d:"—"}</td>
+      <td class="sub">${v?v.a.join(", "):"—"}</td>
+      <td><span class="q">${e.q}</span> <span class="dimmer" style="font-size:11px">arriving</span></td>
+      <td class="num">${GB(e.size)}</td>
+      <td class="mono sub">—</td>
+      <td><button class="btn sm">Decide</button></td>
+    </tr>`; };
+
+  return `<div class="wrap lb">
+    <div class="head"><h2>Library</h2><span class="count">${LIB.length} videos · ${LIB.reduce((n,v)=>n+v.f.length,0)} files · ${GB(LIB.reduce((n,v)=>n+totalSize(v),0))}</span></div>
+    <div class="filters">
+      <input type="search" placeholder="Search titles…" style="width:250px">
+      <select><option>All sites</option>${Object.values(SITES).map(s=>`<option>${s.t}</option>`).join("")}</select>
+      <select><option>All actors</option>${[...new Set(LIB.flatMap(v=>v.a))].sort().map(a=>`<option>${a}</option>`).join("")}</select>
+      <div class="qs">${[...new Set(LIB.flatMap(qOf))].sort().map(q=>`<span class="q">${q}</span>`).join("")}</div>
+    </div>
+    <table>
+      <thead><tr>${cols.map((c,i)=>`<th class="${i===7?"on":""}">${c}</th>`).join("")}</tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="9">Waiting for you — not filed (3)</td></tr>
+        ${QUEUE.map(qrow).join("")}
+        <tr class="grp" style="background:#141a21;color:var(--dimmer);border-bottom-color:var(--line)"><td colspan="9">Filed (${LIB.length})</td></tr>
+        ${LIB.map(row).join("")}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+/* ============================  LIBRARY C — lanes by site  ============================ */
+function libraryC(){
+  const lanes = Object.keys(SITES).map(k=>({k, vs:LIB.filter(v=>v.site===k)})).filter(l=>l.vs.length);
+  const openId = 1; // one card expanded, to show how two qualities read
+  const card = v => `
+    <div class="card ${v.id===openId?"open":""}">
+      ${art(v.t)}</div>
+      <div class="t">${esc(v.t)}</div>
+    </div>`;
+  const exp = v => `
+    <div class="exp">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div><h3 style="font-size:15px">${esc(v.t)}</h3>
+        <div class="muted" style="font-size:12.5px;margin-top:3px">${SITES[v.site].t} · ${v.d}</div></div>
+        <button class="btn sm">Find better releases</button>
+      </div>
+      <div class="achips">${v.a.map(a=>`<span class="achip">${a}</span>`).join("")}</div>
+      <div style="margin-top:12px">
+        ${v.f.map(f=>`<div class="frow"><span class="q">${f.q}</span><span class="mono muted" style="flex:1">${esc(f.p)}</span><span class="mono">${GB(f.s)}</span></div>`).join("")}
+      </div>
+    </div>`;
+  return `<div class="wrap lc">
+    <div class="head"><h2>Library</h2><span class="count">${LIB.length} videos</span></div>
+    <div class="pills">
+      <input type="search" placeholder="Search titles…" style="width:230px">
+      <span class="fp">Mira Vance ✕</span>
+      <span class="muted" style="font-size:12px">click any actor to filter</span>
+    </div>
+
+    <div class="lane pendlane">
+      <div class="lanehead"><h3>Waiting for you</h3><span class="n">3 files this tool would not move on its own</span></div>
+      <div class="strip">
+        ${QUEUE.map(e=>`
+          <div class="card pendcard">
+            <div class="art" style="aspect-ratio:16/10;border-radius:8px">!</div>
+            <div class="t mono" style="font-size:11.5px">${esc(e.file)}</div>
+            <div class="muted" style="font-size:11.5px;margin-top:3px">${esc(e.note)}</div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    ${lanes.map(l=>`
+      <div class="lane">
+        <div class="lanehead">
+          <h3>${SITES[l.k].t}</h3>
+          <span class="n">${l.vs.length}</span>
+          ${SITES[l.k].net?`<span class="net">${SITES[l.k].net}</span>`:""}
+        </div>
+        <div class="strip">${l.vs.map(card).join("")}</div>
+        ${l.vs.some(v=>v.id===openId)?exp(byId(openId)):""}
+      </div>`).join("")}
+  </div>`;
+}
+
+/* ============================  release view — shared pieces  ============================ */
+const ranked   = () => RELS.filter(r=>r.ok);
+const excluded = () => RELS.filter(r=>!r.ok);
+const stoppedBanner = () => STATE.stopped ? `
+  <div class="banner stop">
+    <span><b>Stopped.</b> The retry budget for this video is spent — 3 releases were consumed and none left it held.
+    Nothing more is fetched automatically until this is reset.</span>
+    <button class="btn sm">Reset — clear consumed releases and the budget</button>
+  </div>` : "";
+const holdsLine = () => `
+  <div class="holds">
+    <span class="muted">Your library holds:</span>
+    <b>nothing of this video</b>
+    <span class="muted" style="margin-left:auto">Wanted in prdb since 2024-08-04</span>
+  </div>`;
+const subjHead = () => `
+  <div class="head">
+    <h2>${SUBJ.t}</h2>
+    <span class="count">${SITES[SUBJ.site].t} · ${SUBJ.d} · ${SUBJ.a.join(", ")}</span>
+  </div>`;
+const deltaTop = r => { const t=ranked()[0].s; return r.s===t ? "—" : ((r.s-t)/t*100).toFixed(1)+" %"; };
+
+/* ============================  RELEASE A — ranked cards  ============================ */
+function releaseA(){
+  return `<div class="wrap ra">
+    ${subjHead()}${stoppedBanner()}${holdsLine()}
+    <div class="muted" style="font-size:12.5px;margin-bottom:11px">Ordered as the release ranking orders them. ${ranked().length} usable, ${excluded().length} excluded.</div>
+    ${ranked().map((r,i)=>`
+      <div class="rcard ${i===0?"first":""}">
+        <div class="rank">${i+1}</div>
+        <div>
+          ${i===0?`<span class="flag">↓ automation would take this one</span>`:""}
+          <div class="rname">${esc(r.n)}</div>
+          <div class="meta">
+            <span class="pill ${confCls(r.c)}">${r.c}</span>
+            <span class="muted">${r.ix}</span>
+            <span class="dimmer">indexer rank ${r.ixr}</span>
+            ${i>0&&Math.abs(r.s-ranked()[0].s)/ranked()[0].s<=0.05?`<span class="dimmer">within the 5 % size tolerance of #1</span>`:""}
+          </div>
+        </div>
+        <div>
+          <div class="sz">${GB(r.s)}</div>
+          <div class="szsub">${deltaTop(r)}</div>
+          <div style="margin-top:9px"><button class="btn ${i===0?"pri":""} sm">Fetch</button></div>
+        </div>
+      </div>`).join("")}
+    <details open>
+      <summary>${excluded().length} releases the ranking excluded — shown with the reason</summary>
+      ${excluded().map(r=>`
+        <div class="ex">
+          <div class="rank">—</div>
+          <div><div class="rname">${esc(r.n)}</div>
+            <div class="meta"><span class="muted">${r.ix}</span><span class="dimmer">rank ${r.ixr}</span><span class="mono dimmer">${GB(r.s)}</span></div></div>
+          <div class="why">${r.why}</div>
+        </div>`).join("")}
+    </details>
+  </div>`;
+}
+
+/* ============================  RELEASE B — table  ============================ */
+function releaseB(){
+  const cols=["#","Release","Size","Δ vs #1","Indexer","Rank","Confidence","State"];
+  const r2 = (r,i,ex)=>`
+    <tr class="${ex?"ex":(i===0?"first":"")}">
+      <td class="num">${ex?"—":i+1}</td>
+      <td class="nm">${esc(r.n)}</td>
+      <td class="num">${GB(r.s)}</td>
+      <td class="num muted">${ex?"":deltaTop(r)}</td>
+      <td>${r.ix}</td>
+      <td class="num">${r.ixr}</td>
+      <td><span class="pill ${confCls(r.c)}">${r.c}</span></td>
+      <td>${ex?`<span class="why">${r.why}</span>`
+              :(i===0?`<span class="take">automation takes this</span>`:`<button class="btn sm">Fetch</button>`)}</td>
+    </tr>`;
+  return `<div class="wrap rb">
+    ${subjHead()}${stoppedBanner()}${holdsLine()}
+    <table>
+      <thead><tr>${cols.map((c,i)=>`<th class="${i===0?"on":""}">${c}</th>`).join("")}</tr></thead>
+      <tbody>
+        ${ranked().map((r,i)=>r2(r,i,false)).join("")}
+        ${excluded().map(r=>r2(r,-1,true)).join("")}
+      </tbody>
+    </table>
+    <div class="muted" style="font-size:12px;margin-top:12px">
+      Sorted by the release ranking: exclusions, then confidence tier, then size descending with a 5 % tolerance, then indexer rank.
+      Clicking a column sorts the view — it does not change what automation takes.
+    </div>
+  </div>`;
+}
+
+/* ============================  RELEASE C — one recommendation  ============================ */
+function releaseC(){
+  const top=ranked()[0], rest=ranked().slice(1);
+  return `<div class="wrap rc">
+    ${subjHead()}${stoppedBanner()}
+    <div class="hero">
+      <div class="lab">Automation would take this</div>
+      <div class="nm">${esc(top.n)}</div>
+      <div class="facts">
+        <div class="fact"><div class="k">Size</div><div class="v">${GB(top.s)}</div></div>
+        <div class="fact"><div class="k">Indexer</div><div class="v">${top.ix}</div></div>
+        <div class="fact"><div class="k">Indexer rank</div><div class="v">${top.ixr}</div></div>
+        <div class="fact"><div class="k">Confidence</div><div class="v">${top.c}</div></div>
+      </div>
+      <div class="because">
+        Largest of 4 usable releases — 2.6 % above the next, inside the 5 % tolerance, so the indexer rank decided it.
+        Your library holds nothing of this video.
+      </div>
+      <div class="acts">
+        <button class="btn pri">Fetch this</button>
+        <button class="btn">Fetch something else…</button>
+      </div>
+    </div>
+    <div class="sechead">Other candidates (${rest.length})</div>
+    ${rest.map((r,i)=>`
+      <div class="row">
+        <span class="dimmer mono">${i+2}</span>
+        <span class="nm">${esc(r.n)}</span>
+        <span class="pill ${confCls(r.c)}">${r.c}</span>
+        <span class="muted">${r.ix} · rank ${r.ixr}</span>
+        <span class="mono">${GB(r.s)}</span>
+        <span class="muted mono" style="width:64px;text-align:right">${deltaTop(r)}</span>
+        <button class="btn sm">Fetch</button>
+      </div>`).join("")}
+    <div style="margin-top:20px;opacity:.75">
+      <div class="sechead">Excluded (${excluded().length}) <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0">— kept visible so a wrong setting is visible too</span></div>
+      ${excluded().map(r=>`
+        <div class="row ex">
+          <span class="dimmer mono">—</span>
+          <span class="nm">${esc(r.n)}</span>
+          <span class="muted">${r.ix}</span>
+          <span class="mono">${GB(r.s)}</span>
+          <span class="why">${r.why}</span>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+/* ============================  switcher  ============================ */
+const VARIANTS = [
+  {k:"A", lib:libraryA, rel:releaseA, libName:"Poster wall",   relName:"Ranked cards"},
+  {k:"B", lib:libraryB, rel:releaseB, libName:"One table",     relName:"Table"},
+  {k:"C", lib:libraryC, rel:releaseC, libName:"Lanes by site", relName:"One recommendation"},
+];
+const STATE = {v:"A", view:"library", stopped:false};
+
+function readUrl(){
+  const p=new URLSearchParams(location.search);
+  STATE.v = (p.get("variant")||"A").toUpperCase();
+  if(!VARIANTS.some(x=>x.k===STATE.v)) STATE.v="A";
+  STATE.view = p.get("view")==="release" ? "release" : "library";
+  STATE.stopped = p.get("state")==="stopped";
+}
+function writeUrl(){
+  const p=new URLSearchParams();
+  p.set("variant",STATE.v); p.set("view",STATE.view);
+  if(STATE.stopped) p.set("state","stopped");
+  history.replaceState(null,"","?"+p);
+}
+function render(){
+  const v=VARIANTS.find(x=>x.k===STATE.v);
+  document.getElementById("stage").innerHTML = STATE.view==="library" ? v.lib() : v.rel();
+  document.getElementById("lab").textContent =
+    `${v.k} — ${STATE.view==="library"?v.libName:v.relName}`;
+  document.getElementById("navlib").textContent = STATE.view==="library" ? "Library" : "Wanted";
+  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("on",b.dataset.view===STATE.view));
+  document.querySelectorAll("[data-state]").forEach(b=>b.classList.toggle("on",(b.dataset.state==="stopped")===STATE.stopped));
+  writeUrl();
+  window.scrollTo(0,0);
+}
+function cycle(d){
+  const i=VARIANTS.findIndex(x=>x.k===STATE.v);
+  STATE.v=VARIANTS[(i+d+VARIANTS.length)%VARIANTS.length].k;
+  render();
+}
+document.getElementById("prev").onclick=()=>cycle(-1);
+document.getElementById("next").onclick=()=>cycle(1);
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{STATE.view=b.dataset.view;render();});
+document.querySelectorAll("[data-state]").forEach(b=>b.onclick=()=>{STATE.stopped=b.dataset.state==="stopped";render();});
+addEventListener("keydown",e=>{
+  const t=e.target;
+  if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable)) return;
+  if(e.key==="ArrowLeft") cycle(-1);
+  if(e.key==="ArrowRight") cycle(1);
+});
+readUrl(); render();
+</script>
+</body>
+</html>
