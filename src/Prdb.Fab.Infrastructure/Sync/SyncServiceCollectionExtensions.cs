@@ -31,6 +31,13 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<CataloguePins>();
         services.AddScoped<CatalogueEviction>();
 
+        // ADR 0030's cache: the files, the fetch that fills them and the sweep
+        // that bounds them. The display path takes ArtworkCache directly, which
+        // is the half of the cache no routine turns.
+        services.AddScoped<ArtworkStore>();
+        services.AddScoped<ArtworkCache>();
+        services.AddScoped<ArtworkEviction>();
+
         services.AddScoped<ActorFeed>();
         services.AddScoped<VideoImageFeed>();
         services.AddScoped<WantedVideoFeed>();
@@ -55,6 +62,7 @@ public static class SyncServiceCollectionExtensions
         Routine<WhatsNewBackfillRoutine>(services);
         Routine<SiteListRoutine>(services);
         Routine<CatalogueRepairRoutine>(services);
+        Routine<ArtworkRoutine>(services);
 
         return services;
     }

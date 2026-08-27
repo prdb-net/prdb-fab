@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Host.Access;
+using Prdb.Fab.Host.Catalogue;
 using Prdb.Fab.Host.Connections;
 using Prdb.Fab.Host.Logging;
 using Prdb.Fab.Host.Scheduling;
@@ -166,6 +167,8 @@ app.MapAccess();
 app.MapOnboarding();
 
 app.MapConnections();
+
+app.MapArtwork();
 
 app.MapSkeleton();
 

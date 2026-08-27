@@ -25,6 +25,30 @@
         }
       }
     },
+    "/api/artwork/{videoId}": {
+      "get": {
+        "tags": [
+          "Artwork"
+        ],
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/access/state": {
       "get": {
         "tags": [
@@ -1324,6 +1348,9 @@
   "tags": [
     {
       "name": "Health"
+    },
+    {
+      "name": "Artwork"
     },
     {
       "name": "Access"

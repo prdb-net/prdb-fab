@@ -28,6 +28,29 @@ public sealed class CatalogueImageRow
     /// </summary>
     public required string Url { get; set; }
 
+    /// <summary>
+    /// Where this image stood in the <c>images[]</c> prdb last published for the
+    /// video, counted from zero.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ADR 0027 chooses the first entry carrying a non-null URL, on the ground
+    /// that prdb documents the array as ordered oldest first with the image id
+    /// breaking ties — a guaranteed order, expressly not a ranking. The choice
+    /// is reproducible only if the order survives being written down, and
+    /// nothing else on the row carries it: the payload has no stamp to sort by,
+    /// and the surrogate key says when the tool first saw the image rather than
+    /// when prdb published it.
+    /// </para>
+    /// <para>
+    /// So the position is quoted from the payload. A detail read rewrites it for
+    /// every image of the video at once, because that payload is the authority
+    /// on the whole array; the images feed puts a newly arrived image last,
+    /// which is where a feed paged by creation time says it belongs.
+    /// </para>
+    /// </remarks>
+    public int Position { get; set; }
+
     /// <summary>Whether the bytes are in the cache.</summary>
     public bool Cached { get; set; }
 

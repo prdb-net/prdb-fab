@@ -79,6 +79,15 @@ Two things are worth getting right.
 corrupt a database, not a way to back one up. Back the directory up by copying
 it; do not run the tool out of a network share.
 
+**What grows on `/data`.** Two things, and both are bounded by a number rather
+than by time. The local copy of prdb's catalogue keeps at most **50,000 videos**
+— tens of megabytes with their pre-names, credits and image records beside them
+— and the cached artwork keeps at most **2 GiB** of pictures for videos you are
+only browsing. Neither number is a setting. What you have marked as wanted, and
+what you hold, is kept beyond both: the tool drops what nothing points at first,
+and only then would a ceiling reach anything else. The whole of it can be thrown
+away and refilled from prdb, which is why none of it is in a backup.
+
 **Mount your media at the same path your downloader sees it at, if you can.**
 The path mapping is then the identity, and a mapping that does not resolve is
 the most common failure this kind of tool has. Mounting one parent directory

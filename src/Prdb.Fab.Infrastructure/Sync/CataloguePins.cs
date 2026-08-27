@@ -57,6 +57,23 @@ public sealed class CataloguePins(FabDbContext context, IEnumerable<ICataloguePi
     public IQueryable<CatalogueVideoRow> Unpinned(IQueryable<CatalogueVideoRow> videos) =>
         sources.Aggregate(videos, (narrowed, source) => narrowed.Where(Not(source.PointsAt)));
 
+    /// <summary>
+    /// The rows of <paramref name="videos"/> something points at, most recently
+    /// pinned first.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0030's order for the artwork routine, and the reason a freshly
+    /// downloaded video's picture is on disk before the copy that produced it
+    /// has finished. The tie is broken by the surrogate key descending, so a
+    /// catalogue whose pins all carry the same stamp — a restore, where every
+    /// wanted row arrives in one pass — is still walked in a stable order rather
+    /// than in whatever order SQLite finds it.
+    /// </remarks>
+    public IQueryable<CatalogueVideoRow> NewestPinFirst(IQueryable<CatalogueVideoRow> videos) =>
+        Pinned(videos)
+            .OrderByDescending(LatestOf())
+            .ThenByDescending(row => row.Id);
+
     /// <summary>Whether anything points at the video with this local id.</summary>
     public async Task<bool> IsPinnedAsync(long videoId, CancellationToken cancellationToken) =>
         await Pinned(context.CatalogueVideos.Where(row => row.Id == videoId))
@@ -102,6 +119,51 @@ public sealed class CataloguePins(FabDbContext context, IEnumerable<ICataloguePi
         sources.Count == 0
             ? null
             : sources.Select(source => source.PointsAt).Aggregate(Or);
+
+    /// <summary>
+    /// The latest stamp any source carries for the video, and null where none
+    /// of them points at it.
+    /// </summary>
+    /// <remarks>
+    /// With one source this is that source's projection unchanged, which is
+    /// what it is today. With several it is a chain of comparisons, and each
+    /// link names both sides twice — so a source whose projection is expensive
+    /// pays for it here. That is a reason to keep a projection cheap rather
+    /// than a reason to store the answer: ADR 0033's argument against a column
+    /// is about correctness, and it does not stop applying because the query
+    /// grew a clause.
+    /// </remarks>
+    private Expression<Func<CatalogueVideoRow, DateTimeOffset?>> LatestOf() =>
+        sources.Count == 0
+            ? _ => null
+            : sources.Select(source => source.PointedAtSince).Aggregate(Later);
+
+    /// <summary>
+    /// The later of two stamps, either of which may be absent, as one
+    /// projection over one video.
+    /// </summary>
+    private static Expression<Func<CatalogueVideoRow, DateTimeOffset?>> Later(
+        Expression<Func<CatalogueVideoRow, DateTimeOffset?>> left,
+        Expression<Func<CatalogueVideoRow, DateTimeOffset?>> right)
+    {
+        var video = left.Parameters[0];
+        var mine = left.Body;
+        var theirs = new Rebind(right.Parameters[0], video).Visit(right.Body);
+
+        // mine != null && (theirs == null || mine > theirs) ? mine : theirs
+        var none = Expression.Constant(null, typeof(DateTimeOffset?));
+
+        var body = Expression.Condition(
+            Expression.AndAlso(
+                Expression.NotEqual(mine, none),
+                Expression.OrElse(
+                    Expression.Equal(theirs, none),
+                    Expression.GreaterThan(mine, theirs))),
+            mine,
+            theirs);
+
+        return Expression.Lambda<Func<CatalogueVideoRow, DateTimeOffset?>>(body, video);
+    }
 
     private static Expression<Func<CatalogueVideoRow, bool>> Not(
         Expression<Func<CatalogueVideoRow, bool>> clause) =>
