@@ -39,7 +39,29 @@ internal sealed class FakePrdb : HttpMessageHandler
     /// <summary>What the last request said it was.</summary>
     public string? LastUserAgent { get; private set; }
 
+    /// <summary>
+    /// Every path that has been asked for, newest last. What it is for is the
+    /// question a route test cannot ask: whether the lanes turn — a routine in a
+    /// lane nothing turns never runs, and nothing anywhere says so.
+    /// </summary>
+    /// <remarks>
+    /// A copy, because the lane is a background worker: whoever reads this is
+    /// on another thread from whoever is adding to it.
+    /// </remarks>
+    public IReadOnlyList<string> Paths
+    {
+        get
+        {
+            lock (paths)
+            {
+                return [.. paths];
+            }
+        }
+    }
+
     public int Requests { get; private set; }
+
+    private readonly List<string> paths = [];
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -51,6 +73,11 @@ internal sealed class FakePrdb : HttpMessageHandler
         Requests++;
         LastKey = request.Headers.TryGetValues("X-Api-Key", out var keys) ? keys.FirstOrDefault() : null;
         LastUserAgent = request.Headers.UserAgent.ToString();
+
+        lock (paths)
+        {
+            paths.Add(request.RequestUri!.AbsolutePath);
+        }
 
         if (Throws is { } refusing)
         {
