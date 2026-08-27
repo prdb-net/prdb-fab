@@ -3,9 +3,10 @@
 Docker Compose is the supported way to run this. Not one option among several —
 the way.
 
-> **This is early software.** What is in the image today starts, migrates its
-> database, serves one page and turns one scheduled routine. It does not yet
-> search, download or file anything.
+> **This is early software.** What is in the image today asks for a password,
+> takes you through setting up, and checks every connection you give it against
+> the service it names. It does not yet sync, search, download or file anything
+> — so a finished setup is a tool that is ready and idle.
 
 ## The quickstart
 
@@ -31,6 +32,39 @@ Then `docker compose up -d`, and the tool is at `http://your-host:8080`.
 **Pin a version rather than `latest`.** An unattended tool that moves files and
 upgrades itself when the NAS reboots is a surprise, and the second half of that
 argument is under *Stopping and updating* below.
+
+## The first run
+
+Open it in a browser. The first thing it asks for is **a password** — there is
+no user name and no default credential, and the field you set it in is only
+offered while no password exists. Whoever reaches the tool first sets it, so
+start it on a network you control and set it before you do anything else.
+
+After that it takes you through four steps, and each one is stored the moment it
+is answered. Closing the tab costs nothing: it resumes where it was.
+
+1. **Your prdb API key.** Required. Without it there is no identification, no
+   wanted list, no artwork and no duplicate detection. It is checked against
+   prdb before it is stored.
+2. **SABnzbd** — its address, its API key, the category it downloads into, and
+   where that category's finished folder is inside this container. Skippable;
+   without it nothing will be downloaded.
+3. **Your indexers**, one at a time. Skippable; without one nothing will be
+   searched for. Each is checked with a real search rather than with a
+   capabilities call, because most indexers answer that one to anybody.
+4. **The library root**, the directory this tool files into. Required. It is the
+   only directory the tool writes to, and it must be writable by the user the
+   container runs as.
+
+Each connection is checked against the real service before it is accepted, and
+one that fails is not stored — there is no *continue anyway*, because a wrong
+key is not a thing that gets better on its own. Skipping is a deliberate act
+with its consequence spelled out at the moment you take it, and setting up does
+not come back to ask again: what a skipped step left missing is filled in from
+the settings afterwards.
+
+Everything you answered is editable later under **Settings**, without a restart
+and without editing this Compose file.
 
 ## The mounts
 
@@ -70,9 +104,70 @@ on the host answer both.
 | `UMASK` | `022` | The permissions on what the tool writes. |
 | `FAB_DATA_DIRECTORY` | `/data` | Where the database and the log live. |
 | `ASPNETCORE_HTTP_PORTS` | `8080` | The port inside the container. To reach it on another port, remap it on the host side (`-p 9000:8080`) instead. |
+| `FAB_RESET_PASSWORD` | unset | Clears the password on the next start. See *If you lose the password* below, and remove it again afterwards. |
 
-Everything else the tool needs is answered in the browser and stored in the
-database.
+That is the whole list, and it is meant to stay that way: **a variable exists
+only where the answer is needed before the application can start.**
+
+Your prdb key, SABnzbd, your indexers and your library root are **not**
+environment variables and never will be. They are answered in the browser and
+kept in the database, which is what makes changing an indexer key a form rather
+than an edit to this file and a restart. If you find yourself looking for
+`PRDB_API_KEY`, there isn't one — that question is asked at the first run.
+
+## The password, and the network it travels over
+
+There is one password and no user name. It belongs to this installation rather
+than to an account somewhere, it is stored hashed, and it is never shipped as a
+default: an installation nobody has set one on is an installation anybody who
+reaches it can claim.
+
+**Over plain `http`, the password is sent across the network in the clear.**
+That is worth saying without hedging. On a home LAN that you control, this is
+the ordinary way to run a tool like this and the risk is one you can weigh.
+Reaching it from anywhere else — a laptop on someone else's wifi, a port
+forwarded through your router, a VPS — means the password, and every key you
+type into the setup forms, are readable by anything on the path.
+
+The session cookie is `HttpOnly` and `SameSite=Strict`, and it is marked
+`Secure` when the request arrived over `https`. None of that encrypts anything:
+those flags limit what a browser does with a cookie, not what a network can
+read. If the tool has to be reachable from outside your own network, put
+something in front of it that encrypts the connection — a reverse proxy holding
+a certificate, a VPN, a tunnel. This tool does not terminate TLS itself, and
+there is no recipe for one here: how you expose it is your own choice to make,
+and a topology written down in this repository would read as the topology.
+
+There is no API token and nothing mechanical can sign in. A browser session is
+the only credential there is, which also means no health check or script can
+reach anything except `/api/health`, which answers only that the process is up.
+
+## If you lose the password
+
+It is recovered at the host rather than over the network, because a second way
+in over the network is a second way to configure wrongly. Start the container
+once with the variable set:
+
+```yaml
+    environment:
+      FAB_RESET_PASSWORD: "true"
+```
+
+On that start the tool **clears the password and ends every session**, logs
+loudly that the variable should now be removed, and drops the installation back
+into *set a password*. Open it in a browser and set a new one.
+
+**Then remove the variable and restart.** While it is set, every start clears
+the password again — including the one you just set.
+
+Everything else survives untouched: your prdb key, SABnzbd, your indexers, your
+library root and how far setting up had got. Losing the password costs the
+password, and nothing else.
+
+Changing a password you still know is done in the browser instead, under
+**Settings → Account**. That asks for the current one and ends every other
+session at once, which is the lever to pull if you suspect a session you did not
+open.
 
 ## The log
 
