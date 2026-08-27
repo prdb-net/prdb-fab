@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Sync;
@@ -23,7 +24,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// are there, and a video whose image is missing costs this query nothing.
 /// </para>
 /// </remarks>
-public sealed class CatalogueBrowse(FabDbContext context)
+public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
 {
     /// <summary>
     /// How many videos a page of a grid holds.
@@ -59,6 +60,7 @@ public sealed class CatalogueBrowse(FabDbContext context)
             .Take(APage)
             .Select(row => new VideoCard(
                 row.Id,
+                row.PrdbId,
                 row.Title,
                 row.Site == null ? null : row.Site.Title,
                 row.ReleaseDate))
@@ -66,6 +68,74 @@ public sealed class CatalogueBrowse(FabDbContext context)
 
         return new VideoPage(videos, wanted, APage, total);
     }
+
+    /// <summary>
+    /// One page of the wanted list: what the user has marked in prdb, most
+    /// recently wanted first.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Read and never written. <c>CONTEXT.md</c> defines a Wanted Video as one
+    /// the user has marked <em>in prdb</em>, and ADR 0007 makes that list the
+    /// only source of intent — so this surface has no way to add to it and is
+    /// not missing one.
+    /// </para>
+    /// <para>
+    /// <strong>It reads the catalogue, not the feed's payload.</strong> ADR 0013
+    /// observes that the feed carries enough to draw a card without a catalogue
+    /// row; ADR 0033 then stores a wanted video as (video, since when) and makes
+    /// it a pinning source. Read together, the payload is what <em>fills</em> a
+    /// catalogue row that does not exist yet — which <see cref="WantedVideoFeed"/>
+    /// already does — and the surface reads the row like every other surface.
+    /// That keeps one card with one source, and it is what puts a wanted video
+    /// under the repair pass and the artwork routine.
+    /// </para>
+    /// </remarks>
+    public async Task<WantedList> WantedAsync(int page, CancellationToken cancellationToken)
+    {
+        var wanted = Math.Max(page, 1);
+
+        var total = await context.WantedVideos.CountAsync(cancellationToken);
+
+        var videos = await context.WantedVideos
+            // Newest wanting first, which is prdb's own stamp rather than when a
+            // feed read it — so a list restored onto a second installation comes
+            // back in the order the user built it.
+            .OrderByDescending(row => row.SinceAt)
+            .ThenByDescending(row => row.VideoId)
+            .Skip((wanted - 1) * APage)
+            .Take(APage)
+            .Select(row => new VideoCard(
+                row.Video!.Id,
+                row.Video.PrdbId,
+                row.Video.Title,
+                row.Video.Site == null ? null : row.Video.Site.Title,
+                row.Video.ReleaseDate))
+            .ToListAsync(cancellationToken);
+
+        return new WantedList(
+            videos,
+            wanted,
+            APage,
+            total,
+            await cursors.StartedAsync(Feed.WantedVideos, cancellationToken),
+            await BackfillIsRunningAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Whether ADR 0013's backfill still has a row.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0014: bootstrap is not a state of the application, so there is no
+    /// flag to read — a one-shot routine retires by deleting its row, and the
+    /// row being there is the whole of what <em>still running</em> means. Asked
+    /// of the schedule rather than of a column, which is what keeps the two from
+    /// disagreeing.
+    /// </remarks>
+    private Task<bool> BackfillIsRunningAsync(CancellationToken cancellationToken) =>
+        context.Routines.AnyAsync(
+            row => row.Name == WhatsNewBackfillRoutine.RoutineName,
+            cancellationToken);
 }
 
 /// <summary>
@@ -74,8 +144,12 @@ public sealed class CatalogueBrowse(FabDbContext context)
 /// </summary>
 /// <param name="Id">
 /// The catalogue's own id, which is what the artwork route is addressed by and
-/// what a later slice will link a detail page on. Not prdb's id: nothing
-/// outside the tool is being named here.
+/// what a later slice will link a detail page on.
+/// </param>
+/// <param name="PrdbId">
+/// prdb's own id, which is how anything outside this tool names the video —
+/// and the only thing a link back to prdb can be built out of. ADR 0033 makes
+/// that the natural key for exactly this reason.
 /// </param>
 /// <param name="Site">
 /// The site's title, or null while the site list has not reached it. ADR 0013
@@ -83,7 +157,35 @@ public sealed class CatalogueBrowse(FabDbContext context)
 /// before it is a video whose site is not known here yet rather than one that
 /// is wrong.
 /// </param>
-public sealed record VideoCard(long Id, string Title, string? Site, DateOnly? ReleaseDate);
+public sealed record VideoCard(
+    long Id,
+    Guid PrdbId,
+    string Title,
+    string? Site,
+    DateOnly? ReleaseDate);
 
 /// <summary>One page of a grid, and where in the whole it sits.</summary>
 public sealed record VideoPage(IReadOnlyList<VideoCard> Videos, int Page, int PageSize, int Total);
+
+/// <summary>
+/// One page of the wanted list, and the two facts about the sync that decide
+/// what an empty one says.
+/// </summary>
+/// <param name="FeedHasRun">
+/// Whether the wanted list has ever been read from prdb. An empty list before
+/// the first run and an empty list after it are different sentences: one is a
+/// page that has not arrived, the other is an account with nothing on it.
+/// </param>
+/// <param name="BackfillRunning">
+/// Whether ADR 0013's backfill still has a row to run. It is a fact and
+/// explicitly not a Gap — nothing is broken, the catalogue is merely
+/// unfinished — and it is the whole of what this slice says about the state of
+/// the loop.
+/// </param>
+public sealed record WantedList(
+    IReadOnlyList<VideoCard> Videos,
+    int Page,
+    int PageSize,
+    int Total,
+    bool FeedHasRun,
+    bool BackfillRunning);

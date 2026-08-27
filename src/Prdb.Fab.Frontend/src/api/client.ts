@@ -27,6 +27,7 @@ export type LibraryRootVerdict = Schema['LibraryRootVerdict']
 
 export type VideoCard = Schema['VideoCard']
 export type VideoPage = Schema['VideoPage']
+export type WantedList = Schema['WantedList']
 
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
@@ -180,6 +181,14 @@ export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict>
  */
 export async function listWhatsNew(page: number): Promise<VideoPage> {
   return json<VideoPage>(await fetch(`/api/catalogue/whats-new?page=${page}`))
+}
+
+/**
+ * ADR 0007's only source of intent, read out of the catalogue. There is no
+ * call beside this one that writes to it: wanting happens in prdb.
+ */
+export async function listWanted(page: number): Promise<WantedList> {
+  return json<WantedList>(await fetch(`/api/catalogue/wanted?page=${page}`))
 }
 
 export async function listItems(page: ItemsQuery['page']): Promise<ItemPage> {

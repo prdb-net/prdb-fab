@@ -26,10 +26,10 @@ export function Chrome() {
       <Link className={styles.name} to="/">
         prdb-fab
       </Link>
-      {/* Two surfaces are what this release has, and the bar names the one that
-          exists. The wanted list joins it when there is one to link to — a link
-          to a page that is not built is worse than no link. */}
+      {/* The two surfaces this slice has, and nothing else — there are two,
+          so the bar names two. */}
       <Link to="/">What&rsquo;s new</Link>
+      <Link to="/wanted">Wanted</Link>
       <Link to="/settings">Settings</Link>
     </nav>
   )

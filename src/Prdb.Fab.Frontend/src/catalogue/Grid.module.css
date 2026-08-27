@@ -63,3 +63,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* What a surface puts under a card, where it puts one. */
+.action {
+  font-size: 0.85rem;
+}

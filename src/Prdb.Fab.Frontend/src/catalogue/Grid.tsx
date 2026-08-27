@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import type { VideoCard } from '../api/client.ts'
 import styles from './Grid.module.css'
@@ -7,27 +7,41 @@ import styles from './Grid.module.css'
  * The grid, written once and used by every browse surface.
  *
  * ADR 0012 makes five surfaces artwork grids and says the differences between
- * them are the source and the actions, never the card — so this takes a list
- * and nothing else. There is no action on a card today: *find this on the
- * indexers* belongs to the matching slice, and a card that does nothing is
- * honest until it exists.
+ * them are the source and the actions, never the card. So the card is fixed
+ * here and what may go under it is the caller's — which is the seam that keeps
+ * *find this on the indexers* from having to be invented before the slice that
+ * owns it, and keeps the wanted list's way out to prdb off every other surface.
  */
-export function Grid({ videos }: { videos: readonly VideoCard[] }) {
+export function Grid({
+  videos,
+  action,
+}: {
+  videos: readonly VideoCard[]
+  /** What this surface offers on a card, if anything. */
+  action?: (video: VideoCard) => ReactNode
+}) {
   return (
     <ul className={styles.grid}>
       {videos.map((video) => (
-        <Card key={video.id} video={video} />
+        <Card key={video.id} video={video} action={action} />
       ))}
     </ul>
   )
 }
 
-function Card({ video }: { video: VideoCard }) {
+function Card({
+  video,
+  action,
+}: {
+  video: VideoCard
+  action?: (video: VideoCard) => ReactNode
+}) {
   return (
     <li className={styles.card}>
       <Artwork videoId={video.id} title={video.title} />
       <span className={styles.title}>{video.title}</span>
       <span className={styles.detail}>{describe(video)}</span>
+      {action?.(video)}
     </li>
   )
 }

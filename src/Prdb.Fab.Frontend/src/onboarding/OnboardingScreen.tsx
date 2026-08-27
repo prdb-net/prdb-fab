@@ -236,7 +236,10 @@ export const steps: ReadonlyArray<{
 /** Where the page sends someone whose onboarding is not finished. */
 export function routeFor(step: OnboardingStep | null | undefined): string {
   if (step === 'Complete') {
-    return '/ready'
+    // ADR 0010 always ended the path here: the wanted list, with the first sync
+    // visibly running. What stood here until the catalogue existed was a page
+    // saying so, and it is gone.
+    return '/wanted'
   }
 
   const match = steps.find((candidate) => candidate.step === step)

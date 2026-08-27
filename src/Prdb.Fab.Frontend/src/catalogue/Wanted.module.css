@@ -1,0 +1,83 @@
+.screen {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.heading h1 {
+  margin: 0;
+}
+
+.count {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}
+
+.lede {
+  color: var(--text-quiet);
+  margin: 0 0 1.25rem;
+  max-width: 60ch;
+}
+
+/*
+  ADR 0013: a running backfill is a fact and explicitly not a Gap. So it is a
+  quiet line and not a warning — no border in the failure colour, no icon, and
+  nothing that would read as something to act on.
+*/
+.working {
+  border-left: 2px solid var(--border);
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+  margin: 0 0 1.5rem;
+  padding-left: 0.75rem;
+}
+
+.empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  max-width: 60ch;
+  padding: 2rem 1.5rem;
+}
+
+.empty p {
+  margin: 0 0 0.75rem;
+}
+
+.empty p:last-child {
+  margin-bottom: 0;
+}
+
+.pager {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.pager button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.4rem 0.9rem;
+}
+
+.pager button:disabled {
+  color: var(--text-quiet);
+  cursor: default;
+}
+
+.where {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}

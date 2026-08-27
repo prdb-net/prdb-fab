@@ -486,6 +486,40 @@
         }
       }
     },
+    "/api/catalogue/wanted": {
+      "get": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WantedList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/skeleton/items": {
       "get": {
         "tags": [
@@ -1380,6 +1414,7 @@
       "VideoCard": {
         "required": [
           "id",
+          "prdbId",
           "title",
           "site",
           "releaseDate"
@@ -1393,6 +1428,10 @@
               "string"
             ],
             "format": "int64"
+          },
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
           },
           "title": {
             "type": "string"
@@ -1450,6 +1489,55 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "WantedList": {
+        "required": [
+          "videos",
+          "page",
+          "pageSize",
+          "total",
+          "feedHasRun",
+          "backfillRunning"
+        ],
+        "type": "object",
+        "properties": {
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoCard"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "feedHasRun": {
+            "type": "boolean"
+          },
+          "backfillRunning": {
+            "type": "boolean"
           }
         }
       }

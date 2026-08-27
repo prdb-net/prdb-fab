@@ -671,6 +671,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalogue/wanted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WantedList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skeleton/items": {
         parameters: {
             query?: never;
@@ -983,6 +1020,8 @@ export interface components {
         VideoCard: {
             /** Format: int64 */
             id: number | string;
+            /** Format: uuid */
+            prdbId: string;
             title: string;
             site: null | string;
             /** Format: date */
@@ -996,6 +1035,17 @@ export interface components {
             pageSize: number | string;
             /** Format: int32 */
             total: number | string;
+        };
+        WantedList: {
+            videos: components["schemas"]["VideoCard"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            feedHasRun: boolean;
+            backfillRunning: boolean;
         };
     };
     responses: never;

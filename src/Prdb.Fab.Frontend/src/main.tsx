@@ -6,10 +6,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 
 import { readAccessState } from './api/client.ts'
 import { AccessGate } from './access/AccessGate.tsx'
+import { WantedScreen } from './catalogue/WantedScreen.tsx'
 import { WhatsNewScreen } from './catalogue/WhatsNewScreen.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
-import { ReadyScreen } from './onboarding/ReadyScreen.tsx'
 import { AccountScreen } from './settings/AccountScreen.tsx'
 import { ConnectionsScreen } from './settings/ConnectionsScreen.tsx'
 import { IndexerSettings } from './settings/IndexerSettings.tsx'
@@ -59,7 +59,9 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding/:step" element={<OnboardingScreen />} />
-            <Route path="/ready" element={<ReadyScreen />} />
+            {/* ADR 0010's last step lands here, which is what makes onboarding
+                lead to a first download rather than to a page saying it could. */}
+            <Route path="/wanted" element={<WantedScreen />} />
             {/* ADR 0020: routes rather than one page with anchors, one level
                 down as well — every indexer has its own. */}
             <Route path="/settings" element={<SettingsGate />}>
