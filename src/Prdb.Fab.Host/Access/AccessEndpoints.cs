@@ -15,6 +15,29 @@ public static class AccessEndpoints
     {
         var group = routes.MapGroup("/api/access").WithTags("Access");
 
+        // ADR 0010: the browser side is one page that decides for itself what
+        // to show, and this is what it decides from. Anonymous, because the
+        // first thing it has to be able to answer is that nobody is signed in.
+        group.MapGet("/state", async (
+            Installations installations,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            var signedIn = http.User.Identity?.IsAuthenticated == true;
+            var passwordSet = !await installations.IsUnclaimedAsync(cancellationToken);
+
+            // How far onboarding has got is told to whoever is entitled to act
+            // on it. Before a password exists that is everyone, and the answer
+            // is the password; afterwards it is whoever is signed in. ADR 0010
+            // asks this endpoint for what the page needs to decide, and a page
+            // showing the sign-in form needs nothing more than that it must.
+            var nextStep = signedIn || !passwordSet
+                ? await installations.NextStepAsync(cancellationToken)
+                : (OnboardingStep?)null;
+
+            return TypedResults.Ok(new AccessState(passwordSet, signedIn, nextStep));
+        }).AllowAnonymous();
+
         // ADR 0010's first unauthenticated write, and in this slice its only
         // one. Restore is the second and joins on the same condition, which is
         // why the condition is asked of the installation rather than written
@@ -98,6 +121,12 @@ public static class AccessEndpoints
         });
     }
 }
+
+/// <summary>
+/// ADR 0010's three questions: whether a password is set, whether this caller is
+/// signed in, and which onboarding step is next.
+/// </summary>
+public sealed record AccessState(bool PasswordSet, bool SignedIn, OnboardingStep? NextStep);
 
 public sealed record SetPasswordRequest(string? Password);
 

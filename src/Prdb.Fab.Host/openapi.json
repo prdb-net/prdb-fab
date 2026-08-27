@@ -25,6 +25,25 @@
         }
       }
     },
+    "/api/access/state": {
+      "get": {
+        "tags": [
+          "Access"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/access/password": {
       "post": {
         "tags": [
@@ -200,6 +219,32 @@
   },
   "components": {
     "schemas": {
+      "AccessState": {
+        "required": [
+          "passwordSet",
+          "signedIn",
+          "nextStep"
+        ],
+        "type": "object",
+        "properties": {
+          "passwordSet": {
+            "type": "boolean"
+          },
+          "signedIn": {
+            "type": "boolean"
+          },
+          "nextStep": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OnboardingStep"
+              }
+            ]
+          }
+        }
+      },
       "AddItemRequest": {
         "required": [
           "label"
@@ -290,6 +335,17 @@
             "format": "int32"
           }
         }
+      },
+      "OnboardingStep": {
+        "enum": [
+          "Password",
+          "PrdbKey",
+          "Sabnzbd",
+          "Indexers",
+          "LibraryRoot",
+          "Complete",
+          null
+        ]
       },
       "RecordedRun": {
         "required": [

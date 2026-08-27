@@ -1,0 +1,87 @@
+.screen {
+  margin: 0 auto;
+  max-width: 26rem;
+  padding: 4rem 1rem;
+}
+
+.lede {
+  color: var(--text-quiet);
+  margin-bottom: 2rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-top: var(--gap);
+}
+
+.field {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  margin-top: 1.25rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.button:disabled {
+  color: var(--text-quiet);
+  cursor: default;
+}
+
+.refusal {
+  color: var(--bad);
+  margin: var(--gap) 0 0;
+}
+
+.note {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+  margin-top: 2.5rem;
+}
+
+.note code {
+  background: var(--surface-raised);
+  border-radius: 3px;
+  padding: 0.1rem 0.3rem;
+}
+
+.signOut {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.3rem 0.6rem;
+  position: fixed;
+  right: 1rem;
+  top: 1rem;
+}
+
+.signOut:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}

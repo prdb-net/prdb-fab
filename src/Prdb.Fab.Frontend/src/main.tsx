@@ -1,35 +1,51 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 
+import { readAccessState } from './api/client.ts'
+import { AccessGate } from './access/AccessGate.tsx'
+import { SignOutButton } from './access/SignOutButton.tsx'
+import { accessStateKey, createQueryClient } from './access/state.ts'
+import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
 import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import './index.css'
 
 // ADR 0036: React Router in library mode only — the router is a library this
 // application calls, not a framework it is built inside. Anything linkable
-// lives in the address, which is why the page number below is a search
-// parameter rather than component state.
-//
-// ADR 0040: a verdict is HTTP 200 with a typed body, so there is nothing here
-// for TanStack Query to retry. Retries are off deliberately rather than by
-// omission: a failed request is a failed request, and ADR 0041 already decided
-// that nothing retries inside one.
-const queries = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false, refetchOnWindowFocus: false },
-    mutations: { retry: false },
-  },
-})
+// lives in the address, which is why every onboarding step has one before the
+// form behind it exists.
+const queries = createQueryClient()
+
+/**
+ * Where someone lands who typed the address and nothing more. The state
+ * endpoint says which step is next, and the answer is a redirect rather than a
+ * screen of its own — so the address always names what is being looked at.
+ */
+function Landing() {
+  const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
+
+  if (state.isPending) {
+    return null
+  }
+
+  return <Navigate to={routeFor(state.data?.nextStep)} replace />
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queries}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/skeleton" element={<SkeletonScreen />} />
-          <Route path="*" element={<Navigate to="/skeleton" replace />} />
-        </Routes>
+        <AccessGate>
+          <SignOutButton />
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/onboarding/:step" element={<OnboardingScreen />} />
+            <Route path="/skeleton" element={<SkeletonScreen />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AccessGate>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

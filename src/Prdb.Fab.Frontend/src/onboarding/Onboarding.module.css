@@ -1,0 +1,30 @@
+.screen {
+  margin: 0 auto;
+  max-width: 34rem;
+  padding: 4rem 1rem;
+}
+
+.heading {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  margin-bottom: var(--gap);
+}
+
+.lede {
+  margin-bottom: 1.5rem;
+}
+
+.pending {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  padding: var(--gap);
+}
+
+.note {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+  margin-top: 2.5rem;
+}
