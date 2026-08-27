@@ -3,7 +3,9 @@ using Microsoft.Kiota.Abstractions;
 using Microsoft.Kiota.Http.HttpClientLibrary.Middleware.Options;
 
 using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.Sync;
 using Prdb.Sdk;
+using Prdb.Sdk.Generated;
 
 namespace Prdb.Fab.Infrastructure.Connections;
 
@@ -29,7 +31,10 @@ namespace Prdb.Fab.Infrastructure.Connections;
 /// key something a person changes in a form while the container runs.
 /// </para>
 /// </remarks>
-public sealed class PrdbGateway(IHttpMessageHandlerFactory transports, ILogger<PrdbGateway> logger)
+public sealed class PrdbGateway(
+    IHttpMessageHandlerFactory transports,
+    PrdbGovernor governor,
+    ILogger<PrdbGateway> logger)
 {
     /// <summary>
     /// ADR 0010's mandatory check: <c>GET /user-identity</c>, and the four
@@ -45,11 +50,13 @@ public sealed class PrdbGateway(IHttpMessageHandlerFactory transports, ILogger<P
             return new PrdbCheck(PrdbConnectionOutcome.WrongKey, UserHash: null, RetryAfterSeconds: null);
         }
 
-        var client = PrdbClientFactory.Create(
-            apiKey,
-            transport: transports.CreateHandler(FabTransports.Prdb),
-            retry: PrdbRetryOptions.Disabled,
-            timeout: FabTransports.PrdbTimeout);
+        var client = Client(apiKey);
+
+        // The one kind of request the governor never defers, and the reason it
+        // does not: this is what finds out whether a key works, so deferring it
+        // would make a spent budget or a refused key unfixable from inside the
+        // tool. It is also the way back — an answer here lifts a refusal.
+        using var doing = governor.For(PrdbWork.Verification);
 
         try
         {
@@ -99,6 +106,47 @@ public sealed class PrdbGateway(IHttpMessageHandlerFactory transports, ILogger<P
             return new PrdbCheck(PrdbConnectionOutcome.NotRightNow, null, null);
         }
     }
+
+    /// <summary>
+    /// Makes one prdb request, saying what it is for.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The shape every routine reaches prdb through. What it adds over calling
+    /// the SDK is the two things that must not be a caller's to remember: the
+    /// client is built here, on the one transport the governor is on, and the
+    /// request is marked with its place in ADR 0014's order before it is sent.
+    /// </para>
+    /// <para>
+    /// Nothing is caught. A refusal is an <c>ApiException</c> and a deferral is
+    /// a <see cref="PrdbDeferredException"/>, and both are the lane's to turn
+    /// into what the run was — which is where ADR 0038 put that decision and
+    /// where it is made once.
+    /// </para>
+    /// </remarks>
+    public async Task<TAnswer?> AskAsync<TAnswer>(
+        string apiKey,
+        PrdbWork work,
+        Func<PrdbClient, CancellationToken, Task<TAnswer?>> ask,
+        CancellationToken cancellationToken = default)
+    {
+        var client = Client(apiKey);
+
+        using var doing = governor.For(work);
+
+        return await ask(client, cancellationToken);
+    }
+
+    /// <summary>
+    /// A client per use over the pooled transport, which is ADR 0041's choice
+    /// and ADR 0020's reason: the key is something a person changes in a form
+    /// while the container runs.
+    /// </summary>
+    private PrdbClient Client(string apiKey) => PrdbClientFactory.Create(
+        apiKey,
+        transport: transports.CreateHandler(FabTransports.Prdb),
+        retry: PrdbRetryOptions.Disabled,
+        timeout: FabTransports.PrdbTimeout);
 
     /// <summary>
     /// The <c>Retry-After</c> prdb sends with a <c>429</c>, in seconds.

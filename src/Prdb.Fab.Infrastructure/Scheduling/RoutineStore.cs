@@ -56,8 +56,6 @@ public sealed class RoutineStore(
             return;
         }
 
-        routine.DueAt = now + cadence;
-
         switch (result.Outcome)
         {
             case RunOutcome.Succeeded:
@@ -78,9 +76,13 @@ public sealed class RoutineStore(
             case null:
                 // ADR 0032, and the only place it is applied: an empty tick is
                 // not a run. The due time moves on so the lane does not spin,
-                // and nothing is written to the log.
+                // and nothing is written to the log. ADR 0014's deferral is the
+                // same absence with a wait of its own, which is why it is the
+                // same case here.
                 break;
         }
+
+        routine.DueAt = now + NextDueIn(result, routine.ConsecutiveFailures, cadence);
 
         if (result.IsRecorded)
         {
@@ -102,6 +104,23 @@ public sealed class RoutineStore(
             await TrimRunLogAsync(routine.Id, cancellationToken);
         }
     }
+
+    /// <summary>
+    /// How long until this routine may be due again.
+    /// </summary>
+    /// <remarks>
+    /// Three answers in one place, in the order they override each other. What
+    /// the run itself knew wins — a deferral waiting on the budget, or the
+    /// <c>Retry-After</c> ADR 0014 says overrides the backoff <em>exactly</em>.
+    /// Otherwise a failure backs off, doubling per consecutive failure and
+    /// capped at an hour. Otherwise the routine's own cadence, which for the
+    /// work-set routines is ADR 0032's idle tick rather than an interval.
+    /// </remarks>
+    private static TimeSpan NextDueIn(RunResult result, int consecutiveFailures, TimeSpan cadence) =>
+        result.DueIn
+        ?? (result.Outcome == RunOutcome.Failed
+            ? Backoff.After(cadence, consecutiveFailures)
+            : cadence);
 
     public async Task<bool> RunNowAsync(string name, string? target, CancellationToken cancellationToken)
     {

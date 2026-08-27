@@ -48,14 +48,28 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public FabDatabaseLocation Location => provider.GetRequiredService<FabDatabaseLocation>();
 
-    public static Task<TestDatabase> CreateAsync() => CreateAsync(migratedTo: null);
-
     /// <summary>
-    /// The same, stopped at <paramref name="migratedTo"/> — an older release's
-    /// schema, so that a test can migrate it forward the way a started
-    /// container does.
+    /// A migrated database and the services around it.
     /// </summary>
-    public static async Task<TestDatabase> CreateAsync(string? migratedTo)
+    /// <param name="migratedTo">
+    /// Stop at this migration — an older release's schema, so that a test can
+    /// migrate it forward the way a started container does. Null for the schema
+    /// this build expects.
+    /// </param>
+    /// <param name="prdb">
+    /// Stands at the prdb socket (ADR 0042), so everything above it — the SDK,
+    /// the governor's handler, the agent, the timeout — is the real thing.
+    /// </param>
+    /// <param name="also">
+    /// Anything else this test needs registered, which in practice is a routine
+    /// for the schedule to turn. Adding one is not replacing one: ADR 0035
+    /// forbids swapping a service out to get past the wiring, and a routine
+    /// that exists only in a test is a caller rather than a double.
+    /// </param>
+    public static async Task<TestDatabase> CreateAsync(
+        string? migratedTo = null,
+        HttpMessageHandler? prdb = null,
+        Action<IServiceCollection>? also = null)
     {
         var directory = Path.Combine(Path.GetTempPath(), "prdb-fab-tests", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(directory);
@@ -69,6 +83,13 @@ public sealed class TestDatabase : IAsyncDisposable
         services.AddFabScheduling();
         services.AddFabAccess();
         services.AddFabConnections();
+
+        if (prdb is not null)
+        {
+            services.AddHttpClient(FabTransports.Prdb).ConfigurePrimaryHttpMessageHandler(() => prdb);
+        }
+
+        also?.Invoke(services);
 
         var provider = services.BuildServiceProvider();
 

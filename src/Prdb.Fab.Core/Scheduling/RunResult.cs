@@ -21,11 +21,12 @@ namespace Prdb.Fab.Core.Scheduling;
 /// </remarks>
 public sealed record RunResult
 {
-    private RunResult(RunOutcome? outcome, int itemsHandled, string? reason)
+    private RunResult(RunOutcome? outcome, int itemsHandled, string? reason, TimeSpan? dueIn = null)
     {
         Outcome = outcome;
         ItemsHandled = itemsHandled;
         Reason = reason;
+        DueIn = dueIn;
     }
 
     /// <summary>
@@ -55,8 +56,14 @@ public sealed record RunResult
         new(RunOutcome.Succeeded, itemsHandled, reason: null);
 
     /// <summary>The routine failed, with a sentence for whoever reads the log.</summary>
-    public static RunResult Failed(string reason) =>
-        new(RunOutcome.Failed, itemsHandled: 0, reason);
+    /// <param name="waitFor">
+    /// What the failure itself said about when to come back — prdb's
+    /// <c>Retry-After</c>, which ADR 0014 has override the backoff exactly.
+    /// Null when the failure said nothing, which is the ordinary case and the
+    /// one backoff is for.
+    /// </param>
+    public static RunResult Failed(string reason, TimeSpan? waitFor = null) =>
+        new(RunOutcome.Failed, itemsHandled: 0, reason, waitFor);
 
     /// <summary>
     /// The container was asked to stop while the routine was working. The count
@@ -64,6 +71,29 @@ public sealed record RunResult
     /// </summary>
     public static RunResult Interrupted(int itemsHandled) =>
         new(RunOutcome.Interrupted, itemsHandled, reason: null);
+
+    /// <summary>
+    /// When the routine may next be due, where the run itself knows better than
+    /// its cadence does — a deferral waiting on the budget, or a <c>429</c>
+    /// carrying a <c>Retry-After</c> that ADR 0014 says overrides the backoff
+    /// exactly. Null everywhere else, and the schedule falls back to what it
+    /// knows.
+    /// </summary>
+    public TimeSpan? DueIn { get; }
+
+    /// <summary>
+    /// The governor turned the request away, so the routine did not run.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0014's fourth case, and it sits beside <see cref="NothingToDo"/>
+    /// rather than beside <see cref="Failed"/> on purpose: a deferred routine is
+    /// the tool working exactly as designed, which is the distinction ADR 0018
+    /// later draws as a Brake against a Gap. So it moves no failure counter and
+    /// writes no run — the same absence ADR 0032 gave the empty tick, and
+    /// expressed in the same one place.
+    /// </remarks>
+    public static RunResult Deferred(TimeSpan waitFor) =>
+        new(outcome: null, itemsHandled: 0, reason: null, dueIn: waitFor);
 
     /// <summary>Whether this belongs in the run log at all.</summary>
     public bool IsRecorded => Outcome is not null;
