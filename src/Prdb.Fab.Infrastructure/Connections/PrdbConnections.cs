@@ -13,6 +13,7 @@ namespace Prdb.Fab.Infrastructure.Connections;
 public sealed class PrdbConnections(
     FabDbContext context,
     PrdbGateway prdb,
+    AccountScopedRows accountScoped,
     ILogger<PrdbConnections> logger)
 {
     /// <summary>
@@ -57,6 +58,20 @@ public sealed class PrdbConnections(
         var changedAccount = installation.PrdbUserHash is { Length: > 0 } held
             && !string.Equals(held, userHash, StringComparison.Ordinal);
 
+        if (changedAccount)
+        {
+            // Before the key is written, and deliberately. Neither of these two
+            // writes can be made to depend on the other — ADR 0004 keeps a
+            // transaction inside a single call and there is no call this could
+            // be inside — so what is chosen instead is the order whose failure
+            // is harmless. Dropped first and then a failed write leaves the old
+            // key against an empty list, which the next feed run refills.
+            // Written first and then a failed drop leaves the new account's
+            // rows arriving beside the previous account's, which is the one
+            // outcome ADR 0013 exists to prevent.
+            await accountScoped.DropAsync(cancellationToken);
+        }
+
         installation.PrdbApiKey = key;
         installation.PrdbUserHash = userHash;
 
@@ -66,13 +81,13 @@ public sealed class PrdbConnections(
         if (changedAccount)
         {
             // ADR 0019 keeps what was already reported and scopes it to the
-            // account it was made under, so nothing is deleted here. Worth a
-            // line in the log all the same: it is the moment the wanted list
-            // stops being the one somebody was looking at.
+            // account it was made under, so that is the one thing a key change
+            // does not take.
             logger.LogWarning(
                 "The prdb key now in use belongs to a different prdb account than the one this "
                 + "installation was running as. What was already reported stays recorded against "
-                + "the account it was reported for.");
+                + "the account it was reported for. The three feeds it dropped fill again from "
+                + "the beginning on their next run.");
         }
 
         logger.LogInformation("The prdb key has been stored.");

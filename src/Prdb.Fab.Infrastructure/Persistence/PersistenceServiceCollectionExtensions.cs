@@ -29,6 +29,10 @@ public static class PersistenceServiceCollectionExtensions
 
         services.AddScoped<DatabaseMigrator>();
 
+        // ADR 0033's account cut, read off the model rather than kept in step
+        // by hand. See AccountScopedRows.
+        services.AddScoped<AccountScopedRows>();
+
         return services;
     }
 

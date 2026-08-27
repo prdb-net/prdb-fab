@@ -8,7 +8,9 @@ public static class SyncServiceCollectionExtensions
 {
     /// <summary>
     /// ADR 0013's sync: the five change feeds, What's New in both directions,
-    /// the two bootstraps that retire, and what they share.
+    /// the site list, the repair pass, the two bootstraps that retire, and what
+    /// they share — including ADR 0033's pinning, which is a query the repair
+    /// pass and eviction both ask rather than a column either of them writes.
     /// </summary>
     /// <remarks>
     /// Registered apart from <c>AddFabScheduling</c> rather than inside it,
@@ -21,6 +23,13 @@ public static class SyncServiceCollectionExtensions
     {
         services.AddScoped<FeedCursors>();
         services.AddScoped<CatalogueRows>();
+
+        // ADR 0033's pinning, as the query it is. One source today and one
+        // clause each for the five tables that arrive later, which is what
+        // keeps adding one from being a rewrite.
+        services.AddScoped<ICataloguePin, WantedVideoPin>();
+        services.AddScoped<CataloguePins>();
+        services.AddScoped<CatalogueEviction>();
 
         services.AddScoped<ActorFeed>();
         services.AddScoped<VideoImageFeed>();
@@ -45,6 +54,7 @@ public static class SyncServiceCollectionExtensions
         Routine<WhatsNewRoutine>(services);
         Routine<WhatsNewBackfillRoutine>(services);
         Routine<SiteListRoutine>(services);
+        Routine<CatalogueRepairRoutine>(services);
 
         return services;
     }
