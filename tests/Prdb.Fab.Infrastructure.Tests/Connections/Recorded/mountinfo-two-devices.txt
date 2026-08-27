@@ -1,0 +1,4 @@
+25 0 259:2 / / rw,relatime - ext4 /dev/nvme0n1p2 rw
+26 25 0:22 / /dev/shm rw,nosuid,nodev - tmpfs tmpfs rw
+41 25 8:17 / /mnt/library rw,relatime - xfs /dev/sdb1 rw
+42 25 8:33 / /mnt/downloads rw,relatime - ext4 /dev/sdc1 rw

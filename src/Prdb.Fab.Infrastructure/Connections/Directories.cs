@@ -54,68 +54,31 @@ public static class Directories
     /// rename rather than copy and delete.
     /// </summary>
     /// <remarks>
-    /// Answered by finding the mount each path falls under — the longest mounted
-    /// root that is a prefix of it — rather than by attempting a rename. ADR
-    /// 0042 put the kernel's own <c>EXDEV</c> on the list of what is not tested
-    /// for the same reason it is not provoked here: it is a property of the
-    /// operating system, and provoking it means writing into somebody's library
-    /// to find out.
+    /// Answered by finding the <em>device</em> each path is on rather than by
+    /// attempting a rename. ADR 0042 put the kernel's own <c>EXDEV</c> on the
+    /// list of what is not tested for the same reason it is not provoked here:
+    /// it is a property of the operating system, and provoking it means writing
+    /// into somebody's library to find out.
     /// <para>
-    /// Null when the mounts cannot be told apart, which is an answer and not a
-    /// gap: ADR 0010 warns rather than refuses here, so <em>we could not tell</em>
+    /// The device and not the mount point, which is the correction ticket 12
+    /// made. Two bind mounts of one filesystem are two mount points and one
+    /// device — and two bind mounts are exactly how a container is given its
+    /// downloads and its library, so comparing the mount points called the
+    /// ordinary arrangement a cross-filesystem one and told the user their
+    /// videos would be copied.
+    /// </para>
+    /// <para>
+    /// Null when the devices cannot be read at all, which is an answer and not
+    /// a gap: ADR 0010 warns rather than refuses here, so <em>we could not tell</em>
     /// and <em>they are the same</em> lead to the same act. It is returned as
     /// its own value so that the sentence a person reads is not a guess.
     /// </para>
     /// </remarks>
     public static bool? OnTheSameFilesystem(string first, string second)
     {
-        var one = MountOf(first);
-        var other = MountOf(second);
+        var one = MountTable.DeviceOf(first);
+        var other = MountTable.DeviceOf(second);
 
         return one is null || other is null ? null : string.Equals(one, other, StringComparison.Ordinal);
     }
-
-    private static string? MountOf(string path)
-    {
-        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-        string? deepest = null;
-
-        foreach (var drive in DriveInfo.GetDrives())
-        {
-            string root;
-
-            try
-            {
-                root = Path.TrimEndingDirectorySeparator(drive.RootDirectory.FullName);
-            }
-            catch (Exception unreadable) when (unreadable is UnauthorizedAccessException or IOException)
-            {
-                continue;
-            }
-
-            if (root.Length == 0)
-            {
-                // The filesystem root itself, which every path is under.
-                root = Path.DirectorySeparatorChar.ToString();
-            }
-
-            if (!Under(full, root))
-            {
-                continue;
-            }
-
-            if (deepest is null || root.Length > deepest.Length)
-            {
-                deepest = root;
-            }
-        }
-
-        return deepest;
-    }
-
-    private static bool Under(string path, string root) =>
-        string.Equals(path, root, StringComparison.Ordinal)
-        || (path.StartsWith(root, StringComparison.Ordinal)
-            && (root.EndsWith(Path.DirectorySeparatorChar)
-                || path[root.Length] == Path.DirectorySeparatorChar));
 }

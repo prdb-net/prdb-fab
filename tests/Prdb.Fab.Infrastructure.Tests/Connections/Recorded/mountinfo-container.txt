@@ -1,0 +1,6 @@
+901 900 9:4 /var/lib/docker/overlay2/6f2c/merged / rw,relatime - ext4 /dev/md4 rw,stripe=256
+902 901 0:57 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw
+903 901 0:58 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755
+957 901 9:4 /srv/fab/data /data rw,relatime - ext4 /dev/md4 rw,stripe=256
+958 901 9:4 /srv/usenet/downloads /downloads ro,relatime - ext4 /dev/md4 rw,stripe=256
+959 901 9:4 /srv/media/library /library rw,relatime - ext4 /dev/md4 rw,stripe=256
