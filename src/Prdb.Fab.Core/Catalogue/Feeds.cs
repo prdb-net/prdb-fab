@@ -23,7 +23,8 @@ public static class Feeds
     public static AccountClass AccountClassOf(this Feed feed) => feed switch
     {
         Feed.WantedVideos or Feed.FavouriteSites or Feed.FavouriteActors => AccountClass.AccountScoped,
-        Feed.Actors or Feed.VideoImages or Feed.WhatsNew or Feed.WhatsNewBackfill => AccountClass.AccountFree,
+        Feed.Actors or Feed.VideoImages or Feed.WhatsNew or Feed.WhatsNewBackfill or Feed.Sites =>
+            AccountClass.AccountFree,
         _ => throw new ArgumentOutOfRangeException(
             nameof(feed),
             feed,

@@ -44,6 +44,7 @@ public static class SyncServiceCollectionExtensions
         Routine<FavouriteActorFeedRoutine>(services);
         Routine<WhatsNewRoutine>(services);
         Routine<WhatsNewBackfillRoutine>(services);
+        Routine<SiteListRoutine>(services);
 
         return services;
     }

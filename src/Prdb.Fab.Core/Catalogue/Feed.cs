@@ -43,4 +43,17 @@ public enum Feed
     /// a second meaning for <see cref="WhatsNew"/>.
     /// </summary>
     WhatsNewBackfill,
+
+    /// <summary>
+    /// Which version of prdb's site list is held: the <c>ETag</c> the last
+    /// answer carried, handed back as <c>If-None-Match</c>.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0013 says sites have no feed, no cursor and no diff, and all three
+    /// are true — the whole list fits one request, so there is nothing to resume
+    /// from and nothing to page. What is left is still a token prdb gave and
+    /// this tool hands back unread, which is what this table holds; a column on
+    /// the installation row would be a sync position kept among the settings.
+    /// </remarks>
+    Sites,
 }

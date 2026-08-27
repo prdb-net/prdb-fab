@@ -13,8 +13,8 @@ namespace Prdb.Fab.Infrastructure.Tests.Sync;
 /// real SDK, the real handler chain, the real governor and the real routine.
 /// What the tests using it are about is what a page does to the database and
 /// what the next request asks for, and both of those are only worth anything
-/// against the real client: the query string these assertions read is the one
-/// Kiota built.
+/// against the real client: the query strings and conditional headers these
+/// assertions read are the ones Kiota built.
 /// </para>
 /// <para>
 /// Hand-written rather than recorded, and answers are queued per path so that a
@@ -25,11 +25,33 @@ namespace Prdb.Fab.Infrastructure.Tests.Sync;
 /// </remarks>
 internal sealed class FakePrdbApi : HttpMessageHandler
 {
-    private readonly ConcurrentDictionary<string, Queue<string>> queued = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, string> last = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Queue<Answer>> queued = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, Answer> last = new(StringComparer.Ordinal);
+    private readonly List<Asking> asked = [];
 
-    /// <summary>Every request that was made, whole, newest last.</summary>
-    public List<Uri> Asked { get; } = [];
+    /// <summary>One request, as much of it as an assertion has asked about.</summary>
+    public sealed record Asking(Uri Uri, string? IfNoneMatch);
+
+    /// <summary>What prdb answers with once.</summary>
+    private sealed record Answer(HttpStatusCode Status, string? Json, string? EntityTag);
+
+    /// <summary>
+    /// Every request that was made, whole, newest last. A copy: a lane is a
+    /// background worker, so whoever reads this is on another thread from
+    /// whoever is adding to it.
+    /// </summary>
+    public IReadOnlyList<Asking> Requests
+    {
+        get
+        {
+            lock (asked)
+            {
+                return [.. asked];
+            }
+        }
+    }
+
+    public IReadOnlyList<Uri> Asked => [.. Requests.Select(request => request.Uri)];
 
     /// <summary>
     /// The hourly window every answer reports, or null for a fake that says
@@ -39,16 +61,23 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     public (int Limit, int Remaining, int ResetInSeconds)? Hourly { get; set; }
 
     /// <summary>Queues one JSON body for <paramref name="path"/>.</summary>
-    public FakePrdbApi Answers(string path, string json)
-    {
-        queued.GetOrAdd(path, _ => new Queue<string>()).Enqueue(json);
+    public FakePrdbApi Answers(string path, string json, string? entityTag = null) =>
+        Queue(path, new Answer(HttpStatusCode.OK, json, entityTag));
 
-        return this;
-    }
+    /// <summary>
+    /// Queues the answer a conditional request gets while nothing has changed:
+    /// no body, and the validator that is still current.
+    /// </summary>
+    public FakePrdbApi AnswersNotModified(string path, string entityTag) =>
+        Queue(path, new Answer(HttpStatusCode.NotModified, null, entityTag));
 
     /// <summary>What was asked of <paramref name="path"/>, in order.</summary>
+    public IReadOnlyList<Asking> AskingFor(string path) =>
+        [.. Requests.Where(request => request.Uri.AbsolutePath == path)];
+
+    /// <summary>The same, for a test that only cares about the query string.</summary>
     public IReadOnlyList<Uri> AskedFor(string path) =>
-        Asked.Where(uri => uri.AbsolutePath == path).ToList();
+        [.. AskingFor(path).Select(request => request.Uri)];
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -56,15 +85,18 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     {
         var uri = request.RequestUri!;
 
-        lock (Asked)
+        lock (asked)
         {
-            Asked.Add(uri);
+            asked.Add(new Asking(
+                uri,
+                request.Headers.TryGetValues("If-None-Match", out var conditions)
+                    ? conditions.FirstOrDefault()
+                    : null));
         }
 
         var path = uri.AbsolutePath;
-        var body = Next(path);
 
-        if (body is null)
+        if (Next(path) is not { } answer)
         {
             // A path the test never said anything about. Answering 404 rather
             // than an empty page, so that a routine reaching somewhere nobody
@@ -72,10 +104,17 @@ internal sealed class FakePrdbApi : HttpMessageHandler
             return Task.FromResult(Problem(HttpStatusCode.NotFound, path));
         }
 
-        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        var response = new HttpResponseMessage(answer.Status);
+
+        if (answer.Json is { } json)
         {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
+            response.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        }
+
+        if (answer.EntityTag is { } tag)
+        {
+            response.Headers.TryAddWithoutValidation("ETag", tag);
+        }
 
         if (Hourly is { } window)
         {
@@ -87,7 +126,19 @@ internal sealed class FakePrdbApi : HttpMessageHandler
         return Task.FromResult(response);
     }
 
-    private string? Next(string path)
+    private FakePrdbApi Queue(string path, Answer answer)
+    {
+        var answers = queued.GetOrAdd(path, _ => new Queue<Answer>());
+
+        lock (answers)
+        {
+            answers.Enqueue(answer);
+        }
+
+        return this;
+    }
+
+    private Answer? Next(string path)
     {
         if (queued.TryGetValue(path, out var answers))
         {
