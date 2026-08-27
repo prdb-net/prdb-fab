@@ -28,3 +28,114 @@
   font-size: 0.9rem;
   margin-top: 2.5rem;
 }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-top: var(--gap);
+}
+
+.hint {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin: 0.15rem 0 0;
+}
+
+.field {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.field:disabled {
+  color: var(--text-quiet);
+}
+
+.button {
+  align-self: flex-start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  margin-top: 1.25rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.button:disabled {
+  color: var(--text-quiet);
+  cursor: default;
+}
+
+/* A verdict the tool checked and can answer, in the three shapes it comes in. */
+.refusal,
+.warning,
+.confirmed,
+.done {
+  border-left: 3px solid;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: var(--gap) 0 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-raised);
+}
+
+.refusal {
+  border-color: var(--bad);
+}
+
+.warning,
+.confirmed {
+  border-color: var(--accent);
+}
+
+.done {
+  border-color: var(--ok);
+}
+
+.path {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  display: block;
+  overflow-x: auto;
+  padding: 0.5rem 0.75rem;
+  white-space: pre;
+}
+
+.rows {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.rows li {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+}
+
+.rows li:last-child {
+  border-bottom: none;
+}
+
+.rowDetail {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+}

@@ -31,6 +31,18 @@
     -->
     <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.10" />
     <!--
+      ADR 0041: prdb is reached only through the SDK, and the SDK is where the
+      cross-origin rule that keeps X-Api-Key on the API host lives. MIT, and it
+      brings Kiota and the HTTP factory, both MIT as well.
+    -->
+    <PackageVersion Include="Prdb.Sdk" Version="0.11.0" />
+    <!--
+      ADR 0041's four named transports come from IHttpClientFactory. Referenced
+      explicitly rather than taken from what Prdb.Sdk pulls in, which targets
+      .NET 8 and would pin this to that line.
+    -->
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
+    <!--
       ADR 0043: console and a rolling file, both from this one reference. Apache-2.0
       here and in everything it brings — which is half of why it is here at all.
     -->

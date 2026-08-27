@@ -8,10 +8,12 @@ using Microsoft.AspNetCore.Authorization;
 
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Host.Access;
+using Prdb.Fab.Host.Connections;
 using Prdb.Fab.Host.Logging;
 using Prdb.Fab.Host.Scheduling;
 using Prdb.Fab.Host.Skeleton;
 using Prdb.Fab.Infrastructure.Access;
+using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 
@@ -35,6 +37,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddFabPersistence(dataDirectory);
 builder.Services.AddFabScheduling();
 builder.Services.AddFabAccess();
+builder.Services.AddFabConnections();
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
 // request gets 401 rather than a redirect.
@@ -147,6 +150,8 @@ app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok")))
     .AllowAnonymous();
 
 app.MapAccess();
+
+app.MapConnections();
 
 app.MapSkeleton();
 

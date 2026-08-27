@@ -18,6 +18,9 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
     <!-- ADR 0010's password hasher. -->
     <PackageReference Include="Microsoft.Extensions.Identity.Core" />
+    <!-- ADR 0041: the four named transports, and prdb reached only through the SDK. -->
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Prdb.Sdk" />
   </ItemGroup>
 
 </Project>

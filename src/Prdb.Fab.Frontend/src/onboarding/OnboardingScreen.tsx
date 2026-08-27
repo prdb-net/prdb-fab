@@ -1,6 +1,11 @@
+import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router'
 
 import type { OnboardingStep } from '../api/client.ts'
+import { IndexerForm } from './IndexerForm.tsx'
+import { LibraryRootForm } from './LibraryRootForm.tsx'
+import { PrdbForm } from './PrdbForm.tsx'
+import { SabnzbdForm } from './SabnzbdForm.tsx'
 import styles from './Onboarding.module.css'
 
 /**
@@ -8,10 +13,10 @@ import styles from './Onboarding.module.css'
  * onboarding step is worth linking to — ADR 0018 has every Gap carrying a route
  * to the form that fills it.
  *
- * So the addresses exist from the start and the forms behind them do not: they
- * are tickets 05 to 08, and ticket 09 is what turns these into a path with
- * *skip* and *continue* around it. What stands here until then says which step
- * it is and that it is not built, rather than pretending to be one.
+ * The addresses came first and the forms are behind them now. What is still
+ * missing is the path *between* them: *skip*, *continue*, and the marker moving
+ * to the next step. Each form commits on its own, which is what ADR 0010 asks
+ * of a step, and the order they are taken in is its own piece of work.
  */
 export function OnboardingScreen() {
   const { step } = useParams<{ step: string }>()
@@ -25,17 +30,15 @@ export function OnboardingScreen() {
         <>
           <h2 className={styles.heading}>{known.title}</h2>
           <p className={styles.lede}>{known.description}</p>
-          <p className={styles.pending}>
-            This step is not built yet. The password is, and so is everything
-            underneath it — what is missing is the form and the check behind it.
-          </p>
+          {known.form}
         </>
       ) : (
         <p className={styles.pending}>There is no setup step by that name.</p>
       )}
 
       <p className={styles.note}>
-        The walking skeleton is still <Link to="/skeleton">where it was</Link>.
+        The steps do not lead into one another yet — each is its own address, and{' '}
+        <Link to="/skeleton">the walking skeleton</Link> is still where it was.
       </p>
     </main>
   )
@@ -46,6 +49,7 @@ export const steps: ReadonlyArray<{
   slug: string
   title: string
   description: string
+  form: ReactNode
 }> = [
   {
     step: 'PrdbKey',
@@ -53,6 +57,7 @@ export const steps: ReadonlyArray<{
     title: 'The prdb API key',
     description:
       'Mandatory. Without it there is no identification, no wanted list, no artwork and no duplicate detection.',
+    form: <PrdbForm />,
   },
   {
     step: 'Sabnzbd',
@@ -60,18 +65,21 @@ export const steps: ReadonlyArray<{
     title: 'SABnzbd',
     description:
       'Skippable. A tool that cannot download is still a tool that holds a library.',
+    form: <SabnzbdForm />,
   },
   {
     step: 'Indexers',
     slug: 'indexers',
     title: 'Indexers',
     description: 'Skippable, and one is enough when it is taken.',
+    form: <IndexerForm />,
   },
   {
     step: 'LibraryRoot',
     slug: 'library',
     title: 'The library root',
     description: 'Mandatory. It is where filing puts what arrives.',
+    form: <LibraryRootForm />,
   },
 ]
 

@@ -9,6 +9,16 @@
     <ProjectReference Include="..\..\src\Prdb.Fab.Host\Prdb.Fab.Host.csproj" />
   </ItemGroup>
 
+  <!--
+    ADR 0042: Newznab is fed from recorded responses rather than hand-written
+    fixtures, because the research found five implementations that differ. See
+    Connections/Recorded/README.md for what is in them and what is deliberately
+    not.
+  -->
+  <ItemGroup>
+    <Content Include="Connections\Recorded\*.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.v3" />

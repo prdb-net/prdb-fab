@@ -12,6 +12,15 @@ export type OnboardingStep = Schema['OnboardingStep']
 export type SetPasswordVerdict = Schema['SetPasswordVerdict']
 export type SignInVerdict = Schema['SignInVerdict']
 
+export type ConnectionsState = Schema['ConnectionsState']
+export type PrdbConnectionVerdict = Schema['PrdbConnectionVerdict']
+export type SabnzbdCategory = Schema['SabnzbdCategory']
+export type SabnzbdCategoriesVerdict = Schema['SabnzbdCategoriesVerdict']
+export type SabnzbdConnectionVerdict = Schema['SabnzbdConnectionVerdict']
+export type ConfiguredIndexer = Schema['ConfiguredIndexer']
+export type IndexerConnectionVerdict = Schema['IndexerConnectionVerdict']
+export type LibraryRootVerdict = Schema['LibraryRootVerdict']
+
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
 export type AddItemVerdict = Schema['AddItemVerdict']
@@ -75,6 +84,53 @@ export async function signOut(): Promise<void> {
   if (!response.ok && response.status !== 401) {
     throw new Error(`${response.status} ${response.statusText}`)
   }
+}
+
+export async function readConnections(): Promise<ConnectionsState> {
+  return json<ConnectionsState>(await fetch('/api/connections'))
+}
+
+export async function savePrdbKey(
+  apiKey: string,
+  confirmAnotherAccount: boolean,
+): Promise<PrdbConnectionVerdict> {
+  return post<PrdbConnectionVerdict>('/api/connections/prdb', { apiKey, confirmAnotherAccount })
+}
+
+/**
+ * A read that carries a credential, which is why it is a POST: a key has no
+ * business in an address bar or in anybody's access log.
+ */
+export async function readSabnzbdCategories(
+  url: string,
+  apiKey: string,
+): Promise<SabnzbdCategoriesVerdict> {
+  return post<SabnzbdCategoriesVerdict>('/api/connections/sabnzbd/categories', { url, apiKey })
+}
+
+export async function saveSabnzbd(connection: {
+  url: string
+  apiKey: string
+  category: string
+  downloadDirectory: string
+}): Promise<SabnzbdConnectionVerdict> {
+  return post<SabnzbdConnectionVerdict>('/api/connections/sabnzbd', connection)
+}
+
+export async function listIndexers(): Promise<ConfiguredIndexer[]> {
+  return json<ConfiguredIndexer[]>(await fetch('/api/connections/indexers'))
+}
+
+export async function addIndexer(indexer: {
+  name: string
+  url: string
+  apiKey: string
+}): Promise<IndexerConnectionVerdict> {
+  return post<IndexerConnectionVerdict>('/api/connections/indexers', indexer)
+}
+
+export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict> {
+  return post<LibraryRootVerdict>('/api/connections/library-root', { path })
 }
 
 export async function listItems(page: ItemsQuery['page']): Promise<ItemPage> {

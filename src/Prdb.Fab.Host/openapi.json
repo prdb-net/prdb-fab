@@ -114,6 +114,190 @@
         }
       }
     },
+    "/api/connections": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionsState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/prdb": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrdbConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrdbConnectionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/sabnzbd/categories": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SabnzbdCategoriesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SabnzbdCategoriesVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/sabnzbd": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SabnzbdConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SabnzbdConnectionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/indexers": {
+      "get": {
+        "tags": [
+          "Connections"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfiguredIndexer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexerConnectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexerConnectionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/library-root": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryRootRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryRootVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/skeleton/items": {
       "get": {
         "tags": [
@@ -284,6 +468,98 @@
           }
         }
       },
+      "ConfiguredIndexer": {
+        "required": [
+          "id",
+          "name",
+          "url",
+          "categories",
+          "lastVerdict",
+          "lastCheckedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "string"
+          },
+          "lastVerdict": {
+            "$ref": "#/components/schemas/IndexerConnectionOutcome"
+          },
+          "lastCheckedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConnectionsState": {
+        "required": [
+          "prdbConfigured",
+          "sabnzbdConfigured",
+          "sabnzbdUrl",
+          "sabnzbdCategory",
+          "completedRoot",
+          "downloadDirectory",
+          "indexerCount",
+          "libraryRoot"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbConfigured": {
+            "type": "boolean"
+          },
+          "sabnzbdConfigured": {
+            "type": "boolean"
+          },
+          "sabnzbdUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sabnzbdCategory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "completedRoot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "downloadDirectory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "indexerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "libraryRoot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "HealthResponse": {
         "required": [
           "status"
@@ -292,6 +568,68 @@
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "IndexerConnectionOutcome": {
+        "enum": [
+          "Saved",
+          "WrongKey",
+          "LimitReached",
+          "NotAnIndexer",
+          "Refused",
+          "NotRightNow",
+          "AlreadyAdded",
+          "NoCategories"
+        ]
+      },
+      "IndexerConnectionRequest": {
+        "required": [
+          "name",
+          "url",
+          "apiKey"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apiKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "IndexerConnectionVerdict": {
+        "required": [
+          "outcome",
+          "detail",
+          "categories"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/IndexerConnectionOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -336,6 +674,46 @@
           }
         }
       },
+      "LibraryRootOutcome": {
+        "enum": [
+          "Saved",
+          "SavedWithWarning",
+          "NotAbsolute",
+          "Missing",
+          "NotWritable",
+          "InsideDownloadDirectory",
+          "ContainsDownloadDirectory"
+        ]
+      },
+      "LibraryRootRequest": {
+        "required": [
+          "path"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LibraryRootVerdict": {
+        "required": [
+          "outcome",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/LibraryRootOutcome"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
       "OnboardingStep": {
         "enum": [
           "Password",
@@ -346,6 +724,59 @@
           "Complete",
           null
         ]
+      },
+      "PrdbConnectionOutcome": {
+        "enum": [
+          "Saved",
+          "WrongKey",
+          "NoApiAccess",
+          "QuotaSpent",
+          "NotRightNow",
+          "AnotherAccount"
+        ]
+      },
+      "PrdbConnectionRequest": {
+        "required": [
+          "apiKey",
+          "confirmAnotherAccount"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confirmAnotherAccount": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PrdbConnectionVerdict": {
+        "required": [
+          "outcome",
+          "detail",
+          "retryAfterSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/PrdbConnectionOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "RecordedRun": {
         "required": [
@@ -413,6 +844,133 @@
           "Failed",
           "Interrupted"
         ]
+      },
+      "SabnzbdCategoriesRequest": {
+        "required": [
+          "url",
+          "apiKey"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apiKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SabnzbdCategoriesVerdict": {
+        "required": [
+          "outcome",
+          "detail",
+          "categories"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/SabnzbdConnectionOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SabnzbdCategory"
+            }
+          }
+        }
+      },
+      "SabnzbdCategory": {
+        "required": [
+          "name",
+          "completedRoot"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "completedRoot": {
+            "type": "string"
+          }
+        }
+      },
+      "SabnzbdConnectionOutcome": {
+        "enum": [
+          "Saved",
+          "WrongKey",
+          "AccessDenied",
+          "NotSabnzbd",
+          "NotRightNow",
+          "UnknownCategory",
+          "DownloadDirectoryMissing",
+          "DownloadDirectoryUnreadable"
+        ]
+      },
+      "SabnzbdConnectionRequest": {
+        "required": [
+          "url",
+          "apiKey",
+          "category",
+          "downloadDirectory"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apiKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "downloadDirectory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SabnzbdConnectionVerdict": {
+        "required": [
+          "outcome",
+          "detail",
+          "completedRoot"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/SabnzbdConnectionOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "completedRoot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "SetPasswordOutcome": {
         "enum": [
@@ -537,6 +1095,9 @@
     },
     {
       "name": "Access"
+    },
+    {
+      "name": "Connections"
     },
     {
       "name": "Skeleton"
