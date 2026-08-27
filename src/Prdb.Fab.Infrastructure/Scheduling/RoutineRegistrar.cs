@@ -44,6 +44,17 @@ public sealed class RoutineRegistrar(
                 continue;
             }
 
+            // ADR 0014's bootstrap routines retire by deleting their row, so
+            // for them "there is no row" is ambiguous: it is either the first
+            // start or every start after they finished. Only the routine can
+            // tell those apart, and this is where it is asked — creating the
+            // row anyway would start the drain over on the next restart, having
+            // read prdb's whole actor corpus once already.
+            if (routine is IOneShot once && !await once.StartsAsync(cancellationToken))
+            {
+                continue;
+            }
+
             context.Routines.Add(new RoutineRow
             {
                 Name = routine.Name,

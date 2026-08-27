@@ -16,6 +16,7 @@ using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
+using Prdb.Fab.Infrastructure.Sync;
 
 using Serilog;
 
@@ -38,6 +39,7 @@ builder.Services.AddFabPersistence(dataDirectory);
 builder.Services.AddFabScheduling();
 builder.Services.AddFabAccess();
 builder.Services.AddFabConnections();
+builder.Services.AddFabSync();
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
 // request gets 401 rather than a redirect.
@@ -54,11 +56,21 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-// ADR 0038: one hosted service per lane. Only the bulk lane has a routine so
-// far, so only the bulk lane turns — the other three are this same class with a
-// different lane, added when they have something to run rather than left
-// ticking over an empty query.
-builder.Services.AddHostedService(provider => ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Bulk));
+// ADR 0038: one hosted service per lane. Two of the four turn — sync, which is
+// where ADR 0014 puts everything that talks to prdb, and bulk. The live and file
+// lanes are this same class with a different lane, added when they have
+// something to run rather than left ticking over an empty query.
+//
+// Registered as IHostedService rather than through AddHostedService, which adds
+// its registration with TryAddEnumerable and therefore keeps one per
+// implementation type. Every lane is the same class, so the second call would be
+// dropped and one lane would simply never turn — with nothing anywhere saying
+// so, which is the shape of failure ADR 0018 cannot draw.
+builder.Services.AddSingleton<IHostedService>(provider =>
+    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Sync));
+
+builder.Services.AddSingleton<IHostedService>(provider =>
+    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Bulk));
 
 // ADR 0040: an outcome crosses the contract as its name rather than as its
 // position in a C# enum. The number would be stable only for as long as nobody

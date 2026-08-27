@@ -133,6 +133,25 @@ public sealed class RoutineStore(
         return updated > 0;
     }
 
+    public async Task<bool> RetireAsync(string name, string? target, CancellationToken cancellationToken)
+    {
+        // The run log goes with it, on the cascade ADR 0033 declared. That is
+        // the honest reading of ADR 0014's "bootstrap is not a state of the
+        // application": what retired is not a routine with an empty history, it
+        // is not a routine, and a run log of something that no longer exists is
+        // a row nobody can ask a question about.
+        var removed = await context.Routines
+            .Where(row => row.Name == name && row.Target == target)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        if (removed > 0)
+        {
+            logger.LogInformation("The routine {Name} has finished, and its row is gone.", name);
+        }
+
+        return removed > 0;
+    }
+
     private async Task TrimRunLogAsync(long routineId, CancellationToken cancellationToken)
     {
         var cutoff = await context.RoutineRuns

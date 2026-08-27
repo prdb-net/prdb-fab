@@ -41,4 +41,18 @@ public interface IRoutineStore
     /// </remarks>
     /// <returns>Whether there was a row to make due.</returns>
     Task<bool> RunNowAsync(string name, string? target, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Removes the row of a routine that has finished. See <see cref="IOneShot"/>.
+    /// </summary>
+    /// <remarks>
+    /// Keyed by name and target rather than by id, the same way
+    /// <see cref="RunNowAsync"/> is, because a routine knows what it is and not
+    /// which row it was read from. It takes its run log with it, which is the
+    /// honest consequence of ADR 0014 making the row the thing that exists: a
+    /// bootstrap that has retired is not a routine with an empty history, it is
+    /// not a routine.
+    /// </remarks>
+    /// <returns>Whether there was a row to remove.</returns>
+    Task<bool> RetireAsync(string name, string? target, CancellationToken cancellationToken);
 }
