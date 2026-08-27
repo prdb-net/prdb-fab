@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 
@@ -39,7 +41,14 @@ public sealed class TestDatabase : IAsyncDisposable
 
     public FabDatabaseLocation Location => provider.GetRequiredService<FabDatabaseLocation>();
 
-    public static async Task<TestDatabase> CreateAsync()
+    public static Task<TestDatabase> CreateAsync() => CreateAsync(migratedTo: null);
+
+    /// <summary>
+    /// The same, stopped at <paramref name="migratedTo"/> — an older release's
+    /// schema, so that a test can migrate it forward the way a started
+    /// container does.
+    /// </summary>
+    public static async Task<TestDatabase> CreateAsync(string? migratedTo)
     {
         var directory = Path.Combine(Path.GetTempPath(), "prdb-fab-tests", Guid.NewGuid().ToString("n"));
         Directory.CreateDirectory(directory);
@@ -58,8 +67,17 @@ public sealed class TestDatabase : IAsyncDisposable
 
         await using (var scope = provider.CreateAsyncScope())
         {
-            await scope.ServiceProvider.GetRequiredService<FabDbContext>()
-                .Database.MigrateAsync(TestContext.Current.CancellationToken);
+            var database = scope.ServiceProvider.GetRequiredService<FabDbContext>().Database;
+
+            if (migratedTo is null)
+            {
+                await database.MigrateAsync(TestContext.Current.CancellationToken);
+            }
+            else
+            {
+                await database.GetService<IMigrator>()
+                    .MigrateAsync(migratedTo, TestContext.Current.CancellationToken);
+            }
         }
 
         return new TestDatabase(provider, directory, time);
