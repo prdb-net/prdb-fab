@@ -46,7 +46,7 @@ public sealed class VideoImageFeed(FabDbContext context, PrdbGateway prdb, Catal
     /// </summary>
     public override bool StartsAtTheBeginning => false;
 
-    protected override PrdbWork Work => PrdbWork.Images;
+    public override PrdbWork Work => PrdbWork.Images;
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,

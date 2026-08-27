@@ -91,4 +91,26 @@ public sealed class InstallationRow
     /// sit on the installation rather than on the connection each names.
     /// </summary>
     public bool IndexersSkipped { get; set; }
+
+    /// <summary>
+    /// Since when the prdb plan has been too small to carry the schedule, and
+    /// null while it carries it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ADR 0014's named condition, recorded here for the same reason the two
+    /// skips above are: there is no row of its own to carry it. It is not a
+    /// property of any one routine — every routine is running exactly as it
+    /// should, more slowly — so a counter on a routine row could not say it,
+    /// and three consecutive failures would be the wrong shape entirely.
+    /// </para>
+    /// <para>
+    /// A stamp rather than a flag, because <em>since when</em> is what makes it
+    /// worth reading: a plan that has not carried the schedule for a fortnight
+    /// is a different sentence from one that stopped carrying it a minute ago,
+    /// and ADR 0018's page is what turns either into words. Written once when
+    /// the condition arrives and cleared once when it lifts, never on every run.
+    /// </para>
+    /// </remarks>
+    public DateTimeOffset? PlanShortSince { get; set; }
 }

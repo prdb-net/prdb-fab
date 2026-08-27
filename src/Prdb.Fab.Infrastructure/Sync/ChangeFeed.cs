@@ -41,7 +41,13 @@ public abstract class ChangeFeed(FabDbContext context, PrdbGateway prdb, Catalog
     public virtual bool StartsAtTheBeginning => true;
 
     /// <summary>Where in ADR 0014's order this feed's requests are given up.</summary>
-    protected abstract PrdbWork Work { get; }
+    /// <summary>
+    /// Which of ADR 0014's kinds of work this feed's requests are. Public
+    /// because the schedule asks: the idle profile is added up over it, and
+    /// what is shed under a plan too small is expressed per kind of work rather
+    /// than per routine (<see cref="IdleProfile"/>).
+    /// </summary>
+    public abstract PrdbWork Work { get; }
 
     protected FabDbContext Context { get; } = context;
 

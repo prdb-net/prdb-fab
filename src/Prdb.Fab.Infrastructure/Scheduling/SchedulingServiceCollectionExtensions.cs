@@ -21,6 +21,7 @@ public static class SchedulingServiceCollectionExtensions
     public static IServiceCollection AddFabScheduling(this IServiceCollection services)
     {
         services.AddScoped<IRoutineStore, RoutineStore>();
+        services.AddScoped<ThePlan>();
         services.AddScoped<RoutineRunner>();
         services.AddScoped<RoutineRegistrar>();
         services.AddScoped<RunLog>();

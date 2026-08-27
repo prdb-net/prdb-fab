@@ -22,7 +22,7 @@ public sealed class FavouriteSiteFeed(FabDbContext context, PrdbGateway prdb, Ca
 {
     public override Feed Feed => Feed.FavouriteSites;
 
-    protected override PrdbWork Work => PrdbWork.UserFeeds;
+    public override PrdbWork Work => PrdbWork.UserFeeds;
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,

@@ -23,7 +23,7 @@ public sealed class FavouriteActorFeed(FabDbContext context, PrdbGateway prdb, C
 {
     public override Feed Feed => Feed.FavouriteActors;
 
-    protected override PrdbWork Work => PrdbWork.UserFeeds;
+    public override PrdbWork Work => PrdbWork.UserFeeds;
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,
