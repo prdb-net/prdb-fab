@@ -9,6 +9,7 @@ type Schema = components['schemas']
 
 export type AccessState = Schema['AccessState']
 export type OnboardingStep = Schema['OnboardingStep']
+export type ChangePasswordVerdict = Schema['ChangePasswordVerdict']
 export type SetPasswordVerdict = Schema['SetPasswordVerdict']
 export type SignInVerdict = Schema['SignInVerdict']
 
@@ -81,6 +82,17 @@ export async function signIn(password: string): Promise<SignInVerdict> {
   return post<SignInVerdict>('/api/access/sign-in', { password })
 }
 
+/**
+ * ADR 0010: the current password is asked for again, and every other session
+ * ends. ADR 0020 puts the act on the Account route.
+ */
+export async function changePassword(
+  current: string,
+  next: string,
+): Promise<ChangePasswordVerdict> {
+  return post<ChangePasswordVerdict>('/api/access/change-password', { current, next })
+}
+
 export async function signOut(): Promise<void> {
   const response = await fetch('/api/access/sign-out', { method: 'POST' })
 
@@ -144,6 +156,14 @@ export async function addIndexer(indexer: {
   apiKey: string
 }): Promise<IndexerConnectionVerdict> {
   return post<IndexerConnectionVerdict>('/api/connections/indexers', indexer)
+}
+
+/** ADR 0020's indexer route: the same check, run again over a row that is there. */
+export async function editIndexer(
+  id: string,
+  indexer: { name: string; url: string; apiKey: string },
+): Promise<IndexerConnectionVerdict> {
+  return post<IndexerConnectionVerdict>(`/api/connections/indexers/${id}`, indexer)
 }
 
 export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict> {

@@ -1,0 +1,14 @@
+.bar {
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 1.25rem;
+  padding: 0.6rem 1rem;
+}
+
+.name {
+  color: var(--text);
+  font-weight: 600;
+  margin-right: auto;
+  text-decoration: none;
+}

@@ -14,6 +14,7 @@ import {
 import { accessStateKey } from '../access/state.ts'
 import { connectionsKey } from './state.ts'
 import { IndexerForm } from './IndexerForm.tsx'
+import { IndexerList } from './IndexerList.tsx'
 import { LibraryRootForm } from './LibraryRootForm.tsx'
 import { PrdbForm } from './PrdbForm.tsx'
 import { SabnzbdForm } from './SabnzbdForm.tsx'
@@ -216,7 +217,12 @@ export const steps: ReadonlyArray<{
       'Without an indexer nothing is searched and nothing is downloaded, because there is nowhere '
       + 'to look. One can be added later from the settings — but setting up does not come back to '
       + 'ask.',
-    form: () => <IndexerForm />,
+    form: () => (
+      <>
+        <IndexerForm />
+        <IndexerList />
+      </>
+    ),
   },
   {
     step: 'LibraryRoot',

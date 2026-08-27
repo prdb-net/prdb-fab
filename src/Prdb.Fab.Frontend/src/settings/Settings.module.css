@@ -1,0 +1,60 @@
+.screen {
+  margin: 0 auto;
+  max-width: 34rem;
+  padding: 3rem 1rem 4rem;
+}
+
+.back {
+  color: var(--text-quiet);
+  display: inline-block;
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.lede {
+  color: var(--text-quiet);
+  margin-bottom: 2rem;
+}
+
+/* The groups, and the ones that are not built yet. ADR 0020 names seven; two
+   of them hold anything so far, and saying which is better than a page that
+   quietly has five fewer links than the decision does. */
+.groups {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.groups li {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+}
+
+.groups li:last-child {
+  border-bottom: none;
+}
+
+.detail {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+}
+
+.pending {
+  color: var(--text-quiet);
+}
+
+.heading {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-quiet);
+  margin: 2.5rem 0 var(--gap);
+}
+
+.note {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+  margin-top: 2.5rem;
+}

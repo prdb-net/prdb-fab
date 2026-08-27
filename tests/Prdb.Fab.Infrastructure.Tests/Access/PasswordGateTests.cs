@@ -78,6 +78,82 @@ public sealed class PasswordGateTests
     }
 
     /// <summary>
+    /// ADR 0010's password change: it requires the current password and ends
+    /// every other session, which is the only lever somebody has who suspects
+    /// a session they did not open.
+    /// </summary>
+    [Fact]
+    public async Task Changing_it_ends_every_session_but_the_one_that_asked()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SetAsync(database, Password);
+
+        var mine = await SignInAsync(database);
+        var elsewhere = await SignInAsync(database);
+        var third = await SignInAsync(database);
+
+        var (outcome, refusal, ended) = await ChangeAsync(database, Password, "a new long password", mine.Id);
+
+        Assert.Equal(ChangePasswordOutcome.Changed, outcome);
+        Assert.Null(refusal);
+        Assert.Equal(2, ended);
+
+        // The one that asked still works, and the other two are gone from the
+        // moment of the change rather than at their expiry.
+        Assert.NotNull(await AuthenticateAsync(database, mine.Token));
+        Assert.Null(await AuthenticateAsync(database, elsewhere.Token));
+        Assert.Null(await AuthenticateAsync(database, third.Token));
+
+        Assert.True(await VerifyAsync(database, "a new long password"));
+        Assert.False(await VerifyAsync(database, Password));
+    }
+
+    /// <summary>
+    /// A session left open on a borrowed machine must not be a way to lock the
+    /// owner out of their own installation.
+    /// </summary>
+    [Fact]
+    public async Task The_current_password_is_required_and_a_wrong_one_changes_nothing()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SetAsync(database, Password);
+
+        var mine = await SignInAsync(database);
+        var elsewhere = await SignInAsync(database);
+
+        var (outcome, _, ended) = await ChangeAsync(database, "not the password", "a new long password", mine.Id);
+
+        Assert.Equal(ChangePasswordOutcome.WrongPassword, outcome);
+        Assert.Equal(0, ended);
+
+        Assert.True(await VerifyAsync(database, Password));
+        Assert.NotNull(await AuthenticateAsync(database, elsewhere.Token));
+    }
+
+    /// <summary>
+    /// The same rule as the first one, and the same reason: a change is where a
+    /// short password would otherwise get in behind the rule that refused it.
+    /// </summary>
+    [Fact]
+    public async Task A_new_password_the_rule_refuses_changes_nothing()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SetAsync(database, Password);
+
+        var mine = await SignInAsync(database);
+        var elsewhere = await SignInAsync(database);
+
+        var (outcome, refusal, ended) = await ChangeAsync(database, Password, "short", mine.Id);
+
+        Assert.Equal(ChangePasswordOutcome.Refused, outcome);
+        Assert.NotNull(refusal);
+        Assert.Equal(0, ended);
+
+        Assert.True(await VerifyAsync(database, Password));
+        Assert.NotNull(await AuthenticateAsync(database, elsewhere.Token));
+    }
+
+    /// <summary>
     /// ADR 0010's recovery path, and ADR 0037's reason for refusing to derive an
     /// encryption key from the password: the reset must not be the destruction
     /// path for every other credential.
@@ -154,5 +230,36 @@ public sealed class PasswordGateTests
 
         return await scope.ServiceProvider.GetRequiredService<PasswordGate>()
             .VerifyAsync(password, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<(long Id, string Token)> SignInAsync(TestDatabase database)
+    {
+        await using var scope = database.Scope();
+
+        var sessions = scope.ServiceProvider.GetRequiredService<Sessions>();
+        var (token, _) = await sessions.CreateAsync(TestContext.Current.CancellationToken);
+        var session = await sessions.AuthenticateAsync(token, TestContext.Current.CancellationToken);
+
+        return (session!.Id, token);
+    }
+
+    private static async Task<Persistence.SessionRow?> AuthenticateAsync(TestDatabase database, string token)
+    {
+        await using var scope = database.Scope();
+
+        return await scope.ServiceProvider.GetRequiredService<Sessions>()
+            .AuthenticateAsync(token, TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<(ChangePasswordOutcome Outcome, string? Refusal, int Ended)> ChangeAsync(
+        TestDatabase database,
+        string current,
+        string next,
+        long sessionId)
+    {
+        await using var scope = database.Scope();
+
+        return await scope.ServiceProvider.GetRequiredService<PasswordGate>()
+            .ChangeAsync(current, next, sessionId, TestContext.Current.CancellationToken);
     }
 }

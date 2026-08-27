@@ -31,13 +31,17 @@ public sealed class PrdbConnections(
         bool confirmedAnotherAccount,
         CancellationToken cancellationToken = default)
     {
-        var check = await prdb.CheckAsync(apiKey, cancellationToken);
+        var key = await KeptOrSubmittedAsync(apiKey, cancellationToken);
+
+        var check = await prdb.CheckAsync(key, cancellationToken);
 
         if (check.Outcome is not PrdbConnectionOutcome.Saved || check.UserHash is not { } userHash)
         {
             return new PrdbSave(check.Outcome, check.RetryAfterSeconds);
         }
 
+        // Read after the check rather than before it, so what is written is
+        // written against the row as it is now.
         var installation = await context.Installation.SingleAsync(cancellationToken);
 
         // ADR 0010: this does not block, because people do move accounts. What
@@ -53,7 +57,7 @@ public sealed class PrdbConnections(
         var changedAccount = installation.PrdbUserHash is { Length: > 0 } held
             && !string.Equals(held, userHash, StringComparison.Ordinal);
 
-        installation.PrdbApiKey = apiKey!.Trim();
+        installation.PrdbApiKey = key;
         installation.PrdbUserHash = userHash;
 
         context.Installation.Update(installation);
@@ -74,6 +78,31 @@ public sealed class PrdbConnections(
         logger.LogInformation("The prdb key has been stored.");
 
         return new PrdbSave(PrdbConnectionOutcome.Saved, null);
+    }
+
+    /// <summary>
+    /// The key to check: the one that was typed, or the one that is already
+    /// stored when the field came back empty.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0020: keys are write-only. Nothing is ever returned to the browser,
+    /// so the field is empty with a marker saying one is set, and saving it
+    /// empty means unchanged. With nothing stored there is nothing for an empty
+    /// field to mean, and it goes on to be answered as the wrong key it is —
+    /// which is what onboarding needs.
+    /// </remarks>
+    private async Task<string?> KeptOrSubmittedAsync(string? apiKey, CancellationToken cancellationToken)
+    {
+        var submitted = (apiKey ?? string.Empty).Trim();
+
+        if (submitted.Length > 0)
+        {
+            return submitted;
+        }
+
+        return await context.Installation
+            .Select(row => row.PrdbApiKey)
+            .SingleAsync(cancellationToken);
     }
 }
 

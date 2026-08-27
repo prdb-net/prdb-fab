@@ -16,9 +16,16 @@ import styles from './Onboarding.module.css'
  */
 export function PrdbForm({
   submitLabel = 'Check and continue',
+  keyIsStored = false,
   onSaved,
 }: {
   submitLabel?: string
+  /**
+   * ADR 0020: keys are write-only. Nothing is ever sent back to the browser, so
+   * this is all the form can say about the one that is stored — and leaving the
+   * field empty keeps it.
+   */
+  keyIsStored?: boolean
   /** What the step around this form does once the key is stored. Nothing, in the settings. */
   onSaved?: () => void
 }) {
@@ -69,6 +76,12 @@ export function PrdbForm({
         }}
       />
       <p className={styles.hint}>
+        {keyIsStored ? (
+          <>
+            A key is stored. Leave this empty to keep it &mdash; saving re-checks
+            it against prdb either way.{' '}
+          </>
+        ) : null}
         It is on your prdb account page. This installation checks it against prdb
         before storing it, so a key that is wrong is a wrong key now rather than
         a library that quietly never fills.
@@ -80,7 +93,7 @@ export function PrdbForm({
       <button
         className={styles.button}
         type="submit"
-        disabled={submit.isPending || apiKey.trim().length === 0}
+        disabled={submit.isPending || (apiKey.trim().length === 0 && !keyIsStored)}
       >
         {asking ? 'Yes, use this account' : submitLabel}
       </button>

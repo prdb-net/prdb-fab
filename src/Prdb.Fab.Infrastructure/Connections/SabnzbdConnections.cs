@@ -19,11 +19,14 @@ public sealed class SabnzbdConnections(
     /// SABnzbd's own categories, each with the folder its downloads finish
     /// under. The first half of the form, and the key check at the same time.
     /// </summary>
-    public Task<SabnzbdCategories> CategoriesAsync(
+    public async Task<SabnzbdCategories> CategoriesAsync(
         string? url,
         string? apiKey,
         CancellationToken cancellationToken = default) =>
-        sabnzbd.CategoriesAsync(url, apiKey, cancellationToken);
+        await sabnzbd.CategoriesAsync(
+            url,
+            await KeptOrSubmittedAsync(apiKey, cancellationToken),
+            cancellationToken);
 
     /// <summary>
     /// Checks all of it again and stores it. The order is ADR 0010's and it
@@ -43,7 +46,9 @@ public sealed class SabnzbdConnections(
         string? downloadDirectory,
         CancellationToken cancellationToken = default)
     {
-        var categories = await sabnzbd.CategoriesAsync(url, apiKey, cancellationToken);
+        var key = await KeptOrSubmittedAsync(apiKey, cancellationToken);
+
+        var categories = await sabnzbd.CategoriesAsync(url, key, cancellationToken);
 
         if (categories.Outcome is not SabnzbdConnectionOutcome.Saved)
         {
@@ -73,7 +78,7 @@ public sealed class SabnzbdConnections(
         var installation = await context.Installation.SingleAsync(cancellationToken);
 
         installation.SabnzbdUrl = url!.Trim();
-        installation.SabnzbdApiKey = apiKey!.Trim();
+        installation.SabnzbdApiKey = key!;
         installation.SabnzbdCategory = chosen.Name;
         installation.PathMappingFrom = chosen.CompletedRoot;
         installation.PathMappingTo = local;
@@ -92,6 +97,31 @@ public sealed class SabnzbdConnections(
             chosen.Name);
 
         return new SabnzbdSave(SabnzbdConnectionOutcome.Saved, chosen.CompletedRoot);
+    }
+
+    /// <summary>
+    /// The key to check with: the one that was typed, or the one that is
+    /// already stored when the field came back empty.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0020: keys are write-only, so the field is empty with a marker
+    /// saying one is set and saving it empty means unchanged. It is kept across
+    /// a changed address on purpose — SABnzbd moving to another port is
+    /// ordinary, and making the key be dug out again for it is the friction
+    /// that gets keys pasted into text files.
+    /// </remarks>
+    private async Task<string?> KeptOrSubmittedAsync(string? apiKey, CancellationToken cancellationToken)
+    {
+        var submitted = (apiKey ?? string.Empty).Trim();
+
+        if (submitted.Length > 0)
+        {
+            return submitted;
+        }
+
+        return await context.Installation
+            .Select(row => row.SabnzbdApiKey)
+            .SingleAsync(cancellationToken);
     }
 
     /// <summary>

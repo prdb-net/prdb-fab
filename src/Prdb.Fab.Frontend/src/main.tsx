@@ -6,10 +6,17 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 
 import { readAccessState } from './api/client.ts'
 import { AccessGate } from './access/AccessGate.tsx'
-import { SignOutButton } from './access/SignOutButton.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
 import { ReadyScreen } from './onboarding/ReadyScreen.tsx'
+import { AccountScreen } from './settings/AccountScreen.tsx'
+import { ConnectionsScreen } from './settings/ConnectionsScreen.tsx'
+import { IndexerSettings } from './settings/IndexerSettings.tsx'
+import { PrdbSettings } from './settings/PrdbSettings.tsx'
+import { SabnzbdSettings } from './settings/SabnzbdSettings.tsx'
+import { SettingsGate } from './settings/SettingsPage.tsx'
+import { SettingsScreen } from './settings/SettingsScreen.tsx'
+import { Chrome } from './shell/Chrome.tsx'
 import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import './index.css'
 
@@ -39,11 +46,22 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queries}>
       <BrowserRouter>
         <AccessGate>
-          <SignOutButton />
+          <Chrome />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding/:step" element={<OnboardingScreen />} />
             <Route path="/ready" element={<ReadyScreen />} />
+            {/* ADR 0020: routes rather than one page with anchors, one level
+                down as well — every indexer has its own. */}
+            <Route path="/settings" element={<SettingsGate />}>
+              <Route index element={<SettingsScreen />} />
+              <Route path="connections" element={<ConnectionsScreen />} />
+              <Route path="connections/prdb" element={<PrdbSettings />} />
+              <Route path="connections/sabnzbd" element={<SabnzbdSettings />} />
+              <Route path="connections/indexers/new" element={<IndexerSettings />} />
+              <Route path="connections/indexers/:id" element={<IndexerSettings />} />
+              <Route path="account" element={<AccountScreen />} />
+            </Route>
             <Route path="/skeleton" element={<SkeletonScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

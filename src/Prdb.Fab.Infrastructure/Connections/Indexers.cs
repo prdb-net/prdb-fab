@@ -97,6 +97,75 @@ public sealed class Indexers(
         return new IndexerSave(IndexerConnectionOutcome.Saved, null, categories);
     }
 
+    /// <summary>
+    /// ADR 0020's indexer route: the same check, run again over a row that is
+    /// already there. Null when there is no such row.
+    /// </summary>
+    /// <remarks>
+    /// Nothing is written past a failure, exactly as when it was added — which
+    /// is the point ADR 0020 makes about there being one form: the verification
+    /// question is cheap here because the check was not rebuilt for it.
+    /// </remarks>
+    public async Task<IndexerSave?> EditAsync(
+        Guid id,
+        string? name,
+        string? url,
+        string? apiKey,
+        CancellationToken cancellationToken = default)
+    {
+        var stored = await context.Indexers
+            .SingleOrDefaultAsync(row => row.Id == id, cancellationToken);
+
+        if (stored is null)
+        {
+            return null;
+        }
+
+        var address = (url ?? string.Empty).Trim();
+
+        // ADR 0002's identity again, minus this row: an address that is its own
+        // is not a second one.
+        if (await context.Indexers.AnyAsync(row => row.Url == address && row.Id != id, cancellationToken))
+        {
+            return new IndexerSave(IndexerConnectionOutcome.AlreadyAdded, null, []);
+        }
+
+        // ADR 0020: keys are write-only, so an empty field is the key that is
+        // already on the row rather than no key.
+        var submitted = (apiKey ?? string.Empty).Trim();
+        var key = submitted.Length > 0 ? submitted : stored.ApiKey;
+
+        var check = await newznab.CheckAsync(address, key, cancellationToken);
+
+        if (check.Outcome is not IndexerConnectionOutcome.Saved)
+        {
+            return new IndexerSave(check.Outcome, check.Said, []);
+        }
+
+        var categories = IndexerConnection.MatchedByName(check.Categories);
+
+        if (categories.Count == 0)
+        {
+            return new IndexerSave(IndexerConnectionOutcome.NoCategories, null, []);
+        }
+
+        stored.Name = string.IsNullOrWhiteSpace(name) ? HostOf(address) : name.Trim();
+        stored.Url = address;
+        stored.ApiKey = key;
+        stored.Categories = string.Join(',', categories);
+        stored.LastVerdict = IndexerConnectionOutcome.Saved;
+        stored.LastCheckedAt = time.GetUtcNow();
+
+        context.Indexers.Update(stored);
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "The indexer at {Host} was checked again and its settings stored.",
+            HostOf(address));
+
+        return new IndexerSave(IndexerConnectionOutcome.Saved, null, categories);
+    }
+
     private static string HostOf(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var address) ? address.Host : url;
 }
