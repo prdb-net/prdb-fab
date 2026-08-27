@@ -9,6 +9,14 @@
     <ProjectReference Include="..\..\src\Prdb.Fab.Infrastructure\Prdb.Fab.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!--
+    Ticket 12: two mounts of one filesystem cannot be built in a test, so the
+    mount table is recorded. See Connections/Recorded/README.md.
+  -->
+  <ItemGroup>
+    <Content Include="Connections\Recorded\*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.v3" />

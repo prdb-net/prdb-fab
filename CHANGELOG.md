@@ -19,7 +19,15 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
-Nothing since 0.1.0.
+### Fixed
+
+- **The library root no longer warns about a copy that would be a rename.** The
+  check asked which *mount* each path was reached through rather than which
+  filesystem it is on, so a container given its downloads and its library as two
+  bind mounts of one filesystem — the arrangement `docs/running-in-docker.md`
+  recommends — was told that filing would copy every video and delete the
+  original. It now compares the device the kernel reports, and the warning
+  appears only when the two really are on different filesystems.
 
 ## [0.1.0] - 2026-08-27
 
