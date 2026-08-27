@@ -30,7 +30,13 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     private readonly List<Asking> asked = [];
 
     /// <summary>One request, as much of it as an assertion has asked about.</summary>
-    public sealed record Asking(Uri Uri, string? IfNoneMatch);
+    /// <param name="Body">
+    /// What was sent, for the endpoints where the request rather than the query
+    /// string is the interesting half — <c>POST /videos/batch</c> carries the
+    /// ids a pass decided to ask about, and nothing else records that decision.
+    /// Empty for a request with no body.
+    /// </param>
+    public sealed record Asking(Uri Uri, string? IfNoneMatch, string Body);
 
     /// <summary>What prdb answers with once.</summary>
     private sealed record Answer(HttpStatusCode Status, string? Json, string? EntityTag);
@@ -79,11 +85,15 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     public IReadOnlyList<Uri> AskedFor(string path) =>
         [.. AskingFor(path).Select(request => request.Uri)];
 
-    protected override Task<HttpResponseMessage> SendAsync(
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
         var uri = request.RequestUri!;
+
+        var body = request.Content is null
+            ? string.Empty
+            : await request.Content.ReadAsStringAsync(cancellationToken);
 
         lock (asked)
         {
@@ -91,7 +101,8 @@ internal sealed class FakePrdbApi : HttpMessageHandler
                 uri,
                 request.Headers.TryGetValues("If-None-Match", out var conditions)
                     ? conditions.FirstOrDefault()
-                    : null));
+                    : null,
+                body));
         }
 
         var path = uri.AbsolutePath;
@@ -101,7 +112,7 @@ internal sealed class FakePrdbApi : HttpMessageHandler
             // A path the test never said anything about. Answering 404 rather
             // than an empty page, so that a routine reaching somewhere nobody
             // meant it to shows up as a failure instead of as quiet success.
-            return Task.FromResult(Problem(HttpStatusCode.NotFound, path));
+            return Problem(HttpStatusCode.NotFound, path);
         }
 
         var response = new HttpResponseMessage(answer.Status);
@@ -123,7 +134,7 @@ internal sealed class FakePrdbApi : HttpMessageHandler
             response.Headers.TryAddWithoutValidation("X-RateLimit-Reset-Hour", window.ResetInSeconds.ToString());
         }
 
-        return Task.FromResult(response);
+        return response;
     }
 
     private FakePrdbApi Queue(string path, Answer answer)

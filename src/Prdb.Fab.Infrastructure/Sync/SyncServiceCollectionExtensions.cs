@@ -8,9 +8,9 @@ public static class SyncServiceCollectionExtensions
 {
     /// <summary>
     /// ADR 0013's sync: the five change feeds, What's New in both directions,
-    /// the site list, the two bootstraps that retire, and what they share —
-    /// including ADR 0033's pinning, which is a query eviction asks rather than
-    /// a column anything writes.
+    /// the site list, the repair pass, the two bootstraps that retire, and what
+    /// they share — including ADR 0033's pinning, which is a query the repair
+    /// pass and eviction both ask rather than a column either of them writes.
     /// </summary>
     /// <remarks>
     /// Registered apart from <c>AddFabScheduling</c> rather than inside it,
@@ -54,6 +54,7 @@ public static class SyncServiceCollectionExtensions
         Routine<WhatsNewRoutine>(services);
         Routine<WhatsNewBackfillRoutine>(services);
         Routine<SiteListRoutine>(services);
+        Routine<CatalogueRepairRoutine>(services);
 
         return services;
     }
