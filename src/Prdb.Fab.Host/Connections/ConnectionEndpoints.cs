@@ -35,11 +35,13 @@ public static class ConnectionEndpoints
             return TypedResults.Ok(new ConnectionsState(
                 PrdbConfigured: installation.PrdbApiKey is { Length: > 0 },
                 SabnzbdConfigured: installation.SabnzbdApiKey is { Length: > 0 },
+                SabnzbdSkipped: installation.SabnzbdSkipped,
                 SabnzbdUrl: installation.SabnzbdUrl,
                 SabnzbdCategory: installation.SabnzbdCategory,
                 CompletedRoot: installation.PathMappingFrom,
                 DownloadDirectory: installation.PathMappingTo,
                 IndexerCount: indexers,
+                IndexersSkipped: installation.IndexersSkipped,
                 LibraryRoot: installation.LibraryRoot));
         });
 
@@ -132,14 +134,22 @@ public static class ConnectionEndpoints
 }
 
 /// <summary>What each of ADR 0010's connections holds, with no credential in it.</summary>
+/// <remarks>
+/// The two <c>Skipped</c> flags are the Gaps ADR 0010 leaves behind: what a
+/// connection can answer for itself about whether it was configured or passed
+/// by deliberately. Nothing displays them yet — ADR 0018's Status page is a
+/// slice of its own, and it adds no column to these.
+/// </remarks>
 public sealed record ConnectionsState(
     bool PrdbConfigured,
     bool SabnzbdConfigured,
+    bool SabnzbdSkipped,
     string? SabnzbdUrl,
     string? SabnzbdCategory,
     string? CompletedRoot,
     string? DownloadDirectory,
     int IndexerCount,
+    bool IndexersSkipped,
     string? LibraryRoot);
 
 public sealed record PrdbConnectionRequest(string? ApiKey, bool ConfirmAnotherAccount);

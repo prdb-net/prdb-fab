@@ -114,6 +114,64 @@
         }
       }
     },
+    "/api/onboarding/take": {
+      "post": {
+        "tags": [
+          "Onboarding"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/skip": {
+      "post": {
+        "tags": [
+          "Onboarding"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/connections": {
       "get": {
         "tags": [
@@ -505,11 +563,13 @@
         "required": [
           "prdbConfigured",
           "sabnzbdConfigured",
+          "sabnzbdSkipped",
           "sabnzbdUrl",
           "sabnzbdCategory",
           "completedRoot",
           "downloadDirectory",
           "indexerCount",
+          "indexersSkipped",
           "libraryRoot"
         ],
         "type": "object",
@@ -518,6 +578,9 @@
             "type": "boolean"
           },
           "sabnzbdConfigured": {
+            "type": "boolean"
+          },
+          "sabnzbdSkipped": {
             "type": "boolean"
           },
           "sabnzbdUrl": {
@@ -551,6 +614,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "indexersSkipped": {
+            "type": "boolean"
           },
           "libraryRoot": {
             "type": [
@@ -714,6 +780,15 @@
           }
         }
       },
+      "OnboardingOutcome": {
+        "enum": [
+          "Taken",
+          "Skipped",
+          "NotTheCurrentStep",
+          "NotConfigured",
+          "NotSkippable"
+        ]
+      },
       "OnboardingStep": {
         "enum": [
           "Password",
@@ -724,6 +799,36 @@
           "Complete",
           null
         ]
+      },
+      "OnboardingStepRequest": {
+        "required": [
+          "step"
+        ],
+        "type": "object",
+        "properties": {
+          "step": {
+            "$ref": "#/components/schemas/OnboardingStep"
+          }
+        }
+      },
+      "OnboardingVerdict": {
+        "required": [
+          "outcome",
+          "detail",
+          "nextStep"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/OnboardingOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "nextStep": {
+            "$ref": "#/components/schemas/OnboardingStep"
+          }
+        }
       },
       "PrdbConnectionOutcome": {
         "enum": [
@@ -1095,6 +1200,9 @@
     },
     {
       "name": "Access"
+    },
+    {
+      "name": "Onboarding"
     },
     {
       "name": "Connections"

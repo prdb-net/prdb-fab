@@ -80,6 +80,13 @@ public sealed class Indexers(
             LastCheckedAt = now,
         });
 
+        // The first indexer closes the Gap that skipping the search step left,
+        // wherever in the installation's life it arrives.
+        var installation = await context.Installation.SingleAsync(cancellationToken);
+
+        installation.IndexersSkipped = false;
+        context.Installation.Update(installation);
+
         await context.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(

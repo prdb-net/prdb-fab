@@ -11,7 +11,13 @@ import styles from './Onboarding.module.css'
  * genuinely put the library and the downloads on different filesystems and
  * refusing them would be refusing a working installation.
  */
-export function LibraryRootForm({ submitLabel = 'Check and continue' }: { submitLabel?: string }) {
+export function LibraryRootForm({
+  submitLabel = 'Check and continue',
+  onSaved,
+}: {
+  submitLabel?: string
+  onSaved?: () => void
+}) {
   const [path, setPath] = useState('')
   const [verdict, setVerdict] = useState<LibraryRootVerdict | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
@@ -26,6 +32,13 @@ export function LibraryRootForm({ submitLabel = 'Check and continue' }: { submit
 
       if (answer.outcome === 'Saved' || answer.outcome === 'SavedWithWarning') {
         await queries.invalidateQueries({ queryKey: connectionsKey })
+      }
+
+      // The warning is a sentence somebody has to read, and continuing would
+      // take the page it is written on away. ADR 0010 warns without refusing,
+      // so the path waits for the step around this form instead.
+      if (answer.outcome === 'Saved') {
+        onSaved?.()
       }
     },
     onError: (error) => setFailure(String(error)),

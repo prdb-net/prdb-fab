@@ -19,7 +19,13 @@ import styles from './Onboarding.module.css'
  * There is no field for the download directory. It is the second half of the
  * mapping, and asking twice for one fact is how two answers end up disagreeing.
  */
-export function SabnzbdForm({ submitLabel = 'Check and continue' }: { submitLabel?: string }) {
+export function SabnzbdForm({
+  submitLabel = 'Check and continue',
+  onSaved,
+}: {
+  submitLabel?: string
+  onSaved?: () => void
+}) {
   const [url, setUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [category, setCategory] = useState('')
@@ -51,6 +57,7 @@ export function SabnzbdForm({ submitLabel = 'Check and continue' }: { submitLabe
 
       if (answer.outcome === 'Saved') {
         await queries.invalidateQueries({ queryKey: connectionsKey })
+        onSaved?.()
       }
     },
     onError: (error) => setFailure(String(error)),

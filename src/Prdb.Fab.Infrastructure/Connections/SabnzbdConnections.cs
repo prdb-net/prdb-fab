@@ -78,6 +78,11 @@ public sealed class SabnzbdConnections(
         installation.PathMappingFrom = chosen.CompletedRoot;
         installation.PathMappingTo = local;
 
+        // Configuring it is what closes the Gap a skip left behind, and the
+        // same write does it. ADR 0018 reads whether a connection was skipped
+        // rather than working it out from an empty credential.
+        installation.SabnzbdSkipped = false;
+
         context.Installation.Update(installation);
         await context.SaveChangesAsync(cancellationToken);
 
