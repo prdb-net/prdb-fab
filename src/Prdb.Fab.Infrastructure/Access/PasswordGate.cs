@@ -58,7 +58,7 @@ public sealed class PasswordGate(
         // FAB_RESET_PASSWORD returns to wherever it had got to.
         if (installation.OnboardingStep == OnboardingStep.Password)
         {
-            installation.OnboardingStep = OnboardingStep.PrdbKey;
+            installation.OnboardingStep = OnboardingPath.After(OnboardingStep.Password);
         }
 
         context.Installation.Update(installation);

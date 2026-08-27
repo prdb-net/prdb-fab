@@ -151,6 +151,8 @@ app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok")))
 
 app.MapAccess();
 
+app.MapOnboarding();
+
 app.MapConnections();
 
 app.MapSkeleton();

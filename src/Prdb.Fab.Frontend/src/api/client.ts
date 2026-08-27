@@ -12,6 +12,9 @@ export type OnboardingStep = Schema['OnboardingStep']
 export type SetPasswordVerdict = Schema['SetPasswordVerdict']
 export type SignInVerdict = Schema['SignInVerdict']
 
+export type OnboardingOutcome = Schema['OnboardingOutcome']
+export type OnboardingVerdict = Schema['OnboardingVerdict']
+
 export type ConnectionsState = Schema['ConnectionsState']
 export type PrdbConnectionVerdict = Schema['PrdbConnectionVerdict']
 export type SabnzbdCategory = Schema['SabnzbdCategory']
@@ -84,6 +87,20 @@ export async function signOut(): Promise<void> {
   if (!response.ok && response.status !== 401) {
     throw new Error(`${response.status} ${response.statusText}`)
   }
+}
+
+/**
+ * ADR 0010's path: the step is answered, so the marker moves past it. What
+ * keeps the two mandatory steps mandatory is the backend reading what is
+ * stored, not this call being withheld.
+ */
+export async function takeOnboardingStep(step: OnboardingStep): Promise<OnboardingVerdict> {
+  return post<OnboardingVerdict>('/api/onboarding/take', { step })
+}
+
+/** The step is passed by deliberately, and what is left behind is a Gap. */
+export async function skipOnboardingStep(step: OnboardingStep): Promise<OnboardingVerdict> {
+  return post<OnboardingVerdict>('/api/onboarding/skip', { step })
 }
 
 export async function readConnections(): Promise<ConnectionsState> {

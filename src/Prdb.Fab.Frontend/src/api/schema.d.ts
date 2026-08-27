@@ -185,6 +185,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/onboarding/take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingStepRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnboardingVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/onboarding/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingStepRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnboardingVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/connections": {
         parameters: {
             query?: never;
@@ -593,12 +671,14 @@ export interface components {
         ConnectionsState: {
             prdbConfigured: boolean;
             sabnzbdConfigured: boolean;
+            sabnzbdSkipped: boolean;
             sabnzbdUrl: null | string;
             sabnzbdCategory: null | string;
             completedRoot: null | string;
             downloadDirectory: null | string;
             /** Format: int32 */
             indexerCount: number | string;
+            indexersSkipped: boolean;
             libraryRoot: null | string;
         };
         HealthResponse: {
@@ -635,7 +715,17 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
+        OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";
+        /** @enum {unknown} */
         OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Complete" | null;
+        OnboardingStepRequest: {
+            step: components["schemas"]["OnboardingStep"];
+        };
+        OnboardingVerdict: {
+            outcome: components["schemas"]["OnboardingOutcome"];
+            detail: string;
+            nextStep: components["schemas"]["OnboardingStep"];
+        };
         /** @enum {unknown} */
         PrdbConnectionOutcome: "Saved" | "WrongKey" | "NoApiAccess" | "QuotaSpent" | "NotRightNow" | "AnotherAccount";
         PrdbConnectionRequest: {

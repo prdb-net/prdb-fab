@@ -75,4 +75,20 @@ public sealed class InstallationRow
     /// when it completes and a closed tab costs nothing.
     /// </summary>
     public OnboardingStep OnboardingStep { get; set; } = OnboardingStep.Password;
+
+    /// <summary>
+    /// Whether ADR 0010's downloader step was passed by deliberately. What it
+    /// leaves behind is a Gap, and this is where the Gap is recorded: it says
+    /// the consequence was named and accepted, which is a different thing from
+    /// a step nobody has reached yet. Cleared by configuring SABnzbd, whenever
+    /// that happens.
+    /// </summary>
+    public bool SabnzbdSkipped { get; set; }
+
+    /// <summary>
+    /// The same, for the search step. There is no indexer row to carry it —
+    /// skipping is precisely the absence of one — which is why both of these
+    /// sit on the installation rather than on the connection each names.
+    /// </summary>
+    public bool IndexersSkipped { get; set; }
 }

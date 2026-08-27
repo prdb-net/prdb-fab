@@ -14,7 +14,14 @@ import styles from './Onboarding.module.css'
  * look for — the submit is the check, and a refusal leaves the field where it
  * is with the reason under it.
  */
-export function PrdbForm({ submitLabel = 'Check and continue' }: { submitLabel?: string }) {
+export function PrdbForm({
+  submitLabel = 'Check and continue',
+  onSaved,
+}: {
+  submitLabel?: string
+  /** What the step around this form does once the key is stored. Nothing, in the settings. */
+  onSaved?: () => void
+}) {
   const [apiKey, setApiKey] = useState('')
   const [verdict, setVerdict] = useState<PrdbConnectionVerdict | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
@@ -27,6 +34,7 @@ export function PrdbForm({ submitLabel = 'Check and continue' }: { submitLabel?:
 
       if (answer.outcome === 'Saved') {
         await queries.invalidateQueries({ queryKey: connectionsKey })
+        onSaved?.()
       }
     },
     onError: (error) => setFailure(String(error)),

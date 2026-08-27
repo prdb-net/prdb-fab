@@ -13,6 +13,7 @@ public static class AccessServiceCollectionExtensions
     public static IServiceCollection AddFabAccess(this IServiceCollection services)
     {
         services.AddScoped<Installations>();
+        services.AddScoped<Onboarding>();
         services.AddScoped<PasswordGate>();
         services.AddScoped<Sessions>();
 

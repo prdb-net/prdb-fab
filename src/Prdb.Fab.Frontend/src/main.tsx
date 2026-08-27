@@ -9,6 +9,7 @@ import { AccessGate } from './access/AccessGate.tsx'
 import { SignOutButton } from './access/SignOutButton.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
+import { ReadyScreen } from './onboarding/ReadyScreen.tsx'
 import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import './index.css'
 
@@ -42,6 +43,7 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding/:step" element={<OnboardingScreen />} />
+            <Route path="/ready" element={<ReadyScreen />} />
             <Route path="/skeleton" element={<SkeletonScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
