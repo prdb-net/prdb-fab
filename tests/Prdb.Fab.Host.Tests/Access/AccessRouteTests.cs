@@ -218,6 +218,75 @@ public sealed class AccessRouteTests
         }
     }
 
+    /// <summary>
+    /// ADR 0010: one anonymous state endpoint answers whether a password is
+    /// set, whether this caller is signed in, and which onboarding step is
+    /// next. The page decides from these three and nothing else.
+    /// </summary>
+    [Fact]
+    public async Task The_state_endpoint_answers_the_three_questions()
+    {
+        using var application = new FabApplication();
+        using var client = application.CreateClient();
+
+        var fresh = await GetStateAsync(client);
+
+        Assert.False(fresh.PasswordSet);
+        Assert.False(fresh.SignedIn);
+        Assert.Equal("Password", fresh.NextStep);
+
+        await PostAsync<SetPasswordVerdict>(client, "/api/access/password", new { password = Password });
+
+        var afterwards = await GetStateAsync(client);
+
+        Assert.True(afterwards.PasswordSet);
+        Assert.True(afterwards.SignedIn);
+        Assert.Equal("PrdbKey", afterwards.NextStep);
+    }
+
+    /// <summary>
+    /// How far onboarding has got is told to whoever is entitled to act on it.
+    /// A page showing the sign-in form needs to know that it must, and nothing
+    /// beyond that.
+    /// </summary>
+    [Fact]
+    public async Task How_far_onboarding_got_is_not_told_to_a_stranger()
+    {
+        using var application = new FabApplication();
+
+        using (var owner = await application.SignedInClientAsync(Password))
+        {
+            Assert.Equal("PrdbKey", (await GetStateAsync(owner)).NextStep);
+        }
+
+        using var stranger = application.CreateClient();
+
+        var state = await GetStateAsync(stranger);
+
+        Assert.True(state.PasswordSet);
+        Assert.False(state.SignedIn);
+        Assert.Null(state.NextStep);
+    }
+
+    [Fact]
+    public async Task Signing_out_is_visible_in_the_state()
+    {
+        using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync(Password);
+
+        using (var response = await client.PostAsync(
+            "/api/access/sign-out", content: null, TestContext.Current.CancellationToken))
+        {
+            response.EnsureSuccessStatusCode();
+        }
+
+        Assert.False((await GetStateAsync(client)).SignedIn);
+    }
+
+    private static async Task<AccessState> GetStateAsync(HttpClient client) =>
+        (await client.GetFromJsonAsync<AccessState>(
+            "/api/access/state", TestContext.Current.CancellationToken))!;
+
     private static async Task<T> PostAsync<T>(HttpClient client, string path, object body)
     {
         using var response = await client.PostAsJsonAsync(path, body, TestContext.Current.CancellationToken);
@@ -225,6 +294,8 @@ public sealed class AccessRouteTests
 
         return (await response.Content.ReadFromJsonAsync<T>(TestContext.Current.CancellationToken))!;
     }
+
+    private sealed record AccessState(bool PasswordSet, bool SignedIn, string? NextStep);
 
     private sealed record SetPasswordVerdict(string Outcome, string? Refusal);
 

@@ -32,6 +32,10 @@ public sealed class AnonymousSurfaceTests
         // smoke test asks.
         "GET /api/health",
 
+        // What the one page decides from, and it cannot need a session to ask
+        // whether there is one.
+        "GET /api/access/state",
+
         // The first of ADR 0010's two unauthenticated writes.
         "POST /api/access/password",
 
