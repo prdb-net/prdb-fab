@@ -2,9 +2,10 @@
 
 Measured rather than argued, in the shape
 [ADR 0025](0025-the-cache-is-searched-with-like-over-a-normalised-column-in-one-pass-per-batch.md)
-established for this project. The prototype is on the `prototype/05-sqlite-settings`
-branch under `prototypes/05-sqlite-settings/`, with every number and how it was
-taken; only the ones that decide something appear here.
+established for this project. The prototype is in
+[`prototypes/05-sqlite-settings/`](../../prototypes/05-sqlite-settings/), with
+every number and how it was taken; only the ones that decide something appear
+here.
 
 The database is opened with **`journal_mode=WAL`**, **`synchronous=NORMAL`**,
 **`busy_timeout=5000`** and **`foreign_keys=ON`**. One writer at a time is left
