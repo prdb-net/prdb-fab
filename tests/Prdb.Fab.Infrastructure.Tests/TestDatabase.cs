@@ -4,6 +4,7 @@ using Microsoft.Extensions.Time.Testing;
 
 using Xunit;
 
+using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 
@@ -49,6 +50,7 @@ public sealed class TestDatabase : IAsyncDisposable
         services.AddLogging();
         services.AddFabPersistence(directory);
         services.AddFabScheduling();
+        services.AddFabAccess();
 
         var provider = services.BuildServiceProvider();
 

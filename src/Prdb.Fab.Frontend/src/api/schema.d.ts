@@ -39,6 +39,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/access/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetPasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SetPasswordVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/access/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SignInRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SignInVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/access/sign-out": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skeleton/items": {
         parameters: {
             query?: never;
@@ -209,6 +320,25 @@ export interface components {
         };
         /** @enum {unknown} */
         RunOutcome: "Succeeded" | "Failed" | "Interrupted";
+        /** @enum {unknown} */
+        SetPasswordOutcome: "Set" | "AlreadySet" | "Refused";
+        SetPasswordRequest: {
+            password: null | string;
+        };
+        SetPasswordVerdict: {
+            outcome: components["schemas"]["SetPasswordOutcome"];
+            refusal: null | string;
+        };
+        /** @enum {unknown} */
+        SignInOutcome: "SignedIn" | "WrongPassword" | "TooManyAttempts" | "NoPasswordYet";
+        SignInRequest: {
+            password: null | string;
+        };
+        SignInVerdict: {
+            outcome: components["schemas"]["SignInOutcome"];
+            /** Format: int32 */
+            retryAfterSeconds: null | number | string;
+        };
         SkeletonItem: {
             /** Format: int64 */
             id: number | string;

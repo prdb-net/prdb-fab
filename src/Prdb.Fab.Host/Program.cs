@@ -3,10 +3,15 @@ using System.Text.Json.Serialization;
 
 using Microsoft.OpenApi;
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Host.Access;
 using Prdb.Fab.Host.Logging;
 using Prdb.Fab.Host.Scheduling;
 using Prdb.Fab.Host.Skeleton;
+using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 
@@ -29,6 +34,22 @@ builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddFabPersistence(dataDirectory);
 builder.Services.AddFabScheduling();
+builder.Services.AddFabAccess();
+
+// ADR 0010: a browser session is the only credential, and an unauthenticated
+// request gets 401 rather than a redirect.
+builder.Services
+    .AddAuthentication(SessionAuthentication.Scheme)
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(
+        SessionAuthentication.Scheme,
+        configureOptions: null);
+
+// Everything is behind the password unless it says otherwise. Stated as a
+// fallback rather than added route by route, because the failure mode of the
+// other way round is a route somebody forgot — and ADR 0010 spent a paragraph
+// on how narrow the anonymous surface is.
+builder.Services.AddAuthorizationBuilder()
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
 // ADR 0038: one hosted service per lane. Only the bulk lane has a routine so
 // far, so only the bulk lane turns — the other three are this same class with a
@@ -100,6 +121,12 @@ if (!readingTheEndpoints)
     // ADR 0038: a routine with no row never runs, so the rows are created with
     // the code rather than by hand.
     await app.Services.PrepareFabScheduleAsync();
+
+    // ADR 0010: the way back in when the password is lost, taken at the host
+    // because a second way in over the network is a second way to configure
+    // wrongly.
+    await app.Services.ResetPasswordIfAskedAsync(
+        builder.Configuration.GetValue<bool>("FAB_RESET_PASSWORD"));
 }
 
 // ADR 0043: one line per request, at Debug. Turning Prdb.Fab up turns these on
@@ -109,7 +136,17 @@ app.UseSerilogRequestLogging(options => options.GetLevel = (_, _, _) => Serilog.
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok"))).WithTags("Health");
+app.UseAuthentication();
+app.UseAuthorization();
+
+// The one anonymous read. ADR 0010 accepts that nothing mechanical can reach
+// the tool, and this reaches nothing: it says the process is answering, which
+// is what the container's own smoke test asks and all it is told.
+app.MapGet("/api/health", () => TypedResults.Ok(new HealthResponse("ok")))
+    .WithTags("Health")
+    .AllowAnonymous();
+
+app.MapAccess();
 
 app.MapSkeleton();
 
@@ -117,7 +154,9 @@ app.MapSkeleton();
 // and let the frontend decide. Unknown API paths must not — a caller that asked
 // a question the API does not have gets that answer, not a page.
 app.MapFallback("/api/{*rest}", () => Results.NotFound());
-app.MapFallbackToFile("index.html");
+
+// Anonymous, and it has to be: this is the page that shows the sign-in form.
+app.MapFallbackToFile("index.html").AllowAnonymous();
 
 app.Run();
 

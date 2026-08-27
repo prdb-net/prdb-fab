@@ -15,12 +15,17 @@ namespace Prdb.Fab.Host.Tests;
 /// startup exactly as it is in the container, and the lane is turning
 /// underneath the whole time.
 /// </remarks>
+/// <remarks>
+/// The client is signed in, because ADR 0010 puts everything behind the
+/// password. What that refusal looks like is <c>AccessRouteTests</c>'s
+/// question, not this one's.
+/// </remarks>
 public sealed class SkeletonRouteTests(FabApplication application) : IClassFixture<FabApplication>
 {
     [Fact]
     public async Task The_health_route_answers()
     {
-        using var client = application.CreateClient();
+        using var client = await application.SignedInClientAsync();
 
         using var response = await client.GetAsync("/api/health", TestContext.Current.CancellationToken);
 
@@ -30,7 +35,7 @@ public sealed class SkeletonRouteTests(FabApplication application) : IClassFixtu
     [Fact]
     public async Task An_unknown_api_path_is_not_the_frontend()
     {
-        using var client = application.CreateClient();
+        using var client = await application.SignedInClientAsync();
 
         using var response = await client.GetAsync(
             "/api/there-is-no-such-thing", TestContext.Current.CancellationToken);
@@ -44,7 +49,7 @@ public sealed class SkeletonRouteTests(FabApplication application) : IClassFixtu
     [Fact]
     public async Task An_item_can_be_added_and_read_back()
     {
-        using var client = application.CreateClient();
+        using var client = await application.SignedInClientAsync();
 
         var verdict = await PostAsync<AddItemVerdict>(client, "/api/skeleton/items", new { label = "a thing" });
 
@@ -66,7 +71,7 @@ public sealed class SkeletonRouteTests(FabApplication application) : IClassFixtu
     [Fact]
     public async Task A_refusal_is_a_success_with_a_reason()
     {
-        using var client = application.CreateClient();
+        using var client = await application.SignedInClientAsync();
 
         using var response = await client.PostAsJsonAsync(
             "/api/skeleton/items", new { label = "   " }, TestContext.Current.CancellationToken);
@@ -89,7 +94,7 @@ public sealed class SkeletonRouteTests(FabApplication application) : IClassFixtu
     [Fact]
     public async Task The_lane_sweeps_what_the_route_added()
     {
-        using var client = application.CreateClient();
+        using var client = await application.SignedInClientAsync();
 
         await PostAsync<AddItemVerdict>(client, "/api/skeleton/items", new { label = "for the lane" });
 
