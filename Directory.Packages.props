@@ -25,6 +25,12 @@
     -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
     <!--
+      ADR 0010 names PasswordHasher<T> and its reason: it is versioned and
+      rehashes on sign-in. MIT, and it brings only logging and options
+      abstractions that are already here.
+    -->
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.10" />
+    <!--
       ADR 0043: console and a rolling file, both from this one reference. Apache-2.0
       here and in everything it brings — which is half of why it is here at all.
     -->

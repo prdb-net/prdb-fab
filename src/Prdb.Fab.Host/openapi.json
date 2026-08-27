@@ -25,6 +25,76 @@
         }
       }
     },
+    "/api/access/password": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetPasswordVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/access/sign-in": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/access/sign-out": {
+      "post": {
+        "tags": [
+          "Access"
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/skeleton/items": {
       "get": {
         "tags": [
@@ -288,6 +358,88 @@
           "Interrupted"
         ]
       },
+      "SetPasswordOutcome": {
+        "enum": [
+          "Set",
+          "AlreadySet",
+          "Refused"
+        ]
+      },
+      "SetPasswordRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SetPasswordVerdict": {
+        "required": [
+          "outcome",
+          "refusal"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/SetPasswordOutcome"
+          },
+          "refusal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SignInOutcome": {
+        "enum": [
+          "SignedIn",
+          "WrongPassword",
+          "TooManyAttempts",
+          "NoPasswordYet"
+        ]
+      },
+      "SignInRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SignInVerdict": {
+        "required": [
+          "outcome",
+          "retryAfterSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/SignInOutcome"
+          },
+          "retryAfterSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "SkeletonItem": {
         "required": [
           "id",
@@ -326,6 +478,9 @@
   "tags": [
     {
       "name": "Health"
+    },
+    {
+      "name": "Access"
     },
     {
       "name": "Skeleton"

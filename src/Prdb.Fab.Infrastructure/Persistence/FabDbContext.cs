@@ -1,14 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
+using Prdb.Fab.Core.Access;
 using Prdb.Fab.Core.Scheduling;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
-/// The skeleton's schema: ADR 0014's two tables, plus the scaffolding row the
-/// one routine works through. Not ADR 0033's twenty-four — that arrives with
-/// the features that need it.
+/// What is built so far of ADR 0033's twenty-four tables: ADR 0014's two, the
+/// installation and its sessions, and the scaffolding row the one routine works
+/// through. The rest arrive with the features that need them.
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {
@@ -17,6 +18,11 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<RoutineRunRow> RoutineRuns => Set<RoutineRunRow>();
 
     public DbSet<SkeletonItemRow> SkeletonItems => Set<SkeletonItemRow>();
+
+    /// <summary>The one row. See <see cref="InstallationRow"/>.</summary>
+    public DbSet<InstallationRow> Installation => Set<InstallationRow>();
+
+    public DbSet<SessionRow> Sessions => Set<SessionRow>();
 
     /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
@@ -81,6 +87,38 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             run.HasIndex(row => new { row.RoutineId, row.StartedAt });
 
             run.Property(row => row.Outcome).HasConversion<string>();
+        });
+
+        builder.Entity<InstallationRow>(installation =>
+        {
+            installation.ToTable("installation", table => table.HasCheckConstraint(
+                "CK_installation_one_row",
+                $"\"Id\" = {InstallationRow.TheOnlyRow}"));
+
+            installation.HasKey(row => row.Id);
+
+            // Never generated: the key is the constant, so a second insert is
+            // refused by the check constraint rather than quietly numbered 2.
+            installation.Property(row => row.Id).ValueGeneratedNever();
+
+            installation.Property(row => row.OnboardingStep).HasConversion<string>();
+
+            // The row exists from the first migration rather than being created
+            // on demand, so nothing anywhere has to ask whether it is there.
+            installation.HasData(new InstallationRow { Id = InstallationRow.TheOnlyRow });
+        });
+
+        builder.Entity<SessionRow>(session =>
+        {
+            session.ToTable("session");
+            session.HasKey(row => row.Id);
+
+            // Every authenticated request is this lookup.
+            session.HasIndex(row => row.TokenHash).IsUnique();
+
+            // ADR 0010: expiry is a property of the row, and sweeping the dead
+            // ones is one delete over this.
+            session.HasIndex(row => row.ExpiresAt);
         });
 
         builder.Entity<SkeletonItemRow>(item =>

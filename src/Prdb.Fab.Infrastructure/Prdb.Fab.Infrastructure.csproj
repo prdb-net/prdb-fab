@@ -16,6 +16,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <!-- ADR 0039: overrides the vulnerable SQLite that EF Core still brings. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <!-- ADR 0010's password hasher. -->
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
   </ItemGroup>
 
 </Project>
