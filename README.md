@@ -6,8 +6,10 @@ download it through SABnzbd, and build a sorted library out of what arrives.
 Self-hosted, Docker Compose, single user. A prdb API key is required.
 
 > **This is early software.** What is in the image today asks for a password,
-> takes you through setting up, and checks every connection you give it against
-> the service it names. It does not yet sync, search, download or file anything.
+> takes you through setting up, checks every connection you give it against the
+> service it names, and then keeps a local copy of the part of prdb you point it
+> at — with two pages to look at it. It does not yet search, download or file
+> anything.
 
 ## What you need
 
@@ -25,7 +27,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.1.0
+    image: prdbnet/prdb-fab:0.2.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -46,6 +48,8 @@ credential, and the field to set one is offered only while no password exists.
 Whoever reaches the tool first sets it, so start it on a network you control.
 After that it walks you through your prdb key, SABnzbd, your indexers and your
 library root, checking each one against the real service before it stores it.
+Setting up ends on your wanted list, with the first read of prdb's catalogue
+already running behind it — there is nothing to wait in front of.
 
 **Over plain `http` the password travels across the network in the clear.** On a
 LAN you control that is the ordinary way to run this; reaching it from anywhere
@@ -53,6 +57,16 @@ else wants TLS in front of it.
 
 The mounts, `PUID`/`PGID`, the log, updating, and what to do when the password is
 lost: **[docs/running-in-docker.md](docs/running-in-docker.md)**.
+
+## What it does once it is set up
+
+It reads prdb, on its own, and keeps what it reads: the videos prdb publishes,
+the sites and actors behind them, your wanted list and your favourites, and one
+picture per video. Two pages show it — **what's new**, which is where it lands,
+and **wanted**, which is what you have marked in prdb. Marking happens there;
+this reads that list and never writes to it.
+
+Nothing is searched for, downloaded or filed yet.
 
 ## Configuration
 

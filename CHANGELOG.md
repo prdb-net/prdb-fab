@@ -19,6 +19,47 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-27
+
+The tool now knows what prdb knows. Setting up ends on your wanted list instead
+of on a page apologising for not having one, and there are two things to look
+at. Still nothing is searched for, downloaded or filed — that is the next
+release, and this one is what it will be built on.
+
+### Added
+
+- **A local copy of the part of prdb you point it at**, kept up to date on its
+  own: the videos prdb publishes, the sites and actors behind them, your wanted
+  list and your favourites. It starts the minute a key is saved, reads backwards
+  into what prdb published before your installation existed, and then keeps up
+  with what is new. Nothing waits for it and there is no progress bar to sit in
+  front of.
+- **What's new**, which is where the tool now lands: prdb's newest videos as a
+  grid, in prdb's own order. Where you are in it is in the address, so a page can
+  be linked and a reload comes back to it.
+- **Your wanted list**, as the same grid over what you have marked in prdb, most
+  recently wanted first, with a link out to prdb on every card. Wanting happens
+  in prdb: this reads that list and never writes to it. An empty list says which
+  kind of empty it is — nothing marked, or not read yet.
+- **Artwork**, one picture per video, kept on disk so that scrolling a grid does
+  not fetch the same thumbnails again. Pictures for videos you want are fetched
+  ahead of you looking; everything else is fetched the first time it is on
+  screen. Bounded at 2 GiB, and what you want is never dropped to hold that.
+- **It paces itself against your prdb plan**, read off prdb's own answers rather
+  than configured. A plan too small for the schedule is said out loud in the log
+  and answered by asking for less — the actors feed drops to daily, the images
+  feed and what's new to hourly — rather than by quietly falling behind.
+
+### Changed
+
+- **Setting up ends on your wanted list**, with the first read of prdb already
+  running behind it. The placeholder page that stood there is gone, along with
+  its address.
+- **A prdb key belonging to a different account replaces what belongs to the old
+  one** — the wanted list, the favourites, and where their feeds had got to —
+  and keeps the catalogue, which belongs to no account. You are asked before it
+  happens, and told what will go.
+
 ### Fixed
 
 - **The library root no longer warns about a copy that would be a rename.** The

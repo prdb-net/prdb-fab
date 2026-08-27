@@ -4,16 +4,17 @@ Docker Compose is the supported way to run this. Not one option among several �
 the way.
 
 > **This is early software.** What is in the image today asks for a password,
-> takes you through setting up, and checks every connection you give it against
-> the service it names. It does not yet sync, search, download or file anything
-> — so a finished setup is a tool that is ready and idle.
+> takes you through setting up, checks every connection you give it against the
+> service it names, and then keeps a local copy of the part of prdb you point it
+> at. It does not yet search, download or file anything — so a finished setup is
+> a tool that reads prdb and shows you what it read.
 
 ## The quickstart
 
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.1.0
+    image: prdbnet/prdb-fab:0.2.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -70,7 +71,7 @@ and without editing this Compose file.
 
 | Mount | What it is |
 | --- | --- |
-| `/data` | The tool's own state: the SQLite database and the log. |
+| `/data` | The tool's own state: the SQLite database, the log, and the cached artwork. |
 | Your media | Whatever you mount your downloads and your library from. The paths inside the container are yours to choose. |
 
 Two things are worth getting right.
@@ -79,14 +80,24 @@ Two things are worth getting right.
 corrupt a database, not a way to back one up. Back the directory up by copying
 it; do not run the tool out of a network share.
 
-**What grows on `/data`.** Two things, and both are bounded by a number rather
-than by time. The local copy of prdb's catalogue keeps at most **50,000 videos**
-— tens of megabytes with their pre-names, credits and image records beside them
-— and the cached artwork keeps at most **2 GiB** of pictures for videos you are
-only browsing. Neither number is a setting. What you have marked as wanted, and
-what you hold, is kept beyond both: the tool drops what nothing points at first,
-and only then would a ceiling reach anything else. The whole of it can be thrown
-away and refilled from prdb, which is why none of it is in a backup.
+**What grows on `/data`.** Three things: the database, the log, and the cached
+artwork. The log is capped near a hundred megabytes and rolls. The other two are
+bounded by a number rather than by a duration, because how much disk a duration
+implies is not something anyone can predict.
+
+| | Ceiling | What happens at it |
+| --- | --- | --- |
+| The local copy of prdb's catalogue | **50,000 videos** — tens of megabytes with their pre-names, credits and image records | The oldest rows nothing points at are dropped, a few hundred at a time |
+| Cached artwork | **2 GiB**, and only for videos you are merely browsing | The pictures served longest ago are deleted; the next time you scroll past one it is fetched again |
+
+Neither is a setting, and neither can reach what you have marked as wanted or
+what you hold: those are kept whatever the ceilings say, and the artwork of a
+wanted video is not counted against the 2 GiB at all. Reaching a ceiling is
+ordinary and costs you nothing but a picture fetched twice.
+
+**None of it is in a backup**, and it does not need to be — every row and every
+image can be read from prdb again. A restored installation shows a library that
+fills in over the following minutes.
 
 **Mount your media at the same path your downloader sees it at, if you can.**
 The path mapping is then the identity, and a mapping that does not resolve is
@@ -212,7 +223,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.1.0` | A release. This is what documentation and Compose files should pin. |
+| `0.2.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 
