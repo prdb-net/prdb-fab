@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Sync;
@@ -16,13 +17,15 @@ public sealed class ActorFeedRoutine(
     ActorFeed feed,
     FeedCursors cursors,
     FabDbContext context,
-    ILogger<ActorFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger)
+    ILogger<ActorFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger), ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.actors";
 
     public override string Name => RoutineName;
 
     public override TimeSpan Cadence => TimeSpan.FromHours(6);
+
+    public PrdbWork Spends => Source.Work;
 }
 
 /// <summary>
@@ -36,13 +39,15 @@ public sealed class VideoImageFeedRoutine(
     VideoImageFeed feed,
     FeedCursors cursors,
     FabDbContext context,
-    ILogger<VideoImageFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger)
+    ILogger<VideoImageFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger), ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.video-images";
 
     public override string Name => RoutineName;
 
     public override TimeSpan Cadence => TimeSpan.FromMinutes(30);
+
+    public PrdbWork Spends => Source.Work;
 }
 
 /// <summary>
@@ -58,13 +63,15 @@ public sealed class WantedVideoFeedRoutine(
     WantedVideoFeed feed,
     FeedCursors cursors,
     FabDbContext context,
-    ILogger<WantedVideoFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger)
+    ILogger<WantedVideoFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger), ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.wanted-videos";
 
     public override string Name => RoutineName;
 
     public override TimeSpan Cadence => TimeSpan.FromHours(1);
+
+    public PrdbWork Spends => Source.Work;
 }
 
 /// <summary>ADR 0014's cadence for the favourite sites feed: one hour.</summary>
@@ -72,13 +79,15 @@ public sealed class FavouriteSiteFeedRoutine(
     FavouriteSiteFeed feed,
     FeedCursors cursors,
     FabDbContext context,
-    ILogger<FavouriteSiteFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger)
+    ILogger<FavouriteSiteFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger), ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.favourite-sites";
 
     public override string Name => RoutineName;
 
     public override TimeSpan Cadence => TimeSpan.FromHours(1);
+
+    public PrdbWork Spends => Source.Work;
 }
 
 /// <summary>ADR 0014's cadence for the favourite actors feed: one hour.</summary>
@@ -86,11 +95,13 @@ public sealed class FavouriteActorFeedRoutine(
     FavouriteActorFeed feed,
     FeedCursors cursors,
     FabDbContext context,
-    ILogger<FavouriteActorFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger)
+    ILogger<FavouriteActorFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger), ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.favourite-actors";
 
     public override string Name => RoutineName;
 
     public override TimeSpan Cadence => TimeSpan.FromHours(1);
+
+    public PrdbWork Spends => Source.Work;
 }

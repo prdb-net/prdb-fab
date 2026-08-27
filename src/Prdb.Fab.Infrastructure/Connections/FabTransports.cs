@@ -18,6 +18,14 @@ public static class FabTransports
     public const string Sabnzbd = "sabnzbd";
 
     /// <summary>
+    /// ADR 0030's artwork cache: a <c>GET</c> against a CDN for a URL prdb
+    /// handed out in its own payload. Not the prdb transport, which is the whole
+    /// point — it carries no key, spends no rate limit, and therefore must not
+    /// pass through the governor's handler.
+    /// </summary>
+    public const string Artwork = "artwork";
+
+    /// <summary>
     /// ADR 0041: the timeout follows the cadence rather than taste. SABnzbd is
     /// polled every five seconds while anything is outstanding, so a longer wait
     /// than this is a poll queued behind a poll.
@@ -27,6 +35,14 @@ public static class FabTransports
     public static readonly TimeSpan PrdbTimeout = TimeSpan.FromSeconds(30);
 
     public static readonly TimeSpan IndexerTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// ADR 0041's rule applied to ADR 0030's display path: a page request may
+    /// now do network I/O, and this is what keeps it from being a page request
+    /// that hangs. A slow CDN serves the no-artwork tile instead, which costs a
+    /// thumbnail; a grid held open for thirty seconds costs the page.
+    /// </summary>
+    public static readonly TimeSpan ArtworkTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// ADR 0041: an honest, identifiable <c>User-Agent</c> of product name and
@@ -43,9 +59,7 @@ public static class FabTransports
     public static string UserAgent { get; } = BuildUserAgent();
 
     /// <summary>
-    /// The three transports this slice reaches. ADR 0041 names a fourth for
-    /// artwork; it arrives with ADR 0030's cache, because a transport nothing
-    /// sends through is a transport nothing tests.
+    /// The four transports, one per kind of remote thing.
     /// </summary>
     public static IServiceCollection AddFabTransports(this IServiceCollection services)
     {
@@ -59,21 +73,32 @@ public static class FabTransports
         Register(services, Indexers, IndexerTimeout);
         Register(services, Sabnzbd, SabnzbdTimeout);
 
+        // The fourth, and the one exception to the rule above it. ADR 0041:
+        // only the CDN follows a redirect — this request carries no credential
+        // of any kind, and an image URL that redirects to the bytes is how a
+        // content delivery network ordinarily answers.
+        Register(services, Artwork, ArtworkTimeout, followsRedirects: true);
+
         return services;
     }
 
-    private static IHttpClientBuilder Register(IServiceCollection services, string name, TimeSpan timeout) =>
+    private static IHttpClientBuilder Register(
+        IServiceCollection services,
+        string name,
+        TimeSpan timeout,
+        bool followsRedirects = false) =>
         services.AddHttpClient(name, client =>
             {
                 client.Timeout = timeout;
                 client.DefaultRequestHeaders.UserAgent.ParseAdd(UserAgent);
             })
-            // ADR 0041: none of these three follows a redirect, because all
-            // three carry a credential. For prdb the SDK refuses to build on a
-            // transport that does; for an indexer it is sharper still, since
-            // Newznab puts the key in the query string and a followed redirect
-            // hands the whole URL to whatever host it names.
-            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false })
+            // ADR 0041: none of the three credentialled transports follows a
+            // redirect, because all three carry a credential. For prdb the SDK
+            // refuses to build on a transport that does; for an indexer it is
+            // sharper still, since Newznab puts the key in the query string and
+            // a followed redirect hands the whole URL to whatever host it names.
+            .ConfigurePrimaryHttpMessageHandler(
+                () => new SocketsHttpHandler { AllowAutoRedirect = followsRedirects })
             // The prdb transport is reached as a bare handler rather than as an
             // HttpClient, because the SDK builds the client above it — so the
             // agent is set here, where both paths pass through, rather than on

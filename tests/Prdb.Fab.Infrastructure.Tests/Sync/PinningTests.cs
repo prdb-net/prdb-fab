@@ -181,6 +181,14 @@ public sealed class PinningTests
 
         public Expression<Func<CatalogueVideoRow, bool>> PointsAt =>
             video => context.CatalogueImages.Any(image => image.VideoId == video.Id);
+
+        /// <summary>
+        /// The image row has no stamp of its own, so this source has nothing to
+        /// say about when it started pointing — which is a legitimate answer to
+        /// the question and the one that keeps the order stable rather than
+        /// inventing a time.
+        /// </summary>
+        public Expression<Func<CatalogueVideoRow, DateTimeOffset?>> PointedAtSince => _ => null;
     }
 
     private static Task<TestDatabase> CreateAsync(Action<IServiceCollection>? also = null) =>

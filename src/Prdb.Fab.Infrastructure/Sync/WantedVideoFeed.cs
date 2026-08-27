@@ -27,7 +27,7 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
 {
     public override Feed Feed => Feed.WantedVideos;
 
-    protected override PrdbWork Work => PrdbWork.UserFeeds;
+    public override PrdbWork Work => PrdbWork.UserFeeds;
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,

@@ -1,0 +1,55 @@
+.screen {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.heading h1 {
+  margin: 0;
+}
+
+.count {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}
+
+.empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  padding: 2rem 1.5rem;
+}
+
+.pager {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.pager button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.4rem 0.9rem;
+}
+
+.pager button:disabled {
+  color: var(--text-quiet);
+  cursor: default;
+}
+
+.where {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}

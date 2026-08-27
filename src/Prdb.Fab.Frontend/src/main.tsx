@@ -6,9 +6,10 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 
 import { readAccessState } from './api/client.ts'
 import { AccessGate } from './access/AccessGate.tsx'
+import { WantedScreen } from './catalogue/WantedScreen.tsx'
+import { WhatsNewScreen } from './catalogue/WhatsNewScreen.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
-import { ReadyScreen } from './onboarding/ReadyScreen.tsx'
 import { AccountScreen } from './settings/AccountScreen.tsx'
 import { ConnectionsScreen } from './settings/ConnectionsScreen.tsx'
 import { IndexerSettings } from './settings/IndexerSettings.tsx'
@@ -27,15 +28,23 @@ import './index.css'
 const queries = createQueryClient()
 
 /**
- * Where someone lands who typed the address and nothing more. The state
- * endpoint says which step is next, and the answer is a redirect rather than a
- * screen of its own — so the address always names what is being looked at.
+ * Where someone lands who typed the address and nothing more.
+ *
+ * While setting up is unfinished the state endpoint says which step is next and
+ * the answer is a redirect, so the address always names what is being looked
+ * at. Once it is finished this stops redirecting and *is* the landing page:
+ * What's New, which ADR 0013 calls it and which is what the catalogue exists
+ * for.
  */
 function Landing() {
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
 
   if (state.isPending) {
     return null
+  }
+
+  if (state.data?.nextStep === 'Complete') {
+    return <WhatsNewScreen />
   }
 
   return <Navigate to={routeFor(state.data?.nextStep)} replace />
@@ -50,7 +59,9 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/onboarding/:step" element={<OnboardingScreen />} />
-            <Route path="/ready" element={<ReadyScreen />} />
+            {/* ADR 0010's last step lands here, which is what makes onboarding
+                lead to a first download rather than to a page saying it could. */}
+            <Route path="/wanted" element={<WantedScreen />} />
             {/* ADR 0020: routes rather than one page with anchors, one level
                 down as well — every indexer has its own. */}
             <Route path="/settings" element={<SettingsGate />}>

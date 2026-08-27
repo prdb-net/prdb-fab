@@ -32,6 +32,28 @@ public interface ICataloguePin
 
     /// <summary>Whether this source points at the video.</summary>
     Expression<Func<CatalogueVideoRow, bool>> PointsAt { get; }
+
+    /// <summary>
+    /// Since when this source has pointed at the video, and null where it does
+    /// not point at it at all.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ADR 0030 asks its routine to take <em>newly pinned</em> videos before the
+    /// backlog, which is what puts a freshly downloaded video's image on disk
+    /// while the copy that produced it is still running. Whether a row is pinned
+    /// is a clause; <em>when</em> it became pinned is a value, so it is a second
+    /// projection rather than a second predicate.
+    /// </para>
+    /// <para>
+    /// It stays out of the row for the same reason the pin itself does
+    /// (ADR 0033): a stored stamp would have one writer per source and no reader
+    /// that would notice it being wrong. Every source already carries a time —
+    /// the tables that pin a video record when they were written — so this is a
+    /// column that exists being read rather than one being kept.
+    /// </para>
+    /// </remarks>
+    Expression<Func<CatalogueVideoRow, DateTimeOffset?>> PointedAtSince { get; }
 }
 
 /// <summary>
@@ -49,4 +71,16 @@ public sealed class WantedVideoPin(FabDbContext context) : ICataloguePin
 
     public Expression<Func<CatalogueVideoRow, bool>> PointsAt =>
         video => context.WantedVideos.Any(wanted => wanted.VideoId == video.Id);
+
+    /// <summary>
+    /// Since when prdb says the video has been wanted, which is the list's own
+    /// stamp rather than when this installation first read it. That is the right
+    /// one: a key added to a second installation should put the same videos at
+    /// the front of the queue as the first, and the alternative would make the
+    /// order an accident of when a feed happened to run.
+    /// </summary>
+    public Expression<Func<CatalogueVideoRow, DateTimeOffset?>> PointedAtSince =>
+        video => context.WantedVideos
+            .Where(wanted => wanted.VideoId == video.Id)
+            .Max(wanted => (DateTimeOffset?)wanted.SinceAt);
 }

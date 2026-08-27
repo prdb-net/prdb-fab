@@ -46,7 +46,7 @@ public sealed class VideoImageFeed(FabDbContext context, PrdbGateway prdb, Catal
     /// </summary>
     public override bool StartsAtTheBeginning => false;
 
-    protected override PrdbWork Work => PrdbWork.Images;
+    public override PrdbWork Work => PrdbWork.Images;
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,
@@ -113,6 +113,20 @@ public sealed class VideoImageFeed(FabDbContext context, PrdbGateway prdb, Catal
             .Where(row => ids.Contains(row.PrdbId))
             .ToDictionaryAsync(row => row.PrdbId, cancellationToken);
 
+        // Where the next image of each video goes. This feed is paged by
+        // creation time and prdb orders images[] oldest first, so an image
+        // arriving here is the newest one the video has and belongs at the end
+        // — which is what keeps ADR 0027's choice on the entry it was already
+        // on. A detail read rewrites the whole array's positions anyway, so
+        // this only has to be right until the repair pass comes round.
+        var local = placeable.Values.ToList();
+
+        var next = await Context.CatalogueImages
+            .Where(row => local.Contains(row.VideoId))
+            .GroupBy(row => row.VideoId)
+            .Select(group => new { VideoId = group.Key, Last = group.Max(row => row.Position) })
+            .ToDictionaryAsync(row => row.VideoId, row => row.Last + 1, cancellationToken);
+
         var applied = 0;
 
         foreach (var image in images)
@@ -127,7 +141,17 @@ public sealed class VideoImageFeed(FabDbContext context, PrdbGateway prdb, Catal
 
             if (!held.TryGetValue(id, out var row))
             {
-                row = new CatalogueImageRow { PrdbId = id, VideoId = videoId, Url = url };
+                var position = next.TryGetValue(videoId, out var last) ? last : 0;
+
+                next[videoId] = position + 1;
+
+                row = new CatalogueImageRow
+                {
+                    PrdbId = id,
+                    VideoId = videoId,
+                    Url = url,
+                    Position = position,
+                };
 
                 Context.CatalogueImages.Add(row);
                 held[id] = row;

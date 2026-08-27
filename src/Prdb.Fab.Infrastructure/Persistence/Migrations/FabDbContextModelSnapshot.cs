@@ -59,6 +59,11 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("LastServedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Position")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<Guid>("PrdbId")
                         .HasColumnType("TEXT");
 
@@ -71,12 +76,15 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Cached")
+                        .HasFilter("\"Cached\" = 0");
+
                     b.HasIndex("LastServedAt");
 
                     b.HasIndex("PrdbId")
                         .IsUnique();
 
-                    b.HasIndex("VideoId");
+                    b.HasIndex("VideoId", "Position", "PrdbId");
 
                     b.ToTable("catalogue_image", (string)null);
 
@@ -169,6 +177,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("DurationFileCount")
                         .HasColumnType("INTEGER");
 
@@ -212,6 +223,8 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("SiteId");
+
+                    b.HasIndex("CreatedAtUtc", "Id");
 
                     b.ToTable("catalogue_video", (string)null);
 
@@ -324,6 +337,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PathMappingTo")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PlanShortSince")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PrdbApiKey")

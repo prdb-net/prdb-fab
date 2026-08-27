@@ -74,6 +74,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
         video.DurationSpreadMs = detail.DurationSpreadMs;
         video.DurationFileCount = detail.DurationFileCount;
 
+        video.CreatedAtUtc = detail.CreatedAtUtc ?? default;
         video.UpdatedAtUtc = detail.UpdatedAtUtc ?? default;
         video.LastReadAt = time.GetUtcNow();
 
@@ -187,12 +188,20 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
         List<VideoDetailImageDto>? images,
         CancellationToken cancellationToken)
     {
+        // The payload's own order, kept: ADR 0027 chooses the first entry with a
+        // URL, and nothing else on the row can say which that was. An entry
+        // without one still takes its place in the count, because the position
+        // quotes images[] rather than the subset that happens to be usable.
         var published = (images ?? [])
             .Where(image => image.Id is not null)
             .GroupBy(image => image.Id!.Value)
-            .ToDictionary(group => group.Key, group => group.First().Url ?? string.Empty);
+            .Select((group, position) => new Published(
+                group.Key,
+                group.First().Url ?? string.Empty,
+                position))
+            .ToList();
 
-        var ids = published.Keys.ToList();
+        var ids = published.Select(image => image.PrdbId).ToList();
 
         // The video's own images, and any row elsewhere carrying one of the ids
         // this payload claims. The second half is not hypothetical arithmetic:
@@ -205,7 +214,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             .ToListAsync(cancellationToken);
 
         foreach (var gone in held.Where(row =>
-                     row.VideoId == videoId && !published.ContainsKey(row.PrdbId)))
+                     row.VideoId == videoId && !ids.Contains(row.PrdbId)))
         {
             // ADR 0030 names the cached file by the image id, so the bytes on
             // disk are the artwork routine's to sweep up rather than this one's:
@@ -213,7 +222,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             context.CatalogueImages.Remove(gone);
         }
 
-        foreach (var (prdbId, url) in published)
+        foreach (var (prdbId, url, position) in published)
         {
             var row = held.FirstOrDefault(held => held.PrdbId == prdbId);
 
@@ -224,6 +233,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
                     PrdbId = prdbId,
                     VideoId = videoId,
                     Url = url,
+                    Position = position,
                 });
             }
             else if (!string.Equals(row.Url, url, StringComparison.Ordinal))
@@ -233,13 +243,24 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
                 // another look now that it has changed.
                 row.Url = url;
                 row.VideoId = videoId;
+                row.Position = position;
                 row.Cached = false;
                 row.FoundDead = false;
             }
             else
             {
                 row.VideoId = videoId;
+
+                // The order is the payload's every time, so a row that has moved
+                // within images[] moves here — that is how the chosen image
+                // becomes a different one without anything comparing bytes
+                // (ADR 0027). The cached file is named by the image id, so
+                // nothing on disk is invalidated by it.
+                row.Position = position;
             }
         }
     }
+
+    /// <summary>One image of the payload, at the place the payload put it.</summary>
+    private sealed record Published(Guid PrdbId, string Url, int Position);
 }

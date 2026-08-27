@@ -24,6 +24,11 @@ public static class ConnectionsServiceCollectionExtensions
         services.AddScoped<SabnzbdGateway>();
         services.AddScoped<NewznabGateway>();
 
+        // The fourth remote thing, and the one that is not a connection the user
+        // configures: ADR 0030 fetches an image from whatever host prdb named in
+        // its payload.
+        services.AddScoped<ArtworkGateway>();
+
         services.AddScoped<PrdbConnections>();
         services.AddScoped<SabnzbdConnections>();
         services.AddScoped<Indexers>();

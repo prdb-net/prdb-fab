@@ -25,6 +25,10 @@ export type ConfiguredIndexer = Schema['ConfiguredIndexer']
 export type IndexerConnectionVerdict = Schema['IndexerConnectionVerdict']
 export type LibraryRootVerdict = Schema['LibraryRootVerdict']
 
+export type VideoCard = Schema['VideoCard']
+export type VideoPage = Schema['VideoPage']
+export type WantedList = Schema['WantedList']
+
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
 export type AddItemVerdict = Schema['AddItemVerdict']
@@ -168,6 +172,23 @@ export async function editIndexer(
 
 export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict> {
   return post<LibraryRootVerdict>('/api/connections/library-root', { path })
+}
+
+/**
+ * ADR 0013's What's New, read out of the catalogue. Nothing here reaches prdb:
+ * the page is a query over what the sync routines have already written, which
+ * is why a reload spends no request (ADR 0018).
+ */
+export async function listWhatsNew(page: number): Promise<VideoPage> {
+  return json<VideoPage>(await fetch(`/api/catalogue/whats-new?page=${page}`))
+}
+
+/**
+ * ADR 0007's only source of intent, read out of the catalogue. There is no
+ * call beside this one that writes to it: wanting happens in prdb.
+ */
+export async function listWanted(page: number): Promise<WantedList> {
+  return json<WantedList>(await fetch(`/api/catalogue/wanted?page=${page}`))
 }
 
 export async function listItems(page: ItemsQuery['page']): Promise<ItemPage> {

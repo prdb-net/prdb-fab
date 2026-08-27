@@ -219,6 +219,13 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             // error and no Gap.
             video.Property(row => row.TitleSearchedBackwards).HasDefaultValue(false);
 
+            // What's New's order, in both directions, so that the landing page
+            // takes a page of it out of an index rather than by sorting the
+            // catalogue. The id breaks the tie, because two videos created in
+            // the same second must not swap places between two requests for
+            // the same page.
+            video.HasIndex(row => new { row.CreatedAtUtc, row.Id });
+
             video.HasOne(row => row.Site)
                 .WithMany()
                 .HasForeignKey(row => row.SiteId)
@@ -299,8 +306,24 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             image.HasIndex(row => row.PrdbId).IsUnique();
 
             image.Property(row => row.Url).IsRequired();
+            image.Property(row => row.Position).HasDefaultValue(0);
             image.Property(row => row.Cached).HasDefaultValue(false);
             image.Property(row => row.FoundDead).HasDefaultValue(false);
+
+            // ADR 0027's choice, as the order it is made in: the first entry of
+            // the video's images[] carrying a URL. Indexed with the video
+            // because that is how it is always asked — one video, its lowest
+            // position — and the id is in the key so that the tie prdb breaks
+            // by image id is broken the same way here.
+            image.HasIndex(row => new { row.VideoId, row.Position, row.PrdbId });
+
+            // ADR 0033 asks for this one filtered to pinned videos, which no
+            // index can express — pinning is a query (ADR 0033) and SQLite has
+            // no index over another table. What it can hold is the other half
+            // of the same clause, and that is the selective half: an installed
+            // cache has almost nothing uncached in it, so the routine's work
+            // set is found in the index rather than by reading the table.
+            image.HasIndex(row => row.Cached).HasFilter("\"Cached\" = 0");
 
             // ADR 0030's eviction order: least recently served first, over the
             // unpinned part only. One of the two indexes ADR 0033 asks for by

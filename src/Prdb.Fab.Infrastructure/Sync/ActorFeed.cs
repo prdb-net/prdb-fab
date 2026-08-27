@@ -22,7 +22,7 @@ public sealed class ActorFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
 {
     public override Feed Feed => Feed.Actors;
 
-    protected override PrdbWork Work => PrdbWork.Actors;
+    public override PrdbWork Work => PrdbWork.Actors;
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,

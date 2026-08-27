@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Sync;
@@ -22,7 +23,7 @@ public sealed class WhatsNewRoutine(
     WhatsNew whatsNew,
     FeedCursors cursors,
     FabDbContext context,
-    ILogger<WhatsNewRoutine> logger) : IRoutine
+    ILogger<WhatsNewRoutine> logger) : IRoutine, ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.whats-new";
 
@@ -31,6 +32,12 @@ public sealed class WhatsNewRoutine(
     public Lane Lane => Lane.Sync;
 
     public TimeSpan Cadence => TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// ADR 0014's fourth kind of work, and the largest single share of the idle
+    /// profile: four requests an hour before anything is found.
+    /// </summary>
+    public PrdbWork Spends => PrdbWork.WhatsNew;
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {

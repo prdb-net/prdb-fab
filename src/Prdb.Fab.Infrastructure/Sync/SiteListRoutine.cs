@@ -41,7 +41,7 @@ public sealed class SiteListRoutine(
     FabDbContext context,
     FeedCursors cursors,
     PrdbGateway prdb,
-    ILogger<SiteListRoutine> logger) : IRoutine
+    ILogger<SiteListRoutine> logger) : IRoutine, ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.sites";
 
@@ -56,6 +56,12 @@ public sealed class SiteListRoutine(
     public Lane Lane => Lane.Sync;
 
     public TimeSpan Cadence => TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// Last of ADR 0014's order before repair, and the smallest share of the
+    /// idle profile there is — one request a day, usually answered <c>304</c>.
+    /// </summary>
+    public PrdbWork Spends => PrdbWork.Sites;
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {

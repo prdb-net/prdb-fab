@@ -24,12 +24,19 @@ namespace Prdb.Fab.Infrastructure.Scheduling;
 /// </remarks>
 public sealed class RoutineRunner(
     IRoutineStore store,
+    ThePlan plan,
     IEnumerable<IRoutine> routines,
     ILogger<RoutineRunner> logger)
 {
     /// <summary>Runs everything <paramref name="lane"/> has due.</summary>
     public async Task TurnAsync(Lane lane, CancellationToken stoppingToken)
     {
+        // ADR 0014's named condition, asked once a turn rather than once a run:
+        // it is a property of the plan and the schedule, and neither of them
+        // changes between two routines of one tick. It writes only when the
+        // answer has changed.
+        await plan.NoteAsync(stoppingToken);
+
         var known = routines.ToDictionary(routine => routine.Name);
 
         foreach (var row in await store.DueAsync(lane, stoppingToken))
@@ -71,7 +78,11 @@ public sealed class RoutineRunner(
             // Written with a token that is not the one that just fired: the
             // record is the point of catching this, and cancelling it too would
             // lose the only trace.
-            await store.RecordAsync(row.Id, RunResult.Interrupted(0), routine.Cadence, CancellationToken.None);
+            await store.RecordAsync(
+                row.Id,
+                RunResult.Interrupted(0),
+                plan.CadenceFor(routine),
+                CancellationToken.None);
             throw;
         }
         catch (PrdbDeferredException deferred)
@@ -104,6 +115,11 @@ public sealed class RoutineRunner(
             result = RunResult.Failed(exception.GetType().Name + ": " + exception.Message);
         }
 
-        await store.RecordAsync(row.Id, result, routine.Cadence, stoppingToken);
+        // ADR 0014: what the routine asked for, unless the plan cannot carry
+        // the schedule — in which case this is where less is asked for, in the
+        // documented order. Not a backoff and not a deferral: both of those are
+        // about this run, and this is about every run from now until the plan
+        // changes.
+        await store.RecordAsync(row.Id, result, plan.CadenceFor(routine), stoppingToken);
     }
 }
