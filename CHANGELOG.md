@@ -19,6 +19,20 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-27
+
+### Fixed
+
+- **Nothing was being read from prdb except the newest videos and the site
+  list.** All five change feeds — the wanted list, both favourites, artwork and
+  actors — failed on their very first request, so a fresh installation showed an
+  empty wanted list and never learned about a video acquiring artwork. prdb
+  requires a `since` on every feed request and refuses one without it; this
+  tool expressed *start from the beginning* by sending no `since` at all, which
+  is what prdb's own API document says is allowed. It now sends the beginning of
+  time, which excludes nothing and is accepted. Feeds that had already been
+  failing recover on their next run, with nothing to reset and nothing lost.
+
 ## [0.2.0] - 2026-08-27
 
 The tool now knows what prdb knows. Setting up ends on your wanted list instead

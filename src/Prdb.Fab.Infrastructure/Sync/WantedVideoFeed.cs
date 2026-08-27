@@ -31,7 +31,7 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,
-        FeedPosition? from,
+        FeedPosition from,
         int pageSize,
         CancellationToken cancellationToken)
     {
@@ -42,8 +42,8 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
                 request =>
                 {
                     request.QueryParameters.PageSize = pageSize;
-                    request.QueryParameters.Since = from?.Since;
-                    request.QueryParameters.SinceId = from?.SinceId;
+                    request.QueryParameters.Since = from.Since;
+                    request.QueryParameters.SinceId = from.SinceId;
                 },
                 token),
             cancellationToken);

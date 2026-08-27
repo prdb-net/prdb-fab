@@ -97,4 +97,36 @@ public sealed class FeedPositionTests
         Assert.Equal(
             FeedPosition.CaughtUpAt(Noon),
             FeedPosition.Read($"{FeedPosition.CaughtUpAt(Noon).Stored}|not-an-id"));
+
+    /// <summary>
+    /// Before everything, and it has to be a value: prdb requires <c>since</c>
+    /// on every feed request and answers <c>400</c> without it, whatever its own
+    /// document says. A deployment found that; this is where the answer lives.
+    /// </summary>
+    [Fact]
+    public void The_beginning_is_a_lower_bound_that_excludes_nothing()
+    {
+        var beginning = FeedPosition.TheBeginning;
+
+        Assert.Equal(DateTimeOffset.MinValue, beginning.Since);
+        Assert.Null(beginning.SinceId);
+    }
+
+    /// <summary>
+    /// And the overlap is not applied below it. Setting a settled position back
+    /// a minute is the rule everywhere else; at the beginning of time there is
+    /// nothing behind it to be conservative about, and subtracting would throw.
+    /// </summary>
+    [Fact]
+    public void The_overlap_does_not_reach_below_the_beginning_of_time()
+    {
+        Assert.Equal(
+            DateTimeOffset.MinValue,
+            FeedPosition.CaughtUpAt(DateTimeOffset.MinValue).Since);
+
+        // A second in, still inside the overlap, and still not below it.
+        Assert.Equal(
+            DateTimeOffset.MinValue.AddSeconds(1),
+            FeedPosition.CaughtUpAt(DateTimeOffset.MinValue.AddSeconds(1)).Since);
+    }
 }

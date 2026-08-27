@@ -26,7 +26,7 @@ public sealed class ActorFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
 
     public override async Task<FeedPage> ReadAsync(
         string apiKey,
-        FeedPosition? from,
+        FeedPosition from,
         int pageSize,
         CancellationToken cancellationToken)
     {
@@ -37,8 +37,8 @@ public sealed class ActorFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
                 request =>
                 {
                     request.QueryParameters.PageSize = pageSize;
-                    request.QueryParameters.Since = from?.Since;
-                    request.QueryParameters.SinceId = from?.SinceId;
+                    request.QueryParameters.Since = from.Since;
+                    request.QueryParameters.SinceId = from.SinceId;
                 },
                 token),
             cancellationToken);

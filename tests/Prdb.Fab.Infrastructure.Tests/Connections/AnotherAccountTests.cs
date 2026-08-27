@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Web;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -177,11 +178,18 @@ public sealed class AnotherAccountTests
 
         Assert.Equal([somebody], await WantedAsync(database));
 
-        // And the run that filled it asked from the beginning rather than from
-        // where the other account's walk had come to.
+        // And the run that filled it asked from the beginning of time rather
+        // than from where the other account's walk had come to. The cursor
+        // going with the key is what this is about; the bound is there because
+        // prdb refuses a feed request without one.
         var asked = prdb.AskedFor(Wanted)[^1];
 
-        Assert.DoesNotContain("Since=", asked.Query, StringComparison.Ordinal);
+        Assert.Equal(
+            DateTimeOffset.MinValue,
+            DateTimeOffset.Parse(
+                HttpUtility.ParseQueryString(asked.Query)["Since"]!,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind));
     }
 
     /// <summary>

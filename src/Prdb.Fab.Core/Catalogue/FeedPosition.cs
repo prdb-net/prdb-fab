@@ -69,8 +69,37 @@ public sealed record FeedPosition
     /// </summary>
     public static FeedPosition MidWalkAt(DateTimeOffset at, Guid row) => new(at, row);
 
+    /// <summary>
+    /// Before everything, for a feed that has never run.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// prdb requires <c>since</c> on every feed request and answers <c>400</c>
+    /// without it, so <em>from the beginning</em> has to be a value rather than
+    /// an absence. Its own OpenAPI document does not mark the parameter as
+    /// required, which is why the first version of this code expressed the
+    /// beginning by sending nothing at all and no test refused it: the document
+    /// the fake was built from allowed what the service does not.
+    /// </para>
+    /// <para>
+    /// The lower bound that excludes nothing. A timestamp rather than a
+    /// hard-coded string, so the one rule about what to send lives in
+    /// <see cref="Since"/> like every other.
+    /// </para>
+    /// </remarks>
+    public static FeedPosition TheBeginning { get; } = new(DateTimeOffset.MinValue, unfinished: null);
+
     /// <summary>What to send as <c>since</c>.</summary>
-    public DateTimeOffset Since => Unfinished is null ? At - Overlap : At;
+    /// <remarks>
+    /// The overlap is not applied below the beginning of time: a settled
+    /// position at <see cref="DateTimeOffset.MinValue"/> is
+    /// <see cref="TheBeginning"/>, which has nothing before it to be
+    /// conservative about.
+    /// </remarks>
+    public DateTimeOffset Since =>
+        Unfinished is not null || At - DateTimeOffset.MinValue < Overlap
+            ? At
+            : At - Overlap;
 
     /// <summary>
     /// What to send as <c>sinceId</c>. Never set together with a timestamp that

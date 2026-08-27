@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
+using System.Web;
 
 namespace Prdb.Fab.Infrastructure.Tests.Sync;
 
@@ -107,12 +108,17 @@ internal sealed class FakePrdbApi : HttpMessageHandler
 
         var path = uri.AbsolutePath;
 
+        if (RefusedForMissingSince(uri) is { } refusal)
+        {
+            return refusal;
+        }
+
         if (Next(path) is not { } answer)
         {
             // A path the test never said anything about. Answering 404 rather
             // than an empty page, so that a routine reaching somewhere nobody
             // meant it to shows up as a failure instead of as quiet success.
-            return Problem(HttpStatusCode.NotFound, path);
+            return Problem(HttpStatusCode.NotFound, $"Nothing was said about {path}");
         }
 
         var response = new HttpResponseMessage(answer.Status);
@@ -135,6 +141,41 @@ internal sealed class FakePrdbApi : HttpMessageHandler
         }
 
         return response;
+    }
+
+    /// <summary>
+    /// The rule the service has and its document does not: a change feed
+    /// refuses a request with no <c>Since</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Written here after a deployment found it. Every one of the five feeds
+    /// answered <c>400</c> with
+    /// <c>{"errors":{"Since":["The Since field is required."]}}</c>, and no
+    /// test refused the request because this fake was built from prdb's
+    /// OpenAPI document, which marks the parameter optional. A fake that
+    /// answers whatever it is asked is a fake that agrees with the code rather
+    /// than with the service.
+    /// </para>
+    /// <para>
+    /// So the fake is stricter than the document too, and the suite states the
+    /// service's rule. It applies to the change feeds only: <c>GET /videos</c>
+    /// and <c>GET /sites</c> have no such parameter and are unaffected, which
+    /// is exactly the split the deployment saw.
+    /// </para>
+    /// </remarks>
+    private static HttpResponseMessage? RefusedForMissingSince(Uri uri)
+    {
+        if (!uri.AbsolutePath.EndsWith("/changes", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        return string.IsNullOrEmpty(query["Since"])
+            ? Problem(HttpStatusCode.BadRequest, "The Since field is required.")
+            : null;
     }
 
     private FakePrdbApi Queue(string path, Answer answer)
@@ -165,11 +206,11 @@ internal sealed class FakePrdbApi : HttpMessageHandler
         return last.TryGetValue(path, out var repeated) ? repeated : null;
     }
 
-    private static HttpResponseMessage Problem(HttpStatusCode status, string path) =>
+    private static HttpResponseMessage Problem(HttpStatusCode status, string title) =>
         new(status)
         {
             Content = new StringContent(
-                $$"""{"type":"about:blank","title":"Nothing was said about {{path}}","status":{{(int)status}}}""",
+                $$"""{"type":"about:blank","title":"{{title}}","status":{{(int)status}}}""",
                 Encoding.UTF8,
                 "application/problem+json"),
         };
