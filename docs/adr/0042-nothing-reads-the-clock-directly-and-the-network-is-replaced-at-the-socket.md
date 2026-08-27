@@ -30,6 +30,21 @@ be, in a place a reader can see.
 held by architecture tests reading source, every additional package is another
 thing those tests cannot see.
 
+(*Amended by
+[ADR 0043](0043-core-returns-its-reasons-and-the-log-is-a-file-the-user-can-send.md),
+which changes neither answer and supplies the half of the argument these two
+paragraphs were missing. A library passes two tests: it does something the
+platform does not, and its licence is one that cannot be withdrawn under this
+repository's MIT terms. Both halves weigh more in this corner of the ecosystem
+than anywhere else in the tree, because it is the corner where the second has
+already failed in public more than once — an assertion library moved to a
+commercial licence, a mocking library shipped a closed-source build-time
+component. The first half is also stronger than it reads above: `Assert.Equivalent`
+ships in `xunit.assert` itself, so the structural comparison over object graphs
+that an assertion library is usually taken for is already in a package that is
+already referenced. What one would add past that is chaining and nicer failure
+messages — comfort rather than capability.*)
+
 ## Nothing reads the clock directly
 
 `TimeProvider` is injected, `TimeProvider.System` is registered, `FakeTimeProvider`

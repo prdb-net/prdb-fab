@@ -42,6 +42,14 @@ increments nor resets that count.
 There is nothing left for it to do, and its presence would invite somebody to
 give it work.
 
+(*Amended by
+[ADR 0043](0043-core-returns-its-reasons-and-the-log-is-a-file-the-user-can-send.md),
+which changes nothing here and supplies the second half of the test this was
+applying. A library is taken when it does something the platform does not and
+its licence is one that cannot be withdrawn under this repository's MIT terms.
+This decision declined on the first half alone; the second would have declined
+it too.*)
+
 ## Four transports, and the timeout belongs to the transport
 
 Four named clients from `IHttpClientFactory`: prdb, indexers, SABnzbd, artwork.
