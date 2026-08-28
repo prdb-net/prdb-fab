@@ -223,13 +223,10 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             video.Property(row => row.Title).IsRequired();
             video.Property(row => row.NormalisedTitle).IsRequired();
 
-            // ADR 0032's work set for the backwards search, and deliberately
-            // not indexed here: its reader arrives with the indexer cache, and
-            // ADR 0033 asks for the index where the COUNT is, which is with the
-            // routine that makes it every tick. The column exists now because a
-            // row written before it would otherwise sit unsearched with no
-            // error and no Gap.
+            // ADR 0032's work set for the backwards search. The routine has now
+            // arrived, so its idle COUNT gets the index ADR 0033 names.
             video.Property(row => row.TitleSearchedBackwards).HasDefaultValue(false);
+            video.HasIndex(row => row.TitleSearchedBackwards);
 
             // What's New's order, in both directions, so that the landing page
             // takes a page of it out of an index rather than by sorting the
@@ -256,6 +253,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             preName.Property(row => row.PreName).IsRequired();
             preName.Property(row => row.NormalisedPreName).IsRequired();
             preName.Property(row => row.SearchedBackwards).HasDefaultValue(false);
+            preName.HasIndex(row => row.SearchedBackwards);
 
             // The natural key. A video's detail read brings its pre-names whole
             // every time, so without this an upsert would append the same title
@@ -435,10 +433,20 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             release.Property(row => row.Categories).IsRequired();
             release.Property(row => row.DownloadUrl).IsRequired();
             release.Property(row => row.IdentificationState).HasConversion<string>();
+            release.Property(row => row.Confidence).HasConversion<string>();
+            release.Property(row => row.MatchedBy).HasConversion<string>();
             release.HasOne(row => row.Indexer)
                 .WithMany()
                 .HasForeignKey(row => row.IndexerId)
                 .OnDelete(DeleteBehavior.Cascade);
+            release.HasOne(row => row.Video)
+                .WithMany()
+                .HasForeignKey(row => row.VideoId)
+                .OnDelete(DeleteBehavior.SetNull);
+            release.HasOne(row => row.Site)
+                .WithMany()
+                .HasForeignKey(row => row.SiteId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<ReleaseCandidateRow>(candidate =>

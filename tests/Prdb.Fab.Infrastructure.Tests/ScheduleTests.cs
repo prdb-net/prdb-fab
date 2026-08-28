@@ -66,7 +66,9 @@ public sealed class ScheduleTests
 
         Assert.Empty(await context.RoutineRuns.ToListAsync(TestContext.Current.CancellationToken));
 
-        var routine = await context.Routines.SingleAsync(TestContext.Current.CancellationToken);
+        var routine = await context.Routines.SingleAsync(
+            row => row.Name == SkeletonSweep.RoutineName,
+            TestContext.Current.CancellationToken);
         Assert.True(routine.DueAt > before, "an empty tick still moves the due time, or the lane spins");
         Assert.Equal(0, routine.ConsecutiveFailures);
         Assert.Null(routine.LastSuccessAt);
@@ -98,7 +100,9 @@ public sealed class ScheduleTests
         Assert.Equal(RunOutcome.Succeeded, run.Outcome);
         Assert.Equal(2, run.ItemsHandled);
 
-        var routine = await context.Routines.SingleAsync(TestContext.Current.CancellationToken);
+        var routine = await context.Routines.SingleAsync(
+            row => row.Name == SkeletonSweep.RoutineName,
+            TestContext.Current.CancellationToken);
         Assert.Equal(database.Time.GetUtcNow(), routine.LastSuccessAt);
 
         // And the work is gone from the set, so the next turn is an empty tick.

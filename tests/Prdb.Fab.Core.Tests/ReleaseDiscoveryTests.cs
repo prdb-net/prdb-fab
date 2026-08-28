@@ -1,3 +1,4 @@
+using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.ReleaseDiscovery;
 
 using Xunit;
@@ -27,7 +28,7 @@ public sealed class ReleaseDiscoveryTests
     [Fact]
     public void A_title_has_one_punctuation_and_extension_independent_form()
     {
-        Assert.Equal("a release title 2026", ReleaseTitle.Normalise(" A.Release_Title-2026.mkv "));
+        Assert.Equal("a release title 2026", ComparisonForm.Of(" A.Release_Title-2026.mkv "));
     }
 
     [Fact]
@@ -36,5 +37,44 @@ public sealed class ReleaseDiscoveryTests
         Assert.Equal(
             ["Unexamined", "Unremarkable", "Awaiting", "Matched", "SiteOnly", "Ambiguous", "Unknown"],
             Enum.GetNames<IdentificationState>());
+    }
+
+    [Theory]
+    [InlineData(1000, 480)]
+    [InlineData(100, 50)]
+    [InlineData(1, 1)]
+    [InlineData(0, 0)]
+    public void The_wanted_sweep_reserves_half_the_daily_budget_up_to_its_cadence(
+        int dailyBudget,
+        int reserved)
+    {
+        Assert.Equal(reserved, IndexerQueryBudget.ReservedForSweep(dailyBudget));
+    }
+
+    [Fact]
+    public void A_walk_cannot_spend_the_wanted_sweeps_reservation()
+    {
+        Assert.True(IndexerQueryBudget.Admits(10, spent: 4, spentBySweep: 0, purpose: IndexerQueryPurpose.Walk));
+        Assert.False(IndexerQueryBudget.Admits(10, spent: 5, spentBySweep: 0, purpose: IndexerQueryPurpose.Walk));
+        Assert.True(IndexerQueryBudget.Admits(10, spent: 5, spentBySweep: 0, purpose: IndexerQueryPurpose.WantedSweep));
+        Assert.True(IndexerQueryBudget.Admits(
+            10,
+            spent: 5,
+            spentBySweep: 0,
+            purpose: IndexerQueryPurpose.Walk,
+            sweepHasWork: false));
+    }
+
+    [Theory]
+    [InlineData("A Long Title", "A Long Title", true)]
+    [InlineData("Scene 3", "Scene 3", false)]
+    [InlineData("One", "One", false)]
+    public void A_wanted_search_title_is_for_the_indexers_tokeniser(
+        string title,
+        string query,
+        bool searchable)
+    {
+        Assert.Equal(query, WantedSearchTitle.Of(title));
+        Assert.Equal(searchable, WantedSearchTitle.IsSearchable(query));
     }
 }

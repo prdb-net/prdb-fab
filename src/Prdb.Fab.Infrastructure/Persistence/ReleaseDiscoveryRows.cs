@@ -14,6 +14,7 @@ public sealed class IndexerWalkStateRow
     public DateTimeOffset? CapsCheckedAt { get; set; }
     public DateTimeOffset QueryDay { get; set; }
     public int QueriesSpentToday { get; set; }
+    public int SweepQueriesSpentToday { get; set; }
     public int? ResumePage { get; set; }
     public DateTimeOffset? BootstrapCompletedAt { get; set; }
     public DateTimeOffset? CatchUpFrom { get; set; }
@@ -38,9 +39,11 @@ public sealed class ReleaseRow
     public DateTimeOffset FirstSeenAt { get; set; }
     public IdentificationState IdentificationState { get; set; }
     public long? VideoId { get; set; }
-    public decimal? Confidence { get; set; }
-    public string? MatchedBy { get; set; }
+    public CatalogueVideoRow? Video { get; set; }
+    public IdentificationConfidence? Confidence { get; set; }
+    public IdentificationRung? MatchedBy { get; set; }
     public long? SiteId { get; set; }
+    public CatalogueSiteRow? Site { get; set; }
     public bool SearchWasReason { get; set; }
 }
 

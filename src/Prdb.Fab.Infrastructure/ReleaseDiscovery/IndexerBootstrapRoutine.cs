@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -35,12 +36,22 @@ public sealed class IndexerBootstrapRoutine(
         if (DiscoveryState.DeserialiseNames(state.MissingCategoryNames).Count > 0) return RunResult.NothingToDo;
 
         var page = state.ResumePage ?? 0;
-        var searched = await search.PageAsync(indexerId, page, maxAgeDays: 90, cancellationToken);
+        var searched = await search.PageAsync(
+                indexerId,
+                page,
+                maxAgeDays: 90,
+                purpose: IndexerQueryPurpose.Walk,
+                query: null,
+                cancellationToken: cancellationToken);
         if (searched.DeferredFor is { } wait) return RunResult.Deferred(wait);
         var read = searched.Read!;
         if (read.Refusal is not null) return RunResult.Failed("The indexer refused the bootstrap search.", read.RetryAfter);
 
         var write = await releases.UpsertAsync(indexerId, read.Releases, time.GetUtcNow(), ReleaseSource.IndexerWalk, cancellationToken);
+        if (write.CacheOverBy > 0)
+        {
+            return RunResult.Failed("The Indexer Cache cannot hold its ceiling without losing an unexamined or pinned Release.");
+        }
 
         // The release batch is committed by UpsertAsync before the durable
         // page moves. A crash between them repeats an idempotent page; it never skips one.

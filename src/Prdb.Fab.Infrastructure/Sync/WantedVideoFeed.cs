@@ -118,6 +118,15 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
 
             if (held is null)
             {
+                // Becoming Wanted is itself a new local needle, even when the
+                // catalogue row was already pinned for some other reason and
+                // its title was searched before. Put that title back into the
+                // backwards Screening work set with the pin that makes it
+                // relevant.
+                var video = await Context.CatalogueVideos
+                    .AsTracking()
+                    .SingleAsync(row => row.Id == videoId, cancellationToken);
+                video.TitleSearchedBackwards = false;
                 Context.WantedVideos.Add(new WantedVideoRow { VideoId = videoId, SinceAt = since });
             }
             else

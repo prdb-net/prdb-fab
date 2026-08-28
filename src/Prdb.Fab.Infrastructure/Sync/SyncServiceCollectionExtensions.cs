@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Prdb.Fab.Core.Scheduling;
 
@@ -22,13 +23,13 @@ public static class SyncServiceCollectionExtensions
     public static IServiceCollection AddFabSync(this IServiceCollection services)
     {
         services.AddScoped<FeedCursors>();
-        services.AddScoped<CatalogueRows>();
+        services.TryAddScoped<CatalogueRows>();
 
         // ADR 0033's pinning, as the query it is. One source today and one
         // clause each for the five tables that arrive later, which is what
         // keeps adding one from being a rewrite.
-        services.AddScoped<ICataloguePin, WantedVideoPin>();
-        services.AddScoped<CataloguePins>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, WantedVideoPin>());
+        services.TryAddScoped<CataloguePins>();
         services.AddScoped<CatalogueEviction>();
 
         // ADR 0030's cache: the files, the fetch that fills them and the sweep
@@ -51,7 +52,7 @@ public static class SyncServiceCollectionExtensions
 
         // The one entity with no change feed, and the write every route into
         // the catalogue goes through.
-        services.AddScoped<VideoDetails>();
+        services.TryAddScoped<VideoDetails>();
         services.AddScoped<WhatsNew>();
 
         // The concrete type as well as the interface, so that a routine can be

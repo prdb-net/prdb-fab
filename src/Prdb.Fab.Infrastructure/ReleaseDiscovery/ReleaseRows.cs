@@ -8,7 +8,7 @@ using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
-public sealed class ReleaseRows(FabDbContext context)
+public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
 {
     public async Task<ReleaseWrite> UpsertAsync(
         Guid indexerId,
@@ -41,14 +41,10 @@ public sealed class ReleaseRows(FabDbContext context)
                 stored.Add(row.DerivedReleaseId, row);
                 added++;
             }
-            else if (source == ReleaseSource.WantedSweep)
-            {
-                row.SearchWasReason = true;
-                if (row.IdentificationState == IdentificationState.Unexamined)
-                {
-                    row.IdentificationState = IdentificationState.Awaiting;
-                }
-            }
+            // A sweep result that already exists is the same Release under a
+            // louder question. Its state and reason flag are both left alone:
+            // provenance is never evidence, and settled answers are not asked
+            // again merely because a title search found the row again.
 
             row.RawGuid = release.RawGuid;
             row.Title = release.Title;
@@ -61,7 +57,8 @@ public sealed class ReleaseRows(FabDbContext context)
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return new(releases.Count, added);
+        var bounded = await eviction.EvictAsync(indexerId, cancellationToken: cancellationToken);
+        return new(releases.Count, added, bounded.OverBy);
     }
 }
 
@@ -71,4 +68,4 @@ public enum ReleaseSource
     WantedSweep,
 }
 
-public sealed record ReleaseWrite(int Seen, int Added);
+public sealed record ReleaseWrite(int Seen, int Added, int CacheOverBy);

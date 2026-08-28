@@ -6,6 +6,7 @@ using System.Xml.Linq;
 
 using Microsoft.Extensions.Logging;
 
+using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
 
@@ -241,7 +242,7 @@ public sealed partial class NewznabGateway(
             identity,
             rawGuid ?? string.Empty,
             title,
-            ReleaseTitle.Normalise(title),
+            ComparisonForm.Of(title),
             long.TryParse(sizeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size) ? size : null,
             categories,
             postDate.Value,
