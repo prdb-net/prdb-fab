@@ -1,0 +1,110 @@
+.screen {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.heading h1 {
+  margin: 0;
+}
+
+.count,
+.itemDetail,
+.back {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}
+
+.filter {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.filter input {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  flex: 1;
+  max-width: 28rem;
+  padding: 0.45rem 0.65rem;
+}
+
+.filter button,
+.pager button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+}
+
+.directory {
+  border-top: 1px solid var(--border);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.directory li {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+}
+
+.itemTitle,
+.itemDetail {
+  display: block;
+}
+
+.itemTitle {
+  font-weight: 600;
+}
+
+.contextHeading {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.45rem;
+}
+
+.empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  padding: 1.5rem;
+}
+
+.pager {
+  align-items: center;
+  color: var(--text-quiet);
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.pager button:disabled {
+  color: var(--text-quiet);
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .contextHeading,
+  .directory li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

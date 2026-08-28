@@ -8,6 +8,8 @@ import { readAccessState } from './api/client.ts'
 import { AccessGate } from './access/AccessGate.tsx'
 import { WantedScreen } from './catalogue/WantedScreen.tsx'
 import { WhatsNewScreen } from './catalogue/WhatsNewScreen.tsx'
+import { ActorsScreen } from './catalogue/ActorsScreen.tsx'
+import { SitesScreen } from './catalogue/SitesScreen.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
 import { AccountScreen } from './settings/AccountScreen.tsx'
@@ -18,6 +20,7 @@ import { SabnzbdSettings } from './settings/SabnzbdSettings.tsx'
 import { SettingsGate } from './settings/SettingsPage.tsx'
 import { SettingsScreen } from './settings/SettingsScreen.tsx'
 import { Chrome } from './shell/Chrome.tsx'
+import { ReleaseScreen } from './release/ReleaseScreen.tsx'
 import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import './index.css'
 
@@ -62,6 +65,11 @@ createRoot(document.getElementById('root')!).render(
             {/* ADR 0010's last step lands here, which is what makes onboarding
                 lead to a first download rather than to a page saying it could. */}
             <Route path="/wanted" element={<WantedScreen />} />
+            <Route path="/sites" element={<SitesScreen />} />
+            <Route path="/sites/:id" element={<SitesScreen />} />
+            <Route path="/actors" element={<ActorsScreen />} />
+            <Route path="/actors/:id" element={<ActorsScreen />} />
+            <Route path="/releases" element={<ReleaseScreen />} />
             {/* ADR 0020: routes rather than one page with anchors, one level
                 down as well — every indexer has its own. */}
             <Route path="/settings" element={<SettingsGate />}>

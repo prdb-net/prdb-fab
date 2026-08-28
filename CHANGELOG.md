@@ -19,6 +19,42 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-28
+
+Release discovery is now visible. The tool continuously extends a bounded
+cache from each enabled Indexer, asks prdb what screened Release names belong
+to, and presents the answers without downloading anything.
+
+### Added
+
+- **Release discovery from all four catalogue surfaces.** What's New, Wanted,
+  Sites and Actors now open one shared Releases table for a selected Video,
+  Site or Actor. Its context, filters and page are in the address, and every
+  read comes from the local Catalogue and Indexer Cache rather than causing a
+  browser request to contact an Indexer.
+- **Sites and Actors as browse surfaces.** Both directories are locally
+  searchable, lead to the shared artwork grid for their Videos, and can open
+  Release discovery for the whole selection or for one Video.
+- **The full Identification answer beside every cached Release:** Indexer,
+  size, first seen, Identification State, Confidence and `matchedBy`. An
+  ambiguous answer lists its Candidates without choosing one; a Site-Only Match
+  names its Site and explicitly names no Video.
+- **A continuously extended, bounded Indexer Cache.** Each enabled Indexer gets
+  a resumable 90-day first walk, a recurring walk for what appears next, and a
+  ceiling of 100,000 Releases. Examined rows nothing points at are evicted
+  oldest first; unseen and still-wanted Releases are protected.
+- **The Wanted Sweep**, which searches each Indexer directly for older Wanted
+  Videos that cannot appear in the newest feed. It shares each Indexer's Daily
+  Query Budget without letting the walk consume its reserved portion, and its
+  search result is only a reason to ask prdb — never evidence of identity.
+
+### Changed
+
+- **Release discovery is the exact boundary of this version.** The UI states
+  where the action would otherwise be that no NZB is fetched and nothing is
+  written to SABnzbd. Downloads and filing remain absent rather than being
+  implied by a row that can now be found and identified.
+
 ## [0.2.1] - 2026-08-27
 
 ### Fixed

@@ -122,6 +122,116 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
             await BackfillIsRunningAsync(cancellationToken));
     }
 
+    /// <summary>Sites kept by the catalogue, alphabetically and searched locally.</summary>
+    public async Task<SitePage> SitesAsync(
+        string? search,
+        int page,
+        CancellationToken cancellationToken)
+    {
+        var wanted = Math.Max(page, 1);
+        var query = context.CatalogueSites.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(row => EF.Functions.Like(row.Title, Like(search), "\\"));
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var sites = await query
+            .OrderBy(row => row.Title)
+            .ThenBy(row => row.Id)
+            .Skip((wanted - 1) * APage)
+            .Take(APage)
+            .Select(row => new SiteCard(
+                row.PrdbId,
+                row.Title,
+                row.Network,
+                context.CatalogueVideos.Count(video => video.SiteId == row.Id)))
+            .ToListAsync(cancellationToken);
+
+        return new SitePage(sites, wanted, APage, total);
+    }
+
+    /// <summary>Actors kept by the catalogue, alphabetically and searched locally.</summary>
+    public async Task<ActorPage> ActorsAsync(
+        string? search,
+        int page,
+        CancellationToken cancellationToken)
+    {
+        var wanted = Math.Max(page, 1);
+        var query = context.CatalogueActors.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(row => EF.Functions.Like(row.Name, Like(search), "\\"));
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var actors = await query
+            .OrderBy(row => row.Name)
+            .ThenBy(row => row.Id)
+            .Skip((wanted - 1) * APage)
+            .Take(APage)
+            .Select(row => new ActorCard(
+                row.PrdbId,
+                row.Name,
+                context.CatalogueVideoActors.Count(credit => credit.ActorId == row.Id)))
+            .ToListAsync(cancellationToken);
+
+        return new ActorPage(actors, wanted, APage, total);
+    }
+
+    /// <summary>One Site and the catalogue Videos released by it.</summary>
+    public async Task<SiteVideos?> SiteAsync(
+        Guid prdbId,
+        string? search,
+        int page,
+        CancellationToken cancellationToken)
+    {
+        var site = await context.CatalogueSites
+            .AsNoTracking()
+            .Where(row => row.PrdbId == prdbId)
+            .Select(row => new BrowseContext(row.PrdbId, row.Title))
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (site is null)
+        {
+            return null;
+        }
+
+        var videos = context.CatalogueVideos
+            .AsNoTracking()
+            .Where(row => row.Site != null && row.Site.PrdbId == prdbId);
+
+        return new SiteVideos(site, await VideosAsync(videos, search, page, cancellationToken));
+    }
+
+    /// <summary>One Actor and the catalogue Videos carrying their credit.</summary>
+    public async Task<ActorVideos?> ActorAsync(
+        Guid prdbId,
+        string? search,
+        int page,
+        CancellationToken cancellationToken)
+    {
+        var actor = await context.CatalogueActors
+            .AsNoTracking()
+            .Where(row => row.PrdbId == prdbId)
+            .Select(row => new BrowseContext(row.PrdbId, row.Name))
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (actor is null)
+        {
+            return null;
+        }
+
+        var videos = context.CatalogueVideoActors
+            .AsNoTracking()
+            .Where(credit => credit.Actor != null && credit.Actor.PrdbId == prdbId)
+            .Select(credit => credit.Video!);
+
+        return new ActorVideos(actor, await VideosAsync(videos, search, page, cancellationToken));
+    }
+
     /// <summary>
     /// Whether ADR 0013's backfill still has a row.
     /// </summary>
@@ -136,6 +246,39 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
         context.Routines.AnyAsync(
             row => row.Name == WhatsNewBackfillRoutine.RoutineName,
             cancellationToken);
+
+    private async Task<VideoPage> VideosAsync(
+        IQueryable<CatalogueVideoRow> query,
+        string? search,
+        int page,
+        CancellationToken cancellationToken)
+    {
+        var wanted = Math.Max(page, 1);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(row => EF.Functions.Like(row.Title, Like(search), "\\"));
+        }
+
+        var total = await query.CountAsync(cancellationToken);
+        var videos = await query
+            .OrderBy(row => row.Title)
+            .ThenBy(row => row.Id)
+            .Skip((wanted - 1) * APage)
+            .Take(APage)
+            .Select(row => new VideoCard(
+                row.Id,
+                row.PrdbId,
+                row.Title,
+                row.Site == null ? null : row.Site.Title,
+                row.ReleaseDate))
+            .ToListAsync(cancellationToken);
+
+        return new VideoPage(videos, wanted, APage, total);
+    }
+
+    private static string Like(string value) =>
+        $"%{value.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal)}%";
 }
 
 /// <summary>
@@ -189,3 +332,17 @@ public sealed record WantedList(
     int Total,
     bool FeedHasRun,
     bool BackfillRunning);
+
+public sealed record BrowseContext(Guid PrdbId, string Title);
+
+public sealed record SiteCard(Guid PrdbId, string Title, string? Network, int VideoCount);
+
+public sealed record ActorCard(Guid PrdbId, string Name, int VideoCount);
+
+public sealed record SitePage(IReadOnlyList<SiteCard> Sites, int Page, int PageSize, int Total);
+
+public sealed record ActorPage(IReadOnlyList<ActorCard> Actors, int Page, int PageSize, int Total);
+
+public sealed record SiteVideos(BrowseContext Site, VideoPage Videos);
+
+public sealed record ActorVideos(BrowseContext Actor, VideoPage Videos);

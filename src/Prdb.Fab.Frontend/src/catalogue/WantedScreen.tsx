@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { listWanted } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
 import gridStyles from './Grid.module.css'
 import { prdbVideoUrl } from './prdb.ts'
 import { wantedKey } from './state.ts'
+import { videoReleasePath } from '../release/routes.ts'
 import styles from './Wanted.module.css'
 
 /**
@@ -72,14 +73,17 @@ export function WantedScreen() {
           <Grid
             videos={wanted.data?.videos ?? []}
             action={(video) => (
-              <a
-                className={gridStyles.action}
-                href={prdbVideoUrl(String(video.prdbId))}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open in prdb
-              </a>
+              <span className={gridStyles.actions}>
+                <Link to={videoReleasePath(video.prdbId)}>Find releases</Link>
+                <a
+                  className={gridStyles.action}
+                  href={prdbVideoUrl(String(video.prdbId))}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in prdb
+                </a>
+              </span>
             )}
           />
 

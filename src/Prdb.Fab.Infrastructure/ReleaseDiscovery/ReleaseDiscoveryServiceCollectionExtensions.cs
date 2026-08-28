@@ -19,6 +19,7 @@ public static class ReleaseDiscoveryServiceCollectionExtensions
         services.AddScoped<IReleasePin, WantedIdentificationReleasePin>();
         services.AddScoped<ReleasePins>();
         services.AddScoped<ReleaseEviction>();
+        services.AddScoped<ReleaseBrowse>();
         Routine<IndexerCapsRoutine>(services);
         Routine<IndexerWalkRoutine>(services);
         Routine<IndexerBootstrapRoutine>(services);

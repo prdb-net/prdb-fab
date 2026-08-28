@@ -26,9 +26,9 @@ export function Chrome() {
       <Link className={styles.name} to="/">
         prdb-fab
       </Link>
-      {/* The two surfaces this slice has, and nothing else — there are two,
-          so the bar names two. */}
       <Link to="/">What&rsquo;s new</Link>
+      <Link to="/sites">Sites</Link>
+      <Link to="/actors">Actors</Link>
       <Link to="/wanted">Wanted</Link>
       <Link to="/settings">Settings</Link>
     </nav>

@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { listWhatsNew } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
+import gridStyles from './Grid.module.css'
+import { videoReleasePath } from '../release/routes.ts'
 import { whatsNewKey } from './state.ts'
 import styles from './WhatsNew.module.css'
 
@@ -56,7 +58,14 @@ export function WhatsNewScreen() {
         </p>
       ) : (
         <>
-          <Grid videos={videos.data?.videos ?? []} />
+          <Grid
+            videos={videos.data?.videos ?? []}
+            action={(video) => (
+              <span className={gridStyles.actions}>
+                <Link to={videoReleasePath(video.prdbId)}>Find releases</Link>
+              </span>
+            )}
+          />
 
           {pages > 1 && (
             <nav className={styles.pager}>

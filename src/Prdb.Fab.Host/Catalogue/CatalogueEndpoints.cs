@@ -1,5 +1,7 @@
 using Prdb.Fab.Infrastructure.Sync;
 
+using Microsoft.AspNetCore.Http.HttpResults;
+
 namespace Prdb.Fab.Host.Catalogue;
 
 /// <summary>
@@ -32,5 +34,45 @@ public static class CatalogueEndpoints
             CancellationToken cancellationToken,
             int page = 1) =>
             TypedResults.Ok(await browse.WantedAsync(page, cancellationToken)));
+
+        group.MapGet("/sites", async (
+            CatalogueBrowse browse,
+            CancellationToken cancellationToken,
+            string? search = null,
+            int page = 1) =>
+            TypedResults.Ok(await browse.SitesAsync(search, page, cancellationToken)));
+
+        group.MapGet("/sites/{prdbId:guid}", ReadSiteAsync);
+
+        group.MapGet("/actors", async (
+            CatalogueBrowse browse,
+            CancellationToken cancellationToken,
+            string? search = null,
+            int page = 1) =>
+            TypedResults.Ok(await browse.ActorsAsync(search, page, cancellationToken)));
+
+        group.MapGet("/actors/{prdbId:guid}", ReadActorAsync);
+    }
+
+    private static async Task<Results<Ok<SiteVideos>, NotFound>> ReadSiteAsync(
+        Guid prdbId,
+        CatalogueBrowse browse,
+        CancellationToken cancellationToken,
+        string? search = null,
+        int page = 1)
+    {
+        var answer = await browse.SiteAsync(prdbId, search, page, cancellationToken);
+        return answer is null ? TypedResults.NotFound() : TypedResults.Ok(answer);
+    }
+
+    private static async Task<Results<Ok<ActorVideos>, NotFound>> ReadActorAsync(
+        Guid prdbId,
+        CatalogueBrowse browse,
+        CancellationToken cancellationToken,
+        string? search = null,
+        int page = 1)
+    {
+        var answer = await browse.ActorAsync(prdbId, search, page, cancellationToken);
+        return answer is null ? TypedResults.NotFound() : TypedResults.Ok(answer);
     }
 }

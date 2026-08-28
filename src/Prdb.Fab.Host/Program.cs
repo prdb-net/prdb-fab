@@ -11,6 +11,7 @@ using Prdb.Fab.Host.Access;
 using Prdb.Fab.Host.Catalogue;
 using Prdb.Fab.Host.Connections;
 using Prdb.Fab.Host.Logging;
+using Prdb.Fab.Host.ReleaseDiscovery;
 using Prdb.Fab.Host.Scheduling;
 using Prdb.Fab.Host.Skeleton;
 using Prdb.Fab.Infrastructure.Access;
@@ -174,6 +175,8 @@ app.MapConnections();
 app.MapArtwork();
 
 app.MapCatalogue();
+
+app.MapReleaseDiscovery();
 
 app.MapSkeleton();
 

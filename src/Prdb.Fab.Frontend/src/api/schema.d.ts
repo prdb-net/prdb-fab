@@ -74,6 +74,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    video?: string;
+                    site?: string;
+                    actor?: string;
+                    state?: components["schemas"]["IdentificationState"];
+                    indexer?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReleasePage"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/access/state": {
         parameters: {
             query?: never;
@@ -708,6 +766,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalogue/sites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SitePage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/sites/{prdbId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SiteVideos"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/actors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActorPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/actors/{prdbId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActorVideos"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skeleton/items": {
         parameters: {
             query?: never;
@@ -847,12 +1075,37 @@ export interface components {
             signedIn: boolean;
             nextStep: null | components["schemas"]["OnboardingStep"];
         };
+        ActorCard: {
+            /** Format: uuid */
+            prdbId: string;
+            name: string;
+            /** Format: int32 */
+            videoCount: number | string;
+        };
+        ActorPage: {
+            actors: components["schemas"]["ActorCard"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
+        ActorVideos: {
+            actor: components["schemas"]["BrowseContext"];
+            videos: components["schemas"]["VideoPage"];
+        };
         AddItemRequest: {
             label: null | string;
         };
         AddItemVerdict: {
             added: null | components["schemas"]["SkeletonItem"];
             refusal: null | string;
+        };
+        BrowseContext: {
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
         };
         /** @enum {unknown} */
         ChangePasswordOutcome: "Changed" | "WrongPassword" | "Refused";
@@ -891,6 +1144,18 @@ export interface components {
         };
         HealthResponse: {
             status: string;
+        };
+        /** @enum {unknown} */
+        IdentificationConfidence: "None" | "Partial" | "Probable" | "Strong" | "Exact" | "Ambiguous" | null;
+        /** @enum {unknown} */
+        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | null;
+        /** @enum {unknown} */
+        IdentificationState: "Unexamined" | "Unremarkable" | "Awaiting" | "Matched" | "SiteOnly" | "Ambiguous" | "Unknown";
+        IdentifiedVideo: {
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
+            site: null | string;
         };
         /** @enum {unknown} */
         IndexerConnectionOutcome: "Saved" | "WrongKey" | "LimitReached" | "NotAnIndexer" | "Refused" | "NotRightNow" | "AlreadyAdded" | "NoCategories";
@@ -946,6 +1211,14 @@ export interface components {
             /** Format: int32 */
             retryAfterSeconds: null | number | string;
         };
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
+        };
         RecordedRun: {
             /** Format: int64 */
             id: number | string;
@@ -956,6 +1229,52 @@ export interface components {
             /** Format: int32 */
             itemsHandled: number | string;
             reason: null | string;
+        };
+        ReleaseCandidate: {
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
+            site: null | string;
+        };
+        ReleaseContext: {
+            kind: components["schemas"]["ReleaseContextKind"];
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
+        };
+        /** @enum {unknown} */
+        ReleaseContextKind: "Video" | "Site" | "Actor";
+        ReleaseIndexer: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ReleasePage: {
+            context: components["schemas"]["ReleaseContext"];
+            releases: components["schemas"]["ReleaseViewRow"][];
+            indexers: components["schemas"]["ReleaseIndexer"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
+        ReleaseViewRow: {
+            /** Format: int64 */
+            id: number | string;
+            title: string;
+            indexer: components["schemas"]["ReleaseIndexer"];
+            /** Format: int64 */
+            size: null | number | string;
+            /** Format: date-time */
+            firstSeenAt: string;
+            identificationState: components["schemas"]["IdentificationState"];
+            confidence: null | components["schemas"]["IdentificationConfidence"];
+            matchedBy: null | components["schemas"]["IdentificationRung"];
+            video: null | components["schemas"]["IdentifiedVideo"];
+            candidates: components["schemas"]["ReleaseCandidate"][];
+            siteOnlyMatch: null | components["schemas"]["SiteOnlyMatch"];
         };
         RunNowVerdict: {
             accepted: boolean;
@@ -1007,6 +1326,32 @@ export interface components {
             outcome: components["schemas"]["SignInOutcome"];
             /** Format: int32 */
             retryAfterSeconds: null | number | string;
+        };
+        SiteCard: {
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
+            network: null | string;
+            /** Format: int32 */
+            videoCount: number | string;
+        };
+        SiteOnlyMatch: {
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
+        };
+        SitePage: {
+            sites: components["schemas"]["SiteCard"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
+        SiteVideos: {
+            site: components["schemas"]["BrowseContext"];
+            videos: components["schemas"]["VideoPage"];
         };
         SkeletonItem: {
             /** Format: int64 */

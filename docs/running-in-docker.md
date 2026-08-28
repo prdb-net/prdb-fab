@@ -5,16 +5,16 @@ the way.
 
 > **This is early software.** What is in the image today asks for a password,
 > takes you through setting up, checks every connection you give it against the
-> service it names, and then keeps a local copy of the part of prdb you point it
-> at. It does not yet search, download or file anything — so a finished setup is
-> a tool that reads prdb and shows you what it read.
+> service it names, then keeps local catalogues of what prdb and your indexers
+> say. It discovers and identifies Releases, but it does not yet fetch an NZB,
+> write to SABnzbd or file anything.
 
 ## The quickstart
 
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.2.1
+    image: prdbnet/prdb-fab:0.3.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -88,16 +88,44 @@ implies is not something anyone can predict.
 | | Ceiling | What happens at it |
 | --- | --- | --- |
 | The local copy of prdb's catalogue | **50,000 videos** — tens of megabytes with their pre-names, credits and image records | The oldest rows nothing points at are dropped, a few hundred at a time |
+| Each Indexer Cache | **100,000 Releases per Indexer** | The oldest examined Releases nothing points at are dropped; unseen and still-wanted Releases are never evicted merely to hold the ceiling |
 | Cached artwork | **2 GiB**, and only for videos you are merely browsing | The pictures served longest ago are deleted; the next time you scroll past one it is fetched again |
 
-Neither is a setting, and neither can reach what you have marked as wanted or
-what you hold: those are kept whatever the ceilings say, and the artwork of a
-wanted video is not counted against the 2 GiB at all. Reaching a ceiling is
-ordinary and costs you nothing but a picture fetched twice.
+These ceilings are fixed rather than settings. None can reach what you have
+marked as wanted or what you hold: those rows stay whatever the ceilings say,
+and the artwork of a wanted video is not counted against the 2 GiB at all.
+Reaching a ceiling is ordinary; disposable rows or pictures are read again if
+they are needed again.
 
-**None of it is in a backup**, and it does not need to be — every row and every
-image can be read from prdb again. A restored installation shows a library that
-fills in over the following minutes.
+### Indexer queries and the first walk
+
+The browser reads the Indexer Cache. Reloading, changing a filter or opening a
+Release table sends no request to an Indexer; background routines own that
+budget.
+
+Each newly added Indexer starts with a **Daily Query Budget of 1,000 requests**,
+reset at midnight UTC. When at least one Wanted Video has a searchable title,
+the Wanted Sweep reserves half of the budget, capped at **480 requests per
+day** — five titles every fifteen minutes. The Indexer Walk uses the remaining
+share. With no searchable Wanted work, the walk may use the whole budget. One
+Indexer never spends another's allowance.
+
+The first walk is deliberately wider than the recurring one: it pages through
+up to **90 days** of the configured categories, 100 Releases at a time. A busy
+Indexer can therefore cost hundreds of queries on its first day, and a very
+large history can continue on the next. The saved page advances only after its
+batch commits, so a restart resumes rather than beginning again, and the walk
+never exceeds that Indexer's daily budget.
+
+Afterwards, the recurring walk extends the cache with newly visible Releases.
+The Wanted Sweep searches older Wanted Videos directly by title, which is why
+the two routines need separate shares of the same budget. Both write the same
+cache; neither identifies a Release by itself. prdb remains the only authority
+that assigns a Video.
+
+**None of it is in a backup**, and it does not need to be — every row and image
+can be read from prdb or the Indexers again. A restored installation shows
+browse surfaces and Release tables that fill in over the following minutes.
 
 **Mount your media at the same path your downloader sees it at, if you can.**
 The path mapping is then the identity, and a mapping that does not resolve is
@@ -223,7 +251,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.2.1` | A release. This is what documentation and Compose files should pin. |
+| `0.3.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 
