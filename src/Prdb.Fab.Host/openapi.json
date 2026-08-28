@@ -1069,6 +1069,52 @@
         }
       }
     },
+    "/api/settings/identification": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentificationSettingsState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentificationSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentificationSettingsVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/skeleton/items": {
       "get": {
         "tags": [
@@ -1319,6 +1365,12 @@
             ]
           }
         }
+      },
+      "AfterDownloadGateChoice": {
+        "enum": [
+          "ExactOnly",
+          "ExactAndStrong"
+        ]
       },
       "BrowseContext": {
         "required": [
@@ -2048,6 +2100,48 @@
           "Site",
           null
         ]
+      },
+      "IdentificationSettingsRequest": {
+        "required": [
+          "afterDownload"
+        ],
+        "type": "object",
+        "properties": {
+          "afterDownload": {
+            "$ref": "#/components/schemas/AfterDownloadGateChoice"
+          }
+        }
+      },
+      "IdentificationSettingsState": {
+        "required": [
+          "afterDownload"
+        ],
+        "type": "object",
+        "properties": {
+          "afterDownload": {
+            "$ref": "#/components/schemas/AfterDownloadGateChoice"
+          }
+        }
+      },
+      "IdentificationSettingsVerdict": {
+        "required": [
+          "afterDownload",
+          "reconsidered"
+        ],
+        "type": "object",
+        "properties": {
+          "afterDownload": {
+            "$ref": "#/components/schemas/AfterDownloadGateChoice"
+          },
+          "reconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "IdentificationState": {
         "enum": [
@@ -3316,6 +3410,9 @@
     },
     {
       "name": "Catalogue"
+    },
+    {
+      "name": "Filing"
     },
     {
       "name": "Skeleton"
