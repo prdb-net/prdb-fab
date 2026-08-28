@@ -6,13 +6,14 @@ using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Filing;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
 /// The physical glossary from ADR 0033, grown one writer at a time. Release
-/// discovery, acquisition and Download following have their writers; filing
-/// and the remaining library tables arrive with theirs.
+/// discovery, acquisition and arrival identification have their writers;
+/// filing the bytes and the remaining tables arrive with theirs.
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {
@@ -73,6 +74,20 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<DownloadRow> Downloads => Set<DownloadRow>();
 
     public DbSet<ReleaseNotDownloadedRow> ReleasesNotDownloaded => Set<ReleaseNotDownloadedRow>();
+
+    public DbSet<LibraryEntryRow> LibraryEntries => Set<LibraryEntryRow>();
+
+    public DbSet<VideoFileRow> VideoFiles => Set<VideoFileRow>();
+
+    public DbSet<ArrivingFileRow> ArrivingFiles => Set<ArrivingFileRow>();
+
+    public DbSet<ArrivingFileCandidateRow> ArrivingFileCandidates => Set<ArrivingFileCandidateRow>();
+
+    public DbSet<ConfirmedAssignmentRow> ConfirmedAssignments => Set<ConfirmedAssignmentRow>();
+
+    public DbSet<OperationLogEntryRow> OperationLogEntries => Set<OperationLogEntryRow>();
+
+    public DbSet<GateAdmissionRow> GateAdmissions => Set<GateAdmissionRow>();
 
     /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
@@ -520,6 +535,102 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             observation.Property(row => row.Reason).IsRequired();
         });
 
+        builder.Entity<LibraryEntryRow>(entry =>
+        {
+            entry.ToTable("library_entry");
+            entry.HasKey(row => row.VideoId);
+            entry.Declares(AccountClass.AccountFree);
+            entry.Property(row => row.EntryDirectory).IsRequired();
+        });
+
+        builder.Entity<VideoFileRow>(file =>
+        {
+            file.ToTable("video_file");
+            file.HasKey(row => row.Id);
+            file.Declares(AccountClass.AccountFree);
+            file.HasIndex(row => row.LibraryEntryVideoId);
+            file.HasIndex(row => row.OsHash);
+            file.Property(row => row.FiledPath).IsRequired();
+            file.Property(row => row.QualityLabel).IsRequired();
+            file.HasOne<LibraryEntryRow>()
+                .WithMany()
+                .HasForeignKey(row => row.LibraryEntryVideoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ArrivingFileRow>(file =>
+        {
+            file.ToTable("arriving_file", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_arriving_file_state",
+                    $"\"State\" IN ({string.Join(',', Enum.GetNames<ArrivingFileState>().Select(name => $"'{name}'"))})");
+                table.HasCheckConstraint(
+                    "CK_arriving_file_reason",
+                    $"\"Reason\" IS NULL OR \"Reason\" IN ({string.Join(',', Enum.GetNames<ArrivingFileReason>().Select(name => $"'{name}'"))})");
+            });
+            file.HasKey(row => row.Id);
+            file.Declares(AccountClass.AccountFree);
+            file.HasIndex(row => new { row.DownloadId, row.SourcePath }).IsUnique();
+            file.HasIndex(row => row.State);
+            file.HasIndex(row => row.VideoId);
+            file.HasIndex(row => row.Reason).HasFilter("\"Reason\" IS NOT NULL");
+            file.Property(row => row.DerivedReleaseId).IsRequired();
+            file.Property(row => row.SourcePath).IsRequired();
+            file.Property(row => row.ArrivedName).IsRequired();
+            file.Property(row => row.State).HasConversion<string>();
+            file.Property(row => row.Reason).HasConversion<string>();
+            file.Property(row => row.Confidence).HasConversion<string>();
+            file.Property(row => row.MatchedBy).HasConversion<string>();
+            file.Property(row => row.ProbeOutcome).HasConversion<string>();
+        });
+
+        builder.Entity<ArrivingFileCandidateRow>(candidate =>
+        {
+            candidate.ToTable("arriving_file_candidate");
+            candidate.HasKey(row => new { row.ArrivingFileId, row.VideoId });
+            candidate.Declares(AccountClass.AccountFree);
+            candidate.HasIndex(row => row.VideoId);
+            candidate.HasOne<ArrivingFileRow>()
+                .WithMany()
+                .HasForeignKey(row => row.ArrivingFileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ConfirmedAssignmentRow>(assignment =>
+        {
+            assignment.ToTable("confirmed_assignment");
+            assignment.HasKey(row => new { row.OsHash, row.VideoId, row.UserHash });
+            assignment.Declares(AccountClass.AccountStamped);
+            assignment.Property(row => row.OsHash).IsRequired();
+            assignment.Property(row => row.UserHash).IsRequired();
+            assignment.Property(row => row.ArrivalFileName).IsRequired();
+            assignment.Property(row => row.ReleaseName).IsRequired();
+        });
+
+        builder.Entity<OperationLogEntryRow>(entry =>
+        {
+            entry.ToTable("operation_log_entry");
+            entry.HasKey(row => row.Id);
+            entry.Declares(AccountClass.AccountFree);
+            entry.HasIndex(row => row.VideoId);
+            entry.Property(row => row.Act).IsRequired();
+            entry.Property(row => row.Actor).IsRequired();
+            entry.Property(row => row.Reason).IsRequired();
+        });
+
+        builder.Entity<GateAdmissionRow>(admission =>
+        {
+            admission.ToTable("gate_admission");
+            admission.HasKey(row => new { row.Gate, row.Confidence });
+            admission.Declares(AccountClass.AccountFree);
+            admission.Property(row => row.Gate).IsRequired();
+            admission.Property(row => row.Confidence).HasConversion<string>();
+            admission.HasData(
+                new GateAdmissionRow { Gate = AfterDownloadGate.Name, Confidence = IdentificationConfidence.Exact },
+                new GateAdmissionRow { Gate = AfterDownloadGate.Name, Confidence = IdentificationConfidence.Strong });
+        });
+
         // Exportability is table-wide. Cache is the safe default; the two
         // tables that contain irreplaceable configuration opt into the backup.
         foreach (var entity in builder.Model.GetEntityTypes())
@@ -530,5 +641,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<InstallationRow>().Declares(ExportClass.Exported);
         builder.Entity<IndexerRow>().Declares(ExportClass.Exported);
         builder.Entity<DownloadRow>().Declares(ExportClass.Exported);
+        builder.Entity<LibraryEntryRow>().Declares(ExportClass.Exported);
+        builder.Entity<VideoFileRow>().Declares(ExportClass.Exported);
+        builder.Entity<ArrivingFileRow>().Declares(ExportClass.Exported);
+        builder.Entity<ArrivingFileCandidateRow>().Declares(ExportClass.Exported);
+        builder.Entity<ConfirmedAssignmentRow>().Declares(ExportClass.Exported);
+        builder.Entity<OperationLogEntryRow>().Declares(ExportClass.Exported);
+        builder.Entity<GateAdmissionRow>().Declares(ExportClass.Exported);
     }
 }

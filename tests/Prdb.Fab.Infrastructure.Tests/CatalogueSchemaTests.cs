@@ -61,7 +61,20 @@ public sealed class CatalogueSchemaTests
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["download", "indexer", "installation"], exported);
+        Assert.Equal(
+            [
+                "arriving_file",
+                "arriving_file_candidate",
+                "confirmed_assignment",
+                "download",
+                "gate_admission",
+                "indexer",
+                "installation",
+                "library_entry",
+                "operation_log_entry",
+                "video_file",
+            ],
+            exported);
     }
 
     /// <summary>
