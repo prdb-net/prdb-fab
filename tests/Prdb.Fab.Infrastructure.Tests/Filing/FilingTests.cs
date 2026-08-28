@@ -371,14 +371,14 @@ public sealed class FilingTests
     }
 
     [Fact]
-    public async Task Only_the_two_routines_with_executable_code_are_registered()
+    public async Task All_three_filing_routines_with_executable_code_are_registered()
     {
         await using var database = await TestDatabase.CreateAsync();
         await using var scope = database.Scope();
         var names = scope.ServiceProvider.GetServices<IRoutine>().Select(routine => routine.Name).ToArray();
         Assert.Contains(CollectingRoutine.RoutineName, names);
         Assert.Contains(ArrivalIdentificationRoutine.RoutineName, names);
-        Assert.DoesNotContain("Filing", names);
+        Assert.Contains(FilingRoutine.RoutineName, names);
         Assert.DoesNotContain("Tidy-up", names);
     }
 

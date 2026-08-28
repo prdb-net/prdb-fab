@@ -35,7 +35,7 @@ public static class SyncServiceCollectionExtensions
         // ADR 0030's cache: the files, the fetch that fills them and the sweep
         // that bounds them. The display path takes ArtworkCache directly, which
         // is the half of the cache no routine turns.
-        services.AddScoped<ArtworkStore>();
+        services.TryAddScoped<ArtworkStore>();
         services.AddScoped<ArtworkCache>();
         services.AddScoped<ArtworkEviction>();
 
