@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 
 import {
   listReleases,
+  downloadRelease,
+  previewReleaseDownload,
   type IdentificationState,
   type ReleasePage,
 } from '../api/client.ts'
@@ -99,8 +101,9 @@ function ReleaseTable({
       </div>
 
       <div className={styles.boundary}>
-        <strong>Discovery only.</strong> This version does not fetch an NZB or write to
-        SABnzbd. Library holdings will appear here when this tool can record them.
+        <strong>Manual acquisition.</strong> From a Video, choose an identified Release to
+        fetch its NZB and submit it to the checked SABnzbd category. The choice is
+        recorded before SABnzbd is written.
       </div>
 
       <div className={styles.filters}>
@@ -139,6 +142,7 @@ function ReleaseTable({
             <thead>
               <tr>
                 <th>Release</th>
+                <th>Rank</th>
                 <th>Indexer</th>
                 <th>Size</th>
                 <th>First seen</th>
@@ -146,13 +150,21 @@ function ReleaseTable({
                 <th>Identification</th>
                 <th>Confidence</th>
                 <th>matchedBy</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {page.releases.map((release) => (
                 <tr key={String(release.id)}>
                   <td className={styles.release}>{release.title}</td>
-                  <td>{release.indexer.name}</td>
+                  <td>
+                    {release.rankingPosition ??
+                      (release.rankingExclusion ? `Excluded — ${release.rankingExclusion}` : '—')}
+                  </td>
+                  <td>
+                    {release.indexer.name}
+                    <span className={styles.secondary}>rank {release.indexer.rank}</span>
+                  </td>
                   <td className={styles.nowrap}>{size(release.size)}</td>
                   <td className={styles.nowrap}>{firstSeen(release.firstSeenAt)}</td>
                   <td>
@@ -161,6 +173,17 @@ function ReleaseTable({
                   <td>{identification(release)}</td>
                   <td>{release.confidence ?? '—'}</td>
                   <td>{release.matchedBy ?? '—'}</td>
+                  <td>
+                    {page.context.kind === 'Video' && release.video && release.rankingPosition ? (
+                      <DownloadAction
+                        releaseId={release.id}
+                        releaseTitle={release.title}
+                        videoId={page.context.prdbId}
+                      />
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -182,6 +205,46 @@ function ReleaseTable({
         </nav>
       )}
     </main>
+  )
+}
+
+function DownloadAction({
+  releaseId,
+  releaseTitle,
+  videoId,
+}: {
+  releaseId: number | string
+  releaseTitle: string
+  videoId: string
+}) {
+  const queryClient = useQueryClient()
+  const action = useMutation({
+    mutationFn: async () => {
+      const preview = await previewReleaseDownload(releaseId, videoId)
+      if (preview.outcome !== 'Ready' || !preview.downloadId) return preview
+
+      const confirmed = window.confirm(
+        `Submit “${releaseTitle}” to SABnzbd?\n\nThis spends bandwidth and consumes one of this Video's ${preview.retryBudget} Download attempts.`,
+      )
+      if (!confirmed) return null
+
+      return downloadRelease(releaseId, videoId, preview.downloadId)
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['releases'] }),
+  })
+
+  const answer = action.data
+  const outcome = answer && 'outcome' in answer ? answer.outcome : null
+  const detail = answer && 'detail' in answer ? answer.detail : null
+
+  return (
+    <div className={styles.action}>
+      <button type="button" onClick={() => action.mutate()} disabled={action.isPending}>
+        {action.isPending ? 'Submitting…' : 'Download'}
+      </button>
+      {outcome && <span data-outcome={outcome}>{detail}</span>}
+      {action.isError && <span>The Download could not be planned.</span>}
+    </div>
   )
 }
 

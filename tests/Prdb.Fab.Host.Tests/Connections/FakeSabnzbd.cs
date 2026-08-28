@@ -47,12 +47,40 @@ internal sealed class FakeSabnzbd : HttpMessageHandler
     /// </summary>
     public Exception? Throws { get; set; }
 
+    public string[] AddFileNzoIds { get; set; } = ["SABnzbd_nzo_fixture"];
+
+    public Exception? AddFileThrows { get; set; }
+
+    public string? LastAddFileBody { get; private set; }
+
+    public string? LastAddFileCategory { get; private set; }
+
+    public string? LastAddFileName { get; private set; }
+
     public List<string> Modes { get; } = [];
 
-    protected override Task<HttpResponseMessage> SendAsync(
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
-        CancellationToken cancellationToken) =>
-        Task.FromResult(Answer(request));
+        CancellationToken cancellationToken)
+    {
+        var query = HttpUtility.ParseQueryString(request.RequestUri?.Query ?? string.Empty);
+        if (query["mode"] is "addfile")
+        {
+            LastAddFileBody = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken);
+            LastAddFileCategory = query["cat"];
+            LastAddFileName = query["nzbname"];
+
+            if (AddFileThrows is { } refusal)
+            {
+                Modes.Add("addfile");
+                throw refusal;
+            }
+        }
+
+        return Answer(request);
+    }
 
     private HttpResponseMessage Answer(HttpRequestMessage request)
     {
@@ -106,6 +134,11 @@ internal sealed class FakeSabnzbd : HttpMessageHandler
                     Categories.Select(category =>
                         $"{{\"name\":{Quoted(category.Key)},\"dir\":{Quoted(category.Value)}}}"))
                 + "]}}"),
+
+            "addfile" => Json(
+                "{\"status\":true,\"nzo_ids\":["
+                + string.Join(',', AddFileNzoIds.Select(Quoted))
+                + "]}"),
 
             _ => Json("""{"status":false,"error":"not implemented"}"""),
         };

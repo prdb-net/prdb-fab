@@ -36,6 +36,11 @@ public sealed class ReleaseRow
     public DateTimeOffset PostDate { get; set; }
     public DateTimeOffset PubDate { get; set; }
     public string DownloadUrl { get; set; } = string.Empty;
+    /// <summary>
+    /// The Newznab password attribute as reported. Only a present value other
+    /// than <c>0</c> is a confession and excludes the Release (ADR 0008).
+    /// </summary>
+    public string? Password { get; set; }
     public DateTimeOffset FirstSeenAt { get; set; }
     public IdentificationState IdentificationState { get; set; }
     public long? VideoId { get; set; }

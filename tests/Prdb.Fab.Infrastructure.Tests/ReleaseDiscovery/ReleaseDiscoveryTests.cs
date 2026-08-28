@@ -42,6 +42,7 @@ public sealed class ReleaseDiscoveryTests
         Assert.Equal(1, read.DroppedWithoutIdentity);
         Assert.Equal("a release title", read.Releases[0].NormalisedTitle);
         Assert.Equal(12345, read.Releases[0].Size);
+        Assert.Equal("1", read.Releases[0].Password);
 
         var query = HttpUtility.ParseQueryString(fake.Requests.Single().Query);
         Assert.Equal("1", query["extended"]);
@@ -94,7 +95,11 @@ public sealed class ReleaseDiscoveryTests
         await using (var scope = database.Scope())
         {
             var rows = scope.ServiceProvider.GetRequiredService<ReleaseRows>();
-            var rotated = Item("stable-id", "https://indexer.invalid/get/stable-id?apikey=new-key") with { Title = "Corrected title" };
+            var rotated = Item("stable-id", "https://indexer.invalid/get/stable-id?apikey=new-key") with
+            {
+                Title = "Corrected title",
+                Password = "1",
+            };
             Assert.Equal(0, (await rows.UpsertAsync(IndexerId, [rotated], FirstSeen.AddDays(1), ReleaseSource.WantedSweep, TestContext.Current.CancellationToken)).Added);
         }
 
@@ -104,6 +109,7 @@ public sealed class ReleaseDiscoveryTests
             Assert.Equal(FirstSeen, release.FirstSeenAt);
             Assert.Contains("new-key", release.DownloadUrl, StringComparison.Ordinal);
             Assert.Equal("Corrected title", release.Title);
+            Assert.Equal("1", release.Password);
             Assert.Equal(IdentificationState.Unexamined, release.IdentificationState);
             Assert.False(release.SearchWasReason);
         }

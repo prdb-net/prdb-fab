@@ -10,12 +10,11 @@ using Prdb.Fab.Core.Connections;
 namespace Prdb.Fab.Infrastructure.Connections;
 
 /// <summary>
-/// The one place SABnzbd is reached from, and in this slice it reads and never
-/// writes.
+/// The one place SABnzbd is reached from.
 /// </summary>
 /// <remarks>
-/// ADR 0016 allows exactly one write to SABnzbd — <c>addfile</c> — and every
-/// call here is a read, so that rule is still intact when this slice ends.
+/// ADR 0016 allows exactly one write to SABnzbd — <c>addfile</c>. Every other
+/// call here is a read; there is no retry, delete, or history mutation.
 /// </remarks>
 public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGateway> logger)
 {
@@ -96,6 +95,108 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
             categories.Length);
 
         return new SabnzbdCategories(SabnzbdConnectionOutcome.Saved, categories);
+    }
+
+    /// <summary>
+    /// The one category check performed immediately before a submission.
+    /// Unlike onboarding, it needs no path information and therefore asks only
+    /// <c>get_cats</c>.
+    /// </summary>
+    public async Task<SabnzbdCategoryNames> CategoryNamesAsync(
+        string? url,
+        string? apiKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (BaseAddressOf(url) is not { } address)
+        {
+            return new(SabnzbdConnectionOutcome.NotSabnzbd, []);
+        }
+
+        var (refusal, body) = await ReadAsync<CatsBody>(
+            clients.CreateClient(FabTransports.Sabnzbd),
+            address,
+            apiKey,
+            "get_cats",
+            cancellationToken);
+
+        return refusal is { } outcome || body?.Categories is not { } categories
+            ? new(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd, [])
+            : new(
+                SabnzbdConnectionOutcome.Saved,
+                [.. categories.Where(name => !string.IsNullOrWhiteSpace(name))]);
+    }
+
+    /// <summary>ADR 0016's only SABnzbd write.</summary>
+    public async Task<SabnzbdSubmission> SubmitAsync(
+        string? url,
+        string? apiKey,
+        string category,
+        string submittedName,
+        byte[] nzb,
+        CancellationToken cancellationToken = default)
+    {
+        if (BaseAddressOf(url) is not { } address)
+        {
+            return new(SabnzbdConnectionOutcome.NotSabnzbd, null);
+        }
+
+        var request = new Uri(
+            address,
+            "api?mode=addfile&output=json"
+            + $"&apikey={Uri.EscapeDataString(apiKey ?? string.Empty)}"
+            + $"&cat={Uri.EscapeDataString(category)}"
+            + $"&nzbname={Uri.EscapeDataString(submittedName)}");
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent(nzb), "name", "release.nzb");
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await clients.CreateClient(FabTransports.Sabnzbd)
+                .PostAsync(request, form, cancellationToken);
+        }
+        catch (Exception unreachable) when (unreachable is HttpRequestException or TaskCanceledException
+                                            && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation(
+                "SABnzbd at {Host} did not answer an addfile request: {Reason}.",
+                address.Host,
+                unreachable.GetType().Name);
+            return new(SabnzbdConnectionOutcome.NotRightNow, null);
+        }
+
+        using (response)
+        {
+            if (response.StatusCode == HttpStatusCode.Forbidden)
+            {
+                var said = await response.Content.ReadAsStringAsync(cancellationToken);
+                return new(
+                    said.Contains("Key", StringComparison.OrdinalIgnoreCase)
+                        ? SabnzbdConnectionOutcome.WrongKey
+                        : SabnzbdConnectionOutcome.AccessDenied,
+                    null);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new(SabnzbdConnectionOutcome.NotSabnzbd, null);
+            }
+
+            try
+            {
+                var body = await response.Content.ReadFromJsonAsync<AddFileBody>(Json, cancellationToken);
+                var ids = body?.NzoIds?.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
+
+                // An archive may return several ids. One Download cannot follow
+                // several jobs, so only one opaque id is an accepted answer.
+                return new(SabnzbdConnectionOutcome.Saved, ids.Length == 1 ? ids[0] : null);
+            }
+            catch (JsonException)
+            {
+                return new(SabnzbdConnectionOutcome.NotSabnzbd, null);
+            }
+        }
     }
 
     private async Task<(SabnzbdConnectionOutcome? Refusal, T? Body)> ReadAsync<T>(
@@ -210,6 +311,9 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
     private sealed record CategoryFolder(
         [property: JsonPropertyName("name")] string? Name,
         [property: JsonPropertyName("dir")] string? Dir);
+
+    private sealed record AddFileBody(
+        [property: JsonPropertyName("nzo_ids")] string[]? NzoIds);
 }
 
 /// <summary>One of SABnzbd's own categories, and where its downloads finish.</summary>
@@ -227,3 +331,11 @@ public sealed record SabnzbdCategory(string Name, string CompletedRoot);
 public sealed record SabnzbdCategories(
     SabnzbdConnectionOutcome Outcome,
     IReadOnlyList<SabnzbdCategory> Categories);
+
+public sealed record SabnzbdCategoryNames(
+    SabnzbdConnectionOutcome Outcome,
+    IReadOnlyList<string> Categories);
+
+public sealed record SabnzbdSubmission(
+    SabnzbdConnectionOutcome Outcome,
+    string? NzoId);

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 using Prdb.Fab.Infrastructure.Access;
+using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
@@ -85,6 +86,7 @@ public sealed class TestDatabase : IAsyncDisposable
         services.AddFabAccess();
         services.AddFabConnections();
         services.AddFabReleaseDiscovery();
+        services.AddFabAcquisition();
 
         if (prdb is not null)
         {

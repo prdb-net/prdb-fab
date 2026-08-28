@@ -134,3 +134,30 @@
   color: var(--text-quiet);
   cursor: default;
 }
+
+.action {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 10rem;
+}
+
+.action button {
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--surface);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.4rem 0.7rem;
+}
+
+.action button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.action span {
+  color: var(--text-quiet);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
