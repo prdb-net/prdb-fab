@@ -68,7 +68,7 @@ public abstract class ChangeFeed(FabDbContext context, PrdbGateway prdb, Catalog
     /// </param>
     public abstract Task<FeedPage> ReadAsync(
         string apiKey,
-        FeedPosition? from,
+        FeedPosition from,
         int pageSize,
         CancellationToken cancellationToken);
 }

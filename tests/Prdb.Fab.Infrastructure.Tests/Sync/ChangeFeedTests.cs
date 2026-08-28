@@ -58,9 +58,12 @@ public sealed class ChangeFeedTests
 
         Assert.Equal(2, asked.Count);
 
-        // The first run had nothing to resume from, so it started at the
-        // beginning of the feed — which is the documented bootstrap.
-        Assert.Null(Query(asked[0], "Since"));
+        // The first run had nothing to resume from, so it asked from the
+        // beginning of time. Not the absence of the parameter: prdb requires
+        // `since` on every feed request and answers 400 without it, whatever
+        // its own document says, and this fake refuses the request the same
+        // way the service does.
+        Assert.Equal(DateTimeOffset.MinValue, Time(Query(asked[0], "Since")));
 
         // The second asked from a minute before where the first left off, and
         // without the tie-breaker, which only means anything at the exact
@@ -145,7 +148,10 @@ public sealed class ChangeFeedTests
 
         var first = prdb.AskedFor(Images).Single();
 
-        Assert.Null(Query(first, "Since"));
+        // One row, and a lower bound that excludes nothing — the request is
+        // for the `serverTimeUtc` on the answer rather than for the row. The
+        // bound is there because prdb refuses a feed request without one.
+        Assert.Equal(DateTimeOffset.MinValue, Time(Query(first, "Since")));
         Assert.Equal("1", Query(first, "PageSize"));
 
         await using var scope = database.Scope();

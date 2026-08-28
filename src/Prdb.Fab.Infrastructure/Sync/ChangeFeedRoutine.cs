@@ -87,8 +87,16 @@ public abstract class ChangeFeedRoutine(
             return RunResult.NothingToDo;
         }
 
-        var from = await Cursors.PositionAsync(Source.Feed, cancellationToken);
-        var takingTheClock = from is null && !Source.StartsAtTheBeginning;
+        var stored = await Cursors.PositionAsync(Source.Feed, cancellationToken);
+        var takingTheClock = stored is null && !Source.StartsAtTheBeginning;
+
+        // Never null, and that is the fix for the defect a first deployment
+        // found: prdb requires `since` on every feed request and answers 400
+        // without it, while its own document marks the parameter optional. A
+        // feed that has never run asks from the beginning of time, which
+        // excludes nothing — including the request below that wants only the
+        // clock.
+        var from = stored ?? FeedPosition.TheBeginning;
 
         var page = await Source.ReadAsync(
             apiKey,
