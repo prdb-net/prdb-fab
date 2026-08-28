@@ -90,6 +90,7 @@ public sealed class IndexerConnectionRouteTests
 
         Assert.Equal(2, indexers.Count);
         Assert.Distinct(indexers.Select(indexer => indexer.Id));
+        Assert.Equal([0, 1], indexers.Select(indexer => indexer.Rank).Order());
     }
 
     /// <summary>
@@ -250,6 +251,7 @@ public sealed class IndexerConnectionRouteTests
         string Name,
         string Url,
         string Categories,
+        int Rank,
         string LastVerdict,
         DateTimeOffset LastCheckedAt);
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 namespace Prdb.Fab.Host.ReleaseDiscovery;
@@ -12,6 +13,46 @@ public static class ReleaseEndpoints
     public static void MapReleaseDiscovery(this IEndpointRouteBuilder routes)
     {
         routes.MapGet("/api/releases", ReadAsync).WithTags("Release discovery");
+
+        routes.MapPost(
+            "/api/releases/{releaseId:long}/download/preview",
+            async Task<Results<Ok<DownloadPreview>, NotFound>> (
+                long releaseId,
+                DownloadPreviewRequest request,
+                PersonDownloads downloads,
+                CancellationToken cancellationToken) =>
+            {
+                var preview = await downloads.PreviewAsync(
+                    request.VideoId,
+                    releaseId,
+                    cancellationToken);
+                return preview is null ? TypedResults.NotFound() : TypedResults.Ok(preview);
+            }).WithTags("Release discovery");
+
+        routes.MapPost(
+            "/api/releases/{releaseId:long}/download",
+            async Task<Results<Ok<DownloadVerdict>, BadRequest<ProblemDetails>, NotFound>> (
+                long releaseId,
+                DownloadRequest request,
+                PersonDownloads downloads,
+                CancellationToken cancellationToken) =>
+            {
+                if (request.DownloadId.Version != 7)
+                {
+                    return TypedResults.BadRequest(new ProblemDetails
+                    {
+                        Title = "The Download identifier is not a preview.",
+                        Detail = "Use the UUIDv7 returned by the Download preview.",
+                    });
+                }
+
+                var verdict = await downloads.DownloadAsync(
+                    request.DownloadId,
+                    request.VideoId,
+                    releaseId,
+                    cancellationToken);
+                return verdict is null ? TypedResults.NotFound() : TypedResults.Ok(verdict);
+            }).WithTags("Release discovery");
     }
 
     private static async Task<Results<Ok<ReleasePage>, BadRequest<ProblemDetails>, NotFound>> ReadAsync(
@@ -42,3 +83,7 @@ public static class ReleaseEndpoints
         return answer is null ? TypedResults.NotFound() : TypedResults.Ok(answer);
     }
 }
+
+public sealed record DownloadPreviewRequest(Guid VideoId);
+
+public sealed record DownloadRequest(Guid DownloadId, Guid VideoId);

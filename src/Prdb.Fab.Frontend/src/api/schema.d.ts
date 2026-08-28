@@ -132,6 +132,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases/{releaseId}/download/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    releaseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DownloadPreviewRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadPreview"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/{releaseId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    releaseId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DownloadRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadVerdict"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/access/state": {
         parameters: {
             query?: never;
@@ -1125,6 +1230,8 @@ export interface components {
             name: string;
             url: string;
             categories: string;
+            /** Format: int32 */
+            rank: number | string;
             lastVerdict: components["schemas"]["IndexerConnectionOutcome"];
             /** Format: date-time */
             lastCheckedAt: string;
@@ -1141,6 +1248,44 @@ export interface components {
             indexerCount: number | string;
             indexersSkipped: boolean;
             libraryRoot: null | string;
+        };
+        /** @enum {unknown} */
+        DownloadCause: "Rejected" | "Failed" | "Unusable" | "Vanished" | "Abandoned" | "Empty" | null;
+        /** @enum {unknown} */
+        DownloadOutcome: "Submitted" | "Rejected" | "SubmissionUnknown" | "ConnectionProblem" | "IndexerProblem" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
+        /** @enum {unknown} */
+        DownloadPlanOutcome: "Ready" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
+        DownloadPreview: {
+            outcome: components["schemas"]["DownloadPlanOutcome"];
+            /** Format: uuid */
+            downloadId: null | string;
+            release: components["schemas"]["ReleaseChoice"];
+            /** Format: int32 */
+            downloadsSpent: number | string;
+            /** Format: int32 */
+            retryBudget: number | string;
+            detail: string;
+        };
+        DownloadPreviewRequest: {
+            /** Format: uuid */
+            videoId: string;
+        };
+        DownloadRequest: {
+            /** Format: uuid */
+            downloadId: string;
+            /** Format: uuid */
+            videoId: string;
+        };
+        /** @enum {unknown} */
+        DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed" | null;
+        DownloadVerdict: {
+            outcome: components["schemas"]["DownloadOutcome"];
+            /** Format: uuid */
+            downloadId: string;
+            state: null | components["schemas"]["DownloadState"];
+            cause: null | components["schemas"]["DownloadCause"];
+            nzoId: null | string;
+            detail: string;
         };
         HealthResponse: {
             status: string;
@@ -1236,6 +1381,21 @@ export interface components {
             title: string;
             site: null | string;
         };
+        ReleaseChoice: {
+            /** Format: int64 */
+            id: number | string;
+            /** Format: uuid */
+            indexerId: string;
+            indexerName: string;
+            derivedReleaseId: string;
+            title: string;
+            /** Format: int64 */
+            size: null | number | string;
+            confidence: null | components["schemas"]["IdentificationConfidence"];
+            /** Format: int32 */
+            position: null | number | string;
+            exclusion: null | components["schemas"]["ReleaseExclusion"];
+        };
         ReleaseContext: {
             kind: components["schemas"]["ReleaseContextKind"];
             /** Format: uuid */
@@ -1244,10 +1404,14 @@ export interface components {
         };
         /** @enum {unknown} */
         ReleaseContextKind: "Video" | "Site" | "Actor";
+        /** @enum {unknown} */
+        ReleaseExclusion: "PasswordProtected" | "ConfidenceNotAllowed" | "Consumed" | "MissingDownload" | null;
         ReleaseIndexer: {
             /** Format: uuid */
             id: string;
             name: string;
+            /** Format: int32 */
+            rank: number | string;
         };
         ReleasePage: {
             context: components["schemas"]["ReleaseContext"];
@@ -1275,6 +1439,9 @@ export interface components {
             video: null | components["schemas"]["IdentifiedVideo"];
             candidates: components["schemas"]["ReleaseCandidate"][];
             siteOnlyMatch: null | components["schemas"]["SiteOnlyMatch"];
+            /** Format: int32 */
+            rankingPosition: null | number | string;
+            rankingExclusion: null | components["schemas"]["ReleaseExclusion"];
         };
         RunNowVerdict: {
             accepted: boolean;

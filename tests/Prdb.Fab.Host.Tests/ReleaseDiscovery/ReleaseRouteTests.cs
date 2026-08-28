@@ -29,6 +29,8 @@ public sealed class ReleaseRouteTests
 
         Assert.Equal("Video", video.Context.Kind);
         Assert.Equal(["Ambiguous.Release", "Matched.Release"], video.Releases.Select(row => row.Title).Order());
+        Assert.Equal(1, video.Releases.Single(row => row.Title == "Matched.Release").RankingPosition);
+        Assert.Null(video.Releases.Single(row => row.Title == "Ambiguous.Release").RankingPosition);
         Assert.Equal("Site", site.Context.Kind);
         Assert.Equal(3, site.Total);
         Assert.Equal("Actor", actor.Context.Kind);
@@ -185,7 +187,9 @@ public sealed class ReleaseRouteTests
         string IdentificationState,
         IdentifiedVideo? Video,
         IReadOnlyList<Candidate> Candidates,
-        SiteOnly? SiteOnlyMatch);
+        SiteOnly? SiteOnlyMatch,
+        int? RankingPosition,
+        string? RankingExclusion);
     private sealed record Answer(Context Context, IReadOnlyList<Row> Releases, int Page, int Total);
 
     private sealed class RefusesEverything : HttpMessageHandler

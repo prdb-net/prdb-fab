@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -10,7 +12,7 @@ namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 /// Every query is over the Catalogue and Indexer Cache; reading this service
 /// performs no remote work.
 /// </summary>
-public sealed class ReleaseBrowse(FabDbContext context)
+public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings)
 {
     public const int APage = 50;
 
@@ -38,6 +40,7 @@ public sealed class ReleaseBrowse(FabDbContext context)
                 state,
                 indexerId,
                 page,
+                await rankings.ForVideoAsync(prdbId, observeDecision: false, cancellationToken),
                 cancellationToken);
     }
 
@@ -68,6 +71,7 @@ public sealed class ReleaseBrowse(FabDbContext context)
                 state,
                 indexerId,
                 page,
+                ranking: null,
                 cancellationToken);
     }
 
@@ -98,6 +102,7 @@ public sealed class ReleaseBrowse(FabDbContext context)
                 state,
                 indexerId,
                 page,
+                ranking: null,
                 cancellationToken);
     }
 
@@ -107,12 +112,13 @@ public sealed class ReleaseBrowse(FabDbContext context)
         IdentificationState? state,
         Guid? indexerId,
         int page,
+        VideoReleaseRanking? ranking,
         CancellationToken cancellationToken)
     {
         var wanted = Math.Max(page, 1);
         var availableIndexers = await relevant
             .Where(row => row.Indexer != null)
-            .Select(row => new { row.IndexerId, row.Indexer!.Name })
+            .Select(row => new { row.IndexerId, row.Indexer!.Name, row.Indexer.Rank })
             .Distinct()
             .OrderBy(row => row.Name)
             .ThenBy(row => row.IndexerId)
@@ -129,17 +135,31 @@ public sealed class ReleaseBrowse(FabDbContext context)
         }
 
         var total = await relevant.CountAsync(cancellationToken);
-        var releases = await relevant
+        var query = relevant
             .AsNoTracking()
             .Include(row => row.Indexer)
             .Include(row => row.Video)
             .ThenInclude(video => video!.Site)
-            .Include(row => row.Site)
-            .OrderByDescending(row => row.FirstSeenAt)
-            .ThenByDescending(row => row.Id)
-            .Skip((wanted - 1) * APage)
-            .Take(APage)
-            .ToListAsync(cancellationToken);
+            .Include(row => row.Site);
+
+        var rankById = ranking?.Ranked.ToDictionary(release => release.Id) ?? [];
+        var exclusionById = ranking?.Excluded.ToDictionary(release => release.Id) ?? [];
+        var releases = ranking is null
+            ? await query
+                .OrderByDescending(row => row.FirstSeenAt)
+                .ThenByDescending(row => row.Id)
+                .Skip((wanted - 1) * APage)
+                .Take(APage)
+                .ToListAsync(cancellationToken)
+            : (await query.ToListAsync(cancellationToken))
+                .OrderBy(row => rankById.ContainsKey(row.Id) ? 0 : exclusionById.ContainsKey(row.Id) ? 1 : 2)
+                .ThenBy(row => rankById.GetValueOrDefault(row.Id)?.Position ?? int.MaxValue)
+                .ThenBy(row => exclusionById.GetValueOrDefault(row.Id)?.Exclusion)
+                .ThenByDescending(row => row.FirstSeenAt)
+                .ThenByDescending(row => row.Id)
+                .Skip((wanted - 1) * APage)
+                .Take(APage)
+                .ToList();
 
         var releaseIds = releases.Select(row => row.Id).ToArray();
         var candidateRows = await context.ReleaseCandidates
@@ -165,7 +185,7 @@ public sealed class ReleaseBrowse(FabDbContext context)
         var rows = releases.Select(row => new ReleaseViewRow(
             row.Id,
             row.Title,
-            new ReleaseIndexer(row.IndexerId, row.Indexer!.Name),
+            new ReleaseIndexer(row.IndexerId, row.Indexer!.Name, row.Indexer.Rank),
             row.Size,
             row.FirstSeenAt,
             row.IdentificationState,
@@ -177,12 +197,14 @@ public sealed class ReleaseBrowse(FabDbContext context)
             candidates.GetValueOrDefault(row.Id, []),
             row.IdentificationState == IdentificationState.SiteOnly && row.Site is not null
                 ? new SiteOnlyMatch(row.Site.PrdbId, row.Site.Title)
-                : null)).ToList();
+                : null,
+            rankById.GetValueOrDefault(row.Id)?.Position,
+            exclusionById.GetValueOrDefault(row.Id)?.Exclusion)).ToList();
 
         return new ReleasePage(
             selected,
             rows,
-            [.. availableIndexers.Select(row => new ReleaseIndexer(row.IndexerId, row.Name))],
+            [.. availableIndexers.Select(row => new ReleaseIndexer(row.IndexerId, row.Name, row.Rank))],
             wanted,
             APage,
             total);
@@ -198,7 +220,7 @@ public enum ReleaseContextKind
 
 public sealed record ReleaseContext(ReleaseContextKind Kind, Guid PrdbId, string Title);
 
-public sealed record ReleaseIndexer(Guid Id, string Name);
+public sealed record ReleaseIndexer(Guid Id, string Name, int Rank);
 
 public sealed record IdentifiedVideo(Guid PrdbId, string Title, string? Site);
 
@@ -217,7 +239,9 @@ public sealed record ReleaseViewRow(
     IdentificationRung? MatchedBy,
     IdentifiedVideo? Video,
     IReadOnlyList<ReleaseCandidate> Candidates,
-    SiteOnlyMatch? SiteOnlyMatch);
+    SiteOnlyMatch? SiteOnlyMatch,
+    int? RankingPosition,
+    ReleaseExclusion? RankingExclusion);
 
 public sealed record ReleasePage(
     ReleaseContext Context,

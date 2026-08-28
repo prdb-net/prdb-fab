@@ -113,6 +113,73 @@ public sealed partial class NewznabGateway(
         return new(null, null, items, dropped, null);
     }
 
+    /// <summary>
+    /// Fetches the opaque NZB bytes at the credential-bearing address supplied
+    /// by the indexer. The address never crosses this boundary or reaches a log.
+    /// </summary>
+    public async Task<NewznabNzbRead> NzbAsync(
+        string downloadUrl,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Address(downloadUrl, out var address))
+        {
+            return NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotAnIndexer);
+        }
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await clients.CreateClient(FabTransports.Indexers).GetAsync(
+                address,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+        }
+        catch (Exception unreachable) when (unreachable is HttpRequestException or TaskCanceledException
+                                            && !cancellationToken.IsCancellationRequested)
+        {
+            logger.LogInformation(
+                "The NZB from the indexer at {Host} could not be fetched: {Reason}.",
+                address!.Host,
+                unreachable.GetType().Name);
+            return NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotRightNow);
+        }
+
+        using (response)
+        {
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                return NewznabNzbRead.Refusing(IndexerConnectionOutcome.LimitReached);
+            }
+
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                return NewznabNzbRead.Refusing(IndexerConnectionOutcome.WrongKey);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotRightNow);
+            }
+
+            try
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                return bytes.Length == 0
+                    ? NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotAnIndexer)
+                    : new(null, bytes);
+            }
+            catch (Exception unreadable) when (unreadable is HttpRequestException or IOException or TaskCanceledException
+                                               && !cancellationToken.IsCancellationRequested)
+            {
+                logger.LogInformation(
+                    "The NZB response from {Host} could not be read: {Reason}.",
+                    address!.Host,
+                    unreadable.GetType().Name);
+                return NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotRightNow);
+            }
+        }
+    }
+
     internal static IReadOnlyList<CapsCategory> CategoriesIn(XDocument? document)
     {
         var categories = document?.Root?.Elements().FirstOrDefault(element => element.Name.LocalName == "categories")?
@@ -238,16 +305,22 @@ public sealed partial class NewznabGateway(
             .ToArray();
 
         var title = Element("title")?.Trim() ?? string.Empty;
+        var size = long.TryParse(sizeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedSize)
+            && parsedSize >= 0
+                ? parsedSize
+                : (long?)null;
+
         return new(
             identity,
             rawGuid ?? string.Empty,
             title,
             ComparisonForm.Of(title),
-            long.TryParse(sizeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size) ? size : null,
+            size,
             categories,
             postDate.Value,
             pubDate.Value,
-            Element("link")?.Trim() ?? enclosure?.Attribute("url")?.Value ?? string.Empty);
+            Element("link")?.Trim() ?? enclosure?.Attribute("url")?.Value ?? string.Empty,
+            Attribute("password")?.Trim());
     }
 
     private static DateTimeOffset? Date(string? value)
@@ -378,4 +451,12 @@ public sealed record NewznabRelease(
     IReadOnlyList<string> Categories,
     DateTimeOffset PostDate,
     DateTimeOffset PubDate,
-    string DownloadUrl);
+    string DownloadUrl,
+    string? Password = null);
+
+public sealed record NewznabNzbRead(
+    IndexerConnectionOutcome? Refusal,
+    byte[] Bytes)
+{
+    public static NewznabNzbRead Refusing(IndexerConnectionOutcome outcome) => new(outcome, []);
+}

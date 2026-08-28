@@ -10,6 +10,7 @@
       <newznab:attr name="usenetdate" value="2026-08-26T08:00:00Z" />
       <newznab:attr name="category" value="5010" />
       <newznab:attr name="size" value="12345" />
+      <newznab:attr name="password" value="1" />
     </item>
     <item>
       <title>URI shape</title>

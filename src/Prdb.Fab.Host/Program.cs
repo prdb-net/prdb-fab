@@ -15,6 +15,7 @@ using Prdb.Fab.Host.ReleaseDiscovery;
 using Prdb.Fab.Host.Scheduling;
 using Prdb.Fab.Host.Skeleton;
 using Prdb.Fab.Infrastructure.Access;
+using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -43,6 +44,7 @@ builder.Services.AddFabScheduling();
 builder.Services.AddFabAccess();
 builder.Services.AddFabConnections();
 builder.Services.AddFabReleaseDiscovery();
+builder.Services.AddFabAcquisition();
 builder.Services.AddFabSync();
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
@@ -60,10 +62,9 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-// ADR 0038: one hosted service per lane. Two of the four turn — sync, which is
-// where ADR 0014 puts everything that talks to prdb, and bulk. The live and file
-// lanes are this same class with a different lane, added when they have
-// something to run rather than left ticking over an empty query.
+// ADR 0038: one hosted service per active lane. Sync carries everything that
+// talks to prdb (ADR 0014), bulk carries discovery, and live carries connection
+// reachability. File arrives when it has something to run.
 //
 // Registered as IHostedService rather than through AddHostedService, which adds
 // its registration with TryAddEnumerable and therefore keeps one per
@@ -75,6 +76,9 @@ builder.Services.AddSingleton<IHostedService>(provider =>
 
 builder.Services.AddSingleton<IHostedService>(provider =>
     ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Bulk));
+
+builder.Services.AddSingleton<IHostedService>(provider =>
+    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Live));
 
 // ADR 0040: an outcome crosses the contract as its name rather than as its
 // position in a C# enum. The number would be stable only for as long as nobody

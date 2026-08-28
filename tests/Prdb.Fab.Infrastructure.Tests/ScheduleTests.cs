@@ -44,7 +44,9 @@ public sealed class ScheduleTests
         await using var scope = database.Scope();
         var store = scope.ServiceProvider.GetRequiredService<IRoutineStore>();
 
-        Assert.Empty(await store.DueAsync(Lane.Live, TestContext.Current.CancellationToken));
+        Assert.DoesNotContain(
+            await store.DueAsync(Lane.Live, TestContext.Current.CancellationToken),
+            row => row.Name == SkeletonSweep.RoutineName);
     }
 
     /// <summary>

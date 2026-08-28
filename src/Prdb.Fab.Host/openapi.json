@@ -135,6 +135,104 @@
         }
       }
     },
+    "/api/releases/{releaseId}/download/preview": {
+      "post": {
+        "tags": [
+          "Release discovery"
+        ],
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadPreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/releases/{releaseId}/download": {
+      "post": {
+        "tags": [
+          "Release discovery"
+        ],
+        "parameters": [
+          {
+            "name": "releaseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadVerdict"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/access/state": {
       "get": {
         "tags": [
@@ -1122,6 +1220,7 @@
           "name",
           "url",
           "categories",
+          "rank",
           "lastVerdict",
           "lastCheckedAt"
         ],
@@ -1139,6 +1238,14 @@
           },
           "categories": {
             "type": "string"
+          },
+          "rank": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           },
           "lastVerdict": {
             "$ref": "#/components/schemas/IndexerConnectionOutcome"
@@ -1213,6 +1320,169 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "DownloadCause": {
+        "enum": [
+          "Rejected",
+          "Failed",
+          "Unusable",
+          "Vanished",
+          "Abandoned",
+          "Empty",
+          null
+        ]
+      },
+      "DownloadOutcome": {
+        "enum": [
+          "Submitted",
+          "Rejected",
+          "SubmissionUnknown",
+          "ConnectionProblem",
+          "IndexerProblem",
+          "ReleaseNotEligible",
+          "NoReleasesLeft",
+          "RetryBudgetSpent"
+        ]
+      },
+      "DownloadPlanOutcome": {
+        "enum": [
+          "Ready",
+          "ReleaseNotEligible",
+          "NoReleasesLeft",
+          "RetryBudgetSpent"
+        ]
+      },
+      "DownloadPreview": {
+        "required": [
+          "outcome",
+          "downloadId",
+          "release",
+          "downloadsSpent",
+          "retryBudget",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/DownloadPlanOutcome"
+          },
+          "downloadId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "release": {
+            "$ref": "#/components/schemas/ReleaseChoice"
+          },
+          "downloadsSpent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "DownloadPreviewRequest": {
+        "required": [
+          "videoId"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "DownloadRequest": {
+        "required": [
+          "downloadId",
+          "videoId"
+        ],
+        "type": "object",
+        "properties": {
+          "downloadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "DownloadState": {
+        "enum": [
+          "Outstanding",
+          "Completed",
+          "Collected",
+          "Failed",
+          null
+        ]
+      },
+      "DownloadVerdict": {
+        "required": [
+          "outcome",
+          "downloadId",
+          "state",
+          "cause",
+          "nzoId",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/DownloadOutcome"
+          },
+          "downloadId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloadState"
+              }
+            ]
+          },
+          "cause": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloadCause"
+              }
+            ]
+          },
+          "nzoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detail": {
+            "type": "string"
           }
         }
       },
@@ -1634,6 +1904,81 @@
           }
         }
       },
+      "ReleaseChoice": {
+        "required": [
+          "id",
+          "indexerId",
+          "indexerName",
+          "derivedReleaseId",
+          "title",
+          "size",
+          "confidence",
+          "position",
+          "exclusion"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "indexerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "indexerName": {
+            "type": "string"
+          },
+          "derivedReleaseId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "confidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IdentificationConfidence"
+              }
+            ]
+          },
+          "position": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "exclusion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReleaseExclusion"
+              }
+            ]
+          }
+        }
+      },
       "ReleaseContext": {
         "required": [
           "kind",
@@ -1661,10 +2006,20 @@
           "Actor"
         ]
       },
+      "ReleaseExclusion": {
+        "enum": [
+          "PasswordProtected",
+          "ConfidenceNotAllowed",
+          "Consumed",
+          "MissingDownload",
+          null
+        ]
+      },
       "ReleaseIndexer": {
         "required": [
           "id",
-          "name"
+          "name",
+          "rank"
         ],
         "type": "object",
         "properties": {
@@ -1674,6 +2029,14 @@
           },
           "name": {
             "type": "string"
+          },
+          "rank": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1741,7 +2104,9 @@
           "matchedBy",
           "video",
           "candidates",
-          "siteOnlyMatch"
+          "siteOnlyMatch",
+          "rankingPosition",
+          "rankingExclusion"
         ],
         "type": "object",
         "properties": {
@@ -1818,6 +2183,25 @@
               },
               {
                 "$ref": "#/components/schemas/SiteOnlyMatch"
+              }
+            ]
+          },
+          "rankingPosition": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rankingExclusion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReleaseExclusion"
               }
             ]
           }

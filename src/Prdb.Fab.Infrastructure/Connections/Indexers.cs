@@ -31,6 +31,7 @@ public sealed class Indexers(
                 row.Name,
                 row.Url,
                 row.Categories,
+                row.Rank,
                 row.LastVerdict,
                 row.LastCheckedAt))
             .ToListAsync(cancellationToken);
@@ -81,7 +82,7 @@ public sealed class Indexers(
             LastVerdict = IndexerConnectionOutcome.Saved,
             LastCheckedAt = now,
             Enabled = true,
-            Rank = 0,
+            Rank = await context.Indexers.MaxAsync(row => (int?)row.Rank, cancellationToken) + 1 ?? 0,
             DailyQueryBudget = 1000,
         };
 
@@ -188,6 +189,7 @@ public sealed record ConfiguredIndexer(
     string Name,
     string Url,
     string Categories,
+    int Rank,
     IndexerConnectionOutcome LastVerdict,
     DateTimeOffset LastCheckedAt);
 

@@ -5,13 +5,14 @@ using Prdb.Fab.Core.Access;
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Acquisition;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
-/// The physical glossary from ADR 0033, grown one writer at a time. This slice
-/// adds the release-discovery cache and its account-scoped sweep position; the
-/// remaining acquisition and library tables arrive with their writers.
+/// The physical glossary from ADR 0033, grown one writer at a time. Release
+/// discovery and person-originated acquisition have their writers; following,
+/// filing, and the remaining library tables arrive with theirs.
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {
@@ -68,6 +69,10 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<WantedVideoSweepStateRow> WantedVideoSweepStates => Set<WantedVideoSweepStateRow>();
 
     public DbSet<IdentificationOutcomeRow> IdentificationOutcomes => Set<IdentificationOutcomeRow>();
+
+    public DbSet<DownloadRow> Downloads => Set<DownloadRow>();
+
+    public DbSet<ReleaseNotDownloadedRow> ReleasesNotDownloaded => Set<ReleaseNotDownloadedRow>();
 
     /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
@@ -154,6 +159,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             installation.Property(row => row.Id).ValueGeneratedNever();
 
             installation.Property(row => row.OnboardingStep).HasConversion<string>();
+            installation.Property(row => row.RetryBudget).HasDefaultValue(3);
 
             // The row exists from the first migration rather than being created
             // on demand, so nothing anywhere has to ask whether it is there.
@@ -491,6 +497,29 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             outcome.Property(row => row.Outcome).IsRequired();
         });
 
+        builder.Entity<DownloadRow>(download =>
+        {
+            download.ToTable("download");
+            download.HasKey(row => row.Id);
+            download.Declares(AccountClass.AccountFree);
+            download.HasIndex(row => new { row.VideoId, row.IndexerId, row.DerivedReleaseId }).IsUnique();
+            download.HasIndex(row => row.VideoId);
+            download.HasIndex(row => new { row.State, row.CreatedAt });
+            download.Property(row => row.DerivedReleaseId).IsRequired();
+            download.Property(row => row.SubmittedName).IsRequired();
+            download.Property(row => row.State).HasConversion<string>();
+            download.Property(row => row.Cause).HasConversion<string>();
+        });
+
+        builder.Entity<ReleaseNotDownloadedRow>(observation =>
+        {
+            observation.ToTable("release_not_downloaded");
+            observation.HasKey(row => row.Id);
+            observation.Declares(AccountClass.AccountFree);
+            observation.HasIndex(row => row.At);
+            observation.Property(row => row.Reason).IsRequired();
+        });
+
         // Exportability is table-wide. Cache is the safe default; the two
         // tables that contain irreplaceable configuration opt into the backup.
         foreach (var entity in builder.Model.GetEntityTypes())
@@ -500,5 +529,6 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
         builder.Entity<InstallationRow>().Declares(ExportClass.Exported);
         builder.Entity<IndexerRow>().Declares(ExportClass.Exported);
+        builder.Entity<DownloadRow>().Declares(ExportClass.Exported);
     }
 }

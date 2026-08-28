@@ -34,6 +34,8 @@ export type ActorPage = Schema['ActorPage']
 export type ActorVideos = Schema['ActorVideos']
 export type ReleasePage = Schema['ReleasePage']
 export type IdentificationState = Schema['IdentificationState']
+export type DownloadPreview = Schema['DownloadPreview']
+export type DownloadVerdict = Schema['DownloadVerdict']
 
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
@@ -249,6 +251,21 @@ export async function listReleases(filters: {
       })}`,
     ),
   )
+}
+
+export async function previewReleaseDownload(
+  releaseId: number | string,
+  videoId: string,
+): Promise<DownloadPreview> {
+  return post<DownloadPreview>(`/api/releases/${releaseId}/download/preview`, { videoId })
+}
+
+export async function downloadRelease(
+  releaseId: number | string,
+  videoId: string,
+  downloadId: string,
+): Promise<DownloadVerdict> {
+  return post<DownloadVerdict>(`/api/releases/${releaseId}/download`, { videoId, downloadId })
 }
 
 function parameters(values: Record<string, string | undefined>): URLSearchParams {

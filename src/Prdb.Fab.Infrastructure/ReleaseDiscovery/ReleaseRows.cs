@@ -54,6 +54,7 @@ public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
             row.PostDate = release.PostDate;
             row.PubDate = release.PubDate;
             row.DownloadUrl = release.DownloadUrl;
+            row.Password = release.Password;
         }
 
         await context.SaveChangesAsync(cancellationToken);

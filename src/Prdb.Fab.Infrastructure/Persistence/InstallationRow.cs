@@ -10,8 +10,8 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Only what this slice reads or writes. The retry budget, the automation cap,
-/// the leftover switch and the two reporting switches are ADR 0033's too, and
+/// Only what the implemented slices read or write. The automation cap, the
+/// leftover switch and the two reporting switches are ADR 0033's too, and
 /// arrive with the features that read them: a column nothing reads is a column
 /// nothing tests.
 /// </para>
@@ -113,4 +113,7 @@ public sealed class InstallationRow
     /// </para>
     /// </remarks>
     public DateTimeOffset? PlanShortSince { get; set; }
+
+    /// <summary>ADR 0008's per-Video Download budget.</summary>
+    public int RetryBudget { get; set; } = 3;
 }

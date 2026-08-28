@@ -61,7 +61,7 @@ public sealed class CatalogueSchemaTests
             .Order(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["indexer", "installation"], exported);
+        Assert.Equal(["download", "indexer", "installation"], exported);
     }
 
     /// <summary>
@@ -195,6 +195,9 @@ public sealed class CatalogueSchemaTests
             Assert.Equal(0, await context.ReleaseCandidates.CountAsync(TestContext.Current.CancellationToken));
             Assert.Equal(0, await context.WantedVideoSweepStates.CountAsync(TestContext.Current.CancellationToken));
             Assert.Equal(0, await context.IdentificationOutcomes.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await context.Downloads.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await context.ReleasesNotDownloaded.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(3, installation.RetryBudget);
         }
     }
 
