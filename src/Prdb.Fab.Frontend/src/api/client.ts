@@ -36,6 +36,12 @@ export type ReleasePage = Schema['ReleasePage']
 export type IdentificationState = Schema['IdentificationState']
 export type DownloadPreview = Schema['DownloadPreview']
 export type DownloadVerdict = Schema['DownloadVerdict']
+export type DownloadPage = Schema['DownloadPage']
+export type DownloadState = Schema['DownloadState']
+export type DownloadSelectionPreview = Schema['DownloadSelectionPreview']
+export type DownloadSelectionVerdict = Schema['DownloadSelectionVerdict']
+export type DownloadResetPreview = Schema['DownloadResetPreview']
+export type DownloadResetVerdict = Schema['DownloadResetVerdict']
 
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
@@ -266,6 +272,45 @@ export async function downloadRelease(
   downloadId: string,
 ): Promise<DownloadVerdict> {
   return post<DownloadVerdict>(`/api/releases/${releaseId}/download`, { videoId, downloadId })
+}
+
+export async function listDownloads(filters: {
+  state?: DownloadState
+  indexer?: string
+  page: number
+}): Promise<DownloadPage> {
+  return json<DownloadPage>(
+    await fetch(
+      `/api/downloads?${parameters({
+        state: filters.state,
+        indexer: filters.indexer,
+        page: String(filters.page),
+      })}`,
+    ),
+  )
+}
+
+export async function previewStopFollowing(
+  downloadIds: string[],
+): Promise<DownloadSelectionPreview> {
+  return post<DownloadSelectionPreview>('/api/downloads/stop-following/preview', { downloadIds })
+}
+
+export async function stopFollowing(downloadIds: string[]): Promise<DownloadSelectionVerdict> {
+  return post<DownloadSelectionVerdict>('/api/downloads/stop-following', { downloadIds })
+}
+
+export async function previewResetDownloads(videoId: string): Promise<DownloadResetPreview> {
+  return post<DownloadResetPreview>(`/api/releases/video/${videoId}/reset-downloads/preview`)
+}
+
+export async function resetDownloads(
+  videoId: string,
+  downloadIds: string[],
+): Promise<DownloadResetVerdict> {
+  return post<DownloadResetVerdict>(`/api/releases/video/${videoId}/reset-downloads`, {
+    downloadIds,
+  })
 }
 
 function parameters(values: Record<string, string | undefined>): URLSearchParams {

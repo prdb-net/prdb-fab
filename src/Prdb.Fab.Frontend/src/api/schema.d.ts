@@ -237,6 +237,201 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    state?: components["schemas"]["DownloadState"];
+                    indexer?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downloads/stop-following/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DownloadSelectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadSelectionPreview"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/downloads/stop-following": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DownloadSelectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadSelectionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/video/{videoId}/reset-downloads/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    videoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadResetPreview"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/video/{videoId}/reset-downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    videoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DownloadResetRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadResetVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/access/state": {
         parameters: {
             query?: never;
@@ -1251,8 +1446,25 @@ export interface components {
         };
         /** @enum {unknown} */
         DownloadCause: "Rejected" | "Failed" | "Unusable" | "Vanished" | "Abandoned" | "Empty" | null;
+        DownloadIndexer: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @enum {unknown} */
+        DownloadOrigin: "Person" | "Automation";
         /** @enum {unknown} */
         DownloadOutcome: "Submitted" | "Rejected" | "SubmissionUnknown" | "ConnectionProblem" | "IndexerProblem" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
+        DownloadPage: {
+            downloads: components["schemas"]["DownloadViewRow"][];
+            indexers: components["schemas"]["DownloadIndexer"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
         /** @enum {unknown} */
         DownloadPlanOutcome: "Ready" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
         DownloadPreview: {
@@ -1277,7 +1489,51 @@ export interface components {
             videoId: string;
         };
         /** @enum {unknown} */
-        DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed" | null;
+        DownloadResetOutcome: "Ready" | "NothingToReset" | "SelectionChanged" | "Reset";
+        DownloadResetPreview: {
+            outcome: components["schemas"]["DownloadResetOutcome"];
+            /** Format: uuid */
+            videoId: string;
+            downloads: components["schemas"]["DownloadSelectionRow"][];
+            detail: string;
+        };
+        DownloadResetRequest: {
+            downloadIds: string[];
+        };
+        DownloadResetVerdict: {
+            outcome: components["schemas"]["DownloadResetOutcome"];
+            /** Format: int32 */
+            removed: number | string;
+            detail: string;
+        };
+        /** @enum {unknown} */
+        DownloadSelectionOutcome: "Ready" | "SelectionChanged" | "Stopped";
+        DownloadSelectionPreview: {
+            outcome: components["schemas"]["DownloadSelectionOutcome"];
+            downloads: components["schemas"]["DownloadSelectionRow"][];
+            detail: string;
+        };
+        DownloadSelectionRequest: {
+            downloadIds: string[];
+        };
+        DownloadSelectionRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            submittedName: string;
+            state: components["schemas"]["DownloadState"];
+            cause: null | components["schemas"]["DownloadCause"];
+            nzoId: null | string;
+        };
+        DownloadSelectionVerdict: {
+            outcome: components["schemas"]["DownloadSelectionOutcome"];
+            /** Format: int32 */
+            changed: number | string;
+            detail: string;
+        };
+        /** @enum {unknown} */
+        DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed";
         DownloadVerdict: {
             outcome: components["schemas"]["DownloadOutcome"];
             /** Format: uuid */
@@ -1286,6 +1542,29 @@ export interface components {
             cause: null | components["schemas"]["DownloadCause"];
             nzoId: null | string;
             detail: string;
+        };
+        DownloadViewRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            videoTitle: string;
+            indexer: components["schemas"]["DownloadIndexer"];
+            derivedReleaseId: string;
+            submittedName: string;
+            /** Format: int64 */
+            size: null | number | string;
+            nzoId: null | string;
+            state: components["schemas"]["DownloadState"];
+            cause: null | components["schemas"]["DownloadCause"];
+            lastSabnzbdStatus: null | string;
+            failMessage: null | string;
+            stageLog: null | string;
+            /** Format: date-time */
+            outstandingSince: string;
+            origin: components["schemas"]["DownloadOrigin"];
+            /** Format: date-time */
+            createdAt: string;
         };
         HealthResponse: {
             status: string;
@@ -1423,6 +1702,7 @@ export interface components {
             pageSize: number | string;
             /** Format: int32 */
             total: number | string;
+            acquisition: null | components["schemas"]["VideoAcquisition"];
         };
         ReleaseViewRow: {
             /** Format: int64 */
@@ -1528,6 +1808,14 @@ export interface components {
             addedAt: string;
             /** Format: date-time */
             sweptAt: null | string;
+        };
+        VideoAcquisition: {
+            /** Format: int32 */
+            downloadsSpent: number | string;
+            /** Format: int32 */
+            retryBudget: number | string;
+            nextRelease: null | components["schemas"]["ReleaseChoice"];
+            downloads: components["schemas"]["DownloadSelectionRow"][];
         };
         VideoCard: {
             /** Format: int64 */

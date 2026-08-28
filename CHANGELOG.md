@@ -19,6 +19,50 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-28
+
+Manual acquisition now reaches SABnzbd and remains visible after the click.
+The tool records each attempt before submission, follows the job, and advances
+through the ranked Releases within a three-attempt budget.
+
+### Added
+
+- **Confirmed Release submission.** An eligible Release on a Video can fetch
+  its NZB and submit it to the configured SABnzbd category. The local Download
+  reservation is durable before the remote write, and a lost answer is
+  recovered only by one exact submitted-name match rather than by blindly
+  submitting the same NZB again.
+- **SABnzbd following every five seconds.** The poll asks the queue first and
+  history only for missing job ids. Request failures preserve an unknown state;
+  three consecutive successful absences report a likely deleted job. SABnzbd's
+  status, failure message and stage log remain visible without translated text
+  being used as control flow.
+- **Automatic ranked retries with a three-Download budget per Video.** Rejected,
+  failed, unusable, vanished, abandoned and empty Downloads all consume their
+  Release and one attempt, then select the next ranked unconsumed Release. A
+  spent budget and no eligible Releases left are shown as different outcomes.
+- **Downloads**, a local-only, newest-first table with State and Indexer filters,
+  SABnzbd evidence, origin and outstanding-since time. Its only action is a
+  confirmed multi-selection *Stop following*.
+- **Per-Video acquisition history on Releases.** The page shows attempts used,
+  consumed Releases, the next ranked choice, and a confirmed reset that deletes
+  only that Video's local Download history.
+
+### Operational boundary
+
+- **The only SABnzbd write is the initial `addfile`.** prdb-fab never calls
+  SABnzbd retry or delete. Stopping following, resetting local history and every
+  automatic failure decision leave SABnzbd's queue and history untouched.
+- **Installation trouble spends nothing.** An unreachable or globally paused
+  SABnzbd raises a Gap; it is not treated as a broken Release. A failed poll
+  neither increments nor resets absence evidence.
+- **Completed files are not collected in this version.** They remain in
+  SABnzbd's configured Download Directory. Filing and any move into the library
+  root arrive in a later version.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.4.0 has started against it.
+
 ## [0.3.0] - 2026-08-28
 
 Release discovery is now visible. The tool continuously extends a bounded

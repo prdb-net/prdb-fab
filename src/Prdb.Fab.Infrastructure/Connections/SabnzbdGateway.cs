@@ -199,6 +199,93 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
         }
     }
 
+    /// <summary>
+    /// Reads the outstanding jobs without ever turning a failed request into an
+    /// empty answer. Known ids are asked of the queue first and only the ids it
+    /// did not return are asked of history. A missing addfile answer has no id,
+    /// so those few rows additionally use bounded queue and history reads for a
+    /// unique exact submitted-name recovery.
+    /// </summary>
+    public async Task<SabnzbdObservation> ObserveAsync(
+        string? url,
+        string? apiKey,
+        IReadOnlyCollection<string> knownIds,
+        bool recoverSubmittedNames,
+        CancellationToken cancellationToken = default)
+    {
+        if (BaseAddressOf(url) is not { } address)
+        {
+            return SabnzbdObservation.Refused(SabnzbdConnectionOutcome.NotSabnzbd);
+        }
+
+        var client = clients.CreateClient(FabTransports.Sabnzbd);
+        var queueJobs = new List<SabnzbdJob>();
+        var historyJobs = new List<SabnzbdJob>();
+        var paused = false;
+
+        if (knownIds.Count > 0)
+        {
+            var queueMode = "queue&nzo_ids=" + Uri.EscapeDataString(string.Join(',', knownIds));
+            var (refusal, body) = await ReadAsync<QueueEnvelope>(
+                client, address, apiKey, queueMode, cancellationToken);
+            if (refusal is { } outcome || body?.Queue is null)
+            {
+                return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
+            }
+
+            paused |= body.Queue.Paused;
+            queueJobs.AddRange((body.Queue.Slots ?? []).Select(QueueJob));
+        }
+
+        if (recoverSubmittedNames)
+        {
+            var (refusal, body) = await ReadAsync<QueueEnvelope>(
+                client, address, apiKey, "queue&start=0&limit=100", cancellationToken);
+            if (refusal is { } outcome || body?.Queue is null)
+            {
+                return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
+            }
+
+            paused |= body.Queue.Paused;
+            queueJobs.AddRange((body.Queue.Slots ?? []).Select(QueueJob));
+        }
+
+        var queueIds = queueJobs.Select(job => job.NzoId).ToHashSet(StringComparer.Ordinal);
+        var missingIds = knownIds.Where(id => !queueIds.Contains(id)).ToArray();
+
+        if (missingIds.Length > 0)
+        {
+            var historyMode = "history&limit=100&nzo_ids="
+                + Uri.EscapeDataString(string.Join(',', missingIds));
+            var (refusal, body) = await ReadAsync<HistoryEnvelope>(
+                client, address, apiKey, historyMode, cancellationToken);
+            if (refusal is { } outcome || body?.History is null)
+            {
+                return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
+            }
+
+            historyJobs.AddRange((body.History.Slots ?? []).Select(HistoryJob));
+        }
+
+        if (recoverSubmittedNames)
+        {
+            var (refusal, body) = await ReadAsync<HistoryEnvelope>(
+                client, address, apiKey, "history&start=0&limit=100", cancellationToken);
+            if (refusal is { } outcome || body?.History is null)
+            {
+                return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
+            }
+
+            historyJobs.AddRange((body.History.Slots ?? []).Select(HistoryJob));
+        }
+
+        return new(
+            SabnzbdConnectionOutcome.Saved,
+            paused,
+            queueJobs.DistinctBy(job => job.NzoId).ToArray(),
+            historyJobs.DistinctBy(job => job.NzoId).ToArray());
+    }
+
     private async Task<(SabnzbdConnectionOutcome? Refusal, T? Body)> ReadAsync<T>(
         HttpClient client,
         Uri address,
@@ -314,6 +401,52 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
 
     private sealed record AddFileBody(
         [property: JsonPropertyName("nzo_ids")] string[]? NzoIds);
+
+    private static SabnzbdJob QueueJob(QueueSlot slot) => new(
+        slot.NzoId ?? string.Empty,
+        slot.Filename ?? string.Empty,
+        slot.Status ?? string.Empty,
+        slot.Labels ?? [],
+        null,
+        null,
+        SabnzbdJobLocation.Queue);
+
+    private static SabnzbdJob HistoryJob(HistorySlot slot) => new(
+        slot.NzoId ?? string.Empty,
+        slot.Name ?? string.Empty,
+        slot.Status ?? string.Empty,
+        [],
+        slot.FailMessage,
+        slot.StageLog.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null
+            ? null
+            : slot.StageLog.GetRawText(),
+        SabnzbdJobLocation.History);
+
+    private sealed record QueueEnvelope(
+        [property: JsonPropertyName("queue")] QueueBody? Queue);
+
+    private sealed record QueueBody(
+        [property: JsonPropertyName("paused")] bool Paused,
+        [property: JsonPropertyName("slots")] QueueSlot[]? Slots);
+
+    private sealed record QueueSlot(
+        [property: JsonPropertyName("nzo_id")] string? NzoId,
+        [property: JsonPropertyName("filename")] string? Filename,
+        [property: JsonPropertyName("status")] string? Status,
+        [property: JsonPropertyName("labels")] string[]? Labels);
+
+    private sealed record HistoryEnvelope(
+        [property: JsonPropertyName("history")] HistoryBody? History);
+
+    private sealed record HistoryBody(
+        [property: JsonPropertyName("slots")] HistorySlot[]? Slots);
+
+    private sealed record HistorySlot(
+        [property: JsonPropertyName("nzo_id")] string? NzoId,
+        [property: JsonPropertyName("name")] string? Name,
+        [property: JsonPropertyName("status")] string? Status,
+        [property: JsonPropertyName("fail_message")] string? FailMessage,
+        [property: JsonPropertyName("stage_log")] JsonElement StageLog);
 }
 
 /// <summary>One of SABnzbd's own categories, and where its downloads finish.</summary>
@@ -339,3 +472,28 @@ public sealed record SabnzbdCategoryNames(
 public sealed record SabnzbdSubmission(
     SabnzbdConnectionOutcome Outcome,
     string? NzoId);
+
+public enum SabnzbdJobLocation
+{
+    Queue,
+    History,
+}
+
+public sealed record SabnzbdJob(
+    string NzoId,
+    string Name,
+    string Status,
+    IReadOnlyList<string> Labels,
+    string? FailMessage,
+    string? StageLog,
+    SabnzbdJobLocation Location);
+
+public sealed record SabnzbdObservation(
+    SabnzbdConnectionOutcome Outcome,
+    bool Paused,
+    IReadOnlyList<SabnzbdJob> Queue,
+    IReadOnlyList<SabnzbdJob> History)
+{
+    public static SabnzbdObservation Refused(SabnzbdConnectionOutcome outcome) =>
+        new(outcome, false, [], []);
+}

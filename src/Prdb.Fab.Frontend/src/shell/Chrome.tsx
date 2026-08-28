@@ -30,6 +30,7 @@ export function Chrome() {
       <Link to="/sites">Sites</Link>
       <Link to="/actors">Actors</Link>
       <Link to="/wanted">Wanted</Link>
+      <Link to="/downloads">Downloads</Link>
       <Link to="/settings">Settings</Link>
     </nav>
   )

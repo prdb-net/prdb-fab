@@ -21,6 +21,7 @@ import { SettingsGate } from './settings/SettingsPage.tsx'
 import { SettingsScreen } from './settings/SettingsScreen.tsx'
 import { Chrome } from './shell/Chrome.tsx'
 import { ReleaseScreen } from './release/ReleaseScreen.tsx'
+import { DownloadsScreen } from './download/DownloadsScreen.tsx'
 import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import './index.css'
 
@@ -70,6 +71,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/actors" element={<ActorsScreen />} />
             <Route path="/actors/:id" element={<ActorsScreen />} />
             <Route path="/releases" element={<ReleaseScreen />} />
+            <Route path="/downloads" element={<DownloadsScreen />} />
             {/* ADR 0020: routes rather than one page with anchors, one level
                 down as well — every indexer has its own. */}
             <Route path="/settings" element={<SettingsGate />}>

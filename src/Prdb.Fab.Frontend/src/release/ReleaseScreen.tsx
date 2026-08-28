@@ -4,7 +4,9 @@ import { useSearchParams } from 'react-router'
 import {
   listReleases,
   downloadRelease,
+  previewResetDownloads,
   previewReleaseDownload,
+  resetDownloads,
   type IdentificationState,
   type ReleasePage,
 } from '../api/client.ts'
@@ -101,10 +103,15 @@ function ReleaseTable({
       </div>
 
       <div className={styles.boundary}>
-        <strong>Manual acquisition.</strong> From a Video, choose an identified Release to
-        fetch its NZB and submit it to the checked SABnzbd category. The choice is
-        recorded before SABnzbd is written.
+        <strong>Acquisition.</strong> From a Video, choose an identified Release to fetch its
+        NZB and submit it to the checked SABnzbd category. prdb-fab follows that job and
+        automatically tries the next ranked Release after a release failure, within the
+        three-Download budget.
       </div>
+
+      {page.acquisition && (
+        <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
+      )}
 
       <div className={styles.filters}>
         <label>
@@ -205,6 +212,70 @@ function ReleaseTable({
         </nav>
       )}
     </main>
+  )
+}
+
+function AcquisitionSummary({
+  videoId,
+  acquisition,
+}: {
+  videoId: string
+  acquisition: NonNullable<ReleasePage['acquisition']>
+}) {
+  const queryClient = useQueryClient()
+  const reset = useMutation({
+    mutationFn: async () => {
+      const preview = await previewResetDownloads(videoId)
+      if (preview.outcome !== 'Ready') return preview
+      const history = preview.downloads
+        .map((download) => `• ${download.submittedName} — ${download.state}${download.cause ? ` / ${download.cause}` : ''}`)
+        .join('\n')
+      if (!window.confirm(
+        `Reset this Video's ${preview.downloads.length} Download attempt(s)?\n\n${history}\n\nThis deletes only local Download history, restores the full retry budget, and allows these Releases again. Any SABnzbd jobs are left untouched and will no longer be followed.`,
+      )) return null
+      return resetDownloads(videoId, preview.downloads.map((download) => download.id))
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['releases'] })
+      void queryClient.invalidateQueries({ queryKey: ['downloads'] })
+    },
+  })
+
+  const spent = Number(acquisition.downloadsSpent)
+  const budget = Number(acquisition.retryBudget)
+  return (
+    <section className={styles.acquisition}>
+      <div className={styles.acquisitionHeading}>
+        <div>
+          <h2>Download attempts: {spent} of {budget}</h2>
+          {spent >= budget ? (
+            <p>The Retry Budget is spent.</p>
+          ) : acquisition.nextRelease ? (
+            <p>Next ranked Release: <strong>{acquisition.nextRelease.title}</strong></p>
+          ) : (
+            <p>No unconsumed eligible Release is currently available.</p>
+          )}
+        </div>
+        <button type="button" disabled={spent === 0 || reset.isPending} onClick={() => reset.mutate()}>
+          {reset.isPending ? 'Checking…' : 'Reset Download history'}
+        </button>
+      </div>
+      {reset.data?.detail && <p className={styles.secondary}>{reset.data.detail}</p>}
+      {reset.isError && <p className={styles.secondary}>The Download history could not be checked.</p>}
+      {acquisition.downloads.length > 0 && (
+        <ul className={styles.attempts}>
+          {acquisition.downloads.map((download) => (
+            <li key={download.id}>
+              <strong>{download.state}</strong>
+              {download.cause && ` / ${download.cause}`} — {download.submittedName}
+              {download.state === 'Completed' && (
+                <span> Waiting for collection; Filing is not in this version.</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
