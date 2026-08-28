@@ -6,15 +6,15 @@ the way.
 > **This is early software.** What is in the image today asks for a password,
 > takes you through setting up, checks every connection you give it against the
 > service it names, then keeps local catalogues of what prdb and your indexers
-> say. It discovers and identifies Releases, but it does not yet fetch an NZB,
-> write to SABnzbd or file anything.
+> say. It discovers and identifies Releases, submits a selected one to SABnzbd,
+> and follows the job. It does not yet collect or file completed files.
 
 ## The quickstart
 
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.3.0
+    image: prdbnet/prdb-fab:0.4.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -66,6 +66,37 @@ the settings afterwards.
 
 Everything you answered is editable later under **Settings**, without a restart
 and without editing this Compose file.
+
+## Downloads and this version's boundary
+
+Open **Releases** for a Video and choose **Download** beside an eligible
+Release. The confirmation names the exact Release and its cost: every submitted
+Release is one of that Video's three Download attempts. prdb-fab records the
+attempt before it sends the NZB to the configured SABnzbd category, then asks
+SABnzbd about outstanding jobs every five seconds. The **Downloads** table shows
+the local state, SABnzbd's last status and messages, the Indexer, origin and how
+long the job has been outstanding.
+
+A release failure spends that attempt and automatically selects the next
+ranked, unconsumed Release while budget remains. A job SABnzbd rejects, reports
+Failed, pauses as encrypted or unwanted, or no longer knows after three
+successful polls is a release failure. An unreachable or globally paused
+SABnzbd is instead an installation problem: it raises a Gap and spends nothing.
+A failed request is unknown, never evidence that a job vanished.
+
+When all three attempts are spent, the Release view says so. If eligible
+Releases run out first, it says that separately. **Reset Download history** is a
+confirmed action for that exact Video: it deletes its local attempt history and
+makes those Releases eligible again. Any SABnzbd jobs remain untouched.
+
+The only SABnzbd write prdb-fab performs is the initial `addfile`. It never uses
+SABnzbd's retry or delete actions. **Stop following** likewise marks only the
+selected local Download; the SABnzbd job continues under your control.
+
+**Completed means SABnzbd has finished, not that prdb-fab has moved anything.**
+In 0.4.0 the finished files stay in SABnzbd's configured Download Directory.
+Collection and Filing arrive in a later version, so make sure that directory
+has enough space and do not expect the library root to change yet.
 
 ## The mounts
 
@@ -251,7 +282,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.3.0` | A release. This is what documentation and Compose files should pin. |
+| `0.4.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 

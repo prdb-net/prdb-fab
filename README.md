@@ -8,8 +8,9 @@ Self-hosted, Docker Compose, single user. A prdb API key is required.
 > **This is early software.** What is in the image today asks for a password,
 > takes you through setting up, checks every connection you give it against the
 > service it names, keeps local catalogues of what prdb and your indexers say,
-> and identifies cached releases through prdb. You can browse and filter those
-> answers, but it does not yet fetch an NZB, write to SABnzbd or file anything.
+> identifies cached releases through prdb, and can submit an identified Release
+> to SABnzbd and follow it through completion. It does not yet collect or file
+> the completed files.
 
 ## What you need
 
@@ -27,7 +28,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.3.0
+    image: prdbnet/prdb-fab:0.4.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -87,9 +88,18 @@ Indexer Walk. The first walk reads up to 90 days of history and may therefore
 cost hundreds of queries or continue on a later day. It never spends past that
 Indexer's daily budget.
 
-Release discovery is read-only in this version: **no NZB is fetched and nothing
-is written to SABnzbd**. Downloading and filing are not wider claims hidden
-behind the Releases table; they do not exist yet.
+From a Video's Releases table, **Download** fetches that exact NZB and submits
+it to the configured SABnzbd category. The choice is recorded before the remote
+write. prdb-fab then polls SABnzbd, shows its own Outstanding, Completed and
+Failed state under **Downloads**, and automatically tries the next ranked,
+unconsumed Release after a release failure. Each Video has a budget of three
+Download attempts; its Release view shows the spent attempts, the next choice,
+and a confirmed reset of that Video's local history.
+
+This version's boundary is exact: **prdb-fab never retries or deletes a SABnzbd
+job**, and *Stop following* changes only the local record. When SABnzbd reports
+Completed, the files remain in its Download Directory. Collection and Filing
+are not in this version.
 
 ## Configuration
 
