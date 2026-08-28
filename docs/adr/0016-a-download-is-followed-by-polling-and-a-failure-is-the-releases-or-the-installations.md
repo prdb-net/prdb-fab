@@ -136,6 +136,15 @@ video still wants it after one broken release. When the budget is spent, or when
 the ranking has nothing left, the wanted video reaches a visible end state —
 ADR 0008 keeps those two apart — and only the user's reset brings it back.
 
+The exception is not a seventh Cause. When the Wanted feed says an automatically
+downloaded Video is no longer wanted, the existing **Abandoned** Cause is
+applied, the Release remains consumed and the Retry Budget remains charged, but
+no next Release is submitted because there is no longer any intent to satisfy.
+The tool stops following and leaves the SABnzbd job untouched, exactly as the
+manual action does. This resolves ADR 0007's former delete requirement in favour
+of the ownership boundary below
+([ADR 0045](0045-a-wanted-removal-abandons-the-download-and-never-writes-sabnzbd.md)).
+
 ## What is never written to SABnzbd
 
 Only `addfile`. Not `mode=retry`, which mints a new `nzo_id` and destroys the
@@ -194,10 +203,12 @@ person sees the stall, and the tool does not claim it.
   four states above are untouched: they describe following the download, and the
   stamp describes its directory, which is why it is not a fifth one.* Amended
   again by [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md),
-  which adds the **origin** — the automation rule that permitted the submission,
-  as a reference and as the name it carried at the time, or the person who
-  started it. Exported, and deliberately not called a cause, since that word is
-  already spent on the six above.*)
+  which adds the **origin** — the person who started it, or the automation rules
+  that permitted it. [ADR 0046](0046-an-automatic-origin-is-every-rule-that-permitted-the-download.md)
+  later makes the automatic half every permitting rule, each with a live
+  reference while it exists and the name it carried at submission. Exported,
+  and deliberately not called a cause, since that word is already spent on the
+  six above.*)
 - **A failed download's files are left where SABnzbd left them.** The tool does
   not collect them, does not delete them, and does not ask SABnzbd to. What a
   failed job leaves in the incomplete tree is SABnzbd's own cleanup.

@@ -109,7 +109,7 @@ credentials*.
 ## What the export carries, checked rather than assumed
 
 ADR 0009 promises a document a person can read, which makes "does anything leak
-into a plain field" a checkable property. All ten exported tables from ADR 0033,
+into a plain field" a checkable property. All fourteen exported tables from ADR 0033,
 checked:
 
 | Exported table | Secret-bearing? |
@@ -119,6 +119,8 @@ checked:
 | `GateAdmission`, `AutomationRule`, `AutomationRuleIndexer` | no |
 | `LibraryEntry`, `VideoFile` | paths, root-relative per ADR 0009 |
 | `Download` | `stage_log` and `fail_message` verbatim — **see below** |
+| `DownloadOriginRule` | rule id and copied name, no credential |
+| `ArrivingFile`, `ArrivingFileCandidate` | paths re-rooted per ADR 0009, Probe facts and Candidates |
 | `ReportedState`, `ConfirmedAssignment` | `userHash` |
 | `OperationLogEntry` | paths and names |
 

@@ -10,6 +10,7 @@ using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Tests;
 
@@ -83,6 +84,7 @@ public sealed class TestDatabase : IAsyncDisposable
         services.AddFabScheduling();
         services.AddFabAccess();
         services.AddFabConnections();
+        services.AddFabReleaseDiscovery();
 
         if (prdb is not null)
         {

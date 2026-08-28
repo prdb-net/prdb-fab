@@ -65,6 +65,7 @@ public sealed class AnotherAccountTests
         Assert.Equal(0, await context.WantedVideos.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(0, await context.FavouriteSites.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(0, await context.FavouriteActors.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, await context.WantedVideoSweepStates.CountAsync(TestContext.Current.CancellationToken));
 
         // The three that walked the user's own feeds, and only those three.
         var cursors = await context.FeedCursors
@@ -82,6 +83,7 @@ public sealed class AnotherAccountTests
         Assert.Equal(held, await context.CatalogueVideos.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.CatalogueSites.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.CatalogueActors.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, await context.Releases.CountAsync(TestContext.Current.CancellationToken));
 
         var installation = await context.Installation.SingleAsync(TestContext.Current.CancellationToken);
 
@@ -217,9 +219,12 @@ public sealed class AnotherAccountTests
 
         Assert.Equal(declared, [.. dropped.OrderBy(table => table, StringComparer.Ordinal)]);
 
-        // Today that is the three ADR 0013 names, and nothing else — above all
-        // not the catalogue, which belongs to no account.
-        Assert.Equal(["favourite_actor", "favourite_site", "wanted_video"], declared);
+        // The three ADR 0013 choices and the per-account position of each
+        // wanted-video/indexer sweep go. The release cache itself belongs to no
+        // account and deliberately is not here.
+        Assert.Equal(
+            ["favourite_actor", "favourite_site", "wanted_video", "wanted_video_sweep_state"],
+            declared);
 
         // ADR 0019's record of what was reported is account-stamped rather than
         // account-scoped, and its table does not exist yet. What has to be true
@@ -270,6 +275,34 @@ public sealed class AnotherAccountTests
         context.WantedVideos.Add(new WantedVideoRow { VideoId = video.Id, SinceAt = Noon });
         context.FavouriteSites.Add(new FavouriteSiteRow { SiteId = site.Id, SinceAt = Noon });
         context.FavouriteActors.Add(new FavouriteActorRow { ActorId = actor.Id, SinceAt = Noon });
+
+        var indexer = new IndexerRow
+        {
+            Id = Guid.Parse("0198ec28-1c00-7000-8000-000000000003"),
+            Name = "An indexer",
+            Url = "https://indexer.invalid/api",
+            ApiKey = "indexer-key",
+            Categories = "Adult",
+            LastVerdict = IndexerConnectionOutcome.Saved,
+            LastCheckedAt = Noon,
+        };
+        context.Indexers.Add(indexer);
+        context.Releases.Add(new ReleaseRow
+        {
+            Indexer = indexer,
+            DerivedReleaseId = "release-id",
+            Title = "A release",
+            NormalisedTitle = "a release",
+            PostDate = Noon,
+            PubDate = Noon,
+            FirstSeenAt = Noon,
+        });
+        context.WantedVideoSweepStates.Add(new WantedVideoSweepStateRow
+        {
+            Video = context.WantedVideos.Local.Single(),
+            Indexer = indexer,
+            LastSearchedAt = Noon,
+        });
 
         foreach (var feed in Feeds.All)
         {

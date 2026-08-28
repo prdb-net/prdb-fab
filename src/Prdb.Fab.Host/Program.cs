@@ -16,6 +16,7 @@ using Prdb.Fab.Host.Skeleton;
 using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 using Prdb.Fab.Infrastructure.Scheduling;
 using Prdb.Fab.Infrastructure.Sync;
 
@@ -40,6 +41,7 @@ builder.Services.AddFabPersistence(dataDirectory);
 builder.Services.AddFabScheduling();
 builder.Services.AddFabAccess();
 builder.Services.AddFabConnections();
+builder.Services.AddFabReleaseDiscovery();
 builder.Services.AddFabSync();
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
@@ -136,6 +138,7 @@ if (!readingTheEndpoints)
 
     // ADR 0038: a routine with no row never runs, so the rows are created with
     // the code rather than by hand.
+    await app.Services.PrepareFabReleaseDiscoveryAsync();
     await app.Services.PrepareFabScheduleAsync();
 
     // ADR 0010: the way back in when the password is lost, taken at the host

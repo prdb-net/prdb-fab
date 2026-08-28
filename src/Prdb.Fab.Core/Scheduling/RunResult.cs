@@ -21,12 +21,20 @@ namespace Prdb.Fab.Core.Scheduling;
 /// </remarks>
 public sealed record RunResult
 {
-    private RunResult(RunOutcome? outcome, int itemsHandled, string? reason, TimeSpan? dueIn = null)
+    private RunResult(
+        RunOutcome? outcome,
+        int itemsHandled,
+        string? reason,
+        TimeSpan? dueIn = null,
+        int? resultsSeen = null,
+        int? rowsAdded = null)
     {
         Outcome = outcome;
         ItemsHandled = itemsHandled;
         Reason = reason;
         DueIn = dueIn;
+        ResultsSeen = resultsSeen;
+        RowsAdded = rowsAdded;
     }
 
     /// <summary>
@@ -37,6 +45,12 @@ public sealed record RunResult
 
     /// <summary>How much of its work set the run got through.</summary>
     public int ItemsHandled { get; }
+
+    /// <summary>Remote results observed, when that differs from rows inserted.</summary>
+    public int? ResultsSeen { get; }
+
+    /// <summary>New durable rows inserted, when a routine is an idempotent reader.</summary>
+    public int? RowsAdded { get; }
 
     /// <summary>
     /// Why it failed, for a person reading the run log. Never read for control
@@ -54,6 +68,9 @@ public sealed record RunResult
     /// <summary>The routine got through <paramref name="itemsHandled"/> of its work set.</summary>
     public static RunResult Handled(int itemsHandled) =>
         new(RunOutcome.Succeeded, itemsHandled, reason: null);
+
+    public static RunResult Discovered(int resultsSeen, int rowsAdded) =>
+        new(RunOutcome.Succeeded, resultsSeen, reason: null, resultsSeen: resultsSeen, rowsAdded: rowsAdded);
 
     /// <summary>The routine failed, with a sentence for whoever reads the log.</summary>
     /// <param name="waitFor">

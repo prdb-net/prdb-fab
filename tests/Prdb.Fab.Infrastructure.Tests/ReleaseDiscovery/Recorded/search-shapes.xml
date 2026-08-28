@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:newznab="http://www.newznab.com/DTD/2010/feeds/attributes/">
+  <channel>
+    <item>
+      <title>A.Release.Title.mkv</title>
+      <guid>https://example.invalid/details/ignored-uri-id</guid>
+      <link>https://example.invalid/get/attribute-id?apikey=first-key</link>
+      <pubDate>Thu, 27 Aug 2026 08:00:00 +0000</pubDate>
+      <newznab:attr name="guid" value="attribute-id" />
+      <newznab:attr name="usenetdate" value="2026-08-26T08:00:00Z" />
+      <newznab:attr name="category" value="5010" />
+      <newznab:attr name="size" value="12345" />
+    </item>
+    <item>
+      <title>URI shape</title>
+      <guid>https://example.invalid/details/uri-id</guid>
+      <link>https://example.invalid/get/uri-id?apikey=first-key</link>
+      <pubDate>Thu, 27 Aug 2026 07:00:00 +0000</pubDate>
+      <enclosure url="https://example.invalid/get/uri-id?apikey=first-key" length="67890" />
+    </item>
+    <item>
+      <title>Spotweb shape</title>
+      <guid>&lt;spot.42@example.invalid&gt;</guid>
+      <link>https://example.invalid/get/spot?apikey=first-key</link>
+      <pubDate>Thu, 27 Aug 2026 06:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>No identity</title>
+      <pubDate>Thu, 27 Aug 2026 05:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>

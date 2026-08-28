@@ -36,38 +36,40 @@ public sealed class RoutineRegistrar(
 
         foreach (var routine in routines)
         {
-            var exists = await context.Routines
-                .AnyAsync(row => row.Name == routine.Name && row.Target == null, cancellationToken);
+            IReadOnlyList<string?> targets = routine is ITargetedRoutine targeted
+                ? [.. await targeted.TargetsAsync(cancellationToken)]
+                : [null];
 
-            if (exists)
+            foreach (var target in targets)
             {
-                continue;
+                var exists = await context.Routines
+                    .AnyAsync(row => row.Name == routine.Name && row.Target == target, cancellationToken);
+
+                if (exists)
+                {
+                    continue;
+                }
+
+                // Untargeted one-shots retain the original completion question.
+                // Targeted one-shots express the same fact by omitting completed
+                // targets from TargetsAsync.
+                if (routine is IOneShot once
+                    && routine is not ITargetedRoutine
+                    && !await once.StartsAsync(cancellationToken))
+                {
+                    continue;
+                }
+
+                context.Routines.Add(new RoutineRow
+                {
+                    Name = routine.Name,
+                    Target = target,
+                    Lane = routine.Lane,
+                    DueAt = now,
+                });
+
+                added++;
             }
-
-            // ADR 0014's bootstrap routines retire by deleting their row, so
-            // for them "there is no row" is ambiguous: it is either the first
-            // start or every start after they finished. Only the routine can
-            // tell those apart, and this is where it is asked — creating the
-            // row anyway would start the drain over on the next restart, having
-            // read prdb's whole actor corpus once already.
-            if (routine is IOneShot once && !await once.StartsAsync(cancellationToken))
-            {
-                continue;
-            }
-
-            context.Routines.Add(new RoutineRow
-            {
-                Name = routine.Name,
-                Target = null,
-                Lane = routine.Lane,
-
-                // Due immediately, and then spread with everything else that is
-                // overdue — see SpreadOverdueAsync below, which runs straight
-                // after this and is what ADR 0014 asks for.
-                DueAt = now,
-            });
-
-            added++;
         }
 
         if (added > 0)

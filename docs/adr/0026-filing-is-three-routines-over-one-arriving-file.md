@@ -302,8 +302,11 @@ page already.
 - The data model gains the **arriving file** table — ADR 0021's six values, the
   download and release, the video or site once known, the candidates, the
   reason, whether the file is still on disk, the state, and the intended path
-  while it is `Filing`. It is not exported, describing files in a download
-  directory, which is what ADR 0022 already said of the queue entry it is.
+  while it is `Filing`. It and its Candidates are exported whole: an open row is
+  the Review Queue state ADR 0009 promises to preserve, and splitting the table
+  by state would violate ADR 0033's export boundary. Restore re-roots its source
+  and intended paths and resumes the same state machine conservatively
+  ([ADR 0047](0047-arriving-files-cross-the-backup-boundary.md)).
 - Every filed video file leaves the library's own record as the only thing that
   knows where it went, which ADR 0017 already required; nothing in this chain
   recomputes a path to find earlier work, including the recovery rule, which

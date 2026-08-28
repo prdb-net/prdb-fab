@@ -317,9 +317,11 @@ themselves.** Rejected again, as in ADR 0011: it picks a winner nobody chose.
 - The schema gains a **review queue entry** — the video file with the row shape
   ADR 0021 fixed, the reason, the download and release it came from, the video
   or the site where one is known, the candidates where there were several, and
-  whether the file is still on disk. Its open count has to be indexed. It is not
-  exported: it describes files in a download directory, which ADR 0009 does not
-  carry.
+  whether the file is still on disk. Its open count has to be indexed. It is
+  exported with every other Arriving File, because the Review Queue is local
+  state ADR 0009 explicitly carries and a whole-table export cannot preserve
+  only the rows that currently have a reason
+  ([ADR 0047](0047-arriving-files-cross-the-backup-boundary.md)).
 - The schema also gains a **confirmed assignment** row — `osHash`, video,
   `userHash`, size, the arrival file name and release name, the four probe
   values, and what prdb answered. This one **is** exported: it is a human

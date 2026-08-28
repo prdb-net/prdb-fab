@@ -93,6 +93,8 @@ public sealed class RoutineStore(
                 FinishedAt = now,
                 Outcome = result.Outcome!.Value,
                 ItemsHandled = result.ItemsHandled,
+                ResultsSeen = result.ResultsSeen,
+                RowsAdded = result.RowsAdded,
                 Reason = result.Reason,
             });
         }

@@ -94,14 +94,16 @@ requires *why is this on my disk* to always have an answer. No ADR has stored
 that answer. ADR 0016's download table carries the release and the video but
 nothing about what permitted the submission.
 
-So the download row gains an **origin**: the automation rule that permitted it,
-or the person who started it by hand. It is stored as the rule reference **and
-the rule's name as it read at that moment**, because
+So the download gains an **origin**: the person who started it by hand, or every
+automation rule that permitted it. The original singular rule was amended by
+[ADR 0046](0046-an-automatic-origin-is-every-rule-that-permitted-the-download.md):
+rules are permissions without order, so choosing one would invent a winner.
+Each automatic Origin member stores the rule reference while it exists and
+**the rule's name as it read at that moment**, because
 [ADR 0020](0020-a-setting-exists-where-the-tool-cannot-know-the-answer-and-its-form-is-the-onboarding-step.md)
-permits a rule to be deleted and a download row is never deleted. The name is
-displayed; the reference is what makes it a link while the rule still exists.
-Exported with the row, since it is part of what ADR 0009 keeps as the consumed
-state and cannot be reconstructed from anything else.
+permits a rule to be deleted and a download row never is. The names are
+displayed; the references are links while the rules still exist. The Download
+and its Origin members are exported, since ADR 0009 cannot reconstruct either.
 
 It is deliberately **not** called a cause. ADR 0016 spent that word on the six
 reasons a download failed, and two fields called *cause* on one row, one saying
@@ -213,15 +215,17 @@ whole download history reads in one place.
 
 **Store the origin as free text only.** Rejected: it cannot be linked, and the
 common case — a rule that still exists — is the one where the user wants to go
-and look at it. Storing both costs one nullable column.
+and look at it. ADR 0046 keeps both the reference and the copied name for every
+permitting rule.
 
 ## Consequences
 
 - **`CONTEXT.md` gains Origin**, defined against **Cause**, which ADR 0016
   already owns. **Download** is untouched.
-- **ADR 0016's download table gains two columns** — the origin reference and the
-  origin name — and both are exported. The four states, the cause and everything
-  else on the row are unchanged.
+- **ADR 0016's Download gains an Origin shape**: Person is recorded on the row;
+  automatic permission is one exported child row per permitting rule, carrying
+  a nullable live reference and an immutable copied name. The four states, the
+  Cause and everything else on the Download are unchanged.
 - **ADR 0018's spent-retry-budget Brake has a destination**: the release view of
   the video, where the reset is. So does ADR 0022's queue Brake: the review
   queue filtered to that entry.

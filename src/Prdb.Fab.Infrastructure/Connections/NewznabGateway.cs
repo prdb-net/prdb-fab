@@ -1,229 +1,351 @@
 using System.Globalization;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Xml;
 using System.Xml.Linq;
 
 using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Connections;
 
-/// <summary>
-/// The one place an indexer is reached from. One transport for all of them —
-/// ADR 0041: a client is a transport, not an address, and the URL travels with
-/// the request.
-/// </summary>
-public sealed class NewznabGateway(IHttpClientFactory clients, ILogger<NewznabGateway> logger)
+/// <summary>The sole HTTP and parsing boundary for every Newznab read.</summary>
+public sealed partial class NewznabGateway(
+    IHttpClientFactory clients,
+    TimeProvider time,
+    ILogger<NewznabGateway> logger)
 {
-    /// <summary>
-    /// ADR 0010's check for an indexer, in the order the two calls have to
-    /// happen in: a real search, and then the category tree.
-    /// </summary>
-    /// <remarks>
-    /// The search is first because it is the only one of the two that proves
-    /// anything about the key. <c>t=caps</c> is not a key test — three of the
-    /// four implementations the research surveyed answer it without a key at
-    /// all — and it is read second, for the one part of a capabilities document
-    /// that is worth trusting.
-    /// </remarks>
+    public const int PageSize = 100;
+
     public async Task<NewznabCheck> CheckAsync(
         string? url,
         string? apiKey,
         CancellationToken cancellationToken = default)
     {
-        if (!Uri.TryCreate((url ?? string.Empty).Trim(), UriKind.Absolute, out var address)
-            || address.Scheme is not ("http" or "https"))
+        if (!Address(url, out var address))
         {
             return NewznabCheck.Refusing(IndexerConnectionOutcome.NotAnIndexer);
         }
 
-        var client = clients.CreateClient(FabTransports.Indexers);
-
-        var search = await ReadAsync(client, address, apiKey, "search&limit=1", cancellationToken);
-        if (search.Refusal is { } refusedSearch)
+        var search = await ReadAsync(address!, apiKey, SearchQuery([], 0, null, null, 1), cancellationToken);
+        if (search.Refusal is { } searchRefusal)
         {
-            return NewznabCheck.Refusing(refusedSearch, search.Said);
+            return NewznabCheck.Refusing(searchRefusal, search.Said);
         }
 
         if (search.Document?.Root?.Name.LocalName is not "rss")
         {
-            // A search that answers with neither a feed nor an error document is
-            // not something to guess about.
             return NewznabCheck.Refusing(IndexerConnectionOutcome.NotAnIndexer);
         }
 
-        // Sent with the key even though the spec does not require one here.
-        // Both clients surveyed do the same, and a server that has decided
-        // otherwise costs nothing to humour.
-        var caps = await ReadAsync(client, address, apiKey, "caps", cancellationToken);
-        if (caps.Refusal is { } refusedCaps)
+        var caps = await ReadAsync(address!, apiKey, "t=caps", cancellationToken);
+        if (caps.Refusal is { } capsRefusal)
         {
-            return NewznabCheck.Refusing(refusedCaps, caps.Said);
+            return NewznabCheck.Refusing(capsRefusal, caps.Said);
         }
 
         var tree = CategoriesIn(caps.Document);
-
         logger.LogInformation(
             "The indexer at {Host} answered a search and offered {Count} top-level categories.",
-            address.Host,
+            address!.Host,
             tree.Count);
 
         return new NewznabCheck(IndexerConnectionOutcome.Saved, Said: null, tree);
     }
 
-    /// <summary>
-    /// The category tree out of a capabilities document.
-    /// </summary>
-    /// <remarks>
-    /// Deliberately more careful than the two clients the research read, both of
-    /// which do <c>Attribute("name").Value</c> with no null check and throw on a
-    /// server that leaves one out. A category with no name or no id is skipped
-    /// rather than fatal, because the tree is the one thing in a capabilities
-    /// document worth having.
-    /// </remarks>
-    private static IReadOnlyList<CapsCategory> CategoriesIn(XDocument? document)
+    public async Task<NewznabCapsRead> CapsAsync(
+        string url,
+        string apiKey,
+        CancellationToken cancellationToken = default)
     {
-        var categories = document?.Root?.Element("categories")?.Elements("category");
-
-        if (categories is null)
+        if (!Address(url, out var address))
         {
-            return [];
+            return new(IndexerConnectionOutcome.NotAnIndexer, null, []);
         }
 
-        return
-        [
-            .. categories
-                .Select(category => Node(
-                    category,
-                    [.. category.Elements("subcat").Select(sub => Node(sub, [])).OfType<CapsCategory>()]))
-                .OfType<CapsCategory>(),
-        ];
+        var read = await ReadAsync(address!, apiKey, "t=caps", cancellationToken);
+        return new(read.Refusal, read.Said, read.Refusal is null ? CategoriesIn(read.Document) : []);
+    }
+
+    public async Task<NewznabSearchRead> SearchAsync(
+        string url,
+        string apiKey,
+        IReadOnlyCollection<int> categoryIds,
+        int offset,
+        int? maxAgeDays,
+        string? query = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Address(url, out var address))
+        {
+            return NewznabSearchRead.Refusing(IndexerConnectionOutcome.NotAnIndexer);
+        }
+
+        var read = await ReadAsync(
+            address!, apiKey, SearchQuery(categoryIds, offset, maxAgeDays, query, PageSize), cancellationToken);
+
+        if (read.Refusal is { } refusal)
+        {
+            return NewznabSearchRead.Refusing(refusal, read.Said, read.RetryAfter);
+        }
+
+        var items = new List<NewznabRelease>();
+        var dropped = 0;
+
+        foreach (var item in read.Document?.Descendants().Where(element => element.Name.LocalName == "item") ?? [])
+        {
+            NewznabRelease? parsed;
+            try
+            {
+                parsed = ReleaseIn(item);
+            }
+            catch (Exception malformed) when (malformed is FormatException or ArgumentException or OverflowException)
+            {
+                parsed = null;
+            }
+            if (parsed is null) dropped++;
+            else items.Add(parsed);
+        }
+
+        return new(null, null, items, dropped, null);
+    }
+
+    internal static IReadOnlyList<CapsCategory> CategoriesIn(XDocument? document)
+    {
+        var categories = document?.Root?.Elements().FirstOrDefault(element => element.Name.LocalName == "categories")?
+            .Elements().Where(element => element.Name.LocalName == "category");
+
+        return categories is null
+            ? []
+            : [.. categories.Select(category => Node(category, [.. category.Elements().Where(element => element.Name.LocalName == "subcat").Select(sub => Node(sub, [])).OfType<CapsCategory>()])).OfType<CapsCategory>()];
     }
 
     private static CapsCategory? Node(XElement element, IReadOnlyList<CapsCategory> children)
     {
         var name = element.Attribute("name")?.Value;
-        var id = element.Attribute("id")?.Value;
-
-        if (string.IsNullOrWhiteSpace(name)
-            || !int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
-        {
-            return null;
-        }
-
-        return new CapsCategory(number, name, children);
+        return !string.IsNullOrWhiteSpace(name)
+            && int.TryParse(element.Attribute("id")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)
+                ? new CapsCategory(id, name, children)
+                : null;
     }
 
     private async Task<NewznabDocument> ReadAsync(
-        HttpClient client,
         Uri address,
         string? apiKey,
-        string function,
+        string query,
         CancellationToken cancellationToken)
     {
-        // The key is a query parameter because Newznab has no header form. That
-        // is also what puts it in every download URL an indexer hands back,
-        // which ADR 0037 leaned on and ADR 0041 turned into the redirect rule
-        // this transport is registered with.
-        var request = With(address, $"t={function}&apikey={Uri.EscapeDataString(apiKey ?? string.Empty)}");
-
+        var request = With(address, $"{query}&apikey={Uri.EscapeDataString(apiKey ?? string.Empty)}");
         HttpResponseMessage response;
 
         try
         {
-            response = await client.GetAsync(request, cancellationToken);
+            response = await clients.CreateClient(FabTransports.Indexers).GetAsync(request, cancellationToken);
         }
         catch (Exception unreachable) when (unreachable is HttpRequestException or TaskCanceledException
                                             && !cancellationToken.IsCancellationRequested)
         {
-            logger.LogInformation(
-                "The indexer at {Host} did not answer: {Reason}.",
-                address.Host,
-                unreachable.GetType().Name);
-
+            logger.LogInformation("The indexer at {Host} did not answer: {Reason}.", address.Host, unreachable.GetType().Name);
             return NewznabDocument.Refusing(IndexerConnectionOutcome.NotRightNow);
         }
 
         using (response)
         {
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
             var status = (int)response.StatusCode;
-
-            XDocument document;
+            var retryAfter = RetryAfter(response);
+            string body;
 
             try
             {
-                document = XDocument.Parse(body);
+                body = await response.Content.ReadAsStringAsync(cancellationToken);
             }
-            catch (System.Xml.XmlException)
+            catch (Exception unreadable) when (unreadable is HttpRequestException or IOException or TaskCanceledException
+                                               && !cancellationToken.IsCancellationRequested)
             {
-                // An HTML page is what a blocked address, a login wall and a
-                // reverse proxy answering for a service that is not there all
-                // look like. Both clients surveyed say the same about it.
-                return NewznabDocument.Refusing(
-                    status is >= 500 and <= 599
-                        ? IndexerConnectionOutcome.NotRightNow
-                        : IndexerConnectionOutcome.NotAnIndexer);
+                logger.LogInformation(
+                    "The response from {Host} could not be read: {Reason}.",
+                    address.Host,
+                    unreadable.GetType().Name);
+                return NewznabDocument.Refusing(IndexerConnectionOutcome.NotRightNow, retryAfter: retryAfter);
             }
 
-            if (document.Root?.Name.LocalName == "error")
+            if (status == 429)
             {
-                var described = document.Root.Attribute("description")?.Value;
-                var code = int.TryParse(
-                    document.Root.Attribute("code")?.Value,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var number)
+                return NewznabDocument.Refusing(IndexerConnectionOutcome.LimitReached, retryAfter: retryAfter);
+            }
+
+            var document = Parse(Sanitise(body));
+
+            if (document?.Root?.Name.LocalName == "error")
+            {
+                var described = SafeSaid(document.Root.Attribute("description")?.Value, apiKey);
+                var code = int.TryParse(document.Root.Attribute("code")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
                     ? number
                     : (int?)null;
-
                 var outcome = IndexerConnection.ForError(status, code, described);
-
                 logger.LogInformation(
                     "The indexer at {Host} refused: code {Code} at HTTP {Status}, read as {Outcome}.",
-                    address.Host,
-                    code,
-                    status,
-                    outcome);
-
-                return NewznabDocument.Refusing(outcome, described);
+                    address.Host, code, status, outcome);
+                return NewznabDocument.Refusing(outcome, described, retryAfter);
             }
 
-            // The spec claims a protocol error always arrives as HTTP 200 and is
-            // wrong about the implementation it names by name: two of the five
-            // surveyed map their error codes onto real statuses. So the body
-            // decides first, and the status only matters when there was no
-            // document to read.
+            if (document is null)
+            {
+                return NewznabDocument.Refusing(
+                    status is 401 or 403
+                        ? IndexerConnection.ForError(status, errorCode: null, description: null)
+                        : status is >= 500 and <= 599
+                            ? IndexerConnectionOutcome.NotRightNow
+                            : IndexerConnectionOutcome.NotAnIndexer,
+                    retryAfter: retryAfter);
+            }
+
             return response.IsSuccessStatusCode
-                ? new NewznabDocument(null, null, document)
-                : NewznabDocument.Refusing(IndexerConnectionOutcome.NotRightNow);
+                ? new(null, null, document, null)
+                : NewznabDocument.Refusing(IndexerConnectionOutcome.NotRightNow, retryAfter: retryAfter);
         }
+    }
+
+    private static NewznabRelease? ReleaseIn(XElement item)
+    {
+        string? Element(string name) => item.Elements().FirstOrDefault(element => element.Name.LocalName.Equals(name, StringComparison.OrdinalIgnoreCase))?.Value;
+        string? Attribute(string name) => item.Descendants()
+            .Where(element => element.Name.LocalName.Equals("attr", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault(element => element.Attribute("name")?.Value.Equals(name, StringComparison.OrdinalIgnoreCase) == true)?
+            .Attribute("value")?.Value;
+
+        var rawGuid = Element("guid")?.Trim();
+        var identity = ReleaseIdentity.From(Attribute("guid"), rawGuid);
+        if (identity is null) return null;
+
+        var pubDate = Date(Element("pubDate"));
+        var postDate = Date(Attribute("usenetdate")) ?? pubDate;
+        if (pubDate is null || postDate is null) return null;
+
+        var enclosure = item.Elements().FirstOrDefault(element => element.Name.LocalName == "enclosure");
+        var sizeText = Attribute("size") ?? enclosure?.Attribute("length")?.Value;
+        var categories = item.Descendants()
+            .Where(element => element.Name.LocalName.Equals("attr", StringComparison.OrdinalIgnoreCase)
+                && element.Attribute("name")?.Value.Equals("category", StringComparison.OrdinalIgnoreCase) == true)
+            .Select(element => element.Attribute("value")?.Value)
+            .Concat(item.Elements().Where(element => element.Name.LocalName == "category").Select(element => element.Value))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        var title = Element("title")?.Trim() ?? string.Empty;
+        return new(
+            identity,
+            rawGuid ?? string.Empty,
+            title,
+            ReleaseTitle.Normalise(title),
+            long.TryParse(sizeText, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size) ? size : null,
+            categories,
+            postDate.Value,
+            pubDate.Value,
+            Element("link")?.Trim() ?? enclosure?.Attribute("url")?.Value ?? string.Empty);
+    }
+
+    private static DateTimeOffset? Date(string? value)
+    {
+        if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out var date))
+        {
+            return date.ToUniversalTime();
+        }
+
+        var withoutZone = ZoneAtEnd().Replace(value ?? string.Empty, " GMT");
+        return DateTimeOffset.TryParse(withoutZone, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out date)
+            ? date.ToUniversalTime()
+            : null;
+    }
+
+    private static XDocument? Parse(string body)
+    {
+        try
+        {
+            using var text = new StringReader(body);
+            using var reader = XmlReader.Create(text, new XmlReaderSettings { DtdProcessing = DtdProcessing.Ignore });
+            return XDocument.Load(reader);
+        }
+        catch (XmlException)
+        {
+            return null;
+        }
+    }
+
+    private static string Sanitise(string body) => IllegalXml().Replace(
+        NamedHtmlEntities().Replace(body, match => WebUtility.HtmlEncode(WebUtility.HtmlDecode(match.Value))),
+        string.Empty);
+
+    private static string? SafeSaid(string? said, string? apiKey)
+    {
+        if (said is null) return null;
+        var safe = AddressInText().Replace(said, "[address]");
+        return string.IsNullOrEmpty(apiKey) ? safe : safe.Replace(apiKey, "[redacted]", StringComparison.Ordinal);
+    }
+
+    private TimeSpan? RetryAfter(HttpResponseMessage response)
+    {
+        if (response.Headers.RetryAfter?.Delta is { } delta) return delta;
+        if (response.Headers.RetryAfter?.Date is not { } date) return null;
+        var wait = date - time.GetUtcNow();
+        return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
+    }
+
+    private static bool Address(string? url, out Uri? address) =>
+        Uri.TryCreate((url ?? string.Empty).Trim(), UriKind.Absolute, out address)
+        && address.Scheme is "http" or "https";
+
+    private static string SearchQuery(IReadOnlyCollection<int> categoryIds, int offset, int? maxAgeDays, string? query, int limit)
+    {
+        var parts = new List<string> { "t=search", "extended=1", $"limit={limit}", $"offset={offset}" };
+        if (categoryIds.Count > 0) parts.Add($"cat={string.Join(',', categoryIds)}");
+        if (maxAgeDays is not null) parts.Add($"maxage={maxAgeDays.Value}");
+        if (!string.IsNullOrWhiteSpace(query)) parts.Add($"q={Uri.EscapeDataString(query)}");
+        return string.Join('&', parts);
     }
 
     private static Uri With(Uri address, string query)
     {
         var builder = new UriBuilder(address);
         var existing = builder.Query.TrimStart('?');
-
         builder.Query = existing.Length > 0 ? $"{existing}&{query}" : query;
-
         return builder.Uri;
     }
+
+    [GeneratedRegex(@"&(?!amp;|lt;|gt;|quot;|apos;)([A-Za-z][A-Za-z0-9]+);")]
+    private static partial Regex NamedHtmlEntities();
+
+    [GeneratedRegex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]")]
+    private static partial Regex IllegalXml();
+
+    [GeneratedRegex(@"\s+[A-Z]{2,5}$")]
+    private static partial Regex ZoneAtEnd();
+
+    [GeneratedRegex(@"https?://\S+", RegexOptions.IgnoreCase)]
+    private static partial Regex AddressInText();
 
     private sealed record NewznabDocument(
         IndexerConnectionOutcome? Refusal,
         string? Said,
-        XDocument? Document)
+        XDocument? Document,
+        TimeSpan? RetryAfter)
     {
-        public static NewznabDocument Refusing(IndexerConnectionOutcome outcome, string? said = null) =>
-            new(outcome, said, null);
+        public static NewznabDocument Refusing(
+            IndexerConnectionOutcome outcome,
+            string? said = null,
+            TimeSpan? retryAfter = null) => new(outcome, said, null, retryAfter);
     }
 }
 
-/// <summary>
-/// What an indexer answered. <see cref="IndexerConnectionOutcome.Saved"/> here
-/// means it answered a real search; whether a row is written is the caller's.
-/// </summary>
-/// <param name="Said">The indexer's own wording, when it refused in its own words.</param>
+public sealed record NewznabCapsRead(
+    IndexerConnectionOutcome? Refusal,
+    string? Said,
+    IReadOnlyList<CapsCategory> Categories);
+
 public sealed record NewznabCheck(
     IndexerConnectionOutcome Outcome,
     string? Said,
@@ -232,3 +354,27 @@ public sealed record NewznabCheck(
     public static NewznabCheck Refusing(IndexerConnectionOutcome outcome, string? said = null) =>
         new(outcome, said, []);
 }
+
+public sealed record NewznabSearchRead(
+    IndexerConnectionOutcome? Refusal,
+    string? Said,
+    IReadOnlyList<NewznabRelease> Releases,
+    int DroppedWithoutIdentity,
+    TimeSpan? RetryAfter)
+{
+    public static NewznabSearchRead Refusing(
+        IndexerConnectionOutcome outcome,
+        string? said = null,
+        TimeSpan? retryAfter = null) => new(outcome, said, [], 0, retryAfter);
+}
+
+public sealed record NewznabRelease(
+    string DerivedReleaseId,
+    string RawGuid,
+    string Title,
+    string NormalisedTitle,
+    long? Size,
+    IReadOnlyList<string> Categories,
+    DateTimeOffset PostDate,
+    DateTimeOffset PubDate,
+    string DownloadUrl);

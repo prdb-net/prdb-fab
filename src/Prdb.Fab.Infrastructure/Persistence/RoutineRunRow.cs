@@ -23,6 +23,10 @@ public sealed class RoutineRunRow
 
     public int ItemsHandled { get; set; }
 
+    public int? ResultsSeen { get; set; }
+
+    public int? RowsAdded { get; set; }
+
     /// <summary>
     /// A sentence for whoever reads the log, never read for control flow. ADR
     /// 0043 keeps it out of the stream's job: what asks to be fixed is a row.

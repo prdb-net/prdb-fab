@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 using Xunit;
 
@@ -40,6 +41,27 @@ public sealed class CatalogueSchemaTests
                 $"{entity.GetTableName()} does not say what becomes of it when the prdb key "
                 + "belongs to a different account (ADR 0033).");
         }
+    }
+
+    [Fact]
+    public void Every_table_declares_whether_it_crosses_the_backup_boundary()
+    {
+        foreach (var entity in TheModel().GetEntityTypes())
+        {
+            Assert.True(
+                entity.FindAnnotation(ExportClassDeclarations.Annotation)?.Value is ExportClass,
+                $"{entity.GetTableName()} does not declare its export class (ADR 0033).");
+        }
+
+        var exported = TheModel().GetEntityTypes()
+            .Where(entity => Equals(
+                entity.FindAnnotation(ExportClassDeclarations.Annotation)?.Value,
+                ExportClass.Exported))
+            .Select(entity => entity.GetTableName())
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(["indexer", "installation"], exported);
     }
 
     /// <summary>
@@ -127,10 +149,25 @@ public sealed class CatalogueSchemaTests
                 TestContext.Current.CancellationToken);
         }
 
+        // A 0.2.1 installation may already have an indexer. Write it through
+        // that release's physical schema, before the current model exists on disk.
+        await using (var connection = new SqliteConnection(database.Location.ConnectionString))
+        {
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                "INSERT INTO indexer (Id, Name, Url, ApiKey, Categories, LastVerdict, LastCheckedAt) "
+                + "VALUES ('0198EC28-1C00-7000-8000-000000000004', 'Old indexer', "
+                + "'https://indexer.invalid/api', 'old-key', 'Adult', 'Saved', '2026-08-27 09:00:00');";
+            await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+        }
+
         await using (var scope = database.Scope())
         {
             await scope.ServiceProvider.GetRequiredService<DatabaseMigrator>()
                 .PrepareAsync(TestContext.Current.CancellationToken);
+            await scope.ServiceProvider.GetRequiredService<DiscoveryState>()
+                .EnsureFoundationAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var scope = database.Scope())
@@ -140,7 +177,7 @@ public sealed class CatalogueSchemaTests
             var installation = await context.Installation.SingleAsync(TestContext.Current.CancellationToken);
             Assert.Equal("/library", installation.LibraryRoot);
 
-            // Reading each of the ten is what proves they are there: the query
+            // Reading every cache table is what proves it is there: the query
             // is against the table, so a missing one is an error rather than a
             // zero.
             Assert.Equal(0, await context.CatalogueVideos.CountAsync(TestContext.Current.CancellationToken));
@@ -153,6 +190,11 @@ public sealed class CatalogueSchemaTests
             Assert.Equal(0, await context.WantedVideos.CountAsync(TestContext.Current.CancellationToken));
             Assert.Equal(0, await context.FavouriteSites.CountAsync(TestContext.Current.CancellationToken));
             Assert.Equal(0, await context.FavouriteActors.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(1, await context.IndexerWalkStates.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await context.Releases.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await context.ReleaseCandidates.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await context.WantedVideoSweepStates.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(0, await context.IdentificationOutcomes.CountAsync(TestContext.Current.CancellationToken));
         }
     }
 
