@@ -1,9 +1,9 @@
 # The schema is the glossary made physical, and the export boundary runs between tables
 
-Thirty-two decisions each added or removed columns, and this turns that prose
-into a schema. It settles four things the prose never could: what identity each
-row has, whether the export boundary is closed, where the account cut runs, and
-whether pinning is a column or a query.
+The first-release decisions each added or removed columns, and this turns that
+prose into a schema. It settles four things the prose never could: what identity
+each row has, whether the export boundary is closed, where the account cut runs,
+and whether pinning is a column or a query.
 
 Two of those answers correct earlier ADRs. **Pinning is a query**, against the
 "pin reason per row" that [ADR 0013](0013-the-prdb-catalogue-is-a-cache-with-pinned-rows-repaired-by-re-reading.md)
@@ -57,12 +57,14 @@ worth recording as evidence that the rule is cheap.
 
 ## Why the boundary is closed, and what actually makes it so
 
-Five exported tables reference rows that are not exported:
+Seven exported tables reference rows that are not exported:
 
 | Exported row | References |
 |---|---|
 | `LibraryEntry` | catalogue video, catalogue site |
 | `Download` | catalogue video, cached release |
+| `ArrivingFile` | catalogue video, catalogue site, cached release |
+| `ArrivingFileCandidate` | catalogue video |
 | `ReportedState` | catalogue video |
 | `ConfirmedAssignment` | catalogue video |
 | `OperationLogEntry` | catalogue video |
@@ -74,7 +76,7 @@ and the reason is the rule this decision extracts and then imposes:
 > that some outside authority owns — prdb's video or site id, or ADR 0015's
 > derived release identity. Never through a locally minted surrogate.**
 
-Every one of the five satisfies it. A restored `LibraryEntry` names a prdb video
+Every one of the seven satisfies it. A restored `LibraryEntry` names a prdb video
 id; the catalogue is empty; ADR 0013 pins what something local points at, and a
 library entry is one of those things, so the row is fetched and pinned on the
 next repair pass. Nothing dangles because nothing pointed at a local row in the
@@ -96,9 +98,11 @@ a name rather than a row. The downloads surface
 falls back to the **submitted name**, which ADR 0016 already keeps for exactly
 this class of reason.
 
-The one reference that goes the other way is `Download.originRuleId` → 
-`AutomationRule`, and both are exported. ADR 0028 already made it nullable with
-the rule's name copied beside it, so a deleted rule leaves a readable row.
+The references that go the other way are ordinary references between exported
+tables. The notable one is `DownloadOriginRule.automationRuleId` →
+`AutomationRule`: [ADR 0046](0046-an-automatic-origin-is-every-rule-that-permitted-the-download.md)
+makes it nullable and keeps the rule's name beside it, so deleting a rule leaves
+the exported Origin member readable without dangling.
 
 ## Identity
 
@@ -112,9 +116,11 @@ would in fact round-trip — the reason to spend the extra bytes is that a UUIDv
 is sortable, needs no sequence to be restored alongside it, and makes it
 impossible to write a restore that accidentally depends on ordinal values.
 
-**Three exported tables need no minted key at all**, because they already have a
+**Six exported tables need no minted key at all**, because they already have a
 natural one, and using it removes a whole class of restore bug:
 
+- `GateAdmission` — (gate, confidence), the membership it records.
+- `AutomationRuleIndexer` — (rule, indexer), the permission edge it records.
 - `LibraryEntry` — the prdb video id. ADR 0012 fixes one entry per video, so the
   video id *is* the entry's identity, and a second quality is a second
   `VideoFile` under it.
@@ -124,6 +130,8 @@ natural one, and using it removes a whole class of restore bug:
 - `ConfirmedAssignment` — (`osHash`, video, `userHash`), which
   [ADR 0022](0022-a-queue-entry-is-one-unmoved-file-with-one-reason-and-a-confirmation-outlives-it.md)
   states as the row's shape.
+- `ArrivingFileCandidate` — (arriving file, video), the Candidate edge it
+  records and preserves through Restore.
 
 **Paths are absolute in the database and root-relative in the export.**
 ADR 0009 already requires the second. The first is
@@ -203,7 +211,7 @@ procedure someone has to keep in step with new tables.
 
 ## The tables
 
-Twenty-four. Exported ones are marked **E**; account class is noted where it is
+Thirty-three. Exported ones are marked **E**; account class is noted where it is
 not account-free.
 
 ### Installation and access
@@ -279,18 +287,22 @@ not account-free.
 
 - **`Download` (E)** — id, video, indexer, derived release id, submitted name,
   `nzo_id`, one of four states, cause, last seen SABnzbd status, `fail_message`,
-  `stage_log`, consecutive-absence count, outstanding since, tidied-at, the
-  origin rule and the origin rule's name at the time (ADR 0028), started by a
-  person or not, created. Never pruned.
+  `stage_log`, consecutive-absence count, outstanding since, tidied-at, whether
+  its Origin is a person, and created. Never pruned.
+- **`DownloadOriginRule` (E)** — id, download, nullable automation rule and the
+  rule's name at submission. One row per permitting rule; the nullable live
+  reference and immutable name are ADR 0046's complete automatic Origin.
 
-### Filing — not exported
+### Filing — exported
 
-- **`ArrivingFile`** — id, download, indexer and derived release id, the path it
+- **`ArrivingFile` (E)** — id, download, indexer and derived release id, the path it
   was found at, the name it arrived under, whether it is still on disk, one of
   four states, a **nullable reason**, video, site, the six probe values, the
-  intended path while `Filing`, and when it was last attempted (ADR 0032).
-- **`ArrivingFileCandidate`** — arriving file, video. A table, for the same
-  pinning reason as `ReleaseCandidate`.
+  intended path while `Filing`, and when it was last attempted (ADR 0032). Its
+  source and intended paths are re-rooted separately by Restore (ADR 0047).
+- **`ArrivingFileCandidate` (E)** — arriving file, video. A table, for the same
+  pinning reason as `ReleaseCandidate`, and exported because it is evidence on
+  the Review Queue entry.
 
 ### Reporting — exported
 
@@ -423,23 +435,24 @@ re-rooting from a bulk update into an invisible global behaviour change.
   does not.
 - **ADR 0017 is amended**: the entry directory is on the library entry.
 - **ADR 0009 gains its answer**: the identity that survives a round trip is a
-  UUIDv7 for exported tables, three natural keys where they exist, and an
+  UUIDv7 for exported tables, six natural keys where they exist, and an
   outside authority's identifier for every cross-boundary reference. Its
   root-relative path rule becomes a rule about the *export*, with the database
   holding absolute paths.
 - **ADR 0015's derived release identity turns out to be load-bearing for the
   backup**, which nothing had noticed: it is the only reason a consumed release
   stays consumed across a restore.
-- **`CONTEXT.md` is unchanged.** No new term is needed, and the mechanical check
-  against every `_Avoid_` list passes, with the three deliberate exceptions
-  named above.
-- Twenty-four tables, of which ten are exported. The largest two —
-  `OperationLogEntry` and `Download` — are the two that grow with the library
-  forever and are exported for the same reason.
+- **`CONTEXT.md` is amended by ADR 0046.** Origin is a person or every
+  Automation Rule that permitted the Download, never one arbitrarily selected
+  rule. No other term changes, and the mechanical check against every `_Avoid_`
+  list passes, with the three deliberate exceptions named above.
+- Thirty-three tables, of which fourteen are exported. `OperationLogEntry`,
+  `Download`, `DownloadOriginRule` and `ArrivingFile` grow with acquisition and
+  the Library and are exported because none can be reconstructed.
 - **Nothing in the schema is a condition, a Gap, a Brake or a pin.** All four are
   computed at read time from rows that exist for other reasons, which is what
   ADR 0018 required and what this decision extends to pinning.
 - [Ticket 33](../../.scratch/first-release-spec/issues/33-how-the-tool-is-run-and-documented.md)
-  inherits one fact from here: what grows on the data volume is the two exported
-  tables above, the artwork cache under its ceiling, and the indexer cache under
-  ADR 0015's hundred thousand rows per indexer.
+  inherits one fact from here: what grows on the data volume is the exported
+  acquisition record above, the artwork cache under its ceiling, and the indexer
+  cache under ADR 0015's hundred thousand rows per indexer.

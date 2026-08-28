@@ -15,9 +15,12 @@ restore does when the world no longer matches the record.
 
 The test is whether the tool can get it back by itself. Settings, indexers with
 their URLs and keys and rank, the SABnzbd connection with its path mapping, the
-prdb key, automation rules including the disabled ones, the review queue, the
-login credential, and the local record of downloads and filings — including
-which releases are consumed and what has already been reported to prdb.
+prdb key, automation rules including the disabled ones, every Arriving File and
+its Candidates, the login credential, and the local record of downloads and
+filings — including which releases are consumed and what has already been
+reported to prdb. An open Arriving File is the review queue entry this ADR
+originally named; [ADR 0047](0047-arriving-files-cross-the-backup-boundary.md)
+makes the whole table cross the boundary rather than exporting only one state.
 
 The indexer cache, cached artwork and the video files stay out, as `VISION.md`
 says. So does everything prdb holds: videos, sites, actors, the wanted list,
@@ -64,6 +67,12 @@ download directory — are re-answered once at restore, prefilled from the
 configuration. Verification is a background pass afterwards, not part of the
 restore: osHash is cheap, and a restore that hashes a whole library before it
 finishes is a restore people interrupt.
+
+Arriving File source paths are re-rooted under the Download Directory and
+intended paths under the Library. Every state and Candidate is restored, then
+ADR 0026's ordinary work sets resume it. Existing disappearance and
+interrupted-Filing rules apply unchanged; Restore neither invents a successful
+Filing nor deletes content merely because a source or intended path is missing.
 
 Until an entry is verified it counts as **held**. That is the rule that keeps a
 mis-mounted library from looking like an empty one, which under ADR 0007 would
@@ -127,6 +136,10 @@ cache — is not in the file.
 - The schema carries backup in mind from the start, as `VISION.md` demands:
   every exported table needs a stable identity that survives a round trip, and
   filed paths are stored so that a root can be substituted.
+- Arriving Files and their Candidates are exported whole. This corrects the
+  later ADRs that placed them outside the boundary even though this decision
+  had already put the Review Queue inside it; ADR 0047 records why the whole
+  state machine follows the open entries.
 - Restore is part of onboarding, not of settings, and onboarding gains a second
   entry point. This constrains how sign-in is designed.
 - The sync status page gains a third silent-failure count beside those of ADR

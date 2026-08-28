@@ -113,11 +113,13 @@ ADR 0011's second quality for a relabel, ADR 0005's switch for a sweep.
 What the reason does **not** carry is why the bytes are here in the first place.
 That is the download's **origin**, which
 [ADR 0028](0028-downloads-are-a-table-of-their-own-and-the-release-view-answers-for-the-video.md)
-stores on the download row: the automation rule that permitted the submission,
-or the person who started it. The log entry links the download, and the download
-answers *why is this on my disk*. Two questions, two places, one link — copying
-the rule name into the log would be the same fact stored twice with two ways to
-go stale.
+stores with the Download: the person who started it, or every Automation Rule
+that permitted the submission
+([ADR 0046](0046-an-automatic-origin-is-every-rule-that-permitted-the-download.md)).
+The log entry links the Download, and the Download answers *why is this on my
+disk*. Two questions,
+two places, one link — copying the rule names into the log would be the same fact
+stored twice with two ways to go stale.
 
 ## It is a surface, and a small one
 

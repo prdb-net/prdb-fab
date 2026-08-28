@@ -137,7 +137,7 @@ projection of a ten-column row, not a parallel copy of it. There is nothing kept
 in step by hand, and the cost people fear when they hear "two models" is the
 cost of a 1:1 mirror, which this is not.
 
-**Twenty-four tables, and fewer than half carry a rule.** `FeedCursor`,
+**Thirty-three tables, and fewer than half carry a rule.** `FeedCursor`,
 `RoutineRun`, `IdentificationOutcome`, `CatalogueImage` and their relatives have
 no decision that reads them. Entities in `Core` would put every one of them
 there regardless, and a `Core` that is half a schema dump has stopped saying
@@ -237,7 +237,7 @@ project*: it would have to hold rules, queries and a host loop together, which
 it can only do by loosening the dependency rule this decision exists to keep.
 
 **A separate `Persistence` project beside `Infrastructure`.** Rejected as
-`prdb-ordeno` rejected it, and the reason survives twenty-four tables: the
+`prdb-ordeno` rejected it, and the reason survives thirty-three tables: the
 database and the filesystem are both adapters behind the same kind of interface,
 and splitting them buys a project boundary for a distinction nothing needs. It
 becomes arguable if migrations grow tooling of their own.

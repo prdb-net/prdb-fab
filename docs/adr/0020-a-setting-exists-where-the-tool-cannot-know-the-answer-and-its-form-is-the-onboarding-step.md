@@ -142,8 +142,10 @@ and an inert one is exactly the silent failure ADR 0018 exists to prevent.
 
 Rules follow the same structure, which is how ADR 0007 can say both that rules
 are disabled rather than deleted and that provenance survives a deleted rule: a
-download keeps the **names** of the rules that applied to it as text, not as a
-reference.
+download keeps every applicable rule's **name** as it read at submission, and a
+reference for as long as the rule still exists. Deletion clears the live link
+and never the copied name
+([ADR 0046](0046-an-automatic-origin-is-every-rule-that-permitted-the-download.md)).
 
 ## The four controls
 

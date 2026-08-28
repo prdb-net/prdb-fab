@@ -137,10 +137,10 @@ rules have no order and cannot conflict.
 _Avoid_: Filter, Profile, Trigger
 
 **Origin**:
-What permitted a download to be sent: an automation rule, named as it read at
-that moment, or a person. Kept on the download for as long as the download is
-kept, which is forever, so a deleted rule still answers for what it fetched.
-Never the cause, which says why a download failed.
+What permitted a download to be sent: a person, or every automation rule that
+permitted it, each named as it read at that moment. Kept on the download for as
+long as the download is kept, which is forever, so deleted rules still answer
+for what they fetched. Never the cause, which says why a download failed.
 _Avoid_: Cause, Source, Trigger, Reason
 
 ### Identification

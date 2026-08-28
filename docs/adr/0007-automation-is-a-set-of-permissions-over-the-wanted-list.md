@@ -46,7 +46,8 @@ the release name as authority, in the one place where being wrong is silent.
 **Preview and confirm before the catch-up pass.** When a rule is enabled it is
 matched against the whole cache, which can mean a great many downloads at once.
 Rejected as a second confirmation UI: a cap on unfinished automatic downloads
-bounds the same risk, and every decision is already logged and cancellable.
+bounds the same risk, and every decision is already visible and can be stopped
+from being followed without promising control over SABnzbd's queue.
 
 ## Consequences
 
@@ -57,12 +58,18 @@ bounds the same risk, and every decision is already logged and cancellable.
   cache, so enabling a rule is a catch-up pass by design.
 - The number of automatic downloads SABnzbd has not yet finished is capped
   (default 20); the remainder waits rather than being dropped.
-- Disabling a rule is forward-only, but removing a video from the wanted list
-  cancels its running download and deletes the job at SABnzbd — the wanted list
-  speaks about a video, a rule only about future matches. Nothing already filed
-  is removed.
-- Rules are disabled rather than deleted, and a download keeps the names of its
-  rules, so provenance survives a deleted rule.
+- Disabling a rule is forward-only. Removing a video from the wanted list stops
+  this tool following its outstanding automatic download and marks it
+  `Abandoned`, but never deletes or pauses the job in SABnzbd; that queue belongs
+  to the user. No retry follows because the video is no longer wanted, and
+  nothing already filed is removed. (*Amended by
+  [ADR 0045](0045-a-wanted-removal-abandons-the-download-and-never-writes-sabnzbd.md),
+  which resolves this ADR's former requirement to delete the job against ADR
+  0016's prohibition on every SABnzbd write except `addfile`.*)
+- Rules can be disabled without deletion. When a person does delete one, a
+  Download keeps every permitting rule's id while it exists and its name as it
+  read at submission, so provenance survives. (*Physicalised by
+  [ADR 0046](0046-an-automatic-origin-is-every-rule-that-permitted-the-download.md).*)
 - Automation refuses a video the library already holds in any quality, which is
   stricter than the duplicate definition, because the incoming quality is not
   knowable before the download.
