@@ -7,9 +7,9 @@ Self-hosted, Docker Compose, single user. A prdb API key is required.
 
 > **This is early software.** What is in the image today asks for a password,
 > takes you through setting up, checks every connection you give it against the
-> service it names, and then keeps a local copy of the part of prdb you point it
-> at — with two pages to look at it. It does not yet search, download or file
-> anything.
+> service it names, keeps local catalogues of what prdb and your indexers say,
+> and identifies cached releases through prdb. You can browse and filter those
+> answers, but it does not yet fetch an NZB, write to SABnzbd or file anything.
 
 ## What you need
 
@@ -27,7 +27,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.2.1
+    image: prdbnet/prdb-fab:0.3.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -62,11 +62,34 @@ lost: **[docs/running-in-docker.md](docs/running-in-docker.md)**.
 
 It reads prdb, on its own, and keeps what it reads: the videos prdb publishes,
 the sites and actors behind them, your wanted list and your favourites, and one
-picture per video. Two pages show it — **what's new**, which is where it lands,
-and **wanted**, which is what you have marked in prdb. Marking happens there;
-this reads that list and never writes to it.
+picture per video. **What's new**, **Sites**, **Actors** and **Wanted** show that
+catalogue. Marking a video as wanted happens in prdb; this reads that list and
+never writes to it.
 
-Nothing is searched for, downloaded or filed yet.
+Each enabled indexer is also walked continuously. Releases enter a local,
+disposable cache, are screened against the catalogue, and prdb is asked to
+identify the names worth asking about. A shared **Releases** table opens from
+all four browse surfaces and shows the Indexer, size, first seen time,
+Identification State, Confidence and `matchedBy`. Ambiguous answers remain
+Candidates and a Site-Only Match remains a Site — neither is presented as a
+Video.
+
+The browser never turns a page load into an indexer query. It searches and
+filters what the background routines have already cached. Each Indexer Cache is
+bounded at **100,000 Releases**; the oldest examined Releases nothing points at
+are evicted first, while unseen or still-wanted rows are never discarded to
+hold the ceiling.
+
+Each newly added Indexer starts with a **1,000-request Daily Query Budget**.
+When there is searchable Wanted work, half of that budget, capped at 480
+requests, is reserved for the Wanted Sweep; the rest carries the continuous
+Indexer Walk. The first walk reads up to 90 days of history and may therefore
+cost hundreds of queries or continue on a later day. It never spends past that
+Indexer's daily budget.
+
+Release discovery is read-only in this version: **no NZB is fetched and nothing
+is written to SABnzbd**. Downloading and filing are not wider claims hidden
+behind the Releases table; they do not exist yet.
 
 ## Configuration
 

@@ -28,6 +28,12 @@ export type LibraryRootVerdict = Schema['LibraryRootVerdict']
 export type VideoCard = Schema['VideoCard']
 export type VideoPage = Schema['VideoPage']
 export type WantedList = Schema['WantedList']
+export type SitePage = Schema['SitePage']
+export type SiteVideos = Schema['SiteVideos']
+export type ActorPage = Schema['ActorPage']
+export type ActorVideos = Schema['ActorVideos']
+export type ReleasePage = Schema['ReleasePage']
+export type IdentificationState = Schema['IdentificationState']
 
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
@@ -189,6 +195,70 @@ export async function listWhatsNew(page: number): Promise<VideoPage> {
  */
 export async function listWanted(page: number): Promise<WantedList> {
   return json<WantedList>(await fetch(`/api/catalogue/wanted?page=${page}`))
+}
+
+export async function listSites(search: string, page: number): Promise<SitePage> {
+  return json<SitePage>(
+    await fetch(`/api/catalogue/sites?${parameters({ search, page: String(page) })}`),
+  )
+}
+
+export async function readSite(
+  prdbId: string,
+  search: string,
+  page: number,
+): Promise<SiteVideos> {
+  return json<SiteVideos>(
+    await fetch(`/api/catalogue/sites/${prdbId}?${parameters({ search, page: String(page) })}`),
+  )
+}
+
+export async function listActors(search: string, page: number): Promise<ActorPage> {
+  return json<ActorPage>(
+    await fetch(`/api/catalogue/actors?${parameters({ search, page: String(page) })}`),
+  )
+}
+
+export async function readActor(
+  prdbId: string,
+  search: string,
+  page: number,
+): Promise<ActorVideos> {
+  return json<ActorVideos>(
+    await fetch(`/api/catalogue/actors/${prdbId}?${parameters({ search, page: String(page) })}`),
+  )
+}
+
+export async function listReleases(filters: {
+  video?: string
+  site?: string
+  actor?: string
+  state?: IdentificationState
+  indexer?: string
+  page: number
+}): Promise<ReleasePage> {
+  return json<ReleasePage>(
+    await fetch(
+      `/api/releases?${parameters({
+        video: filters.video,
+        site: filters.site,
+        actor: filters.actor,
+        state: filters.state,
+        indexer: filters.indexer,
+        page: String(filters.page),
+      })}`,
+    ),
+  )
+}
+
+function parameters(values: Record<string, string | undefined>): URLSearchParams {
+  const answer = new URLSearchParams()
+
+  for (const [name, value] of Object.entries(values)) {
+    if (value) answer.set(name, value)
+  }
+
+  return answer
 }
 
 export async function listItems(page: ItemsQuery['page']): Promise<ItemPage> {
