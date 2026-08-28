@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Prdb.Fab.Core.Access;
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
-/// What is built so far of ADR 0033's twenty-four tables: ADR 0014's two, the
-/// installation and its sessions, the catalogue half of the schema, and the
-/// scaffolding row the one routine works through. The rest arrive with the
-/// features that need them.
+/// The physical glossary from ADR 0033, grown one writer at a time. This slice
+/// adds the release-discovery cache and its account-scoped sweep position; the
+/// remaining acquisition and library tables arrive with their writers.
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {
@@ -58,6 +58,16 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<FavouriteSiteRow> FavouriteSites => Set<FavouriteSiteRow>();
 
     public DbSet<FavouriteActorRow> FavouriteActors => Set<FavouriteActorRow>();
+
+    public DbSet<IndexerWalkStateRow> IndexerWalkStates => Set<IndexerWalkStateRow>();
+
+    public DbSet<ReleaseRow> Releases => Set<ReleaseRow>();
+
+    public DbSet<ReleaseCandidateRow> ReleaseCandidates => Set<ReleaseCandidateRow>();
+
+    public DbSet<WantedVideoSweepStateRow> WantedVideoSweepStates => Set<WantedVideoSweepStateRow>();
+
+    public DbSet<IdentificationOutcomeRow> IdentificationOutcomes => Set<IdentificationOutcomeRow>();
 
     /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
@@ -176,6 +186,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             indexer.Property(row => row.Url).IsRequired();
             indexer.Property(row => row.ApiKey).IsRequired();
             indexer.Property(row => row.LastVerdict).HasConversion<string>();
+            indexer.Property(row => row.Enabled).HasDefaultValue(true);
+            indexer.Property(row => row.DailyQueryBudget).HasDefaultValue(1000);
 
             // The same indexer added twice is a mistake rather than a
             // configuration: two rows would walk it twice, spend ADR 0024's
@@ -390,5 +402,95 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .HasForeignKey(row => row.ActorId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        builder.Entity<IndexerWalkStateRow>(state =>
+        {
+            state.ToTable("indexer_walk_state");
+            state.HasKey(row => row.IndexerId);
+            state.Declares(AccountClass.AccountFree);
+            state.Property(row => row.CapsTree).IsRequired();
+            state.Property(row => row.ResolvedCategoryIds).IsRequired();
+            state.Property(row => row.MissingCategoryNames).IsRequired();
+            state.HasOne(row => row.Indexer)
+                .WithOne()
+                .HasForeignKey<IndexerWalkStateRow>(row => row.IndexerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ReleaseRow>(release =>
+        {
+            release.ToTable("release", table => table.HasCheckConstraint(
+                "CK_release_identification_state",
+                $"\"IdentificationState\" IN ({string.Join(',', Enum.GetNames<IdentificationState>().Select(name => $"'{name}'"))})"));
+            release.HasKey(row => row.Id);
+            release.Declares(AccountClass.AccountFree);
+            release.HasIndex(row => new { row.IndexerId, row.DerivedReleaseId }).IsUnique();
+            release.HasIndex(row => row.IdentificationState);
+            release.HasIndex(row => row.VideoId);
+            release.HasIndex(row => row.FirstSeenAt);
+            release.Property(row => row.DerivedReleaseId).IsRequired();
+            release.Property(row => row.RawGuid).IsRequired();
+            release.Property(row => row.Title).IsRequired();
+            release.Property(row => row.NormalisedTitle).IsRequired();
+            release.Property(row => row.Categories).IsRequired();
+            release.Property(row => row.DownloadUrl).IsRequired();
+            release.Property(row => row.IdentificationState).HasConversion<string>();
+            release.HasOne(row => row.Indexer)
+                .WithMany()
+                .HasForeignKey(row => row.IndexerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ReleaseCandidateRow>(candidate =>
+        {
+            candidate.ToTable("release_candidate");
+            candidate.HasKey(row => new { row.ReleaseId, row.VideoId });
+            candidate.Declares(AccountClass.AccountFree);
+            candidate.HasIndex(row => row.ReleaseId);
+            candidate.HasIndex(row => row.VideoId);
+            candidate.HasOne(row => row.Release)
+                .WithMany()
+                .HasForeignKey(row => row.ReleaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            candidate.HasOne(row => row.Video)
+                .WithMany()
+                .HasForeignKey(row => row.VideoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<WantedVideoSweepStateRow>(state =>
+        {
+            state.ToTable("wanted_video_sweep_state");
+            state.HasKey(row => new { row.VideoId, row.IndexerId });
+            state.Declares(AccountClass.AccountScoped);
+            state.HasOne(row => row.Video)
+                .WithMany()
+                .HasForeignKey(row => row.VideoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            state.HasOne(row => row.Indexer)
+                .WithMany()
+                .HasForeignKey(row => row.IndexerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<IdentificationOutcomeRow>(outcome =>
+        {
+            outcome.ToTable("identification_outcome");
+            outcome.HasKey(row => row.Id);
+            outcome.Declares(AccountClass.AccountFree);
+            outcome.HasIndex(row => row.At);
+            outcome.Property(row => row.Gate).IsRequired();
+            outcome.Property(row => row.Outcome).IsRequired();
+        });
+
+        // Exportability is table-wide. Cache is the safe default; the two
+        // tables that contain irreplaceable configuration opt into the backup.
+        foreach (var entity in builder.Model.GetEntityTypes())
+        {
+            entity.SetAnnotation(ExportClassDeclarations.Annotation, ExportClass.NotExported);
+        }
+
+        builder.Entity<InstallationRow>().Declares(ExportClass.Exported);
+        builder.Entity<IndexerRow>().Declares(ExportClass.Exported);
     }
 }

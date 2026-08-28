@@ -2,6 +2,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Prdb.Fab.Infrastructure.Connections;
 
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
+
 public static class ConnectionsServiceCollectionExtensions
 {
     /// <summary>
@@ -33,6 +35,8 @@ public static class ConnectionsServiceCollectionExtensions
         services.AddScoped<SabnzbdConnections>();
         services.AddScoped<Indexers>();
         services.AddScoped<LibraryRoots>();
+        services.AddScoped<DiscoveryState>();
+        services.AddScoped<ReleaseRows>();
 
         return services;
     }

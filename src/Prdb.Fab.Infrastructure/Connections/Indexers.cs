@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Connections;
 
@@ -18,6 +19,7 @@ namespace Prdb.Fab.Infrastructure.Connections;
 public sealed class Indexers(
     FabDbContext context,
     NewznabGateway newznab,
+    DiscoveryState discovery,
     TimeProvider time,
     ILogger<Indexers> logger)
 {
@@ -66,7 +68,7 @@ public sealed class Indexers(
 
         var now = time.GetUtcNow();
 
-        context.Indexers.Add(new IndexerRow
+        var indexer = new IndexerRow
         {
             // ADR 0033's UUIDv7, and given the injected clock rather than the
             // ambient one — ADR 0042 has no exception for a value that happens
@@ -78,7 +80,12 @@ public sealed class Indexers(
             Categories = string.Join(',', categories),
             LastVerdict = IndexerConnectionOutcome.Saved,
             LastCheckedAt = now,
-        });
+            Enabled = true,
+            Rank = 0,
+            DailyQueryBudget = 1000,
+        };
+
+        context.Indexers.Add(indexer);
 
         // The first indexer closes the Gap that skipping the search step left,
         // wherever in the installation's life it arrives.
@@ -88,6 +95,7 @@ public sealed class Indexers(
         context.Installation.Update(installation);
 
         await context.SaveChangesAsync(cancellationToken);
+        await discovery.InitialiseAsync(indexer.Id, check.Categories, cancellationToken);
 
         logger.LogInformation(
             "An indexer at {Host} has been added, searching {Count} of its categories.",
@@ -158,6 +166,7 @@ public sealed class Indexers(
 
         context.Indexers.Update(stored);
         await context.SaveChangesAsync(cancellationToken);
+        await discovery.StoreCapsAsync(stored.Id, check.Categories, cancellationToken);
 
         logger.LogInformation(
             "The indexer at {Host} was checked again and its settings stored.",

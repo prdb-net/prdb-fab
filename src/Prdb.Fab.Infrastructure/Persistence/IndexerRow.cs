@@ -15,10 +15,9 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// cache that refills itself.
 /// </para>
 /// <para>
-/// Only the columns this slice reads or writes, which is ticket 01's rule
-/// applied where that ticket said it would be: enabled, rank and the daily query
-/// budget belong to the walk and to ADR 0020's indexer route, and arrive with
-/// them.
+/// Enabled, rank and the daily query budget arrive with the walk that consumes
+/// them. They remain exported configuration even though the watermark and
+/// query counter beside them are disposable cache.
 /// </para>
 /// </remarks>
 public sealed class IndexerRow
@@ -66,4 +65,10 @@ public sealed class IndexerRow
     public IndexerConnectionOutcome LastVerdict { get; set; }
 
     public DateTimeOffset LastCheckedAt { get; set; }
+
+    public bool Enabled { get; set; } = true;
+
+    public int Rank { get; set; }
+
+    public int DailyQueryBudget { get; set; } = 1000;
 }
