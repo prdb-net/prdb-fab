@@ -21,6 +21,7 @@
     <!-- ADR 0041: the four named transports, and prdb reached only through the SDK. -->
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Prdb.Sdk" />
+    <PackageReference Include="Prdb.Hashing" />
   </ItemGroup>
 
 </Project>

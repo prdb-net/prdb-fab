@@ -97,6 +97,11 @@ public sealed class DownloadFollowingRoutine(
                 download.LastSabnzbdStatus = job.Status;
                 download.FailMessage = job.FailMessage;
                 download.StageLog = job.StageLog;
+                if (job.Location == SabnzbdJobLocation.History
+                    && !string.IsNullOrWhiteSpace(job.Storage))
+                {
+                    download.Storage = job.Storage;
+                }
 
                 Apply(download, DownloadFollowing.Found(SignalOf(job)));
 

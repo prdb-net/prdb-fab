@@ -10,10 +10,9 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Only what the implemented slices read or write. The automation cap, the
-/// leftover switch and the two reporting switches are ADR 0033's too, and
-/// arrive with the features that read them: a column nothing reads is a column
-/// nothing tests.
+/// Only what the implemented slices need. The leftover switch arrives with the
+/// filing schema whose later writer will consume it; the automation cap and
+/// reporting switches arrive with the features that read them.
 /// </para>
 /// <para>
 /// The key is the constant <see cref="TheOnlyRow"/> rather than ADR 0033's
@@ -116,4 +115,7 @@ public sealed class InstallationRow
 
     /// <summary>ADR 0008's per-Video Download budget.</summary>
     public int RetryBudget { get; set; } = 3;
+
+    /// <summary>Whether filing may delete non-video leftovers after it succeeds.</summary>
+    public bool DeleteLeftovers { get; set; }
 }

@@ -9,6 +9,7 @@ using Xunit;
 using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Connections;
+using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -87,6 +88,7 @@ public sealed class TestDatabase : IAsyncDisposable
         services.AddFabConnections();
         services.AddFabReleaseDiscovery();
         services.AddFabAcquisition();
+        services.AddFabFiling();
 
         if (prdb is not null)
         {

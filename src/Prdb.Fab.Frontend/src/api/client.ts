@@ -24,6 +24,9 @@ export type SabnzbdConnectionVerdict = Schema['SabnzbdConnectionVerdict']
 export type ConfiguredIndexer = Schema['ConfiguredIndexer']
 export type IndexerConnectionVerdict = Schema['IndexerConnectionVerdict']
 export type LibraryRootVerdict = Schema['LibraryRootVerdict']
+export type AfterDownloadGateChoice = Schema['AfterDownloadGateChoice']
+export type IdentificationSettingsState = Schema['IdentificationSettingsState']
+export type IdentificationSettingsVerdict = Schema['IdentificationSettingsVerdict']
 
 export type VideoCard = Schema['VideoCard']
 export type VideoPage = Schema['VideoPage']
@@ -186,6 +189,16 @@ export async function editIndexer(
 
 export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict> {
   return post<LibraryRootVerdict>('/api/connections/library-root', { path })
+}
+
+export async function readIdentificationSettings(): Promise<IdentificationSettingsState> {
+  return json<IdentificationSettingsState>(await fetch('/api/settings/identification'))
+}
+
+export async function saveIdentificationSettings(
+  afterDownload: AfterDownloadGateChoice,
+): Promise<IdentificationSettingsVerdict> {
+  return post<IdentificationSettingsVerdict>('/api/settings/identification', { afterDownload })
 }
 
 /**

@@ -409,6 +409,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
         slot.Labels ?? [],
         null,
         null,
+        null,
         SabnzbdJobLocation.Queue);
 
     private static SabnzbdJob HistoryJob(HistorySlot slot) => new(
@@ -420,6 +421,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
         slot.StageLog.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null
             ? null
             : slot.StageLog.GetRawText(),
+        slot.Storage,
         SabnzbdJobLocation.History);
 
     private sealed record QueueEnvelope(
@@ -446,7 +448,8 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
         [property: JsonPropertyName("name")] string? Name,
         [property: JsonPropertyName("status")] string? Status,
         [property: JsonPropertyName("fail_message")] string? FailMessage,
-        [property: JsonPropertyName("stage_log")] JsonElement StageLog);
+        [property: JsonPropertyName("stage_log")] JsonElement StageLog,
+        [property: JsonPropertyName("storage")] string? Storage);
 }
 
 /// <summary>One of SABnzbd's own categories, and where its downloads finish.</summary>
@@ -486,6 +489,7 @@ public sealed record SabnzbdJob(
     IReadOnlyList<string> Labels,
     string? FailMessage,
     string? StageLog,
+    string? Storage,
     SabnzbdJobLocation Location);
 
 public sealed record SabnzbdObservation(

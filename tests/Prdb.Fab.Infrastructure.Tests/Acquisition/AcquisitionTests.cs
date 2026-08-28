@@ -201,7 +201,7 @@ public sealed class AcquisitionTests
                 """,
             History = """
                 {"history":{"slots":[
-                  {"nzo_id":"complete","name":"Complete","status":"Completed","fail_message":"","stage_log":[]},
+                  {"nzo_id":"complete","name":"Complete","status":"Completed","fail_message":"","stage_log":[],"storage":"/remote/Complete"},
                   {"nzo_id":"failed","name":"Failed","status":"Failed","fail_message":"translated words","stage_log":[{"name":"Unpack","actions":["bad"]}]}
                 ]}}
                 """,
@@ -248,7 +248,9 @@ public sealed class AcquisitionTests
             Assert.True(
                 unusable.Cause == DownloadCause.Unusable,
                 $"state={unusable.State}; cause={unusable.Cause}; nzo={unusable.NzoId}; status={unusable.LastSabnzbdStatus}; absences={unusable.ConsecutiveAbsences}");
-            Assert.Equal(DownloadState.Completed, rows.Single(row => row.SubmittedName == "Complete").State);
+            var complete = rows.Single(row => row.SubmittedName == "Complete");
+            Assert.Equal(DownloadState.Completed, complete.State);
+            Assert.Equal("/remote/Complete", complete.Storage);
             var failed = rows.Single(row => row.SubmittedName == "Failed");
             Assert.Equal(DownloadCause.Failed, failed.Cause);
             Assert.Equal("translated words", failed.FailMessage);

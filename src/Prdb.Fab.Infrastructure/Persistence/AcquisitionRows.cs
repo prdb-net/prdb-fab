@@ -16,6 +16,8 @@ public sealed class DownloadRow
     public string? LastSabnzbdStatus { get; set; }
     public string? FailMessage { get; set; }
     public string? StageLog { get; set; }
+    /// <summary>The completed history path as SABnzbd reported it.</summary>
+    public string? Storage { get; set; }
     public int ConsecutiveAbsences { get; set; }
     public DateTimeOffset OutstandingSince { get; set; }
     public DateTimeOffset? TidiedAt { get; set; }
