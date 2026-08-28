@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -40,7 +41,13 @@ public sealed class IndexerWalkRoutine(
 
         for (var page = 0; page < PageCeiling; page++)
         {
-            var searched = await search.PageAsync(indexerId, page, maxAgeDays: null, cancellationToken);
+            var searched = await search.PageAsync(
+                indexerId,
+                page,
+                maxAgeDays: null,
+                purpose: IndexerQueryPurpose.Walk,
+                query: null,
+                cancellationToken: cancellationToken);
             if (searched.DeferredFor is { } wait) return RunResult.Deferred(wait);
             var read = searched.Read!;
             if (read.Refusal is not null) return RunResult.Failed("The indexer refused a release search.", read.RetryAfter);
@@ -49,6 +56,10 @@ public sealed class IndexerWalkRoutine(
                 row => row.IndexerId == indexerId && read.Releases.Select(item => item.DerivedReleaseId).Contains(row.DerivedReleaseId),
                 cancellationToken);
             var write = await releases.UpsertAsync(indexerId, read.Releases, time.GetUtcNow(), ReleaseSource.IndexerWalk, cancellationToken);
+            if (write.CacheOverBy > 0)
+            {
+                return RunResult.Failed("The Indexer Cache cannot hold its ceiling without losing an unexamined or pinned Release.");
+            }
             seen += read.Releases.Count + read.DroppedWithoutIdentity;
             added += write.Added;
             oldest = read.Releases.Count == 0 ? oldest : read.Releases.Min(item => item.PostDate);

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -37,12 +38,22 @@ public sealed class IndexerCatchUpRoutine(
         var from = state.CatchUpFrom.Value;
         var page = state.ResumePage ?? 0;
         var maxAge = Math.Max(1, (int)Math.Ceiling((time.GetUtcNow() - from).TotalDays));
-        var searched = await search.PageAsync(indexerId, page, maxAge, cancellationToken);
+        var searched = await search.PageAsync(
+                indexerId,
+                page,
+                maxAge,
+                purpose: IndexerQueryPurpose.Walk,
+                query: null,
+                cancellationToken: cancellationToken);
         if (searched.DeferredFor is { } wait) return RunResult.Deferred(wait);
         var read = searched.Read!;
         if (read.Refusal is not null) return RunResult.Failed("The indexer refused the catch-up search.", read.RetryAfter);
 
         var write = await releases.UpsertAsync(indexerId, read.Releases, time.GetUtcNow(), ReleaseSource.IndexerWalk, cancellationToken);
+        if (write.CacheOverBy > 0)
+        {
+            return RunResult.Failed("The Indexer Cache cannot hold its ceiling without losing an unexamined or pinned Release.");
+        }
         state.ResumePage = page + 1;
         var finished = read.Releases.Count + read.DroppedWithoutIdentity < Connections.NewznabGateway.PageSize
             || read.Releases.Any(item => item.PostDate < from);

@@ -79,7 +79,7 @@ public sealed class ReleaseDiscoveryTests
     }
 
     [Fact]
-    public async Task Repeated_reads_and_key_rotation_update_one_release_without_moving_first_seen()
+    public async Task Repeated_reads_and_key_rotation_update_one_release_without_moving_state_or_first_seen()
     {
         await using var database = await TestDatabase.CreateAsync();
         await SeedIndexerAsync(database);
@@ -104,8 +104,8 @@ public sealed class ReleaseDiscoveryTests
             Assert.Equal(FirstSeen, release.FirstSeenAt);
             Assert.Contains("new-key", release.DownloadUrl, StringComparison.Ordinal);
             Assert.Equal("Corrected title", release.Title);
-            Assert.Equal(IdentificationState.Awaiting, release.IdentificationState);
-            Assert.True(release.SearchWasReason);
+            Assert.Equal(IdentificationState.Unexamined, release.IdentificationState);
+            Assert.False(release.SearchWasReason);
         }
     }
 

@@ -62,6 +62,16 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             video.Title = title;
             video.NormalisedTitle = ComparisonForm.Of(title);
             video.TitleSearchedBackwards = false;
+
+            if (!arrived)
+            {
+                // ADR 0024: changing the chosen title naturally makes every
+                // per-indexer pair due again. The pair remains the only state
+                // model; deleting its old position is the new search.
+                await context.WantedVideoSweepStates
+                    .Where(state => state.VideoId == video.Id)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
         }
 
         video.ReleaseDate = detail.ReleaseDate is { } released

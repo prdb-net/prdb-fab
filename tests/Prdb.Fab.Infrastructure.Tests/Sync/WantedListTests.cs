@@ -101,6 +101,32 @@ public sealed class WantedListTests
             read.Videos.Select(video => video.Title));
     }
 
+    [Fact]
+    public async Task Becoming_wanted_puts_an_already_held_title_back_into_backwards_screening()
+    {
+        var prdb = new FakePrdbApi().Answers(Wanted, Page(Video(1), "A Video", Noon));
+        await using var database = await CreateAsync(prdb);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.CatalogueVideos.Add(new CatalogueVideoRow
+            {
+                PrdbId = Video(1),
+                Title = "A Video",
+                NormalisedTitle = ComparisonForm.Of("A Video"),
+                TitleSearchedBackwards = true,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await RunFeedAsync(database);
+
+        await using var check = database.Scope();
+        Assert.False((await check.ServiceProvider.GetRequiredService<FabDbContext>()
+            .CatalogueVideos.SingleAsync(TestContext.Current.CancellationToken)).TitleSearchedBackwards);
+    }
+
     /// <summary>
     /// ADR 0013: a running backfill is a fact and explicitly not a Gap. The row
     /// being there is the whole of what <em>still running</em> means (ADR 0014:
