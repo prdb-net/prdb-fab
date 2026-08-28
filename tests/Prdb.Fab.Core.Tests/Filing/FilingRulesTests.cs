@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 
@@ -50,5 +52,35 @@ public sealed class FilingRulesTests
         Assert.True(AfterDownloadGate.Admits(video, IdentificationConfidence.Strong, ordinary));
         Assert.False(AfterDownloadGate.Admits(video, IdentificationConfidence.Ambiguous, ordinary));
         Assert.False(AfterDownloadGate.Admits(null, IdentificationConfidence.Exact, ordinary));
+    }
+
+    [Fact]
+    public void Only_a_known_different_filesystem_chooses_copy_verify_delete()
+    {
+        Assert.Equal(FilingMove.Rename, FilingMoves.For(true));
+        Assert.Equal(FilingMove.Rename, FilingMoves.For(null));
+        Assert.Equal(FilingMove.CopyVerifyDelete, FilingMoves.For(false));
+    }
+
+    [Fact]
+    public void The_sidecar_writes_only_the_five_Jellyfin_shapes_and_escapes_text()
+    {
+        var video = Guid.Parse("aaaaaaaa-0000-4000-8000-000000000101");
+        var sidecar = XDocument.Parse(Sidecar.For(new SidecarMetadata(
+            video,
+            "A & B < C",
+            "A Site",
+            new DateOnly(2026, 8, 28),
+            ["An Actor", ""])));
+
+        Assert.Equal("A & B < C", sidecar.Root!.Element("title")!.Value);
+        Assert.Equal("2026-08-28", sidecar.Root.Element("premiered")!.Value);
+        Assert.Equal("A Site", sidecar.Root.Element("studio")!.Value);
+        var actor = Assert.Single(sidecar.Root.Elements("actor"));
+        Assert.Equal("An Actor", actor.Element("name")!.Value);
+        Assert.Equal("Actor", actor.Element("type")!.Value);
+        Assert.Equal(video.ToString("D"), sidecar.Root.Element("uniqueid")!.Value);
+        Assert.Equal("prdb", sidecar.Root.Element("uniqueid")!.Attribute("type")!.Value);
+        Assert.Equal(5, sidecar.Root.Elements().Count());
     }
 }

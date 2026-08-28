@@ -66,9 +66,9 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-// ADR 0038: one hosted service per active lane. Sync carries everything that
-// talks to prdb (ADR 0014), bulk carries discovery, and live carries connection
-// reachability. File arrives when it has something to run.
+// ADR 0038: one hosted service per lane. Sync carries everything that talks to
+// prdb (ADR 0014), bulk carries discovery, live carries connection reachability,
+// and file serialises content moves that may take hours.
 //
 // Registered as IHostedService rather than through AddHostedService, which adds
 // its registration with TryAddEnumerable and therefore keeps one per
@@ -83,6 +83,9 @@ builder.Services.AddSingleton<IHostedService>(provider =>
 
 builder.Services.AddSingleton<IHostedService>(provider =>
     ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Live));
+
+builder.Services.AddSingleton<IHostedService>(provider =>
+    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.File));
 
 // ADR 0040: an outcome crosses the contract as its name rather than as its
 // position in a C# enum. The number would be stable only for as long as nobody

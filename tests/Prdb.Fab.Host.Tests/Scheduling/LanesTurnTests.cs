@@ -1,5 +1,8 @@
 using System.Net.Http.Json;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
 using Prdb.Fab.Host.Tests.Connections;
 using Prdb.Fab.Infrastructure.Connections;
 
@@ -21,6 +24,19 @@ namespace Prdb.Fab.Host.Tests.Scheduling;
 public sealed class LanesTurnTests
 {
     private const string AKey = "0123456789abcdef0123456789abcdef";
+
+    [Fact]
+    public void All_four_lanes_have_a_worker_in_the_real_composition()
+    {
+        using var application = new FabApplication();
+        using var client = application.CreateClient();
+
+        Assert.Equal(
+            4,
+            application.Services
+                .GetServices<IHostedService>()
+                .Count(service => service.GetType().Name == "LaneWorker"));
+    }
 
     /// <summary>
     /// The sync lane, from the outside: a key is saved through ADR 0010's own
