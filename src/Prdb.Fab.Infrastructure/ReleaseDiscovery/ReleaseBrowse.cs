@@ -12,7 +12,10 @@ namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 /// Every query is over the Catalogue and Indexer Cache; reading this service
 /// performs no remote work.
 /// </summary>
-public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings)
+public sealed class ReleaseBrowse(
+    FabDbContext context,
+    ReleaseRankings rankings,
+    DownloadBrowse downloads)
 {
     public const int APage = 50;
 
@@ -29,9 +32,11 @@ public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings
             .Select(row => new { row.Id, row.PrdbId, row.Title })
             .SingleOrDefaultAsync(cancellationToken);
 
-        return selected is null
-            ? null
-            : await ReadAsync(
+        if (selected is null) return null;
+
+        var ranking = await rankings.ForVideoAsync(prdbId, observeDecision: false, cancellationToken);
+        var history = await downloads.ForVideoAsync(prdbId, cancellationToken);
+        return await ReadAsync(
                 new ReleaseContext(ReleaseContextKind.Video, selected.PrdbId, selected.Title),
                 context.Releases.Where(row =>
                     row.VideoId == selected.Id
@@ -40,7 +45,14 @@ public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings
                 state,
                 indexerId,
                 page,
-                await rankings.ForVideoAsync(prdbId, observeDecision: false, cancellationToken),
+                ranking,
+                ranking is null
+                    ? null
+                    : new VideoAcquisition(
+                        ranking.DownloadsSpent,
+                        ranking.RetryBudget,
+                        ranking.Ranked.FirstOrDefault(),
+                        history),
                 cancellationToken);
     }
 
@@ -72,6 +84,7 @@ public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings
                 indexerId,
                 page,
                 ranking: null,
+                acquisition: null,
                 cancellationToken);
     }
 
@@ -103,6 +116,7 @@ public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings
                 indexerId,
                 page,
                 ranking: null,
+                acquisition: null,
                 cancellationToken);
     }
 
@@ -113,6 +127,7 @@ public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings
         Guid? indexerId,
         int page,
         VideoReleaseRanking? ranking,
+        VideoAcquisition? acquisition,
         CancellationToken cancellationToken)
     {
         var wanted = Math.Max(page, 1);
@@ -207,7 +222,8 @@ public sealed class ReleaseBrowse(FabDbContext context, ReleaseRankings rankings
             [.. availableIndexers.Select(row => new ReleaseIndexer(row.IndexerId, row.Name, row.Rank))],
             wanted,
             APage,
-            total);
+            total,
+            acquisition);
     }
 }
 
@@ -249,4 +265,11 @@ public sealed record ReleasePage(
     IReadOnlyList<ReleaseIndexer> Indexers,
     int Page,
     int PageSize,
-    int Total);
+    int Total,
+    VideoAcquisition? Acquisition);
+
+public sealed record VideoAcquisition(
+    int DownloadsSpent,
+    int RetryBudget,
+    ReleaseChoice? NextRelease,
+    IReadOnlyList<DownloadSelectionRow> Downloads);

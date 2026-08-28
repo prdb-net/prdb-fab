@@ -11,8 +11,8 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
 /// The physical glossary from ADR 0033, grown one writer at a time. Release
-/// discovery and person-originated acquisition have their writers; following,
-/// filing, and the remaining library tables arrive with theirs.
+/// discovery, acquisition and Download following have their writers; filing
+/// and the remaining library tables arrive with theirs.
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {

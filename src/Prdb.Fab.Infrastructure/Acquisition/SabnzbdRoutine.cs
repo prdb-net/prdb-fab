@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -18,6 +19,16 @@ public sealed class SabnzbdRoutine(FabDbContext context, SabnzbdGateway sabnzbd)
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
+        // The five-second following poll is already the reachability fact while
+        // work is outstanding. This slower check exists only for an idle
+        // installation, so the same client is never asked twice for liveness.
+        if (await context.Downloads.AnyAsync(
+                row => row.State == DownloadState.Outstanding,
+                cancellationToken))
+        {
+            return RunResult.NothingToDo;
+        }
+
         var connection = await context.Installation.AsNoTracking().Select(row => new
         {
             row.SabnzbdUrl,

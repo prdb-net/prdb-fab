@@ -1,0 +1,21 @@
+.screen { margin: 0 auto; max-width: 1500px; padding: 1.5rem 1rem 3rem; }
+.heading { align-items: baseline; display: flex; gap: 1rem; justify-content: space-between; }
+.heading h1, .heading p { margin: 0; }
+.heading p, .heading > span, .selection span { color: var(--text-quiet); }
+.boundary { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); margin: 1.25rem 0; padding: .75rem 1rem; }
+.filters { display: flex; flex-wrap: wrap; gap: 1rem; }
+.filters label { color: var(--text-quiet); display: flex; flex-direction: column; font-size: .8rem; gap: .25rem; }
+.filters select { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); min-width: 12rem; padding: .4rem; }
+.selection { align-items: center; display: flex; gap: .75rem; margin: 1rem 0; }
+.selection button, .pager button { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); cursor: pointer; padding: .45rem .8rem; }
+.selection button:disabled, .pager button:disabled { color: var(--text-quiet); cursor: default; }
+.tableFrame { overflow-x: auto; }
+.tableFrame table { border-collapse: collapse; font-size: .86rem; width: 100%; }
+.tableFrame th { color: var(--text-quiet); font-size: .72rem; letter-spacing: .04em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.tableFrame th, .tableFrame td { border-bottom: 1px solid var(--border); padding: .65rem .55rem; vertical-align: top; }
+.tableFrame td span, .tableFrame td code { display: block; margin-top: .2rem; }
+.tableFrame pre { background: var(--surface-raised); max-height: 8rem; max-width: 28rem; overflow: auto; padding: .4rem; white-space: pre-wrap; }
+.release { min-width: 18rem; overflow-wrap: anywhere; }
+.release > span { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.empty { border: 1px dashed var(--border); border-radius: var(--radius); color: var(--text-quiet); padding: 1.5rem; }
+.pager { align-items: center; color: var(--text-quiet); display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }

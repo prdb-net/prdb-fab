@@ -233,6 +233,183 @@
         }
       }
     },
+    "/api/downloads": {
+      "get": {
+        "tags": [
+          "Acquisition"
+        ],
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/DownloadState"
+            }
+          },
+          {
+            "name": "indexer",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downloads/stop-following/preview": {
+      "post": {
+        "tags": [
+          "Acquisition"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadSelectionPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downloads/stop-following": {
+      "post": {
+        "tags": [
+          "Acquisition"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadSelectionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/video/{videoId}/reset-downloads/preview": {
+      "post": {
+        "tags": [
+          "Acquisition"
+        ],
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadResetPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/video/{videoId}/reset-downloads": {
+      "post": {
+        "tags": [
+          "Acquisition"
+        ],
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadResetVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/access/state": {
       "get": {
         "tags": [
@@ -1334,6 +1511,28 @@
           null
         ]
       },
+      "DownloadIndexer": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "DownloadOrigin": {
+        "enum": [
+          "Person",
+          "Automation"
+        ]
+      },
       "DownloadOutcome": {
         "enum": [
           "Submitted",
@@ -1345,6 +1544,54 @@
           "NoReleasesLeft",
           "RetryBudgetSpent"
         ]
+      },
+      "DownloadPage": {
+        "required": [
+          "downloads",
+          "indexers",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "downloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloadViewRow"
+            }
+          },
+          "indexers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloadIndexer"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "DownloadPlanOutcome": {
         "enum": [
@@ -1428,13 +1675,197 @@
           }
         }
       },
+      "DownloadResetOutcome": {
+        "enum": [
+          "Ready",
+          "NothingToReset",
+          "SelectionChanged",
+          "Reset"
+        ]
+      },
+      "DownloadResetPreview": {
+        "required": [
+          "outcome",
+          "videoId",
+          "downloads",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/DownloadResetOutcome"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "downloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloadSelectionRow"
+            }
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "DownloadResetRequest": {
+        "required": [
+          "downloadIds"
+        ],
+        "type": "object",
+        "properties": {
+          "downloadIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "DownloadResetVerdict": {
+        "required": [
+          "outcome",
+          "removed",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/DownloadResetOutcome"
+          },
+          "removed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "DownloadSelectionOutcome": {
+        "enum": [
+          "Ready",
+          "SelectionChanged",
+          "Stopped"
+        ]
+      },
+      "DownloadSelectionPreview": {
+        "required": [
+          "outcome",
+          "downloads",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/DownloadSelectionOutcome"
+          },
+          "downloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloadSelectionRow"
+            }
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "DownloadSelectionRequest": {
+        "required": [
+          "downloadIds"
+        ],
+        "type": "object",
+        "properties": {
+          "downloadIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "DownloadSelectionRow": {
+        "required": [
+          "id",
+          "videoId",
+          "submittedName",
+          "state",
+          "cause",
+          "nzoId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submittedName": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/DownloadState"
+          },
+          "cause": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloadCause"
+              }
+            ]
+          },
+          "nzoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DownloadSelectionVerdict": {
+        "required": [
+          "outcome",
+          "changed",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/DownloadSelectionOutcome"
+          },
+          "changed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
       "DownloadState": {
         "enum": [
           "Outstanding",
           "Completed",
           "Collected",
-          "Failed",
-          null
+          "Failed"
         ]
       },
       "DownloadVerdict": {
@@ -1483,6 +1914,106 @@
           },
           "detail": {
             "type": "string"
+          }
+        }
+      },
+      "DownloadViewRow": {
+        "required": [
+          "id",
+          "videoId",
+          "videoTitle",
+          "indexer",
+          "derivedReleaseId",
+          "submittedName",
+          "size",
+          "nzoId",
+          "state",
+          "cause",
+          "lastSabnzbdStatus",
+          "failMessage",
+          "stageLog",
+          "outstandingSince",
+          "origin",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "videoTitle": {
+            "type": "string"
+          },
+          "indexer": {
+            "$ref": "#/components/schemas/DownloadIndexer"
+          },
+          "derivedReleaseId": {
+            "type": "string"
+          },
+          "submittedName": {
+            "type": "string"
+          },
+          "size": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "nzoId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/DownloadState"
+          },
+          "cause": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloadCause"
+              }
+            ]
+          },
+          "lastSabnzbdStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "failMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stageLog": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "outstandingSince": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/DownloadOrigin"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2047,7 +2578,8 @@
           "indexers",
           "page",
           "pageSize",
-          "total"
+          "total",
+          "acquisition"
         ],
         "type": "object",
         "properties": {
@@ -2089,6 +2621,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "acquisition": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoAcquisition"
+              }
+            ]
           }
         }
       },
@@ -2575,6 +3117,49 @@
           }
         }
       },
+      "VideoAcquisition": {
+        "required": [
+          "downloadsSpent",
+          "retryBudget",
+          "nextRelease",
+          "downloads"
+        ],
+        "type": "object",
+        "properties": {
+          "downloadsSpent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nextRelease": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReleaseChoice"
+              }
+            ]
+          },
+          "downloads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloadSelectionRow"
+            }
+          }
+        }
+      },
       "VideoCard": {
         "required": [
           "id",
@@ -2716,6 +3301,9 @@
     },
     {
       "name": "Release discovery"
+    },
+    {
+      "name": "Acquisition"
     },
     {
       "name": "Access"

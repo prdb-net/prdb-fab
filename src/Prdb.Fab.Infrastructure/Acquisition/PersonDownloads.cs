@@ -15,6 +15,31 @@ public sealed class PersonDownloads(
     SabnzbdGateway sabnzbd,
     TimeProvider time)
 {
+    /// <summary>
+    /// Submits the next ranked release after a terminal failure. The ordinary
+    /// action path is deliberately reused so reservation-before-network,
+    /// category validation, budget accounting, and uncertain answers have one
+    /// implementation.
+    /// </summary>
+    public async Task<DownloadVerdict?> RetryNextAsync(
+        Guid videoId,
+        CancellationToken cancellationToken = default)
+    {
+        var ranking = await rankings.ForVideoAsync(videoId, observeDecision: false, cancellationToken);
+        if (ranking is null || ranking.DownloadsSpent >= ranking.RetryBudget) return null;
+        if (ranking.Ranked.FirstOrDefault() is not { } next) return DownloadVerdict.Planning(
+            Guid.CreateVersion7(time.GetUtcNow()),
+            DownloadPlanOutcome.NoReleasesLeft,
+            DetailOf(DownloadPlanOutcome.NoReleasesLeft));
+
+        return await DownloadCoreAsync(
+            Guid.CreateVersion7(time.GetUtcNow()),
+            videoId,
+            next.Id,
+            requireFailedHistory: true,
+            cancellationToken);
+    }
+
     public async Task<DownloadPreview?> PreviewAsync(
         Guid videoId,
         long releaseId,
@@ -37,7 +62,20 @@ public sealed class PersonDownloads(
         Guid downloadId,
         Guid videoId,
         long releaseId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        await DownloadCoreAsync(
+            downloadId,
+            videoId,
+            releaseId,
+            requireFailedHistory: false,
+            cancellationToken);
+
+    private async Task<DownloadVerdict?> DownloadCoreAsync(
+        Guid downloadId,
+        Guid videoId,
+        long releaseId,
+        bool requireFailedHistory,
+        CancellationToken cancellationToken)
     {
         if (await ExistingAsync(downloadId, cancellationToken) is { } existing)
         {
@@ -109,6 +147,17 @@ public sealed class PersonDownloads(
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return VerdictOf(raced);
+            }
+
+            if (requireFailedHistory && await context.Downloads.AnyAsync(
+                    row => row.VideoId == videoId && row.State != DownloadState.Failed,
+                    cancellationToken))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return DownloadVerdict.Planning(
+                    downloadId,
+                    DownloadPlanOutcome.ReleaseNotEligible,
+                    "Another Download for this Video is already active; no automatic retry was submitted.");
             }
 
             var spent = await context.Downloads.CountAsync(row => row.VideoId == videoId, cancellationToken);
