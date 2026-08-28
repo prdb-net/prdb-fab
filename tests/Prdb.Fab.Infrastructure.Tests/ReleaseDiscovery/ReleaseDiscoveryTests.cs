@@ -11,6 +11,7 @@ using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
+using Prdb.Fab.Infrastructure.Scheduling;
 
 using Xunit;
 
@@ -217,6 +218,31 @@ public sealed class ReleaseDiscoveryTests
                 DiscoveryRoutineNames.Screening,
             }.Order(),
             rows);
+    }
+
+    [Fact]
+    public async Task The_registrar_reuses_canonical_targets_created_for_an_upgraded_indexer()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SeedIndexerAsync(database);
+
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<DiscoveryState>()
+                .EnsureFoundationAsync(TestContext.Current.CancellationToken);
+            await scope.ServiceProvider.GetRequiredService<RoutineRegistrar>()
+                .EnsureRowsExistAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var check = database.Scope();
+        var rows = await check.ServiceProvider.GetRequiredService<FabDbContext>().Routines
+            .Where(row => row.Name.StartsWith("indexer.") || row.Name.StartsWith("release."))
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(7, rows.Count);
+        Assert.All(
+            rows.Where(row => row.Target is not null),
+            row => Assert.Equal(IndexerId.ToString("D"), row.Target));
     }
 
     private static async Task SeedIndexerAsync(TestDatabase database, string categories = "Adult")

@@ -20,11 +20,12 @@ public sealed class IndexerBootstrapRoutine(
 
     public Task<bool> StartsAsync(CancellationToken cancellationToken) => Task.FromResult(true);
 
-    public async Task<IReadOnlyList<string>> TargetsAsync(CancellationToken cancellationToken) =>
-        await context.IndexerWalkStates
-            .Where(state => state.BootstrapCompletedAt == null)
-            .Select(state => state.IndexerId.ToString())
-            .ToListAsync(cancellationToken);
+    public Task<IReadOnlyList<string>> TargetsAsync(CancellationToken cancellationToken) =>
+        IndexerTargets.CanonicalAsync(
+            context.IndexerWalkStates
+                .Where(state => state.BootstrapCompletedAt == null)
+                .Select(state => state.IndexerId),
+            cancellationToken);
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {

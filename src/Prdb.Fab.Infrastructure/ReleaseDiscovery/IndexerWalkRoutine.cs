@@ -20,8 +20,10 @@ public sealed class IndexerWalkRoutine(
     public Lane Lane => Lane.Sync;
     public TimeSpan Cadence => TimeSpan.FromMinutes(15);
 
-    public async Task<IReadOnlyList<string>> TargetsAsync(CancellationToken cancellationToken) =>
-        await context.Indexers.Where(row => row.Enabled).Select(row => row.Id.ToString()).ToListAsync(cancellationToken);
+    public Task<IReadOnlyList<string>> TargetsAsync(CancellationToken cancellationToken) =>
+        IndexerTargets.CanonicalAsync(
+            context.Indexers.Where(row => row.Enabled).Select(row => row.Id),
+            cancellationToken);
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
