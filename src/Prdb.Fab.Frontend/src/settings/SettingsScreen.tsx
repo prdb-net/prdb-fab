@@ -33,11 +33,11 @@ export function SettingsScreen() {
             The password, and signing out.
           </span>
         </li>
-        <li className={styles.pending}>
-          Identification
+        <li>
+          <Link to="/settings/identification">Identification</Link>
           <br />
           <span className={styles.detail}>
-            The two confidence gates. Arrives with identification.
+            Which named confidence lets an identified arrival proceed to filing.
           </span>
         </li>
         <li className={styles.pending}>

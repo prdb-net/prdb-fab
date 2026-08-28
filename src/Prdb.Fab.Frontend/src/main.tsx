@@ -15,6 +15,7 @@ import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
 import { AccountScreen } from './settings/AccountScreen.tsx'
 import { ConnectionsScreen } from './settings/ConnectionsScreen.tsx'
 import { IndexerSettings } from './settings/IndexerSettings.tsx'
+import { IdentificationScreen } from './settings/IdentificationScreen.tsx'
 import { PrdbSettings } from './settings/PrdbSettings.tsx'
 import { SabnzbdSettings } from './settings/SabnzbdSettings.tsx'
 import { SettingsGate } from './settings/SettingsPage.tsx'
@@ -82,6 +83,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="connections/indexers/new" element={<IndexerSettings />} />
               <Route path="connections/indexers/:id" element={<IndexerSettings />} />
               <Route path="account" element={<AccountScreen />} />
+              <Route path="identification" element={<IdentificationScreen />} />
             </Route>
             <Route path="/skeleton" element={<SkeletonScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />

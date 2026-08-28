@@ -1236,6 +1236,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/identification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IdentificationSettingsState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IdentificationSettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IdentificationSettingsVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skeleton/items": {
         parameters: {
             query?: never;
@@ -1402,6 +1460,8 @@ export interface components {
             added: null | components["schemas"]["SkeletonItem"];
             refusal: null | string;
         };
+        /** @enum {unknown} */
+        AfterDownloadGateChoice: "ExactOnly" | "ExactAndStrong";
         BrowseContext: {
             /** Format: uuid */
             prdbId: string;
@@ -1573,6 +1633,17 @@ export interface components {
         IdentificationConfidence: "None" | "Partial" | "Probable" | "Strong" | "Exact" | "Ambiguous" | null;
         /** @enum {unknown} */
         IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | null;
+        IdentificationSettingsRequest: {
+            afterDownload: components["schemas"]["AfterDownloadGateChoice"];
+        };
+        IdentificationSettingsState: {
+            afterDownload: components["schemas"]["AfterDownloadGateChoice"];
+        };
+        IdentificationSettingsVerdict: {
+            afterDownload: components["schemas"]["AfterDownloadGateChoice"];
+            /** Format: int32 */
+            reconsidered: number | string;
+        };
         /** @enum {unknown} */
         IdentificationState: "Unexamined" | "Unremarkable" | "Awaiting" | "Matched" | "SiteOnly" | "Ambiguous" | "Unknown";
         IdentifiedVideo: {
