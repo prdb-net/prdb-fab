@@ -71,7 +71,9 @@ public static class LibraryNames
             // Surrogates fall through untouched: half of an astral character is
             // neither reserved nor a control character, and the pair is back
             // together by the time anything measures it.
-            var replaced = Reserved.Contains(character) || char.IsControl(character)
+            var replaced = Reserved.Contains(character)
+                || char.IsControl(character)
+                || char.IsWhiteSpace(character)
                 ? ' '
                 : character;
 

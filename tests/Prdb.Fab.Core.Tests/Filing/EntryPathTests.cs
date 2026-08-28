@@ -56,6 +56,7 @@ public sealed class EntryPathTests
     [InlineData("Who? What!", "Who What!")]
     [InlineData("a:b|c*d", "a b c d")]
     [InlineData("  spaced   out  ", "spaced out")]
+    [InlineData("spaced\u00a0out", "spaced out")]
     [InlineData(".hidden", "hidden")]
     [InlineData("trailing. ", "trailing")]
     public void Reserved_and_control_characters_become_spaces(string written, string expected) =>
