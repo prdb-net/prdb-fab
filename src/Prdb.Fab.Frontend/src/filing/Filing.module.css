@@ -12,6 +12,9 @@
 .card, .panel { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: .8rem; }
 .frame { aspect-ratio: 16 / 9; background: var(--surface); border-radius: var(--radius); display: block; margin: -.8rem -.8rem .7rem; overflow: hidden; }
 .frame img { height: 100%; object-fit: cover; width: 100%; }
+.artwork { align-items: center; display: flex; height: 100%; justify-content: center; width: 100%; }
+.artworkImage { height: 100%; object-fit: cover; width: 100%; }
+.artworkAbsent { color: var(--text-quiet); font-size: 1.6rem; }
 .card h2, .panel h2, .panel h3 { font-size: 1rem; margin: .35rem 0; }
 .badges { display: flex; flex-wrap: wrap; gap: .35rem; }
 .badge { border: 1px solid var(--border); border-radius: 999px; color: var(--text-quiet); font-size: .75rem; padding: .12rem .4rem; }
@@ -36,3 +39,7 @@
 .definition dt { color: var(--text-quiet); }
 .definition dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 650px) { .review { grid-template-columns: 1fr; } .definition { grid-template-columns: 1fr; } }
+
+@media (max-width: 600px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

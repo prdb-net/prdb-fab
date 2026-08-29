@@ -5,6 +5,7 @@ import { Link, Navigate, Outlet } from 'react-router'
 import { readAccessState } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
 import styles from './Settings.module.css'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 /**
  * Everything under `/settings` is for an installation that is set up. While
@@ -16,7 +17,7 @@ export function SettingsGate() {
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
 
   if (state.isPending) {
-    return null
+    return <PageLoading label="Loading Settings" />
   }
 
   if (state.data?.nextStep !== 'Complete') {

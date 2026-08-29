@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 
 import { listWhatsNew } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
@@ -7,6 +7,7 @@ import gridStyles from './Grid.module.css'
 import { videoReleasePath } from '../release/routes.ts'
 import { whatsNewKey } from './state.ts'
 import styles from './WhatsNew.module.css'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 /**
  * What's New, and the landing page. ADR 0013 calls it that and it is what the
@@ -21,6 +22,7 @@ export function WhatsNewScreen() {
   // ADR 0036: what is worth linking to is in the address, which for a grid is
   // where in it the user is. It costs nothing now and cannot be retrofitted.
   const [parameters, setParameters] = useSearchParams()
+  const location = useLocation()
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
 
   const videos = useQuery({
@@ -43,6 +45,10 @@ export function WhatsNewScreen() {
     window.scrollTo({ top: 0 })
   }
 
+  if (videos.isPending && !videos.data) {
+    return <PageLoading label="Loading What’s new" />
+  }
+
   return (
     <main className={styles.screen}>
       <div className={styles.heading}>
@@ -50,7 +56,7 @@ export function WhatsNewScreen() {
         {total > 0 && <span className={styles.count}>{total} videos</span>}
       </div>
 
-      {videos.isPending && !videos.data ? null : total === 0 ? (
+      {total === 0 ? (
         <p className={styles.empty}>
           Nothing yet. prdb&rsquo;s catalogue is read in the background from the
           minute a key is saved, and this fills in as it arrives — there is
@@ -62,7 +68,9 @@ export function WhatsNewScreen() {
             videos={videos.data?.videos ?? []}
             action={(video) => (
               <span className={gridStyles.actions}>
-                <Link to={videoReleasePath(video.prdbId)}>Find releases</Link>
+                <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
+                  Find releases
+                </Link>
               </span>
             )}
           />

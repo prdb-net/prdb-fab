@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import type { VideoCard } from '../api/client.ts'
 import styles from './Grid.module.css'
@@ -48,30 +48,89 @@ function Card({
 
 /**
  * ADR 0030: the grid asks the tool for a picture by video, never the CDN. What
- * comes back is a cached file, one fetched on sight, or a 404 — and the third
- * is not an error to report. It is a video prdb publishes no image for, one
- * whose URL has died, or a slow CDN, and all a grid can do about any of them is
- * leave the frame empty.
+ * comes back is a cached file, one fetched on sight, or an empty answer — and
+ * the third is not an error to report. It is a video prdb publishes no image
+ * for, one whose URL has died, or a slow CDN, and all a grid can do about any
+ * of them is leave the frame empty.
  */
-function Artwork({ videoId, title }: { videoId: VideoCard['id']; title: string }) {
+export function Artwork({
+  videoId,
+  title,
+  frameClassName = styles.frame,
+  imageClassName = styles.image,
+  absentClassName = styles.absent,
+}: {
+  videoId: VideoCard['id']
+  title: string
+  frameClassName?: string
+  imageClassName?: string
+  absentClassName?: string
+}) {
+  const frame = useRef<HTMLSpanElement>(null)
+  const [source, setSource] = useState<string | null>(null)
   const [absent, setAbsent] = useState(false)
 
+  useEffect(() => {
+    const controller = new AbortController()
+    let objectUrl: string | null = null
+
+    const load = async () => {
+      try {
+        const answer = await fetch(`/api/artwork/${videoId}`, { signal: controller.signal })
+        if (answer.status === 204 || !answer.ok) {
+          setAbsent(true)
+          return
+        }
+
+        objectUrl = URL.createObjectURL(await answer.blob())
+        if (!controller.signal.aborted) setSource(objectUrl)
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) setAbsent(true)
+      }
+    }
+
+    const target = frame.current
+    if (!target || !('IntersectionObserver' in window)) {
+      void load()
+      return () => {
+        controller.abort()
+        if (objectUrl) URL.revokeObjectURL(objectUrl)
+      }
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          observer.disconnect()
+          void load()
+        }
+      },
+      { rootMargin: '240px' },
+    )
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+      controller.abort()
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [videoId])
+
   return (
-    <div className={styles.frame}>
+    <span className={frameClassName} ref={frame}>
       {absent ? (
-        <span className={styles.absent} aria-hidden="true">
+        <span className={absentClassName} aria-hidden="true">
           ▤
         </span>
-      ) : (
+      ) : source ? (
         <img
-          className={styles.image}
-          src={`/api/artwork/${videoId}`}
+          className={imageClassName}
+          src={source}
           alt={title}
-          loading="lazy"
           onError={() => setAbsent(true)}
         />
-      )}
-    </div>
+      ) : null}
+    </span>
   )
 }
 

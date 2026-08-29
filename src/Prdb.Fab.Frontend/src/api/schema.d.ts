@@ -2288,6 +2288,8 @@ export interface components {
         LibraryCard: {
             /** Format: uuid */
             id: string;
+            /** Format: int64 */
+            artworkId: number | string;
             title: string;
             site: null | string;
             /** Format: date */

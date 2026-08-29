@@ -2866,6 +2866,7 @@
       "LibraryCard": {
         "required": [
           "id",
+          "artworkId",
           "title",
           "site",
           "releaseDate",
@@ -2877,6 +2878,14 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "artworkId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           },
           "title": {
             "type": "string"

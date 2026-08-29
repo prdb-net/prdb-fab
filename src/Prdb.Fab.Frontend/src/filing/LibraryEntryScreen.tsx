@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 
 import { readLibraryEntry, type OperationLogPage } from '../api/client.ts'
 import styles from './Filing.module.css'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 const size = (bytes: number | string) => `${(Number(bytes) / 1024 / 1024 / 1024).toFixed(2)} GiB`
 const duration = (seconds: number | string | null) => seconds == null ? 'Unknown' : `${Math.round(Number(seconds) / 60)} min`
@@ -11,7 +12,7 @@ export function LibraryEntryScreen() {
   const { id = '' } = useParams()
   const entry = useQuery({ queryKey: ['library-entry', id], queryFn: () => readLibraryEntry(id), enabled: Boolean(id) })
   const data = entry.data
-  if (entry.isPending) return null
+  if (entry.isPending) return <PageLoading label="Loading Library entry" />
   if (!data) return <main className={styles.screen}><p className={styles.error}>This Library Entry could not be read.</p></main>
   const consensus = data.consensusRuntimeMs == null ? null : Math.round(Number(data.consensusRuntimeMs) / 60000)
 

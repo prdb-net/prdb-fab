@@ -107,4 +107,16 @@
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .directory li > a,
+  .contextHeading > a {
+    align-items: center;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: inline-flex;
+    min-height: 2.75rem;
+    padding: 0.4rem 0.7rem;
+    text-decoration: none;
+  }
 }

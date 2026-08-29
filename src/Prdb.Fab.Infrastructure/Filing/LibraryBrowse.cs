@@ -54,6 +54,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             .Take(APage)
             .Select(row => new
             {
+                ArtworkId = row.Video.Id,
                 row.Video.PrdbId,
                 row.Video.Title,
                 Site = row.Video.Site == null ? null : row.Video.Site.Title,
@@ -66,6 +67,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             .ToListAsync(cancellationToken);
         var cards = rows.Select(row => new LibraryCard(
             row.PrdbId,
+            row.ArtworkId,
             row.Title,
             row.Site,
             row.ReleaseDate,
@@ -200,6 +202,7 @@ public sealed record LibraryFilters(
     IReadOnlyList<string> Qualities);
 public sealed record LibraryCard(
     Guid Id,
+    long ArtworkId,
     string Title,
     string? Site,
     DateOnly? ReleaseDate,

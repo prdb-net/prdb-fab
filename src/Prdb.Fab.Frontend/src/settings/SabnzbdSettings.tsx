@@ -4,6 +4,7 @@ import { readConnections } from '../api/client.ts'
 import { connectionsKey } from '../onboarding/state.ts'
 import { SabnzbdForm } from '../onboarding/SabnzbdForm.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 /**
  * ADR 0020: the same form as the onboarding step, and the same order within it
@@ -18,7 +19,7 @@ export function SabnzbdSettings() {
   const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
 
   if (connections.isPending) {
-    return null
+    return <PageLoading label="Loading SABnzbd connection" />
   }
 
   const held = connections.data

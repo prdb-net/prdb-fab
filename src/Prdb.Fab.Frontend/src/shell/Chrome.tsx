@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, NavLink, useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { readAccessState, readReviewQueueCount } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
@@ -58,6 +58,7 @@ export function Chrome({ children }: { children: ReactNode }) {
     enabled: state.data?.nextStep === 'Complete',
   })
   const location = useLocation()
+  const contextDestination = releaseContextDestination(location.pathname, location.search)
   const [moreOpen, setMoreOpen] = useState(false)
   const closeButton = useRef<HTMLButtonElement>(null)
   const moreButton = useRef<HTMLButtonElement>(null)
@@ -110,12 +111,23 @@ export function Chrome({ children }: { children: ReactNode }) {
       <aside className={styles.sidebar}>
         <Brand />
         <nav aria-label="Primary navigation">
-          <NavigationGroup label="Discover" destinations={discover} reviewCount={reviewCount} />
-          <NavigationGroup label="Fetch & build" destinations={work} reviewCount={reviewCount} />
+          <NavigationGroup
+            activeTo={contextDestination}
+            label="Discover"
+            destinations={discover}
+            reviewCount={reviewCount}
+          />
+          <NavigationGroup
+            activeTo={contextDestination}
+            label="Fetch & build"
+            destinations={work}
+            reviewCount={reviewCount}
+          />
         </nav>
         <nav className={styles.navBottom} aria-label="System navigation">
           <DestinationLink
             destination={{ label: 'Settings', to: '/settings', icon: 'settings' }}
+            activeTo={contextDestination}
             reviewCount={reviewCount}
           />
         </nav>
@@ -131,6 +143,7 @@ export function Chrome({ children }: { children: ReactNode }) {
         {primaryMobile.map((destination) => (
           <DestinationLink
             destination={destination}
+            activeTo={contextDestination}
             key={destination.to}
             mobile
             reviewCount={reviewCount}
@@ -139,7 +152,7 @@ export function Chrome({ children }: { children: ReactNode }) {
         <button
           aria-expanded={moreOpen}
           aria-controls="mobile-navigation"
-          className={`${styles.mobileLink} ${isMoreDestination(location.pathname) ? styles.active : ''}`}
+          className={`${styles.mobileLink} ${isMoreDestination(location.pathname) || isMoreContext(contextDestination) ? styles.active : ''}`}
           onClick={() => setMoreOpen(true)}
           ref={moreButton}
           type="button"
@@ -187,11 +200,22 @@ export function Chrome({ children }: { children: ReactNode }) {
               </button>
             </header>
             <nav className={styles.sheetGrid} aria-label="All destinations">
-              <SheetGroup label="Discover" destinations={discover} reviewCount={reviewCount} />
-              <SheetGroup label="Fetch & build" destinations={work} reviewCount={reviewCount} />
+              <SheetGroup
+                activeTo={contextDestination}
+                label="Discover"
+                destinations={discover}
+                reviewCount={reviewCount}
+              />
+              <SheetGroup
+                activeTo={contextDestination}
+                label="Fetch & build"
+                destinations={work}
+                reviewCount={reviewCount}
+              />
               <span className={styles.sheetLabel}>System</span>
               <DestinationLink
                 destination={{ label: 'Settings', to: '/settings', icon: 'settings' }}
+                activeTo={contextDestination}
                 reviewCount={reviewCount}
                 sheet
               />
@@ -205,7 +229,7 @@ export function Chrome({ children }: { children: ReactNode }) {
 
 function Brand() {
   return (
-    <Link aria-label="prdb-fab home" className={styles.brand} to="/">
+    <Link className={styles.brand} to="/">
       <span className={styles.brandMark}>pf</span>
       <span>prdb-fab</span>
     </Link>
@@ -213,10 +237,12 @@ function Brand() {
 }
 
 function NavigationGroup({
+  activeTo,
   label,
   destinations,
   reviewCount,
 }: {
+  activeTo: string | null
   label: string
   destinations: Destination[]
   reviewCount: number
@@ -227,6 +253,7 @@ function NavigationGroup({
       {destinations.map((destination) => (
         <DestinationLink
           destination={destination}
+          activeTo={activeTo}
           key={destination.to}
           reviewCount={reviewCount}
         />
@@ -236,10 +263,12 @@ function NavigationGroup({
 }
 
 function SheetGroup({
+  activeTo,
   label,
   destinations,
   reviewCount,
 }: {
+  activeTo: string | null
   label: string
   destinations: Destination[]
   reviewCount: number
@@ -250,6 +279,7 @@ function SheetGroup({
       {destinations.map((destination) => (
         <DestinationLink
           destination={destination}
+          activeTo={activeTo}
           key={destination.to}
           reviewCount={reviewCount}
           sheet
@@ -261,21 +291,29 @@ function SheetGroup({
 
 function DestinationLink({
   destination,
+  activeTo,
   mobile = false,
   reviewCount,
   sheet = false,
 }: {
   destination: Destination
+  activeTo: string | null
   mobile?: boolean
   reviewCount: number
   sheet?: boolean
 }) {
+  const location = useLocation()
   const className = mobile ? styles.mobileLink : sheet ? styles.sheetLink : styles.navLink
+  const contextActive = activeTo === destination.to
+  const routeActive = destination.to === '/'
+    ? location.pathname === '/'
+    : location.pathname === destination.to || location.pathname.startsWith(`${destination.to}/`)
+  const active = routeActive || contextActive
 
   return (
-    <NavLink
-      className={({ isActive }) => `${className} ${isActive ? styles.active : ''}`}
-      end={destination.to === '/'}
+    <Link
+      aria-current={routeActive ? 'page' : contextActive ? 'location' : undefined}
+      className={`${className} ${active ? styles.active : ''}`}
       to={destination.to}
     >
       {mobile ? (
@@ -291,7 +329,7 @@ function DestinationLink({
           {reviewCount}
         </span>
       )}
-    </NavLink>
+    </Link>
   )
 }
 
@@ -299,6 +337,31 @@ function isMoreDestination(pathname: string): boolean {
   return ['/sites', '/actors', '/review-queue', '/operation-log', '/settings'].some(
     (destination) => pathname === destination || pathname.startsWith(`${destination}/`),
   )
+}
+
+function isMoreContext(destination: string | null): boolean {
+  return destination !== null && !primaryMobile.some((entry) => entry.to === destination)
+}
+
+function releaseContextDestination(pathname: string, search: string): string | null {
+  if (pathname !== '/releases') return null
+
+  const parameters = new URLSearchParams(search)
+  const from = parameters.get('from')
+  if (from?.startsWith('/') && !from.startsWith('//')) {
+    const fromPath = from.split('?')[0]
+    if (fromPath === '/') return '/'
+    for (const destination of [...discover, ...work]) {
+      if (fromPath === destination.to || fromPath.startsWith(`${destination.to}/`)) {
+        return destination.to
+      }
+    }
+  }
+
+  if (parameters.has('site')) return '/sites'
+  if (parameters.has('actor')) return '/actors'
+  if (parameters.has('video')) return '/'
+  return null
 }
 
 function Icon({ name }: { name: IconName }) {

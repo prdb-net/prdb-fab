@@ -10,6 +10,7 @@ import {
   type DownloadState,
 } from '../api/client.ts'
 import styles from './DownloadsScreen.module.css'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 const states: readonly DownloadState[] = ['Outstanding', 'Completed', 'Collected', 'Failed']
 
@@ -24,7 +25,7 @@ export function DownloadsScreen() {
     queryFn: () => listDownloads({ state, indexer, page }),
   })
 
-  if (downloads.isPending) return null
+  if (downloads.isPending) return <PageLoading label="Loading Downloads" />
   if (downloads.isError) return <main className={styles.screen}>Downloads could not be read.</main>
 
   return (
@@ -105,14 +106,24 @@ function DownloadTable({
       <div className={styles.filters}>
         <label>
           State
-          <select value={state ?? ''} onChange={(event) => setFilter('state', event.target.value)}>
+          <select
+            id="downloads-state"
+            name="state"
+            value={state ?? ''}
+            onChange={(event) => setFilter('state', event.target.value)}
+          >
             <option value="">All states</option>
             {states.map((value) => <option value={value} key={value}>{value}</option>)}
           </select>
         </label>
         <label>
           Indexer
-          <select value={indexer ?? ''} onChange={(event) => setFilter('indexer', event.target.value)}>
+          <select
+            id="downloads-indexer"
+            name="indexer"
+            value={indexer ?? ''}
+            onChange={(event) => setFilter('indexer', event.target.value)}
+          >
             <option value="">All Indexers</option>
             {answer.indexers.map((entry) => <option value={entry.id} key={entry.id}>{entry.name}</option>)}
           </select>
@@ -141,6 +152,8 @@ function DownloadTable({
                 <td>
                   <input
                     type="checkbox"
+                    name="selected-download"
+                    value={download.id}
                     aria-label={`Select ${download.submittedName}`}
                     disabled={download.state !== 'Outstanding'}
                     checked={selected.has(download.id)}

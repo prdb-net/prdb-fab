@@ -51,7 +51,7 @@
 
 .navLabel,
 .sheetLabel {
-  color: #737c8b;
+  color: #808999;
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -155,6 +155,7 @@
 
   .mobileTop .brand {
     margin: 0;
+    min-height: 2.75rem;
   }
 
   .content {

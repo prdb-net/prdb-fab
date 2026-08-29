@@ -37,3 +37,54 @@ button {
 a {
   color: var(--accent);
 }
+
+.initialLoading {
+  align-items: center;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  padding: 2rem;
+  position: fixed;
+  z-index: 100;
+}
+
+.initialLoadingBrand {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.initialLoadingMark {
+  align-items: center;
+  background: var(--accent);
+  border-radius: var(--radius);
+  color: #09131d;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  height: 1.8rem;
+  justify-content: center;
+  letter-spacing: -0.03em;
+  width: 1.8rem;
+}
+
+.initialLoadingStatus {
+  color: var(--text-quiet);
+  margin: 0.85rem 0 0;
+}
+
+.routeMessage {
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: 3rem 1rem;
+}
+
+.routeMessage h1 {
+  margin-bottom: 0.5rem;
+}
+
+.routeMessage p {
+  color: var(--text-quiet);
+}

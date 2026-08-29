@@ -1,0 +1,54 @@
+.page {
+  margin: 0 auto;
+  max-width: 90rem;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.pageHeading,
+.pageLine,
+.pagePanel {
+  animation: pulse 1.4s ease-in-out infinite alternate;
+  background: var(--surface-raised);
+  border-radius: var(--radius);
+}
+
+.pageHeading {
+  height: 2rem;
+  width: min(15rem, 55%);
+}
+
+.pageLine {
+  height: 0.85rem;
+  margin-top: 0.75rem;
+  width: min(28rem, 80%);
+}
+
+.pagePanel {
+  border: 1px solid var(--border);
+  height: 11rem;
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.srOnly {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+@keyframes pulse {
+  from { opacity: 0.52; }
+  to { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageHeading,
+  .pageLine,
+  .pagePanel {
+    animation: none;
+  }
+}

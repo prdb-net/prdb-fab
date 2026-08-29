@@ -5,6 +5,7 @@ import { listIndexers } from '../api/client.ts'
 import { indexersKey } from '../onboarding/state.ts'
 import { IndexerForm } from '../onboarding/IndexerForm.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 import styles from './Settings.module.css'
 
 /**
@@ -22,7 +23,7 @@ export function IndexerSettings() {
   const navigate = useNavigate()
 
   if (indexers.isPending) {
-    return null
+    return <PageLoading label="Loading Indexer" />
   }
 
   const indexer = id ? indexers.data?.find((candidate) => candidate.id === id) : undefined

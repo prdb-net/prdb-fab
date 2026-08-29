@@ -5,6 +5,7 @@ import { readAccessState } from '../api/client.ts'
 import { accessStateKey } from './state.ts'
 import { SetPasswordScreen } from './SetPasswordScreen.tsx'
 import { SignInScreen } from './SignInScreen.tsx'
+import { AppLoading } from '../shell/LoadingScreen.tsx'
 import styles from './Access.module.css'
 
 /**
@@ -20,9 +21,9 @@ export function AccessGate({ children }: { children: ReactNode }) {
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
 
   if (state.isPending) {
-    // Deliberately not a spinner. This answers in milliseconds off a table with
-    // one row in it, and a flash of something is worse than a blank moment.
-    return null
+    // Usually this is only a moment. On a slow or waking self-hosted instance,
+    // however, an entirely blank document reads as a broken application.
+    return <AppLoading />
   }
 
   if (state.isError) {

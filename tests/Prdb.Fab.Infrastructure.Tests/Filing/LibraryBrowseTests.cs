@@ -15,19 +15,21 @@ public sealed class LibraryBrowseTests
         await using var database = await TestDatabase.CreateAsync();
         var held = Guid.NewGuid();
         var merelyCatalogued = Guid.NewGuid();
+        long artworkId;
         await using (var scope = database.Scope())
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var heldRow = new CatalogueVideoRow
+            {
+                PrdbId = held,
+                Title = "Held Title",
+                NormalisedTitle = "held title",
+                DurationMs = 3_600_000,
+                DurationSpreadMs = 2_000,
+                DurationFileCount = 4,
+            };
             context.CatalogueVideos.AddRange(
-                new CatalogueVideoRow
-                {
-                    PrdbId = held,
-                    Title = "Held Title",
-                    NormalisedTitle = "held title",
-                    DurationMs = 3_600_000,
-                    DurationSpreadMs = 2_000,
-                    DurationFileCount = 4,
-                },
+                heldRow,
                 new CatalogueVideoRow
                 {
                     PrdbId = merelyCatalogued,
@@ -54,6 +56,7 @@ public sealed class LibraryBrowseTests
                 At = database.Time.GetUtcNow(),
             });
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            artworkId = heldRow.Id;
         }
 
         await using var read = database.Scope();
@@ -61,6 +64,7 @@ public sealed class LibraryBrowseTests
         var page = await browse.ReadAsync(null, null, null, null, 1, TestContext.Current.CancellationToken);
         var card = Assert.Single(page.Entries);
         Assert.Equal(held, card.Id);
+        Assert.Equal(artworkId, card.ArtworkId);
         Assert.Equal(["1080p", "720p"], card.Qualities);
 
         var entry = await browse.EntryAsync(held, TestContext.Current.CancellationToken);
