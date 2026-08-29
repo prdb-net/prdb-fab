@@ -30,17 +30,21 @@ public interface IRoutineStore
     Task RecordAsync(long routineId, RunResult result, TimeSpan cadence, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Makes a routine due now, and does nothing else.
+    /// Makes a routine due now through its existing schedule row.
     /// </summary>
     /// <remarks>
     /// ADR 0038's <em>run now</em>, and the reason the row is the only truth:
-    /// this is one write, the lane picks it up on its next tick, and a forced
-    /// run is therefore governed and deferred like any other. A second path
+    /// this is one atomic row update, the lane picks it up on its next tick,
+    /// and a forced run is therefore governed and deferred like any other. Its
+    /// visible request verdict is retained on that row. A second path
     /// that called the routine directly would be the one control a person has
     /// bypassing the one control that holds the rate limit.
     /// </remarks>
-    /// <returns>Whether there was a row to make due.</returns>
+    /// <returns>Whether the request was accepted.</returns>
     Task<bool> RunNowAsync(string name, string? target, CancellationToken cancellationToken);
+
+    /// <summary>Makes a routine due and returns the durable decision shown by Status.</summary>
+    Task<RunNowVerdict> RunNowDetailedAsync(string name, string? target, CancellationToken cancellationToken);
 
     /// <summary>
     /// Removes the row of a routine that has finished. See <see cref="IOneShot"/>.

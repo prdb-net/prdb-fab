@@ -545,6 +545,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StatusState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/status/run-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StatusRunNowRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RunNowVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/access/state": {
         parameters: {
             query?: never;
@@ -2557,6 +2631,13 @@ export interface components {
             /** Format: int32 */
             total: number | string;
         };
+        /** @enum {unknown} */
+        RunNowOutcome: "Accepted" | "Deferred" | "Refused" | null;
+        RunNowVerdict: {
+            outcome: components["schemas"]["RunNowOutcome"];
+            detail: string;
+            accepted?: boolean;
+        };
         SabnzbdCategoriesRequest: {
             url: null | string;
             apiKey: null | string;
@@ -2627,6 +2708,77 @@ export interface components {
         SiteVideos: {
             site: components["schemas"]["BrowseContext"];
             videos: components["schemas"]["VideoPage"];
+        };
+        StatusCondition: {
+            kind: components["schemas"]["StatusConditionKind"];
+            title: string;
+            detail: string;
+            stage: string;
+            route: null | string;
+            cleared: boolean;
+        };
+        /** @enum {unknown} */
+        StatusConditionKind: "Gap" | "Brake";
+        StatusFact: {
+            label: string;
+            value: string;
+            route: null | string;
+        };
+        StatusLink: {
+            label: string;
+            route: string;
+        };
+        StatusRoutine: {
+            name: string;
+            target: null | string;
+            label: string;
+            stage: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** Format: date-time */
+            lastSuccessAt: null | string;
+            /** Format: date-time */
+            lastFailureAt: null | string;
+            /** Format: int32 */
+            consecutiveFailures: number | string;
+            backingOff: boolean;
+            /** Format: int32 */
+            workSetSize: null | number | string;
+            /** Format: date-time */
+            lastCompletedAt: null | string;
+            /** Format: int32 */
+            resultsSeen: null | number | string;
+            /** Format: int32 */
+            rowsAdded: null | number | string;
+            /** Format: date-time */
+            lastRunNowAt: null | string;
+            lastRunNowOutcome: null | components["schemas"]["RunNowOutcome"];
+            lastRunNowDetail: null | string;
+            runNowPending: boolean;
+        };
+        StatusRunNowRequest: {
+            name: string;
+            target: null | string;
+        };
+        StatusStage: {
+            id: string;
+            title: string;
+            routines: components["schemas"]["StatusRoutine"][];
+            facts: components["schemas"]["StatusFact"][];
+            gaps: components["schemas"]["StatusCondition"][];
+            brakes: components["schemas"]["StatusCondition"][];
+        };
+        StatusState: {
+            /** Format: int32 */
+            gapCount: number | string;
+            lastUsefulAct: null | components["schemas"]["StatusUsefulAct"];
+            stages: components["schemas"]["StatusStage"][];
+            related: components["schemas"]["StatusLink"][];
+        };
+        StatusUsefulAct: {
+            act: string;
+            /** Format: date-time */
+            at: null | string;
         };
         VideoAcquisition: {
             /** Format: int32 */

@@ -1,0 +1,122 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
+using Prdb.Fab.Infrastructure.Status;
+
+using Xunit;
+
+namespace Prdb.Fab.Infrastructure.Tests.Status;
+
+public sealed class StatusTests
+{
+    [Fact]
+    public async Task Failed_routines_for_one_indexer_are_one_gap()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var indexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000711");
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Indexers.Add(new IndexerRow
+            {
+                Id = indexerId,
+                Name = "The Indexer",
+                Url = "https://indexer.invalid/api",
+                ApiKey = "held only in the test database",
+                Categories = "XXX",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+                LastCheckedAt = database.Time.GetUtcNow(),
+            });
+            context.Routines.AddRange(
+                Routine(DiscoveryRoutineNames.Walk, indexerId, 3),
+                Routine(DiscoveryRoutineNames.WantedSweep, indexerId, 4));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, status.GapCount);
+        var gap = Assert.Single(status.Stages.Single(stage => stage.Id == "sync-indexers").Gaps);
+        Assert.Equal("/settings/connections/indexers/0198ec28-1c00-7000-8000-000000000711", gap.Route);
+        Assert.Contains("Indexer walk", gap.Detail);
+        Assert.Contains("Wanted sweep", gap.Detail);
+    }
+
+    [Fact]
+    public async Task Reporting_switched_off_with_a_difference_is_a_brake_not_a_gap()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Installation.ExecuteUpdateAsync(
+                update => update.SetProperty(row => row.PrdbUserHash, "account"),
+                TestContext.Current.CancellationToken);
+            context.ConfirmedAssignments.Add(new ConfirmedAssignmentRow
+            {
+                OsHash = "hash",
+                VideoId = Guid.Parse("0198ec28-1c00-7000-8000-000000000712"),
+                UserHash = "account",
+                ArrivalFileName = "arrival.mkv",
+                ReleaseName = "release",
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, status.GapCount);
+        var brake = Assert.Single(
+            status.Stages.Single(stage => stage.Id == "file").Brakes,
+            item => item.Title == "Confirmed-assignment reporting is off");
+        Assert.Equal("/settings/reporting", brake.Route);
+    }
+
+    [Fact]
+    public async Task Run_now_refuses_an_empty_work_set_without_changing_due_time()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var due = database.Time.GetUtcNow().AddHours(1);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Routines.Add(new RoutineRow
+            {
+                Name = DiscoveryRoutineNames.Screening,
+                Lane = Lane.Bulk,
+                DueAt = due,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = reading.ServiceProvider.GetRequiredService<StatusService>();
+        var verdict = await status.RunNowAsync(
+            new StatusRunNowRequest(DiscoveryRoutineNames.Screening, null),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(RunNowOutcome.Refused, verdict.Outcome);
+        var row = await reading.ServiceProvider.GetRequiredService<FabDbContext>().Routines
+            .SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(due, row.DueAt);
+        Assert.Equal(RunNowOutcome.Refused, row.LastRunNowOutcome);
+    }
+
+    private static RoutineRow Routine(string name, Guid indexerId, int failures) => new()
+    {
+        Name = name,
+        Target = indexerId.ToString("D"),
+        Lane = Lane.Bulk,
+        DueAt = DateTimeOffset.MaxValue,
+        ConsecutiveFailures = failures,
+    };
+}

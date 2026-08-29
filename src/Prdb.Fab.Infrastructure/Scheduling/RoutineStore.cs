@@ -82,6 +82,38 @@ public sealed class RoutineStore(
                 break;
         }
 
+        if (result.Outcome is null && result.DueIn is { } wait)
+        {
+            routine.LastDeferredAt = now;
+            routine.DeferredUntil = now + wait;
+            routine.LastDeferredReason = result.Reason ?? "The routine is waiting for a governing limit.";
+        }
+        else if (result.Outcome is not null)
+        {
+            routine.DeferredUntil = null;
+            routine.LastDeferredReason = null;
+        }
+
+        if (routine.RunNowPending)
+        {
+            routine.RunNowPending = false;
+            if (result.Outcome is null && result.DueIn is not null)
+            {
+                routine.LastRunNowOutcome = RunNowOutcome.Deferred;
+                routine.LastRunNowDetail = result.Reason ?? "The scheduler deferred the routine.";
+            }
+            else if (result.Outcome is null)
+            {
+                routine.LastRunNowOutcome = RunNowOutcome.Refused;
+                routine.LastRunNowDetail = "The scheduler found no work to do.";
+            }
+            else
+            {
+                routine.LastRunNowOutcome = RunNowOutcome.Accepted;
+                routine.LastRunNowDetail = "The scheduler completed the requested turn.";
+            }
+        }
+
         routine.DueAt = now + NextDueIn(result, routine.ConsecutiveFailures, cadence);
 
         if (result.IsRecorded)
@@ -124,15 +156,41 @@ public sealed class RoutineStore(
             ? Backoff.After(cadence, consecutiveFailures)
             : cadence);
 
-    public async Task<bool> RunNowAsync(string name, string? target, CancellationToken cancellationToken)
-    {
-        var updated = await context.Routines
-            .Where(row => row.Name == name && row.Target == target)
-            .ExecuteUpdateAsync(
-                update => update.SetProperty(row => row.DueAt, time.GetUtcNow()),
-                cancellationToken);
+    public async Task<bool> RunNowAsync(string name, string? target, CancellationToken cancellationToken) =>
+        (await RunNowDetailedAsync(name, target, cancellationToken)).Accepted;
 
-        return updated > 0;
+    public async Task<RunNowVerdict> RunNowDetailedAsync(string name, string? target, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+        const string acceptedDetail = "The routine is due now and will use its ordinary scheduler path.";
+        var accepted = await context.Routines
+            .Where(row => row.Name == name && row.Target == target && !row.RunNowPending)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(row => row.DueAt, now)
+                .SetProperty(row => row.LastRunNowAt, now)
+                .SetProperty(row => row.LastRunNowOutcome, RunNowOutcome.Accepted)
+                .SetProperty(row => row.LastRunNowDetail, acceptedDetail)
+                .SetProperty(row => row.RunNowPending, true), cancellationToken);
+        if (accepted > 0)
+        {
+            return new RunNowVerdict(RunNowOutcome.Accepted, acceptedDetail);
+        }
+
+        if (!await context.Routines.AnyAsync(
+                row => row.Name == name && row.Target == target,
+                cancellationToken))
+        {
+            return new RunNowVerdict(RunNowOutcome.Refused, "There is no schedule row for that routine.");
+        }
+
+        const string deferredDetail = "A requested turn is already waiting for its lane.";
+        await context.Routines
+            .Where(row => row.Name == name && row.Target == target && row.RunNowPending)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(row => row.LastRunNowAt, now)
+                .SetProperty(row => row.LastRunNowOutcome, RunNowOutcome.Deferred)
+                .SetProperty(row => row.LastRunNowDetail, deferredDetail), cancellationToken);
+        return new RunNowVerdict(RunNowOutcome.Deferred, deferredDetail);
     }
 
     public async Task<bool> RetireAsync(string name, string? target, CancellationToken cancellationToken)

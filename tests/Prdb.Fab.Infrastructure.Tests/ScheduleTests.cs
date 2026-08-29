@@ -169,6 +169,36 @@ public sealed class ScheduleTests
         Assert.Empty(await context.RoutineRuns.ToListAsync(TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task A_second_run_now_request_is_deferred_until_the_first_scheduler_turn()
+    {
+        await using var database = await CreateAsync();
+        await RegisterAsync(database);
+        await TurnAsync(database);
+        database.Time.Advance(TimeSpan.FromSeconds(1));
+
+        await using (var scope = database.Scope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IRoutineStore>();
+            var first = await store.RunNowDetailedAsync(
+                RoutineName, target: null, TestContext.Current.CancellationToken);
+            var second = await store.RunNowDetailedAsync(
+                RoutineName, target: null, TestContext.Current.CancellationToken);
+
+            Assert.Equal(RunNowOutcome.Accepted, first.Outcome);
+            Assert.Equal(RunNowOutcome.Deferred, second.Outcome);
+        }
+
+        await TurnAsync(database);
+
+        await using var reading = database.Scope();
+        var row = await reading.ServiceProvider.GetRequiredService<FabDbContext>().Routines
+            .SingleAsync(item => item.Name == RoutineName, TestContext.Current.CancellationToken);
+        Assert.False(row.RunNowPending);
+        Assert.Equal(RunNowOutcome.Refused, row.LastRunNowOutcome);
+        Assert.Contains("no work", row.LastRunNowDetail, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// ADR 0014: fifty runs per routine, so the log stays something a person
     /// reads rather than something that grows for as long as the container runs.

@@ -7,7 +7,7 @@ namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 /// <summary>
 /// The deliberately small manual surface of release discovery. Making a
-/// routine due remains a schedule write; this type does not run one.
+/// routine due remains one atomic schedule-row update; this type does not run one.
 /// </summary>
 public sealed class ReleaseDiscoveryControls(FabDbContext context, IRoutineStore routines)
 {
@@ -92,12 +92,8 @@ public sealed class ReleaseDiscoveryControls(FabDbContext context, IRoutineStore
             return new(false, "That Indexer is not enabled.");
         }
 
-        var found = await routines.RunNowAsync(name, target, cancellationToken);
-        return new(
-            found,
-            found
-                ? "The routine is due now. Its lane will run it when its normal limits allow."
-                : "There is no schedule row for that routine.");
+        var verdict = await routines.RunNowDetailedAsync(name, target, cancellationToken);
+        return new(verdict.Accepted, verdict.Detail);
     }
 
     private static void AddGlobal(

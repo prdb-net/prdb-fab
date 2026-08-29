@@ -8,14 +8,15 @@ the way.
 > service it names, then keeps local catalogues of what prdb and your indexers
 > say. It discovers and identifies Releases, submits a selected one to SABnzbd,
 > follows the job, and files safely identified Video Files into the library.
-> Automation and reporting are not in this version.
+> Status explains the whole loop, and two opt-in reporting channels can send
+> local facts back to prdb. Unattended Download automation is not in this version.
 
 ## The quickstart
 
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.7.1
+    image: prdbnet/prdb-fab:0.8.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -130,8 +131,32 @@ files are retained, and a single-file storage path is never widened to its
 parent directory.
 
 The SABnzbd boundary is unchanged: prdb-fab performs only the initial `addfile`
-and never calls SABnzbd retry or delete. Download automation and fulfilment
-reporting are not in 0.7.1.
+and never calls SABnzbd retry or delete. The complete manual path works;
+unattended Download automation is not in 0.8.0.
+
+## Status and reporting
+
+**Status** reads the local database every five seconds and never turns a page
+view into a remote request. It follows the six stages Sync (prdb), Sync
+(Indexers), Match, Decide, Download and File. A **Gap** needs repair and counts
+in the headline. A **Brake** is a gate, budget or human decision doing exactly
+what it was configured to do; it explains the choice and links to its owner,
+but does not make a healthy installation look broken. The last-useful-act line
+shows whether the loop has recently filed a file, started a Download or added a
+Release to the cache without inventing a timeout for what “recent” should mean.
+
+**Run now** only changes a routine's ordinary due time. The same lane executes
+it, so prdb's Governor, an Indexer's Daily Query Budget, permanent refusals and
+an empty work set still cannot be bypassed. A second click cannot overlap the
+first request, and the accepted, deferred or refused result stays visible.
+
+Reporting is disabled by default under **Settings → Reporting**. Its two
+switches are independent: one reports Fulfilments for locally held Wanted
+Videos, and one reports file-to-Video assignments that a person explicitly
+confirmed in the Review Queue. Switching a channel off stops outbound reports
+from that channel while leaving its pending local differences intact. It does
+not retract reports prdb already accepted. The exact fields and boundaries are
+documented in [privacy.md](privacy.md).
 
 ## The mounts
 
@@ -322,7 +347,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.7.1` | A release. This is what documentation and Compose files should pin. |
+| `0.8.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 

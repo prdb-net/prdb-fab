@@ -10,8 +10,9 @@ Self-hosted, Docker Compose, single user. A prdb API key is required.
 > service it names, keeps local catalogues of what prdb and your indexers say,
 > identifies cached releases through prdb, and can submit an identified Release
 > to SABnzbd, follow it through completion, collect its Video Files and file
-> identified arrivals into a Jellyfin-compatible library. Automation and
-> reporting are not in this version.
+> identified arrivals into a Jellyfin-compatible library. It exposes that
+> whole loop on Status and can report two separately enabled kinds of local
+> fact back to prdb. Unattended Download automation is not in this version.
 
 ## What you need
 
@@ -29,7 +30,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.7.1
+    image: prdbnet/prdb-fab:0.8.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -89,9 +90,18 @@ Indexer Walk. The first walk reads up to 90 days of history and may therefore
 cost hundreds of queries or continue on a later day. It never spends past that
 Indexer's daily budget.
 
-The Releases view shows when each Wanted Sweep, Screening and Identification
-routine last completed or failed. **Run now** makes one due immediately; its
-normal lane, Governor and query budget still decide when it can proceed.
+**Status** lays the whole unattended loop out as Sync (prdb), Sync (Indexers),
+Match, Decide, Download and File. Its headline counts only **Gaps** that need a
+repair. A **Brake** explains work that is deliberately held by a configured
+gate or budget and links to that choice without calling it broken. The liveness
+line shows the last file filed, Download started or Release cached. The page
+polls local state every five seconds; opening it never contacts prdb, an Indexer
+or SABnzbd.
+
+Every scheduled routine can be made due with **Run now** from Status. This is a
+request to the normal scheduler, not a second execution path: the Governor,
+daily Indexer query budget and empty work set still win, and the accepted,
+deferred or refused answer remains visible beside the routine.
 
 From a Video's Releases table, **Download** fetches that exact NZB and submits
 it to the configured SABnzbd category. The choice is recorded before the remote
@@ -122,9 +132,20 @@ decision, tidy-up removes only `.nfo`, `.par2`, `.sfv`, `.srr`, `.url`, `.txt`,
 Unknown files remain, and the parent directory of single-file storage is never
 tidied.
 
+Reporting under **Settings → Reporting** is off by default and has two
+independent switches. Fulfilment reporting sends a wanted Video id, whether it
+is held, when it was filed and the highest truthfully expressible quality.
+Confirmed-assignment reporting sends the exact file metadata a person approved
+in the Review Queue: Video id, osHash, size, filename, Release name and available
+runtime, dimensions and codec. Turning either switch off makes no outbound
+report for that channel; pending differences remain local, and reports prdb
+already accepted are not retracted. See
+[docs/privacy.md](docs/privacy.md).
+
 This version's remaining boundary is exact: **prdb-fab never retries or deletes
-a SABnzbd job**, and *Stop following* changes only the local record. Download
-automation and fulfilment reporting are not in this version.
+a SABnzbd job**, and *Stop following* changes only the local record. The whole
+manual path from a wanted Video through filing works; unattended Download
+automation is still off.
 
 ## Configuration
 

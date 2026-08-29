@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Infrastructure.Status;
 
 namespace Prdb.Fab.Infrastructure.Scheduling;
 
@@ -24,6 +25,7 @@ public static class SchedulingServiceCollectionExtensions
         services.AddScoped<RoutineRunner>();
         services.AddScoped<RoutineRegistrar>();
         services.AddScoped<RunLog>();
+        services.AddScoped<StatusService>();
 
         return services;
     }
