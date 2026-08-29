@@ -45,6 +45,19 @@ export type DownloadSelectionPreview = Schema['DownloadSelectionPreview']
 export type DownloadSelectionVerdict = Schema['DownloadSelectionVerdict']
 export type DownloadResetPreview = Schema['DownloadResetPreview']
 export type DownloadResetVerdict = Schema['DownloadResetVerdict']
+export type ArrivingFileReason = Schema['ArrivingFileReason']
+export type ReviewQueuePage = Schema['ReviewQueuePage']
+export type ReviewQueueEntry = Schema['ReviewQueueEntry']
+export type ReviewQueueCount = Schema['ReviewQueueCount']
+export type ReviewVideo = Schema['ReviewVideo']
+export type ReviewVideoSearchPage = Schema['ReviewVideoSearchPage']
+export type ReviewSelectionPreview = Schema['ReviewSelectionPreview']
+export type ReviewSelectionVerdict = Schema['ReviewSelectionVerdict']
+export type ReviewDecisionVerdict = Schema['ReviewDecisionVerdict']
+export type LibraryPage = Schema['LibraryPage']
+export type LibraryEntry = Schema['LibraryEntry']
+export type LibrarySettingsState = Schema['LibrarySettingsState']
+export type OperationLogPage = Schema['OperationLogPage']
 
 export type SkeletonItem = Schema['SkeletonItem']
 export type ItemPage = Schema['ItemPage']
@@ -324,6 +337,102 @@ export async function resetDownloads(
   return post<DownloadResetVerdict>(`/api/releases/video/${videoId}/reset-downloads`, {
     downloadIds,
   })
+}
+
+export async function readReviewQueue(filters: {
+  reason?: ArrivingFileReason
+  download?: string
+  page: number
+}): Promise<ReviewQueuePage> {
+  return json<ReviewQueuePage>(
+    await fetch(`/api/review-queue?${parameters({
+      reason: filters.reason,
+      download: filters.download,
+      page: String(filters.page),
+    })}`),
+  )
+}
+
+export async function readReviewQueueCount(): Promise<ReviewQueueCount> {
+  return json<ReviewQueueCount>(await fetch('/api/review-queue/count'))
+}
+
+export async function searchReviewVideos(
+  search: string,
+  site?: string,
+  page = 1,
+): Promise<ReviewVideoSearchPage> {
+  return json<ReviewVideoSearchPage>(
+    await fetch(`/api/review-queue/videos?${parameters({ search, site, page: String(page) })}`),
+  )
+}
+
+export async function previewReviewDelete(ids: string[]): Promise<ReviewSelectionPreview> {
+  return post<ReviewSelectionPreview>('/api/review-queue/delete/preview', { arrivingFileIds: ids })
+}
+
+export async function deleteReviewEntries(ids: string[]): Promise<ReviewSelectionVerdict> {
+  return post<ReviewSelectionVerdict>('/api/review-queue/delete', { arrivingFileIds: ids })
+}
+
+export async function dismissReviewEntries(ids: string[]): Promise<ReviewSelectionVerdict> {
+  return post<ReviewSelectionVerdict>('/api/review-queue/dismiss', { arrivingFileIds: ids })
+}
+
+export async function fileReviewAs(id: string, videoId: string): Promise<ReviewDecisionVerdict> {
+  return post<ReviewDecisionVerdict>(`/api/review-queue/${id}/file-as`, { videoId })
+}
+
+export async function replaceFromReview(id: string): Promise<ReviewDecisionVerdict> {
+  return post<ReviewDecisionVerdict>(`/api/review-queue/${id}/replace`)
+}
+
+export async function fileOnlyCopyFromReview(id: string): Promise<ReviewDecisionVerdict> {
+  return post<ReviewDecisionVerdict>(`/api/review-queue/${id}/file-as-only-copy`)
+}
+
+export async function readLibrary(filters: {
+  search?: string
+  site?: string
+  actor?: string
+  quality?: string
+  page: number
+}): Promise<LibraryPage> {
+  return json<LibraryPage>(
+    await fetch(`/api/library?${parameters({
+      search: filters.search,
+      site: filters.site,
+      actor: filters.actor,
+      quality: filters.quality,
+      page: String(filters.page),
+    })}`),
+  )
+}
+
+export async function readLibraryEntry(videoId: string): Promise<LibraryEntry> {
+  return json<LibraryEntry>(await fetch(`/api/library/${videoId}`))
+}
+
+export async function readOperationLog(filters: {
+  act?: string
+  search?: string
+  page: number
+}): Promise<OperationLogPage> {
+  return json<OperationLogPage>(
+    await fetch(`/api/operation-log?${parameters({
+      act: filters.act,
+      search: filters.search,
+      page: String(filters.page),
+    })}`),
+  )
+}
+
+export async function readLibrarySettings(): Promise<LibrarySettingsState> {
+  return json<LibrarySettingsState>(await fetch('/api/settings/library'))
+}
+
+export async function saveLibrarySettings(deleteLeftovers: boolean): Promise<LibrarySettingsState> {
+  return post<LibrarySettingsState>('/api/settings/library', { deleteLeftovers })
 }
 
 function parameters(values: Record<string, string | undefined>): URLSearchParams {

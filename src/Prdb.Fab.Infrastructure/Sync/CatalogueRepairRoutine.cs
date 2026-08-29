@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
+using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Sdk.Generated.Models;
 
@@ -42,10 +43,10 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// nothing while repair sits last in the order of precedence.
 /// </para>
 /// <para>
-/// <strong>The sidecar and the entry image are not written here.</strong>
-/// ADR 0027 gives this routine that job and there are no library entries yet;
-/// the filing slice adds the write to this routine rather than to one of its
-/// own.
+/// <strong>Held entry files follow the repaired catalogue.</strong> After the
+/// catalogue write, the sidecar is replaced only when its rendered contents
+/// changed and the entry image only when the chosen artwork changed or is
+/// missing. Recorded and physical video paths never move during repair.
 /// </para>
 /// </remarks>
 public sealed class CatalogueRepairRoutine(
@@ -54,6 +55,7 @@ public sealed class CatalogueRepairRoutine(
     PrdbGateway prdb,
     PrdbGovernor governor,
     VideoDetails details,
+    EntryFiles entryFiles,
     TimeProvider time,
     ILogger<CatalogueRepairRoutine> logger) : IRoutine
 {
@@ -146,11 +148,23 @@ public sealed class CatalogueRepairRoutine(
 
         foreach (var detail in read ?? [])
         {
+            var previousImage = detail.Id is { } videoId
+                ? await entryFiles.ChosenImageIdAsync(videoId, cancellationToken)
+                : null;
+
             await details.WriteAsync(detail, cancellationToken);
 
             if (detail.Id is { } prdbId)
             {
                 answered.Add(prdbId);
+
+                var currentImage = await entryFiles.ChosenImageIdAsync(
+                    prdbId,
+                    cancellationToken);
+                await entryFiles.RefreshAsync(
+                    prdbId,
+                    previousImage != currentImage,
+                    cancellationToken);
             }
         }
 

@@ -6,28 +6,11 @@ namespace Prdb.Fab.Infrastructure.Filing;
 /// <summary>Performs and freshly verifies ADR 0026's two move executions.</summary>
 public sealed class VideoFileMover
 {
-    public async Task MoveAsync(
+    public async Task CopyAndVerifyAsync(
         string source,
-        string target,
         string temporary,
-        FilingMove move,
         CancellationToken cancellationToken)
     {
-        if (move == FilingMove.Rename)
-        {
-            try
-            {
-                File.Move(source, target);
-                return;
-            }
-            catch (IOException exception) when (IsCrossDevice(exception))
-            {
-                // Linux normally tells Directories the devices up front. If
-                // mountinfo was unavailable, the kernel's EXDEV is the same
-                // answer arriving here and takes the already verified branch.
-            }
-        }
-
         File.Delete(temporary);
 
         try
@@ -50,7 +33,39 @@ public sealed class VideoFileMover
             {
                 throw new IOException("The copied Video File did not verify against its source.");
             }
+        }
+        catch
+        {
+            File.Delete(temporary);
+            throw;
+        }
+    }
 
+    public async Task MoveAsync(
+        string source,
+        string target,
+        string temporary,
+        FilingMove move,
+        CancellationToken cancellationToken)
+    {
+        if (move == FilingMove.Rename)
+        {
+            try
+            {
+                File.Move(source, target);
+                return;
+            }
+            catch (IOException exception) when (IsCrossDevice(exception))
+            {
+                // Linux normally tells Directories the devices up front. If
+                // mountinfo was unavailable, the kernel's EXDEV is the same
+                // answer arriving here and takes the already verified branch.
+            }
+        }
+
+        try
+        {
+            await CopyAndVerifyAsync(source, temporary, cancellationToken);
             File.Move(temporary, target);
             File.Delete(source);
         }
@@ -73,12 +88,9 @@ public sealed class VideoFileMover
             return false;
         }
 
-        if (OsHash.TryCompute(first, out var firstHash)
-            && OsHash.TryCompute(second, out var secondHash))
-        {
-            return string.Equals(firstHash, secondHash, StringComparison.OrdinalIgnoreCase);
-        }
-
+        // OS hashes are identification evidence, not a byte-for-byte proof;
+        // deliberate and small-file collisions are possible. A move or
+        // replacement is destructive only after a full sequential comparison.
         await using var one = OpenRead(first);
         await using var other = OpenRead(second);
         var left = new byte[64 * 1024];

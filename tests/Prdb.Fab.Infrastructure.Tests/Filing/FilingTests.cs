@@ -371,7 +371,7 @@ public sealed class FilingTests
     }
 
     [Fact]
-    public async Task All_three_filing_routines_with_executable_code_are_registered()
+    public async Task All_four_filing_routines_with_executable_code_are_registered()
     {
         await using var database = await TestDatabase.CreateAsync();
         await using var scope = database.Scope();
@@ -379,7 +379,7 @@ public sealed class FilingTests
         Assert.Contains(CollectingRoutine.RoutineName, names);
         Assert.Contains(ArrivalIdentificationRoutine.RoutineName, names);
         Assert.Contains(FilingRoutine.RoutineName, names);
-        Assert.DoesNotContain("Tidy-up", names);
+        Assert.Contains(TidyUpRoutine.RoutineName, names);
     }
 
     private static ArrivingFileRow Arrival(

@@ -410,6 +410,54 @@
         }
       }
     },
+    "/api/operation-log": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "act",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationLogPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/access/state": {
       "get": {
         "tags": [
@@ -1115,6 +1163,453 @@
         }
       }
     },
+    "/api/settings/library": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySettingsState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibrarySettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibrarySettingsState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ArrivingFileReason"
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueuePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/count": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueCount"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/videos": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewVideoSearchPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/delete/preview": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSelectionPreview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/delete": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSelectionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/dismiss": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSelectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSelectionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/{arrivingFileId}/file-as": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "arrivingFileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileAsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/{arrivingFileId}/replace": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "arrivingFileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/review-queue/{arrivingFileId}/file-as-only-copy": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "arrivingFileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "quality",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/{videoId}": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryEntry"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/skeleton/items": {
       "get": {
         "tags": [
@@ -1370,6 +1865,15 @@
         "enum": [
           "ExactOnly",
           "ExactAndStrong"
+        ]
+      },
+      "ArrivingFileReason": {
+        "enum": [
+          "IdenticalFile",
+          "UnreadableQuality",
+          "Unidentified",
+          "Duplicate",
+          "EntryMissing"
         ]
       },
       "BrowseContext": {
@@ -2069,6 +2573,18 @@
           }
         }
       },
+      "FileAsRequest": {
+        "required": [
+          "videoId"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "HealthResponse": {
         "required": [
           "status"
@@ -2280,6 +2796,313 @@
           }
         }
       },
+      "LibraryActor": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "LibraryCard": {
+        "required": [
+          "id",
+          "title",
+          "site",
+          "releaseDate",
+          "qualities",
+          "runtimeSeconds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "site": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "qualities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "runtimeSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "LibraryEntry": {
+        "required": [
+          "id",
+          "title",
+          "site",
+          "releaseDate",
+          "consensusRuntimeMs",
+          "consensusRuntimeSpreadMs",
+          "consensusRuntimeFileCount",
+          "entryDirectory",
+          "filedAt",
+          "actors",
+          "files",
+          "operations"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "site": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "consensusRuntimeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "consensusRuntimeSpreadMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "consensusRuntimeFileCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "entryDirectory": {
+            "type": "string"
+          },
+          "filedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryActor"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryFile"
+            }
+          },
+          "operations": {
+            "$ref": "#/components/schemas/OperationLogPage"
+          }
+        }
+      },
+      "LibraryFile": {
+        "required": [
+          "id",
+          "filedPath",
+          "quality",
+          "sizeBytes",
+          "runtimeSeconds",
+          "width",
+          "height",
+          "videoCodec"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "filedPath": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "runtimeSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "videoCodec": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LibraryFilter": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "LibraryFilters": {
+        "required": [
+          "sites",
+          "actors",
+          "qualities"
+        ],
+        "type": "object",
+        "properties": {
+          "sites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryFilter"
+            }
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryFilter"
+            }
+          },
+          "qualities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LibraryPage": {
+        "required": [
+          "entries",
+          "filters",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryCard"
+            }
+          },
+          "filters": {
+            "$ref": "#/components/schemas/LibraryFilters"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "LibraryRootOutcome": {
         "enum": [
           "Saved",
@@ -2317,6 +3140,35 @@
           },
           "detail": {
             "type": "string"
+          }
+        }
+      },
+      "LibrarySettingsRequest": {
+        "required": [
+          "deleteLeftovers"
+        ],
+        "type": "object",
+        "properties": {
+          "deleteLeftovers": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LibrarySettingsState": {
+        "required": [
+          "libraryRoot",
+          "deleteLeftovers"
+        ],
+        "type": "object",
+        "properties": {
+          "libraryRoot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deleteLeftovers": {
+            "type": "boolean"
           }
         }
       },
@@ -2367,6 +3219,120 @@
           },
           "nextStep": {
             "$ref": "#/components/schemas/OnboardingStep"
+          }
+        }
+      },
+      "OperationLogEntry": {
+        "required": [
+          "id",
+          "act",
+          "videoId",
+          "downloadId",
+          "pathBefore",
+          "pathAfter",
+          "displacedPath",
+          "leftoverNamesJson",
+          "actor",
+          "reason",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "act": {
+            "type": "string"
+          },
+          "videoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "downloadId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "pathBefore": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pathAfter": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "displacedPath": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "leftoverNamesJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actor": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OperationLogPage": {
+        "required": [
+          "entries",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OperationLogEntry"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -2840,6 +3806,502 @@
                 "$ref": "#/components/schemas/ReleaseExclusion"
               }
             ]
+          }
+        }
+      },
+      "ReviewDecisionOutcome": {
+        "enum": [
+          "SelectionChanged",
+          "CannotAct",
+          "VideoNotFound",
+          "QueuedForFiling",
+          "QueuedForReplacement"
+        ]
+      },
+      "ReviewDecisionVerdict": {
+        "required": [
+          "outcome",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ReviewDecisionOutcome"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewDownload": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewFiledFile": {
+        "required": [
+          "path",
+          "quality",
+          "sizeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ReviewQueueAction": {
+        "enum": [
+          "FileAs",
+          "Replace",
+          "FileAsOnlyCopy",
+          null
+        ]
+      },
+      "ReviewQueueCount": {
+        "required": [
+          "open"
+        ],
+        "type": "object",
+        "properties": {
+          "open": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ReviewQueueEntry": {
+        "required": [
+          "id",
+          "reason",
+          "actingAction",
+          "fileName",
+          "path",
+          "isOnDisk",
+          "sizeBytes",
+          "runtimeSeconds",
+          "quality",
+          "width",
+          "height",
+          "videoCodec",
+          "probeError",
+          "confidence",
+          "matchedBy",
+          "video",
+          "candidates",
+          "filedFile",
+          "download",
+          "release",
+          "indexer"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ArrivingFileReason"
+          },
+          "actingAction": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewQueueAction"
+              }
+            ]
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "isOnDisk": {
+            "type": "boolean"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "runtimeSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "quality": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "videoCodec": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "probeError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IdentificationConfidence"
+              }
+            ]
+          },
+          "matchedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IdentificationRung"
+              }
+            ]
+          },
+          "video": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewVideo"
+              }
+            ]
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewVideo"
+            }
+          },
+          "filedFile": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewFiledFile"
+              }
+            ]
+          },
+          "download": {
+            "$ref": "#/components/schemas/ReviewDownload"
+          },
+          "release": {
+            "type": "string"
+          },
+          "indexer": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewQueuePage": {
+        "required": [
+          "entries",
+          "page",
+          "pageSize",
+          "total",
+          "globalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewQueueEntry"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "globalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ReviewSelectionFile": {
+        "required": [
+          "id",
+          "fileName",
+          "path",
+          "sizeBytes",
+          "reason",
+          "isOnDisk"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ArrivingFileReason"
+          },
+          "isOnDisk": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReviewSelectionOutcome": {
+        "enum": [
+          "Ready",
+          "SelectionChanged",
+          "Deleted",
+          "Dismissed"
+        ]
+      },
+      "ReviewSelectionPreview": {
+        "required": [
+          "outcome",
+          "files",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ReviewSelectionOutcome"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewSelectionFile"
+            }
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewSelectionRequest": {
+        "required": [
+          "arrivingFileIds"
+        ],
+        "type": "object",
+        "properties": {
+          "arrivingFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "ReviewSelectionVerdict": {
+        "required": [
+          "outcome",
+          "changed",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ReviewSelectionOutcome"
+          },
+          "changed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "ReviewVideo": {
+        "required": [
+          "id",
+          "title",
+          "site",
+          "releaseDate"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "site": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "consensusRuntimeMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "consensusRuntimeFileCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ReviewVideoSearchPage": {
+        "required": [
+          "videos",
+          "page",
+          "pageSize",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewVideo"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -3400,6 +4862,9 @@
       "name": "Acquisition"
     },
     {
+      "name": "Filing"
+    },
+    {
       "name": "Access"
     },
     {
@@ -3410,9 +4875,6 @@
     },
     {
       "name": "Catalogue"
-    },
-    {
-      "name": "Filing"
     },
     {
       "name": "Skeleton"

@@ -26,13 +26,16 @@ public sealed class FilingRoutine(
     {
         var arrival = await context.ArrivingFiles
             .AsTracking()
-            .Where(row => row.Reason == null
+            .Where(row => (row.Reason == null
                 && (row.State == ArrivingFileState.Filing
                     || (row.State == ArrivingFileState.AwaitingFiling
                         && !context.ArrivingFiles.Any(other =>
                             other.Id != row.Id
                             && other.VideoId == row.VideoId
                             && other.State == ArrivingFileState.Filing))))
+                || (row.Reason == ArrivingFileReason.Duplicate
+                    && row.State == ArrivingFileState.Filing
+                    && row.IntendedPath != null))
             .OrderBy(row => row.LastAttemptedAt != null)
             .ThenBy(row => row.LastAttemptedAt)
             .ThenBy(row => row.Id)
@@ -45,6 +48,13 @@ public sealed class FilingRoutine(
 
         arrival.LastAttemptedAt = time.GetUtcNow();
         await context.SaveChangesAsync(cancellationToken);
+
+        if (arrival.Reason == ArrivingFileReason.Duplicate)
+        {
+            await ReplaceAsync(arrival, cancellationToken);
+            logger.LogInformation("Replaced one filed Video File from the Review Queue.");
+            return RunResult.Handled(1);
+        }
 
         var root = await AvailableLibraryRootAsync(cancellationToken);
 
@@ -61,6 +71,113 @@ public sealed class FilingRoutine(
 
         logger.LogInformation("Filed one Arriving File into the Library.");
         return RunResult.Handled(1);
+    }
+
+    private async Task ReplaceAsync(
+        ArrivingFileRow arrival,
+        CancellationToken cancellationToken)
+    {
+        var videoId = arrival.VideoId
+            ?? throw new InvalidOperationException("A replacement has no Video.");
+        var quality = arrival.QualityLabel
+            ?? throw new InvalidOperationException("A replacement has no Quality.");
+        var intended = arrival.IntendedPath
+            ?? throw new InvalidOperationException("A replacement has no intended path.");
+        var displaced = await context.VideoFiles
+            .AsTracking()
+            .SingleAsync(
+                row => row.LibraryEntryVideoId == videoId && row.QualityLabel == quality,
+                cancellationToken);
+        var entry = await context.LibraryEntries
+            .AsNoTracking()
+            .SingleAsync(row => row.VideoId == videoId, cancellationToken);
+        if (!string.Equals(
+                Path.GetDirectoryName(intended),
+                entry.EntryDirectory,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("A replacement intended path is outside its Entry Directory.");
+        }
+
+        var targetIsNew = File.Exists(intended)
+            && mover.Matches(intended, arrival.SizeBytes, arrival.OsHash);
+        if (targetIsNew
+            && arrival.OsHash is null
+            && File.Exists(arrival.SourcePath))
+        {
+            // Equal size is not evidence that the old filed copy is the new
+            // target. On a resumed replacement the target and the still-held
+            // source are byte-identical; before the replacement they need not
+            // be. This keeps the recovery shortcut from preserving the file
+            // the person explicitly chose to replace.
+            targetIsNew = await mover.SameBytesAsync(
+                intended,
+                arrival.SourcePath,
+                cancellationToken);
+        }
+        if (!targetIsNew)
+        {
+            if (!File.Exists(arrival.SourcePath)
+                || !mover.Matches(arrival.SourcePath, arrival.SizeBytes, arrival.OsHash))
+            {
+                throw new IOException("The replacement source is not present as it was confirmed.");
+            }
+
+            if (!string.Equals(intended, displaced.FiledPath, StringComparison.Ordinal)
+                && File.Exists(intended))
+            {
+                throw new IOException("The replacement path is occupied by different content.");
+            }
+
+            var temporary = Path.Combine(
+                entry.EntryDirectory,
+                FiledPaths.TemporaryName(arrival.DownloadId));
+            await mover.CopyAndVerifyAsync(arrival.SourcePath, temporary, cancellationToken);
+            File.Move(temporary, intended, overwrite: true);
+        }
+
+        if (!string.Equals(displaced.FiledPath, intended, StringComparison.Ordinal)
+            && File.Exists(displaced.FiledPath))
+        {
+            File.Delete(displaced.FiledPath);
+        }
+
+        if (File.Exists(arrival.SourcePath))
+        {
+            if (!mover.Matches(arrival.SourcePath, arrival.SizeBytes, arrival.OsHash))
+            {
+                throw new IOException("The replacement source changed after it was confirmed.");
+            }
+
+            File.Delete(arrival.SourcePath);
+        }
+
+        var before = displaced.FiledPath;
+        displaced.FiledPath = intended;
+        displaced.SizeBytes = arrival.SizeBytes;
+        displaced.RuntimeSeconds = arrival.RuntimeSeconds;
+        displaced.Width = arrival.Width;
+        displaced.Height = arrival.Height;
+        displaced.VideoCodec = arrival.VideoCodec;
+        displaced.OsHash = arrival.OsHash;
+        var now = time.GetUtcNow();
+        context.OperationLogEntries.Add(new OperationLogEntryRow
+        {
+            Id = Guid.CreateVersion7(now),
+            Act = "Replaced",
+            VideoFileId = displaced.Id,
+            LibraryEntryVideoId = videoId,
+            VideoId = videoId,
+            DownloadId = arrival.DownloadId,
+            PathBefore = arrival.SourcePath,
+            PathAfter = intended,
+            DisplacedPath = before,
+            Actor = "Person",
+            Reason = "Review Queue: Replace",
+            At = now,
+        });
+        context.ArrivingFiles.Remove(arrival);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<bool> PrepareAsync(
