@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -224,6 +225,65 @@ public sealed class ReleaseDiscoveryTests
                 DiscoveryRoutineNames.Screening,
             }.Order(),
             rows);
+
+        var discoveryRows = await context.Routines
+            .Where(row => row.Name == DiscoveryRoutineNames.WantedSweep
+                || row.Name == DiscoveryRoutineNames.Screening
+                || row.Name == DiscoveryRoutineNames.BackwardsSearch
+                || row.Name == DiscoveryRoutineNames.Identification)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.All(discoveryRows, row => Assert.Equal(database.Time.GetUtcNow(), row.DueAt));
+    }
+
+    [Fact]
+    public async Task Only_never_run_dormant_foundation_rows_are_activated_on_upgrade()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SeedIndexerAsync(database);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Routines.AddRange(
+                new RoutineRow
+                {
+                    Name = DiscoveryRoutineNames.WantedSweep,
+                    Target = IndexerId.ToString("D"),
+                    Lane = Lane.Sync,
+                    DueAt = DateTimeOffset.MaxValue,
+                },
+                new RoutineRow
+                {
+                    Name = DiscoveryRoutineNames.Screening,
+                    Lane = Lane.Bulk,
+                    DueAt = DateTimeOffset.MaxValue,
+                },
+                new RoutineRow
+                {
+                    Name = DiscoveryRoutineNames.Identification,
+                    Lane = Lane.Sync,
+                    DueAt = DateTimeOffset.MaxValue,
+                    LastFailureAt = FirstSeen,
+                    ConsecutiveFailures = 3,
+                });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            await scope.ServiceProvider.GetRequiredService<DiscoveryState>()
+                .EnsureFoundationAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var check = database.Scope();
+        var rows = await check.ServiceProvider.GetRequiredService<FabDbContext>().Routines
+            .Where(row => row.Name == DiscoveryRoutineNames.WantedSweep
+                || row.Name == DiscoveryRoutineNames.Screening
+                || row.Name == DiscoveryRoutineNames.BackwardsSearch
+                || row.Name == DiscoveryRoutineNames.Identification)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(database.Time.GetUtcNow(), rows.Single(row => row.Name == DiscoveryRoutineNames.WantedSweep).DueAt);
+        Assert.Equal(database.Time.GetUtcNow(), rows.Single(row => row.Name == DiscoveryRoutineNames.Screening).DueAt);
+        Assert.Equal(database.Time.GetUtcNow(), rows.Single(row => row.Name == DiscoveryRoutineNames.BackwardsSearch).DueAt);
+        Assert.Equal(DateTimeOffset.MaxValue, rows.Single(row => row.Name == DiscoveryRoutineNames.Identification).DueAt);
     }
 
     [Fact]

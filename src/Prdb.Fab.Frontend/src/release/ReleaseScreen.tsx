@@ -6,8 +6,11 @@ import {
   downloadRelease,
   previewResetDownloads,
   previewReleaseDownload,
+  readReleaseDiscoveryRoutines,
   resetDownloads,
+  runReleaseDiscoveryRoutine,
   type IdentificationState,
+  type ReleaseDiscoveryRoutine,
   type ReleasePage,
 } from '../api/client.ts'
 import styles from './ReleaseScreen.module.css'
@@ -108,6 +111,8 @@ function ReleaseTable({
         automatically tries the next ranked Release after a release failure, within the
         three-Download budget.
       </div>
+
+      <ReleaseDiscoveryControls />
 
       {page.acquisition && (
         <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
@@ -213,6 +218,80 @@ function ReleaseTable({
       )}
     </main>
   )
+}
+
+function ReleaseDiscoveryControls() {
+  const routines = useQuery({
+    queryKey: ['release-discovery-routines'],
+    queryFn: readReleaseDiscoveryRoutines,
+  })
+
+  return (
+    <section className={styles.discovery}>
+      <div className={styles.discoveryHeading}>
+        <div>
+          <h2>Release discovery</h2>
+          <p>
+            These routines run automatically. Run now makes one due immediately; its lane,
+            Governor, and query budget still decide when work can proceed.
+          </p>
+        </div>
+      </div>
+
+      {routines.isPending && <p className={styles.secondary}>Reading the schedule…</p>}
+      {routines.isError && (
+        <p className={styles.secondary}>The Release discovery schedule could not be read.</p>
+      )}
+      {routines.data && routines.data.length === 0 && (
+        <p className={styles.secondary}>No Release discovery routines are available.</p>
+      )}
+      {routines.data && routines.data.length > 0 && (
+        <div className={styles.routines}>
+          {routines.data.map((routine) => (
+            <ReleaseDiscoveryRoutineControl
+              key={`${routine.kind}:${routine.target ?? 'global'}`}
+              routine={routine}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function ReleaseDiscoveryRoutineControl({ routine }: { routine: ReleaseDiscoveryRoutine }) {
+  const queryClient = useQueryClient()
+  const runNow = useMutation({
+    mutationFn: () => runReleaseDiscoveryRoutine(routine),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['release-discovery-routines'] }),
+  })
+
+  return (
+    <div className={styles.routine}>
+      <div>
+        <h3>{routine.label}</h3>
+        <p>{routine.detail}</p>
+        <span className={styles.secondary}>{routineActivity(routine)}</span>
+        {runNow.data && <span className={styles.secondary}>{runNow.data.detail}</span>}
+        {runNow.isError && (
+          <span className={styles.secondary}>The routine could not be made due.</span>
+        )}
+      </div>
+      <button type="button" onClick={() => runNow.mutate()} disabled={runNow.isPending}>
+        {runNow.isPending ? 'Scheduling…' : 'Run now'}
+      </button>
+    </div>
+  )
+}
+
+function routineActivity(routine: ReleaseDiscoveryRoutine): string {
+  if (routine.lastFailureAt && Number(routine.consecutiveFailures) > 0) {
+    return `Last failed ${new Date(routine.lastFailureAt).toLocaleString()} (${routine.consecutiveFailures} consecutive).`
+  }
+  if (routine.lastSuccessAt) {
+    return `Last completed ${new Date(routine.lastSuccessAt).toLocaleString()}.`
+  }
+  return 'No completed run recorded yet.'
 }
 
 function AcquisitionSummary({

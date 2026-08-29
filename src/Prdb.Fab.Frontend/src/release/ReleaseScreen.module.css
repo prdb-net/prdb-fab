@@ -31,6 +31,56 @@
   padding: 0.75rem 1rem;
 }
 
+.discovery {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+}
+
+.discoveryHeading h2,
+.discoveryHeading p,
+.routine h3,
+.routine p {
+  margin: 0 0 0.35rem;
+}
+
+.discoveryHeading p,
+.routine p {
+  color: var(--text-quiet);
+}
+
+.routines {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.routine {
+  align-items: start;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+}
+
+.routine button {
+  background: var(--accent);
+  border: 0;
+  border-radius: var(--radius);
+  color: var(--surface);
+  cursor: pointer;
+  flex: none;
+  font-weight: 700;
+  padding: 0.45rem 0.8rem;
+}
+
+.routine button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
 .acquisition {
   border: 1px solid var(--border);
   border-radius: var(--radius);

@@ -37,6 +37,9 @@ export type ActorPage = Schema['ActorPage']
 export type ActorVideos = Schema['ActorVideos']
 export type ReleasePage = Schema['ReleasePage']
 export type IdentificationState = Schema['IdentificationState']
+export type ReleaseDiscoveryRoutine = Schema['ReleaseDiscoveryRoutine']
+export type ReleaseDiscoveryRoutineKind = Schema['ReleaseDiscoveryRoutineKind']
+export type ReleaseDiscoveryRunNowVerdict = Schema['ReleaseDiscoveryRunNowVerdict']
 export type DownloadPreview = Schema['DownloadPreview']
 export type DownloadVerdict = Schema['DownloadVerdict']
 export type DownloadPage = Schema['DownloadPage']
@@ -283,6 +286,21 @@ export async function listReleases(filters: {
       })}`,
     ),
   )
+}
+
+/** Reading these local schedule rows never starts discovery work. */
+export async function readReleaseDiscoveryRoutines(): Promise<ReleaseDiscoveryRoutine[]> {
+  return json<ReleaseDiscoveryRoutine[]>(await fetch('/api/releases/discovery-routines'))
+}
+
+/**
+ * Makes the existing schedule row due. The lane still owns execution and all
+ * of its ordinary Governor and query-budget limits.
+ */
+export async function runReleaseDiscoveryRoutine(
+  routine: Pick<ReleaseDiscoveryRoutine, 'kind' | 'target'>,
+): Promise<ReleaseDiscoveryRunNowVerdict> {
+  return post<ReleaseDiscoveryRunNowVerdict>('/api/releases/discovery-routines/run-now', routine)
 }
 
 export async function previewReleaseDownload(

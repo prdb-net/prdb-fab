@@ -135,6 +135,57 @@
         }
       }
     },
+    "/api/releases/discovery-routines": {
+      "get": {
+        "tags": [
+          "Release discovery"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseDiscoveryRoutine"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/discovery-routines/run-now": {
+      "post": {
+        "tags": [
+          "Release discovery"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseDiscoveryRunNowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDiscoveryRunNowVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/releases/{releaseId}/download/preview": {
       "post": {
         "tags": [
@@ -3596,6 +3647,105 @@
           "Site",
           "Actor"
         ]
+      },
+      "ReleaseDiscoveryRoutine": {
+        "required": [
+          "kind",
+          "target",
+          "label",
+          "detail",
+          "dueAt",
+          "lastSuccessAt",
+          "lastFailureAt",
+          "consecutiveFailures"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ReleaseDiscoveryRoutineKind"
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastFailureAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "consecutiveFailures": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ReleaseDiscoveryRoutineKind": {
+        "enum": [
+          "WantedSweep",
+          "Screening",
+          "BackwardsScreening",
+          "Identification"
+        ]
+      },
+      "ReleaseDiscoveryRunNowRequest": {
+        "required": [
+          "kind",
+          "target"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ReleaseDiscoveryRoutineKind"
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ReleaseDiscoveryRunNowVerdict": {
+        "required": [
+          "accepted",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
       },
       "ReleaseExclusion": {
         "enum": [

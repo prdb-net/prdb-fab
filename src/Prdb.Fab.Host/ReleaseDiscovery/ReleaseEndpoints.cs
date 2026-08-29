@@ -14,6 +14,21 @@ public static class ReleaseEndpoints
     {
         routes.MapGet("/api/releases", ReadAsync).WithTags("Release discovery");
 
+        routes.MapGet(
+            "/api/releases/discovery-routines",
+            async (ReleaseDiscoveryControls controls, CancellationToken cancellationToken) =>
+                TypedResults.Ok(await controls.ReadAsync(cancellationToken)))
+            .WithTags("Release discovery");
+
+        routes.MapPost(
+            "/api/releases/discovery-routines/run-now",
+            async (
+                ReleaseDiscoveryRunNowRequest request,
+                ReleaseDiscoveryControls controls,
+                CancellationToken cancellationToken) =>
+                TypedResults.Ok(await controls.RunNowAsync(request, cancellationToken)))
+            .WithTags("Release discovery");
+
         routes.MapPost(
             "/api/releases/{releaseId:long}/download/preview",
             async Task<Results<Ok<DownloadPreview>, NotFound>> (
