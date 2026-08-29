@@ -70,6 +70,49 @@ public sealed class EntryPathTests
     }
 
     /// <summary>
+    /// Trimming once is not enough: taking the dots off `. .Site` exposes a
+    /// space, and taking that off exposes a dot again. What the single pass left
+    /// behind was a hidden directory produced by the code that exists to prevent
+    /// one.
+    /// </summary>
+    [Theory]
+    [InlineData(". .Site", "Site")]
+    [InlineData(". . .", "")]
+    [InlineData(" . . Site . . ", "Site")]
+    [InlineData("...Site...", "Site")]
+    public void A_dot_exposed_by_trimming_is_trimmed_too(string written, string expected) =>
+        Assert.Equal(expected, LibraryNames.Sanitise(written));
+
+    /// <summary>
+    /// The whole of why that matters: a site whose title begins with a dot must
+    /// not become a directory the media server's scanner never sees.
+    /// </summary>
+    [Fact]
+    public void No_filed_component_is_hidden()
+    {
+        var path = EntryPaths.For(Filed(site: ". .Example", title: ". .A Title"), ".mkv");
+
+        Assert.Equal("Example", path.SiteDirectory);
+        Assert.Equal("Example - 2026-08-28 - A Title", path.EntryDirectory);
+    }
+
+    /// <summary>
+    /// A site that sanitises to a bare dot used to reach <see cref="LibraryNames.Fit"/>,
+    /// which trimmed it to nothing — and `Path.Combine` then dropped the site
+    /// level, filing the entry directly under the library root.
+    /// </summary>
+    [Fact]
+    public void A_site_of_nothing_but_dots_and_spaces_still_has_a_directory()
+    {
+        var path = EntryPaths.For(Filed(site: ". . ."), ".mkv");
+
+        Assert.Equal(Video.ToString("d"), path.SiteDirectory);
+        Assert.Equal(
+            Path.Combine("/library", Video.ToString("d"), path.EntryDirectory),
+            path.DirectoryUnder("/library"));
+    }
+
+    /// <summary>
     /// A title made of nothing but reserved characters sanitises to nothing, and
     /// an empty path component is worse than an ugly one.
     /// </summary>
