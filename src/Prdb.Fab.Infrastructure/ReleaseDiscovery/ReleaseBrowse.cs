@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Infrastructure.Acquisition;
@@ -130,7 +131,7 @@ public sealed class ReleaseBrowse(
         VideoAcquisition? acquisition,
         CancellationToken cancellationToken)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var availableIndexers = await relevant
             .Where(row => row.Indexer != null)
             .Select(row => new { row.IndexerId, row.Indexer!.Name, row.Indexer.Rank })
@@ -163,7 +164,7 @@ public sealed class ReleaseBrowse(
             ? await query
                 .OrderByDescending(row => row.FirstSeenAt)
                 .ThenByDescending(row => row.Id)
-                .Skip((wanted - 1) * APage)
+                .Skip(Paging.Skip(wanted, APage))
                 .Take(APage)
                 .ToListAsync(cancellationToken)
             : (await query.ToListAsync(cancellationToken))
@@ -172,7 +173,7 @@ public sealed class ReleaseBrowse(
                 .ThenBy(row => exclusionById.GetValueOrDefault(row.Id)?.Exclusion)
                 .ThenByDescending(row => row.FirstSeenAt)
                 .ThenByDescending(row => row.Id)
-                .Skip((wanted - 1) * APage)
+                .Skip(Paging.Skip(wanted, APage))
                 .Take(APage)
                 .ToList();
 

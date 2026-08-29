@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Skeleton;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -28,10 +29,10 @@ public static class SkeletonEndpoints
             int page = 1) =>
         {
             var all = await items.ListAsync(cancellationToken);
-            var wanted = Math.Max(page, 1);
+            var wanted = Paging.Wanted(page);
 
             return TypedResults.Ok(new ItemPage(
-                Items: [.. all.Skip((wanted - 1) * PageSize).Take(PageSize)],
+                Items: [.. all.Skip(Paging.Skip(wanted, PageSize)).Take(PageSize)],
                 Page: wanted,
                 PageSize: PageSize,
                 Total: all.Count));

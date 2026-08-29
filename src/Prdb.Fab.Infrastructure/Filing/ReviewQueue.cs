@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -16,7 +17,7 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
         int page,
         CancellationToken cancellationToken = default)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var open = context.ArrivingFiles
             .AsNoTracking()
             .Where(row => row.Reason != null);
@@ -30,7 +31,7 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
             cancellationToken);
         var arrivals = await open
             .OrderByDescending(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .ToListAsync(cancellationToken);
 

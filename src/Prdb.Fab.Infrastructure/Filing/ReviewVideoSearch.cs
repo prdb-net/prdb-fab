@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -18,7 +19,7 @@ public sealed class ReviewVideoSearch(FabDbContext context, PrdbGateway prdb)
         var query = search?.Trim();
         if (siteId is null && (query is null || query.Length < 2))
         {
-            return new ReviewVideoSearchPage([], Math.Max(page, 1), 20, 0);
+            return new ReviewVideoSearchPage([], Paging.Wanted(page), 20, 0);
         }
 
         var apiKey = await context.Installation
@@ -26,7 +27,7 @@ public sealed class ReviewVideoSearch(FabDbContext context, PrdbGateway prdb)
             .Select(row => row.PrdbApiKey)
             .SingleAsync(cancellationToken)
             ?? throw new InvalidOperationException("A prdb connection is required to search Videos.");
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var answer = await prdb.AskAsync(
             apiKey,
             PrdbWork.Identification,

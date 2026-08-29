@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -16,7 +17,7 @@ public sealed class DownloadBrowse(FabDbContext context)
         int page,
         CancellationToken cancellationToken = default)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var relevant = context.Downloads.AsNoTracking();
         var indexers = await context.Downloads
             .AsNoTracking()
@@ -34,7 +35,7 @@ public sealed class DownloadBrowse(FabDbContext context)
         var rows = await relevant
             .OrderByDescending(row => row.CreatedAt)
             .ThenByDescending(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new
             {
