@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Host.Access;
 using Prdb.Fab.Host.Acquisition;
+using Prdb.Fab.Host.Automation;
 using Prdb.Fab.Host.Catalogue;
 using Prdb.Fab.Host.Connections;
 using Prdb.Fab.Host.Filing;
@@ -19,6 +20,7 @@ using Prdb.Fab.Host.Scheduling;
 using Prdb.Fab.Host.Status;
 using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Acquisition;
+using Prdb.Fab.Infrastructure.Automation;
 using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -55,6 +57,7 @@ builder.Services.AddFabScheduling();
 builder.Services.AddFabAccess();
 builder.Services.AddFabConnections();
 builder.Services.AddFabReleaseDiscovery();
+builder.Services.AddFabAutomation();
 builder.Services.AddFabAcquisition();
 builder.Services.AddFabFiling();
 builder.Services.AddFabReporting();
@@ -201,6 +204,8 @@ app.MapCatalogue();
 app.MapReleaseDiscovery();
 
 app.MapAcquisition();
+
+app.MapAutomation();
 
 app.MapFiling();
 

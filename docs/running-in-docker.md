@@ -9,14 +9,15 @@ the way.
 > say. It discovers and identifies Releases, submits a selected one to SABnzbd,
 > follows the job, and files safely identified Video Files into the library.
 > Status explains the whole loop, and two opt-in reporting channels can send
-> local facts back to prdb. Unattended Download automation is not in this version.
+> local facts back to prdb. Permission rules can run that same Download path
+> unattended for matched Wanted Videos.
 
 ## The quickstart
 
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.8.0
+    image: prdbnet/prdb-fab:0.9.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -69,7 +70,31 @@ the settings afterwards.
 Everything you answered is editable later under **Settings**, without a restart
 and without editing this Compose file.
 
-## Downloads and this version's boundary
+## Automation, Downloads and the SABnzbd boundary
+
+Automation is off until at least one rule is enabled under **Settings →
+Automation**. Every rule is an independent permission over matched Wanted
+Videos: it selects allowed enabled Indexers and optional minimum and maximum
+Release size. Rules are unordered, may overlap, and never deny another rule.
+They do not use favourite Sites, favourite Actors, or a Quality guessed from a
+Release name.
+
+Enabling or changing a rule immediately schedules a catch-up over matching
+Releases already in the cache. There is no preview. The catch-up uses the same
+background Decide work set as newly identified Releases and newly Wanted
+Videos, and the default cap permits at most 20 unfinished automatic Downloads
+in SABnzbd at once. Further work waits durably. Before every submission the
+Video must still be Wanted, absent from the Library in every Quality, free of an
+open Review Queue entry, inside the before-download named confidence set, and
+within its three-attempt Retry Budget. Status and the Release view explain a
+gate, rule, cap or other deliberate non-act.
+
+Disabling a rule is forward-only. Deleting one asks for confirmation; existing
+Downloads keep the copied rule name in their Origin. If a Video leaves Wanted,
+an Outstanding or just-completed automatic Download becomes **Abandoned**
+locally, no retry follows, SABnzbd is not changed, and anything already filed
+stays in the Library. The exact safety model is in
+[automation.md](automation.md).
 
 Open **Releases** for a Video and choose **Download** beside an eligible
 Release. The confirmation names the exact Release and its cost: every submitted
@@ -131,8 +156,7 @@ files are retained, and a single-file storage path is never widened to its
 parent directory.
 
 The SABnzbd boundary is unchanged: prdb-fab performs only the initial `addfile`
-and never calls SABnzbd retry or delete. The complete manual path works;
-unattended Download automation is not in 0.8.0.
+and never calls SABnzbd retry or delete.
 
 ## Status and reporting
 
@@ -347,7 +371,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.8.0` | A release. This is what documentation and Compose files should pin. |
+| `0.9.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 

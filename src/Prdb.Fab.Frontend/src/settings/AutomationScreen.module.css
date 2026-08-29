@@ -1,0 +1,12 @@
+.sectionHeading { align-items: baseline; display: flex; gap: 1rem; justify-content: space-between; margin-top: 1.5rem; }
+.sectionHeading h2, .sectionHeading p { margin: 0; }
+.sectionHeading p, .rules span, .empty { color: var(--text-quiet); font-size: .85rem; }
+.rules { border: 1px solid var(--border); border-radius: var(--radius); list-style: none; margin: 1rem 0 2rem; padding: 0; }
+.rules li { align-items: center; border-bottom: 1px solid var(--border); display: flex; gap: 1rem; justify-content: space-between; padding: .7rem .8rem; }
+.rules li:last-child { border-bottom: 0; }
+.rules span { display: block; margin-top: .15rem; }
+.empty { border: 1px dashed var(--border); border-radius: var(--radius); padding: 1rem; }
+.enabled { margin-top: 1.25rem; }
+.actions { align-items: center; display: flex; gap: .75rem; }
+.danger { background: transparent; border: 1px solid var(--bad); border-radius: var(--radius); color: var(--bad); cursor: pointer; margin-top: 1.25rem; padding: .5rem .75rem; }
+.danger:disabled { cursor: default; opacity: .6; }

@@ -8,6 +8,7 @@ using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.Reporting;
+using Prdb.Fab.Core.Automation;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
@@ -71,6 +72,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<IdentificationOutcomeRow> IdentificationOutcomes => Set<IdentificationOutcomeRow>();
 
     public DbSet<DownloadRow> Downloads => Set<DownloadRow>();
+
+    public DbSet<DownloadOriginRuleRow> DownloadOriginRules => Set<DownloadOriginRuleRow>();
+
+    public DbSet<AutomationRuleRow> AutomationRules => Set<AutomationRuleRow>();
+
+    public DbSet<AutomationRuleIndexerRow> AutomationRuleIndexers => Set<AutomationRuleIndexerRow>();
 
     public DbSet<ReleaseNotDownloadedRow> ReleasesNotDownloaded => Set<ReleaseNotDownloadedRow>();
 
@@ -177,6 +184,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
             installation.Property(row => row.OnboardingStep).HasConversion<string>();
             installation.Property(row => row.RetryBudget).HasDefaultValue(3);
+            installation.Property(row => row.AutomaticDownloadCap).HasDefaultValue(20);
 
             // The row exists from the first migration rather than being created
             // on demand, so nothing anywhere has to ask whether it is there.
@@ -426,6 +434,31 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        builder.Entity<AutomationRuleRow>(rule =>
+        {
+            rule.ToTable("automation_rule");
+            rule.HasKey(row => row.Id);
+            rule.Declares(AccountClass.AccountFree);
+            rule.Property(row => row.Name).IsRequired();
+            rule.HasIndex(row => row.Name);
+        });
+
+        builder.Entity<AutomationRuleIndexerRow>(permission =>
+        {
+            permission.ToTable("automation_rule_indexer");
+            permission.HasKey(row => new { row.AutomationRuleId, row.IndexerId });
+            permission.Declares(AccountClass.AccountFree);
+            permission.HasIndex(row => row.IndexerId);
+            permission.HasOne(row => row.AutomationRule)
+                .WithMany()
+                .HasForeignKey(row => row.AutomationRuleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            permission.HasOne(row => row.Indexer)
+                .WithMany()
+                .HasForeignKey(row => row.IndexerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         builder.Entity<ReleaseRow>(release =>
         {
             release.ToTable("release", table => table.HasCheckConstraint(
@@ -446,6 +479,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             release.Property(row => row.IdentificationState).HasConversion<string>();
             release.Property(row => row.Confidence).HasConversion<string>();
             release.Property(row => row.MatchedBy).HasConversion<string>();
+            release.Property(row => row.AutomationPending).HasDefaultValue(false);
+            release.Property(row => row.AutomationDecisionReason).HasConversion<string>();
+            release.HasIndex(row => row.AutomationPending).HasFilter("\"AutomationPending\" = 1");
             release.HasOne(row => row.Indexer)
                 .WithMany()
                 .HasForeignKey(row => row.IndexerId)
@@ -514,6 +550,24 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             download.Property(row => row.SubmittedName).IsRequired();
             download.Property(row => row.State).HasConversion<string>();
             download.Property(row => row.Cause).HasConversion<string>();
+        });
+
+        builder.Entity<DownloadOriginRuleRow>(origin =>
+        {
+            origin.ToTable("download_origin_rule");
+            origin.HasKey(row => row.Id);
+            origin.Declares(AccountClass.AccountFree);
+            origin.HasIndex(row => row.DownloadId);
+            origin.HasIndex(row => row.AutomationRuleId);
+            origin.Property(row => row.RuleName).IsRequired();
+            origin.HasOne(row => row.Download)
+                .WithMany()
+                .HasForeignKey(row => row.DownloadId)
+                .OnDelete(DeleteBehavior.Cascade);
+            origin.HasOne(row => row.AutomationRule)
+                .WithMany()
+                .HasForeignKey(row => row.AutomationRuleId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         builder.Entity<ReleaseNotDownloadedRow>(observation =>
@@ -627,6 +681,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             admission.Property(row => row.Gate).IsRequired();
             admission.Property(row => row.Confidence).HasConversion<string>();
             admission.HasData(
+                new GateAdmissionRow { Gate = BeforeDownloadGate.Name, Confidence = IdentificationConfidence.Exact },
+                new GateAdmissionRow { Gate = BeforeDownloadGate.Name, Confidence = IdentificationConfidence.Strong },
+                new GateAdmissionRow { Gate = BeforeDownloadGate.Name, Confidence = IdentificationConfidence.Probable },
                 new GateAdmissionRow { Gate = AfterDownloadGate.Name, Confidence = IdentificationConfidence.Exact },
                 new GateAdmissionRow { Gate = AfterDownloadGate.Name, Confidence = IdentificationConfidence.Strong });
         });
@@ -641,6 +698,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<InstallationRow>().Declares(ExportClass.Exported);
         builder.Entity<IndexerRow>().Declares(ExportClass.Exported);
         builder.Entity<DownloadRow>().Declares(ExportClass.Exported);
+        builder.Entity<DownloadOriginRuleRow>().Declares(ExportClass.Exported);
+        builder.Entity<AutomationRuleRow>().Declares(ExportClass.Exported);
+        builder.Entity<AutomationRuleIndexerRow>().Declares(ExportClass.Exported);
         builder.Entity<LibraryEntryRow>().Declares(ExportClass.Exported);
         builder.Entity<VideoFileRow>().Declares(ExportClass.Exported);
         builder.Entity<ArrivingFileRow>().Declares(ExportClass.Exported);

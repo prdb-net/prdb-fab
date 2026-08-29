@@ -19,6 +19,51 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-29
+
+This release completes Wanted automation. Unordered permission rules can now
+run the existing ranked Download path unattended while the same local safety
+facts remain authoritative and inspectable.
+
+### Added
+
+- **Automation Rules over Wanted Videos.** Each rule allows one or more enabled
+  Indexers and optional minimum and maximum Release sizes. No enabled rule is
+  the off state. Enabling or changing a rule schedules a catch-up over cached
+  matches, bounded by a configurable unfinished automatic Download cap that
+  defaults to 20.
+- **An active before-download Identification gate.** Exact, Strong and Probable
+  remain the default named set; stricter fixed sets can be selected beside the
+  existing after-download gate. A change queues reconsideration and never turns
+  the settings request itself into a SABnzbd submission.
+- **Durable automatic decisions and Origins.** The Release view and Status
+  explain gates, size, disallowed Indexers, held Videos, Review Queue entries,
+  the automatic cap, Retry Budget and exhausted Releases. Downloads and
+  Operation Log entries show Person or Automation, including every permitting
+  rule; copied rule names survive rule deletion.
+
+### Changed
+
+- Newly identified Releases, Videos newly entering Wanted, and rule or gate
+  catch-up all feed one bounded background Decide work set. Automatic
+  submission reuses the manual reservation, NZB retrieval, SABnzbd category
+  validation, retry budget and idempotency path.
+- Removing a Video from Wanted marks its unfinished automatic Download
+  `Abandoned`, stops following it and prevents a retry. It never pauses, retries
+  or deletes the SABnzbd job, and it leaves anything already filed untouched.
+- A Video already held in the Library in any Quality is never automatically
+  upgraded in this first release. Favourite Sites, favourite Actors and Quality
+  parsed from Release names are not automation inputs.
+
+### Documentation
+
+- Added an operator-facing description of catch-up, every automatic safety
+  bound, forward-only rule changes, durable Origin and the exact Wanted-removal
+  boundary.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.9.0 has started against it.
+
 ## [0.8.0] - 2026-08-29
 
 This release finishes the Reporting and Status slice. It adds separately

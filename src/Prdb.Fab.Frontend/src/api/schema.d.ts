@@ -323,6 +323,7 @@ export interface paths {
                 query?: {
                     state?: components["schemas"]["DownloadState"];
                     indexer?: string;
+                    download?: string;
                     page?: number | string;
                 };
                 header?: never;
@@ -1423,6 +1424,283 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/automation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationSettingsState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/cap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutomationCapRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationCapVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationRuleView"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutomationRuleRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationRuleVerdict"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutomationRuleRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationRuleVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/rules/{id}/delete/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationRuleDeletePreview"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/rules/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationRuleDeleteVerdict"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/identification": {
         parameters: {
             query?: never;
@@ -1445,7 +1723,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["IdentificationSettingsState"];
+                        "application/json": components["schemas"]["IdentificationGateChoices"];
                     };
                 };
             };
@@ -2058,8 +2336,84 @@ export interface components {
         };
         /** @enum {unknown} */
         AfterDownloadGateChoice: "ExactOnly" | "ExactAndStrong";
+        ApplicableAutomationRule: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         /** @enum {unknown} */
         ArrivingFileReason: "IdenticalFile" | "UnreadableQuality" | "Unidentified" | "Duplicate" | "EntryMissing";
+        AutomationCapRequest: {
+            /** Format: int32 */
+            automaticDownloadCap: number | string;
+        };
+        AutomationCapVerdict: {
+            saved: boolean;
+            /** Format: int32 */
+            automaticDownloadCap: number | string;
+            /** Format: int32 */
+            reconsidered: number | string;
+            detail: string;
+        };
+        /** @enum {unknown} */
+        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | null;
+        AutomationIndexer: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            enabled: boolean;
+        };
+        AutomationRuleDeletePreview: {
+            /** Format: uuid */
+            ruleId: string;
+            name: string;
+            /** Format: int32 */
+            existingOrigins: number | string;
+            detail: string;
+        };
+        AutomationRuleDeleteVerdict: {
+            /** Format: uuid */
+            ruleId: string;
+            /** Format: int32 */
+            reconsidered: number | string;
+            detail: string;
+        };
+        AutomationRuleRequest: {
+            name: null | string;
+            enabled: boolean;
+            /** Format: int64 */
+            minimumSize: null | number | string;
+            /** Format: int64 */
+            maximumSize: null | number | string;
+            allowedIndexerIds: string[];
+        };
+        AutomationRuleVerdict: {
+            saved: boolean;
+            /** Format: uuid */
+            ruleId: null | string;
+            /** Format: int32 */
+            reconsidered: number | string;
+            detail: string;
+        };
+        AutomationRuleView: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            enabled: boolean;
+            /** Format: int64 */
+            minimumSize: null | number | string;
+            /** Format: int64 */
+            maximumSize: null | number | string;
+            allowedIndexers: components["schemas"]["AutomationIndexer"][];
+        };
+        AutomationSettingsState: {
+            /** Format: int32 */
+            automaticDownloadCap: number | string;
+            rules: components["schemas"]["AutomationRuleView"][];
+            indexers: components["schemas"]["AutomationIndexer"][];
+        };
+        /** @enum {unknown} */
+        BeforeDownloadGateChoice: "ExactOnly" | "ExactAndStrong" | "ThroughProbable";
         BrowseContext: {
             /** Format: uuid */
             prdbId: string;
@@ -2113,6 +2467,15 @@ export interface components {
         };
         /** @enum {unknown} */
         DownloadOrigin: "Person" | "Automation";
+        DownloadOriginRuleView: {
+            /** Format: uuid */
+            ruleId: null | string;
+            name: string;
+        };
+        DownloadOriginView: {
+            kind: components["schemas"]["DownloadOrigin"];
+            rules: components["schemas"]["DownloadOriginRuleView"][];
+        };
         /** @enum {unknown} */
         DownloadOutcome: "Submitted" | "Rejected" | "SubmissionUnknown" | "ConnectionProblem" | "IndexerProblem" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
         DownloadPage: {
@@ -2185,6 +2548,7 @@ export interface components {
             state: components["schemas"]["DownloadState"];
             cause: null | components["schemas"]["DownloadCause"];
             nzoId: null | string;
+            origin: components["schemas"]["DownloadOriginView"];
         };
         DownloadSelectionVerdict: {
             outcome: components["schemas"]["DownloadSelectionOutcome"];
@@ -2193,7 +2557,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed";
+        DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed" | "Abandoned";
         DownloadVerdict: {
             outcome: components["schemas"]["DownloadOutcome"];
             /** Format: uuid */
@@ -2222,7 +2586,7 @@ export interface components {
             stageLog: null | string;
             /** Format: date-time */
             outstandingSince: string;
-            origin: components["schemas"]["DownloadOrigin"];
+            origin: components["schemas"]["DownloadOriginView"];
             /** Format: date-time */
             createdAt: string;
         };
@@ -2235,18 +2599,23 @@ export interface components {
         };
         /** @enum {unknown} */
         IdentificationConfidence: "None" | "Partial" | "Probable" | "Strong" | "Exact" | "Ambiguous" | null;
+        IdentificationGateChoices: {
+            beforeDownload: components["schemas"]["BeforeDownloadGateChoice"];
+            afterDownload: components["schemas"]["AfterDownloadGateChoice"];
+        };
         /** @enum {unknown} */
         IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | null;
         IdentificationSettingsRequest: {
-            afterDownload: components["schemas"]["AfterDownloadGateChoice"];
-        };
-        IdentificationSettingsState: {
+            beforeDownload: components["schemas"]["BeforeDownloadGateChoice"];
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
         };
         IdentificationSettingsVerdict: {
+            beforeDownload: components["schemas"]["BeforeDownloadGateChoice"];
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
             /** Format: int32 */
-            reconsidered: number | string;
+            arrivingFilesReconsidered: number | string;
+            /** Format: int32 */
+            releasesReconsidered: number | string;
         };
         /** @enum {unknown} */
         IdentificationState: "Unexamined" | "Unremarkable" | "Awaiting" | "Matched" | "SiteOnly" | "Ambiguous" | "Unknown";
@@ -2377,6 +2746,7 @@ export interface components {
             videoId: null | string;
             /** Format: uuid */
             downloadId: null | string;
+            origin: null | components["schemas"]["DownloadOriginView"];
             pathBefore: null | string;
             pathAfter: null | string;
             displacedPath: null | string;
@@ -2509,6 +2879,8 @@ export interface components {
             /** Format: int32 */
             rankingPosition: null | number | string;
             rankingExclusion: null | components["schemas"]["ReleaseExclusion"];
+            applicableRules: components["schemas"]["ApplicableAutomationRule"][];
+            automaticDecisionReason: null | components["schemas"]["AutomationDecisionReason"];
         };
         ReportingSettingsRequest: {
             reportFulfilments: boolean;

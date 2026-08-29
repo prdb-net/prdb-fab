@@ -5,6 +5,7 @@ import {
   readIdentificationSettings,
   saveIdentificationSettings,
   type AfterDownloadGateChoice,
+  type BeforeDownloadGateChoice,
 } from '../api/client.ts'
 import { SettingsPage } from './SettingsPage.tsx'
 import formStyles from '../onboarding/Onboarding.module.css'
@@ -15,14 +16,17 @@ export function IdentificationScreen() {
     queryKey: ['identification-settings'],
     queryFn: readIdentificationSettings,
   })
-  const [choice, setChoice] = useState<AfterDownloadGateChoice | null>(null)
+  const [beforeChoice, setBeforeChoice] = useState<BeforeDownloadGateChoice | null>(null)
+  const [afterChoice, setAfterChoice] = useState<AfterDownloadGateChoice | null>(null)
   const [saved, setSaved] = useState(false)
 
-  const selected = choice ?? settings.data?.afterDownload ?? 'ExactAndStrong'
+  const before = beforeChoice ?? settings.data?.beforeDownload ?? 'ThroughProbable'
+  const after = afterChoice ?? settings.data?.afterDownload ?? 'ExactAndStrong'
   const save = useMutation({
-    mutationFn: () => saveIdentificationSettings(selected),
+    mutationFn: () => saveIdentificationSettings(before, after),
     onSuccess: (answer) => {
-      setChoice(answer.afterDownload)
+      setBeforeChoice(answer.beforeDownload)
+      setAfterChoice(answer.afterDownload)
       setSaved(true)
       void queryClient.invalidateQueries({ queryKey: ['identification-settings'] })
     },
@@ -31,7 +35,7 @@ export function IdentificationScreen() {
   return (
     <SettingsPage
       title="Identification"
-      lede="The after-download gate is a set of names, not a score. It is applied again to identified files that are still waiting when this changes."
+      lede="Both gates are fixed sets of named identification answers, not numeric scores. Saving only queues local reconsideration; it never submits a Download in this request."
     >
       <form
         className={formStyles.form}
@@ -41,14 +45,40 @@ export function IdentificationScreen() {
           save.mutate()
         }}
       >
+        <label className={formStyles.label}>Allow an automatic Download after</label>
+        <GateChoice
+          name="before-download"
+          value="ThroughProbable"
+          selected={before}
+          setSelected={(value) => { setBeforeChoice(value); setSaved(false) }}
+          label="Exact, Strong, or Probable identification"
+          hint="The default. Every matched Wanted Release through Probable may reach an Automation Rule."
+        />
+        <GateChoice
+          name="before-download"
+          value="ExactAndStrong"
+          selected={before}
+          setSelected={(value) => { setBeforeChoice(value); setSaved(false) }}
+          label="Exact or Strong identification"
+          hint="Probable and every other answer are held before any automatic submission."
+        />
+        <GateChoice
+          name="before-download"
+          value="ExactOnly"
+          selected={before}
+          setSelected={(value) => { setBeforeChoice(value); setSaved(false) }}
+          label="Exact identification only"
+          hint="Only an Exact match may be submitted automatically."
+        />
+
         <label className={formStyles.label}>Proceed to filing after</label>
         <label>
           <input
             type="radio"
             name="after-download"
             value="ExactAndStrong"
-            checked={selected === 'ExactAndStrong'}
-            onChange={() => { setChoice('ExactAndStrong'); setSaved(false) }}
+            checked={after === 'ExactAndStrong'}
+            onChange={() => { setAfterChoice('ExactAndStrong'); setSaved(false) }}
           />{' '}
           Exact or Strong identification
         </label>
@@ -61,8 +91,8 @@ export function IdentificationScreen() {
             type="radio"
             name="after-download"
             value="ExactOnly"
-            checked={selected === 'ExactOnly'}
-            onChange={() => { setChoice('ExactOnly'); setSaved(false) }}
+            checked={after === 'ExactOnly'}
+            onChange={() => { setAfterChoice('ExactOnly'); setSaved(false) }}
           />{' '}
           Exact identification only
         </label>
@@ -72,7 +102,7 @@ export function IdentificationScreen() {
 
         {settings.isError && <p className={formStyles.refusal}>{String(settings.error)}</p>}
         {save.isError && <p className={formStyles.refusal}>{String(save.error)}</p>}
-        {saved && <p className={formStyles.done}>The after-download gate has been saved.</p>}
+        {saved && <p className={formStyles.done}>Both identification gates have been saved.</p>}
 
         <button
           className={formStyles.button}
@@ -83,5 +113,37 @@ export function IdentificationScreen() {
         </button>
       </form>
     </SettingsPage>
+  )
+}
+
+function GateChoice({
+  name,
+  value,
+  selected,
+  setSelected,
+  label,
+  hint,
+}: {
+  name: string
+  value: BeforeDownloadGateChoice
+  selected: BeforeDownloadGateChoice
+  setSelected: (choice: BeforeDownloadGateChoice) => void
+  label: string
+  hint: string
+}) {
+  return (
+    <>
+      <label>
+        <input
+          type="radio"
+          name={name}
+          value={value}
+          checked={selected === value}
+          onChange={() => setSelected(value)}
+        />{' '}
+        {label}
+      </label>
+      <p className={formStyles.hint}>{hint}</p>
+    </>
   )
 }

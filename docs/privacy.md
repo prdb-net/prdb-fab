@@ -54,3 +54,9 @@ Assignments are part of the installation's durable state. Reported state is
 scoped to the prdb account that received it; changing accounts does not make a
 record from one account suppress a report to another. Operational routine and
 gate tallies are local diagnostics and are not reporting payloads.
+
+Automation Rules, their allowed Indexers and size bounds, the current automatic
+decision reason, and the copied rule names on a Download Origin are also local
+records. They are not sent to prdb. An automatic Download makes the same
+Indexer NZB request and SABnzbd `addfile` request as a confirmed manual
+Download; automation adds no reporting channel.

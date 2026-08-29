@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
@@ -351,8 +352,15 @@ public sealed class FilingTests
         await using (var scope = database.Scope())
         {
             var settings = scope.ServiceProvider.GetRequiredService<IdentificationSettings>();
-            Assert.Equal(AfterDownloadGateChoice.ExactAndStrong, await settings.ReadAsync(TestContext.Current.CancellationToken));
-            Assert.Equal(2, await settings.SaveAsync(AfterDownloadGateChoice.ExactOnly, TestContext.Current.CancellationToken));
+            var choices = await settings.ReadAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(BeforeDownloadGateChoice.ThroughProbable, choices.BeforeDownload);
+            Assert.Equal(AfterDownloadGateChoice.ExactAndStrong, choices.AfterDownload);
+            Assert.Equal(
+                new IdentificationGateSave(2, 0),
+                await settings.SaveAsync(
+                    choices.BeforeDownload,
+                    AfterDownloadGateChoice.ExactOnly,
+                    TestContext.Current.CancellationToken));
         }
 
         await using (var scope = database.Scope())

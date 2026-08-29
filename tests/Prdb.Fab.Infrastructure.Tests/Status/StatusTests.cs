@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.Automation;
+using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -13,6 +15,52 @@ namespace Prdb.Fab.Infrastructure.Tests.Status;
 
 public sealed class StatusTests
 {
+    [Fact]
+    public async Task Automatic_non_acts_are_visible_as_decide_brakes_and_facts()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var indexerId = Guid.NewGuid();
+            context.Indexers.Add(new IndexerRow
+            {
+                Id = indexerId,
+                Name = "Fixture",
+                Url = "https://indexer.invalid",
+                ApiKey = "fixture",
+                Categories = "Adult",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+                LastCheckedAt = database.Time.GetUtcNow(),
+            });
+            context.Releases.Add(new ReleaseRow
+            {
+                IndexerId = indexerId,
+                DerivedReleaseId = "held",
+                RawGuid = "held",
+                Title = "held",
+                NormalisedTitle = "held",
+                Categories = "[]",
+                PostDate = database.Time.GetUtcNow(),
+                PubDate = database.Time.GetUtcNow(),
+                DownloadUrl = "https://indexer.invalid/nzb",
+                FirstSeenAt = database.Time.GetUtcNow(),
+                IdentificationState = IdentificationState.Matched,
+                AutomationDecisionReason = AutomationDecisionReason.AutomaticDownloadCap,
+                AutomationPending = true,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+        var decide = status.Stages.Single(stage => stage.Id == "decide");
+        Assert.Contains(decide.Brakes, brake => brake.Title.Contains("automatic Download cap"));
+        Assert.Contains(decide.Facts, fact => fact.Label == "Current automatic non-acts"
+            && fact.Value.Contains("AutomaticDownloadCap 1"));
+    }
+
     [Fact]
     public async Task Failed_routines_for_one_indexer_are_one_gap()
     {

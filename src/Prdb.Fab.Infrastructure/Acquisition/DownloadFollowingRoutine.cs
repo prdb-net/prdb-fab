@@ -5,6 +5,7 @@ using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Core.Automation;
 
 namespace Prdb.Fab.Infrastructure.Acquisition;
 
@@ -24,7 +25,7 @@ public sealed class DownloadFollowingRoutine(
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
         var outstanding = await context.Downloads
-            .AsTracking()
+            .AsNoTracking()
             .Where(row => row.State == DownloadState.Outstanding)
             .OrderBy(row => row.CreatedAt)
             .ThenBy(row => row.Id)
@@ -83,32 +84,22 @@ public sealed class DownloadFollowingRoutine(
 
                 if (job is null)
                 {
-                    Apply(download, DownloadFollowing.Absent(download.ConsecutiveAbsences));
-
-                    handled++;
+                    var result = DownloadFollowing.Absent(download.ConsecutiveAbsences);
+                    if (await UpdateOutstandingAsync(download, result, null, cancellationToken) > 0)
+                    {
+                        await QueueAutomaticRetryAsync(download, result, cancellationToken);
+                        handled++;
+                    }
                     continue;
                 }
 
-                if (download.NzoId is null && job.NzoId.Length > 0)
+                var found = DownloadFollowing.Found(SignalOf(job));
+                if (await UpdateOutstandingAsync(download, found, job, cancellationToken) > 0)
                 {
-                    download.NzoId = job.NzoId;
+                    await QueueAutomaticRetryAsync(download, found, cancellationToken);
+                    handled++;
                 }
-
-                download.LastSabnzbdStatus = job.Status;
-                download.FailMessage = job.FailMessage;
-                download.StageLog = job.StageLog;
-                if (job.Location == SabnzbdJobLocation.History
-                    && !string.IsNullOrWhiteSpace(job.Storage))
-                {
-                    download.Storage = job.Storage;
-                }
-
-                Apply(download, DownloadFollowing.Found(SignalOf(job)));
-
-                handled++;
             }
-
-            await context.SaveChangesAsync(cancellationToken);
         }
 
         var retryBudget = await context.Installation
@@ -118,7 +109,7 @@ public sealed class DownloadFollowingRoutine(
             .AsNoTracking()
             .GroupBy(row => row.VideoId)
             .Where(group => group.Count() < retryBudget
-                && group.All(row => row.State == DownloadState.Failed))
+                && group.All(row => row.State == DownloadState.Failed && row.OriginIsPerson))
             .OrderBy(group => group.Min(row => row.CreatedAt))
             .Select(group => group.Key)
             .Take(BatchSize)
@@ -174,10 +165,50 @@ public sealed class DownloadFollowingRoutine(
                 : DownloadSignal.Outstanding;
     }
 
-    private static void Apply(DownloadRow row, DownloadFollowResult result)
+    private Task<int> UpdateOutstandingAsync(
+        DownloadRow row,
+        DownloadFollowResult result,
+        SabnzbdJob? job,
+        CancellationToken cancellationToken)
     {
-        row.State = result.State;
-        row.Cause = result.Cause;
-        row.ConsecutiveAbsences = result.ConsecutiveAbsences;
+        var nzoId = row.NzoId ?? (job?.NzoId is { Length: > 0 } id ? id : null);
+        var storage = job?.Location == SabnzbdJobLocation.History
+            && !string.IsNullOrWhiteSpace(job.Storage)
+                ? job.Storage
+                : row.Storage;
+        return context.Downloads
+            .Where(candidate => candidate.Id == row.Id && candidate.State == DownloadState.Outstanding)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(candidate => candidate.NzoId, nzoId)
+                .SetProperty(candidate => candidate.LastSabnzbdStatus, job == null ? row.LastSabnzbdStatus : job.Status)
+                .SetProperty(candidate => candidate.FailMessage, job == null ? row.FailMessage : job.FailMessage)
+                .SetProperty(candidate => candidate.StageLog, job == null ? row.StageLog : job.StageLog)
+                .SetProperty(candidate => candidate.Storage, storage)
+                .SetProperty(candidate => candidate.State, result.State)
+                .SetProperty(candidate => candidate.Cause, result.Cause)
+                .SetProperty(candidate => candidate.ConsecutiveAbsences, result.ConsecutiveAbsences),
+                cancellationToken);
+    }
+
+    private async Task QueueAutomaticRetryAsync(
+        DownloadRow download,
+        DownloadFollowResult result,
+        CancellationToken cancellationToken)
+    {
+        if (download.OriginIsPerson || result.State != DownloadState.Failed) return;
+
+        var localVideoId = await context.CatalogueVideos
+            .Where(row => row.PrdbId == download.VideoId)
+            .Select(row => (long?)row.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (localVideoId is null) return;
+
+        await context.Releases
+            .Where(row => row.VideoId == localVideoId
+                && row.IdentificationState == Prdb.Fab.Core.ReleaseDiscovery.IdentificationState.Matched)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(row => row.AutomationPending, true)
+                .SetProperty(row => row.AutomationDecisionReason, (AutomationDecisionReason?)null),
+                cancellationToken);
     }
 }

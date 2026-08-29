@@ -7,22 +7,24 @@ import {
   previewStopFollowing,
   stopFollowing,
   type DownloadPage,
+  type DownloadOriginView,
   type DownloadState,
 } from '../api/client.ts'
 import styles from './DownloadsScreen.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 
-const states: readonly DownloadState[] = ['Outstanding', 'Completed', 'Collected', 'Failed']
+const states: readonly DownloadState[] = ['Outstanding', 'Completed', 'Collected', 'Failed', 'Abandoned']
 
 export function DownloadsScreen() {
   const [parameters, setParameters] = useSearchParams()
   const stateValue = parameters.get('state')
   const state = states.find((value) => value === stateValue)
   const indexer = parameters.get('indexer') ?? undefined
+  const download = parameters.get('download') ?? undefined
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
   const downloads = useQuery({
     queryKey: ['downloads', parameters.toString()],
-    queryFn: () => listDownloads({ state, indexer, page }),
+    queryFn: () => listDownloads({ state, indexer, download, page }),
   })
 
   if (downloads.isPending) return <PageLoading label="Loading Downloads" />
@@ -33,6 +35,7 @@ export function DownloadsScreen() {
       answer={downloads.data}
       state={state}
       indexer={indexer}
+      download={download}
       setFilter={(name, value) => {
         const next = new URLSearchParams(parameters)
         if (value) next.set(name, value)
@@ -55,12 +58,14 @@ function DownloadTable({
   answer,
   state,
   indexer,
+  download,
   setFilter,
   goTo,
 }: {
   answer: DownloadPage
   state: DownloadState | undefined
   indexer: string | undefined
+  download: string | undefined
   setFilter: (name: 'state' | 'indexer', value: string) => void
   goTo: (page: number) => void
 }) {
@@ -140,14 +145,14 @@ function DownloadTable({
 
       {answer.downloads.length === 0 ? (
         <div className={styles.empty}>
-          <strong>{state || indexer ? 'No Downloads match these filters.' : 'No Downloads yet.'}</strong>
+          <strong>{state || indexer || download ? 'No Downloads match these filters.' : 'No Downloads yet.'}</strong>
           <p>
-            {state || indexer
+            {state || indexer || download
               ? 'Clear the filters to see the complete local history.'
               : 'Open a wanted Video, then use the Download button on its Release page.'}
           </p>
-          <Link to={state || indexer ? '/downloads' : '/wanted'}>
-            {state || indexer ? 'Clear filters' : 'Go to Wanted'}
+          <Link to={state || indexer || download ? '/downloads' : '/wanted'}>
+            {state || indexer || download ? 'Clear filters' : 'Go to Wanted'}
           </Link>
         </div>
       ) : (
@@ -188,7 +193,7 @@ function DownloadTable({
                 </td>
                 <td>{download.indexer.name}</td>
                 <td>{size(download.size)}</td>
-                <td>{download.origin}</td>
+                <td><DownloadOrigin origin={download.origin} /></td>
                 <td>{date(download.outstandingSince)}</td>
               </tr>
             ))}</tbody>
@@ -206,6 +211,7 @@ function DownloadTable({
 }
 
 function stateDetail(download: DownloadPage['downloads'][number]): string {
+  if (download.state === 'Abandoned') return 'Wanted intent ended; SABnzbd was left untouched.'
   if (download.state === 'Completed') return 'Waiting for collection.'
   if (download.state === 'Outstanding') return download.lastSabnzbdStatus ?? 'Waiting for SABnzbd.'
   if (download.state === 'Collected') return 'Files were handed to Filing.'
@@ -218,6 +224,21 @@ function stateDetail(download: DownloadPage['downloads'][number]): string {
     Empty: 'The completed Download contained no video file.',
   }
   return download.cause ? causes[download.cause] : 'The Download failed.'
+}
+
+export function DownloadOrigin({ origin }: { origin: DownloadOriginView }) {
+  if (origin.kind === 'Person') return <>Person</>
+  if (origin.rules.length === 0) return <>Automation</>
+  return (
+    <>
+      Automation
+      {origin.rules.map((rule, index) => rule.ruleId ? (
+        <Link key={rule.ruleId} to={`/settings/automation/rules/${rule.ruleId}`}>{rule.name}</Link>
+      ) : (
+        <span key={`${rule.name}:${index}`}>{rule.name} (deleted)</span>
+      ))}
+    </>
+  )
 }
 
 function size(bytes: number | string | null): string {

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Prdb.Fab.Core;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -198,6 +199,20 @@ public sealed class ReleaseBrowse(
                         row.Video.Site?.Title)),
                 ]);
 
+        var pageIndexerIds = releases.Select(row => row.IndexerId).Distinct().ToArray();
+        var automationRules = await context.AutomationRules
+            .AsNoTracking()
+            .Where(row => row.Enabled)
+            .OrderBy(row => row.Name)
+            .ThenBy(row => row.Id)
+            .ToListAsync(cancellationToken);
+        var automationEdges = await context.AutomationRuleIndexers
+            .AsNoTracking()
+            .Where(row => pageIndexerIds.Contains(row.IndexerId)
+                && row.Indexer != null
+                && row.Indexer.Enabled)
+            .ToListAsync(cancellationToken);
+
         var rows = releases.Select(row => new ReleaseViewRow(
             row.Id,
             row.Title,
@@ -215,7 +230,12 @@ public sealed class ReleaseBrowse(
                 ? new SiteOnlyMatch(row.Site.PrdbId, row.Site.Title)
                 : null,
             rankById.GetValueOrDefault(row.Id)?.Position,
-            exclusionById.GetValueOrDefault(row.Id)?.Exclusion)).ToList();
+            exclusionById.GetValueOrDefault(row.Id)?.Exclusion,
+            [.. automationRules.Where(rule =>
+                    automationEdges.Any(edge => edge.AutomationRuleId == rule.Id && edge.IndexerId == row.IndexerId)
+                    && AutomationRules.SizeFits(row.Size, rule.MinimumSize, rule.MaximumSize))
+                .Select(rule => new ApplicableAutomationRule(rule.Id, rule.Name))],
+            row.AutomationDecisionReason)).ToList();
 
         return new ReleasePage(
             selected,
@@ -245,6 +265,8 @@ public sealed record ReleaseCandidate(Guid PrdbId, string Title, string? Site);
 
 public sealed record SiteOnlyMatch(Guid PrdbId, string Title);
 
+public sealed record ApplicableAutomationRule(Guid Id, string Name);
+
 public sealed record ReleaseViewRow(
     long Id,
     string Title,
@@ -258,7 +280,9 @@ public sealed record ReleaseViewRow(
     IReadOnlyList<ReleaseCandidate> Candidates,
     SiteOnlyMatch? SiteOnlyMatch,
     int? RankingPosition,
-    ReleaseExclusion? RankingExclusion);
+    ReleaseExclusion? RankingExclusion,
+    IReadOnlyList<ApplicableAutomationRule> ApplicableRules,
+    AutomationDecisionReason? AutomaticDecisionReason);
 
 public sealed record ReleasePage(
     ReleaseContext Context,

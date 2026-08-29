@@ -25,6 +25,17 @@ public sealed class DownloadRow
     public DateTimeOffset CreatedAt { get; set; }
 }
 
+/// <summary>One immutable member of an automatic Download's resolved Origin.</summary>
+public sealed class DownloadOriginRuleRow
+{
+    public Guid Id { get; set; }
+    public Guid DownloadId { get; set; }
+    public DownloadRow? Download { get; set; }
+    public Guid? AutomationRuleId { get; set; }
+    public AutomationRuleRow? AutomationRule { get; set; }
+    public string RuleName { get; set; } = string.Empty;
+}
+
 /// <summary>One seven-day diagnostic fact produced by a real ranking decision.</summary>
 public sealed class ReleaseNotDownloadedRow
 {

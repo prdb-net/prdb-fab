@@ -116,6 +116,9 @@ public sealed class InstallationRow
     /// <summary>ADR 0008's per-Video Download budget.</summary>
     public int RetryBudget { get; set; } = 3;
 
+    /// <summary>ADR 0007's ceiling on unfinished automatic Downloads.</summary>
+    public int AutomaticDownloadCap { get; set; } = 20;
+
     /// <summary>Whether filing may delete non-video leftovers after it succeeds.</summary>
     public bool DeleteLeftovers { get; set; }
 

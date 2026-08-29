@@ -1,4 +1,5 @@
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Automation;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
@@ -50,6 +51,11 @@ public sealed class ReleaseRow
     public long? SiteId { get; set; }
     public CatalogueSiteRow? Site { get; set; }
     public bool SearchWasReason { get; set; }
+    /// <summary>Whether this Release belongs to the bounded Decide work set.</summary>
+    public bool AutomationPending { get; set; }
+    /// <summary>The latest deliberate automatic non-act, kept for the Release view.</summary>
+    public AutomationDecisionReason? AutomationDecisionReason { get; set; }
+    public DateTimeOffset? AutomationDecisionAt { get; set; }
 }
 
 public sealed class ReleaseCandidateRow

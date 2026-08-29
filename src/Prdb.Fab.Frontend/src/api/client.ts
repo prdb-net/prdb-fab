@@ -24,9 +24,16 @@ export type SabnzbdConnectionVerdict = Schema['SabnzbdConnectionVerdict']
 export type ConfiguredIndexer = Schema['ConfiguredIndexer']
 export type IndexerConnectionVerdict = Schema['IndexerConnectionVerdict']
 export type LibraryRootVerdict = Schema['LibraryRootVerdict']
+export type BeforeDownloadGateChoice = Schema['BeforeDownloadGateChoice']
 export type AfterDownloadGateChoice = Schema['AfterDownloadGateChoice']
-export type IdentificationSettingsState = Schema['IdentificationSettingsState']
+export type IdentificationSettingsState = Schema['IdentificationGateChoices']
 export type IdentificationSettingsVerdict = Schema['IdentificationSettingsVerdict']
+export type AutomationSettingsState = Schema['AutomationSettingsState']
+export type AutomationRuleView = Schema['AutomationRuleView']
+export type AutomationRuleVerdict = Schema['AutomationRuleVerdict']
+export type AutomationRuleDeletePreview = Schema['AutomationRuleDeletePreview']
+export type AutomationRuleDeleteVerdict = Schema['AutomationRuleDeleteVerdict']
+export type AutomationCapVerdict = Schema['AutomationCapVerdict']
 export type StatusState = Schema['StatusState']
 export type RunNowVerdict = Schema['RunNowVerdict']
 
@@ -46,6 +53,7 @@ export type DownloadPreview = Schema['DownloadPreview']
 export type DownloadVerdict = Schema['DownloadVerdict']
 export type DownloadPage = Schema['DownloadPage']
 export type DownloadState = Schema['DownloadState']
+export type DownloadOriginView = Schema['DownloadOriginView']
 export type DownloadSelectionPreview = Schema['DownloadSelectionPreview']
 export type DownloadSelectionVerdict = Schema['DownloadSelectionVerdict']
 export type DownloadResetPreview = Schema['DownloadResetPreview']
@@ -207,9 +215,59 @@ export async function readIdentificationSettings(): Promise<IdentificationSettin
 }
 
 export async function saveIdentificationSettings(
+  beforeDownload: BeforeDownloadGateChoice,
   afterDownload: AfterDownloadGateChoice,
 ): Promise<IdentificationSettingsVerdict> {
-  return post<IdentificationSettingsVerdict>('/api/settings/identification', { afterDownload })
+  return post<IdentificationSettingsVerdict>('/api/settings/identification', {
+    beforeDownload,
+    afterDownload,
+  })
+}
+
+export async function readAutomationSettings(): Promise<AutomationSettingsState> {
+  return json<AutomationSettingsState>(await fetch('/api/settings/automation'))
+}
+
+export async function readAutomationRule(id: string): Promise<AutomationRuleView> {
+  return json<AutomationRuleView>(
+    await fetch(`/api/settings/automation/rules/${segment(id)}`),
+  )
+}
+
+export async function saveAutomaticDownloadCap(
+  automaticDownloadCap: number,
+): Promise<AutomationCapVerdict> {
+  return post<AutomationCapVerdict>('/api/settings/automation/cap', { automaticDownloadCap })
+}
+
+export async function saveAutomationRule(
+  id: string | null,
+  rule: {
+    name: string
+    enabled: boolean
+    minimumSize: number | null
+    maximumSize: number | null
+    allowedIndexerIds: string[]
+  },
+): Promise<AutomationRuleVerdict> {
+  const path = id
+    ? `/api/settings/automation/rules/${segment(id)}`
+    : '/api/settings/automation/rules'
+  return post<AutomationRuleVerdict>(path, rule)
+}
+
+export async function previewDeleteAutomationRule(
+  id: string,
+): Promise<AutomationRuleDeletePreview> {
+  return post<AutomationRuleDeletePreview>(
+    `/api/settings/automation/rules/${segment(id)}/delete/preview`,
+  )
+}
+
+export async function deleteAutomationRule(id: string): Promise<AutomationRuleDeleteVerdict> {
+  return post<AutomationRuleDeleteVerdict>(
+    `/api/settings/automation/rules/${segment(id)}/delete`,
+  )
 }
 
 export async function readStatus(): Promise<StatusState> {
@@ -338,6 +396,7 @@ export async function downloadRelease(
 export async function listDownloads(filters: {
   state?: DownloadState
   indexer?: string
+  download?: string
   page: number
 }): Promise<DownloadPage> {
   return json<DownloadPage>(
@@ -345,6 +404,7 @@ export async function listDownloads(filters: {
       `/api/downloads?${parameters({
         state: filters.state,
         indexer: filters.indexer,
+        download: filters.download,
         page: String(filters.page),
       })}`,
     ),

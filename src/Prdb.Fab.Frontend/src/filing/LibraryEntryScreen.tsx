@@ -31,5 +31,11 @@ export function LibraryEntryScreen() {
 }
 
 export function OperationRows({ entries }: { entries: OperationLogPage['entries'] }) {
-  return <div className={styles.tableFrame}><table className={styles.table}><thead><tr><th>When</th><th>Act</th><th>Path</th><th>Reason</th></tr></thead><tbody>{entries.map((item) => <tr key={item.id}><td>{new Date(item.at).toLocaleString()}</td><td>{item.act}</td><td><code>{item.pathAfter ?? item.pathBefore ?? '—'}</code></td><td>{item.reason}</td></tr>)}</tbody></table>{entries.length === 0 && <p className={styles.empty}>No operation has been recorded.</p>}</div>
+  return <div className={styles.tableFrame}><table className={styles.table}><thead><tr><th>When</th><th>Act</th><th>Path</th><th>Origin</th><th>Reason</th></tr></thead><tbody>{entries.map((item) => <tr key={item.id}><td>{new Date(item.at).toLocaleString()}</td><td>{item.act}</td><td><code>{item.pathAfter ?? item.pathBefore ?? '—'}</code></td><td>{item.origin && item.downloadId ? <Link to={`/downloads?download=${item.downloadId}`}>{originLabel(item.origin)}</Link> : '—'}</td><td>{item.reason}</td></tr>)}</tbody></table>{entries.length === 0 && <p className={styles.empty}>No operation has been recorded.</p>}</div>
+}
+
+function originLabel(origin: NonNullable<OperationLogPage['entries'][number]['origin']>): string {
+  if (origin.kind === 'Person') return 'Person'
+  const rules = origin.rules.map((rule) => rule.name).join(', ')
+  return rules ? `Automation — ${rules}` : 'Automation'
 }
