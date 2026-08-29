@@ -7,6 +7,7 @@ using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Filing;
+using Prdb.Fab.Core.Reporting;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
@@ -82,6 +83,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<ArrivingFileCandidateRow> ArrivingFileCandidates => Set<ArrivingFileCandidateRow>();
 
     public DbSet<ConfirmedAssignmentRow> ConfirmedAssignments => Set<ConfirmedAssignmentRow>();
+
+    public DbSet<ReportedStateRow> ReportedStates => Set<ReportedStateRow>();
 
     public DbSet<OperationLogEntryRow> OperationLogEntries => Set<OperationLogEntryRow>();
 
@@ -594,6 +597,16 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             assignment.Property(row => row.ReleaseName).IsRequired();
         });
 
+        builder.Entity<ReportedStateRow>(reported =>
+        {
+            reported.ToTable("reported_state");
+            reported.HasKey(row => new { row.VideoId, row.UserHash });
+            reported.Declares(AccountClass.AccountStamped);
+            reported.Property(row => row.UserHash).IsRequired();
+            reported.Property(row => row.Quality).HasConversion<string>();
+            reported.Property(row => row.TerminalOutcome).HasConversion<string>();
+        });
+
         builder.Entity<OperationLogEntryRow>(entry =>
         {
             entry.ToTable("operation_log_entry");
@@ -632,6 +645,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<ArrivingFileRow>().Declares(ExportClass.Exported);
         builder.Entity<ArrivingFileCandidateRow>().Declares(ExportClass.Exported);
         builder.Entity<ConfirmedAssignmentRow>().Declares(ExportClass.Exported);
+        builder.Entity<ReportedStateRow>().Declares(ExportClass.Exported);
         builder.Entity<OperationLogEntryRow>().Declares(ExportClass.Exported);
         builder.Entity<GateAdmissionRow>().Declares(ExportClass.Exported);
     }

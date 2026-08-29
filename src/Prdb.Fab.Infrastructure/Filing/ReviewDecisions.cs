@@ -79,7 +79,6 @@ public sealed class ReviewDecisions(
                 Width = arrival.Width,
                 Height = arrival.Height,
                 VideoCodec = arrival.VideoCodec,
-                PrdbAnswer = DescribePrdbAnswer(arrival),
             });
         }
 
@@ -173,10 +172,6 @@ public sealed class ReviewDecisions(
         context.ArrivingFiles
             .AsTracking()
             .SingleOrDefaultAsync(row => row.Id == id && row.Reason == reason, cancellationToken);
-
-    private static string DescribePrdbAnswer(ArrivingFileRow arrival) =>
-        string.Join('/', new[] { arrival.Confidence?.ToString(), arrival.MatchedBy?.ToString() }
-            .Where(value => value is not null));
 
     private static ReviewDecisionVerdict Changed(string? detail = null) => new(
         ReviewDecisionOutcome.SelectionChanged,

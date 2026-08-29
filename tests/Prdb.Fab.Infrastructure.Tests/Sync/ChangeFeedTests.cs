@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Core.Reporting;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
@@ -219,6 +220,51 @@ public sealed class ChangeFeedTests
 
         Assert.Equal(0, await context.WantedVideos.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.CatalogueVideos.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task A_live_wanted_change_reopens_only_a_not_wanted_report_for_the_current_account()
+    {
+        const string currentUser = "5b1f0c2e9a7d4f3b8c6e1a0d2f4b6a8c";
+        const string otherUser = "9d3a7c1e5f8b2046ae7c9b1d3f5a7c90";
+        var prdb = new FakePrdbApi()
+            .Answers(Wanted, WantedPage(AVideo, "A Video", deleted: false, at: Noon));
+        await using var database = await CreateAsync(prdb);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var installation = await context.Installation.AsTracking()
+                .SingleAsync(TestContext.Current.CancellationToken);
+            installation.PrdbUserHash = currentUser;
+            context.ReportedStates.AddRange(
+                new ReportedStateRow
+                {
+                    VideoId = AVideo,
+                    UserHash = currentUser,
+                    IsFulfilled = true,
+                    TerminalOutcome = ReportingOutcome.NotWanted,
+                },
+                new ReportedStateRow
+                {
+                    VideoId = AVideo,
+                    UserHash = otherUser,
+                    IsFulfilled = true,
+                    TerminalOutcome = ReportingOutcome.NotWanted,
+                });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await RunAsync<WantedVideoFeedRoutine>(database);
+
+        await using var afterScope = database.Scope();
+        var states = await afterScope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .ReportedStates.OrderBy(row => row.UserHash)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Null(states.Single(row => row.UserHash == currentUser).TerminalOutcome);
+        Assert.Equal(
+            ReportingOutcome.NotWanted,
+            states.Single(row => row.UserHash == otherUser).TerminalOutcome);
     }
 
     /// <summary>

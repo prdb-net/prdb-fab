@@ -1660,6 +1660,52 @@
           }
         }
       }
+    },
+    "/api/settings/reporting": {
+      "get": {
+        "tags": [
+          "Reporting"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingSettingsState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Reporting"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportingSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportingSettingsState"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3752,6 +3798,54 @@
           }
         }
       },
+      "ReportingSettingsRequest": {
+        "required": [
+          "reportFulfilments",
+          "reportConfirmedAssignments"
+        ],
+        "type": "object",
+        "properties": {
+          "reportFulfilments": {
+            "type": "boolean"
+          },
+          "reportConfirmedAssignments": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ReportingSettingsState": {
+        "required": [
+          "reportFulfilments",
+          "fulfilmentBacklog",
+          "reportConfirmedAssignments",
+          "confirmedAssignmentBacklog"
+        ],
+        "type": "object",
+        "properties": {
+          "reportFulfilments": {
+            "type": "boolean"
+          },
+          "fulfilmentBacklog": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reportConfirmedAssignments": {
+            "type": "boolean"
+          },
+          "confirmedAssignmentBacklog": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ReviewDecisionOutcome": {
         "enum": [
           "SelectionChanged",
@@ -4767,6 +4861,9 @@
     },
     {
       "name": "Catalogue"
+    },
+    {
+      "name": "Reporting"
     }
   ]
 }

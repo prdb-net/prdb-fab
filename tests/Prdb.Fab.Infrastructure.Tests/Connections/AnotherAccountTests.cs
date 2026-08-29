@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.Reporting;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Sync;
@@ -84,6 +85,7 @@ public sealed class AnotherAccountTests
         Assert.Equal(1, await context.CatalogueSites.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.CatalogueActors.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.Releases.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, await context.ReportedStates.CountAsync(TestContext.Current.CancellationToken));
 
         var installation = await context.Installation.SingleAsync(TestContext.Current.CancellationToken);
 
@@ -227,8 +229,7 @@ public sealed class AnotherAccountTests
             declared);
 
         // ADR 0019's record of what was reported is account-stamped rather than
-        // account-scoped, and its table does not exist yet. What has to be true
-        // when it arrives is that this list is not where it lands.
+        // account-scoped, so this list is not where it lands.
         Assert.DoesNotContain(
             context.Model.GetEntityTypes()
                 .Where(entity => AccountClasses.DeclaredBy(entity) == AccountClass.AccountStamped)
@@ -302,6 +303,14 @@ public sealed class AnotherAccountTests
             Video = context.WantedVideos.Local.Single(),
             Indexer = indexer,
             LastSearchedAt = Noon,
+        });
+        context.ReportedStates.Add(new ReportedStateRow
+        {
+            VideoId = AVideo,
+            UserHash = TheirHash,
+            IsFulfilled = true,
+            Quality = FulfilmentQuality.P1080,
+            FulfilledAt = Noon,
         });
 
         foreach (var feed in Feeds.All)

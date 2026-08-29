@@ -3,10 +3,9 @@ import { Link } from 'react-router'
 import styles from './Settings.module.css'
 
 /**
- * ADR 0020's seven groups, of which two hold anything so far. The other five
- * are named rather than hidden: each of them configures a feature that is not
- * built, and a page quietly five links shorter than the decision is how a
- * surface drifts from what was argued.
+ * ADR 0020's seven groups. Groups whose feature has not arrived yet remain
+ * named rather than hidden, so the surface cannot quietly drift from what was
+ * argued.
  */
 export function SettingsScreen() {
   return (
@@ -55,11 +54,11 @@ export function SettingsScreen() {
             Arrives with automation.
           </span>
         </li>
-        <li className={styles.pending}>
-          Reporting
+        <li>
+          <Link to="/settings/reporting">Reporting</Link>
           <br />
           <span className={styles.detail}>
-            What is sent back to prdb. Arrives with reporting.
+            Two independent opt-in channels for what may be sent back to prdb.
           </span>
         </li>
         <li className={styles.pending}>

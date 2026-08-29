@@ -14,6 +14,7 @@ using Prdb.Fab.Host.Connections;
 using Prdb.Fab.Host.Filing;
 using Prdb.Fab.Host.Logging;
 using Prdb.Fab.Host.ReleaseDiscovery;
+using Prdb.Fab.Host.Reporting;
 using Prdb.Fab.Host.Scheduling;
 using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Acquisition;
@@ -21,6 +22,7 @@ using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
+using Prdb.Fab.Infrastructure.Reporting;
 using Prdb.Fab.Infrastructure.Scheduling;
 using Prdb.Fab.Infrastructure.Sync;
 
@@ -54,6 +56,7 @@ builder.Services.AddFabConnections();
 builder.Services.AddFabReleaseDiscovery();
 builder.Services.AddFabAcquisition();
 builder.Services.AddFabFiling();
+builder.Services.AddFabReporting();
 builder.Services.AddFabSync();
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
@@ -199,6 +202,8 @@ app.MapReleaseDiscovery();
 app.MapAcquisition();
 
 app.MapFiling();
+
+app.MapReporting();
 
 // ADR 0036: routing happens in the browser, so unknown paths return index.html
 // and let the frontend decide. Unknown API paths must not — a caller that asked
