@@ -91,9 +91,18 @@ the download URL embeds it — which
 then made load-bearing. A followed redirect hands that URL, credential included,
 to whatever host the redirect names.
 
-The one place that would have forced a redirect is already ruled out: the
-Newznab research rejects `t=get` outright, because it is a 302 to the enclosure
-URL the tool is already holding.
+The credentialled transports still never follow a redirect. One real Newznab
+dialect exposed a narrower case the original research missed: an Indexer
+configured at an HTTPS API can advertise the same host's enclosure as HTTP,
+then redirect it to the identical HTTPS address. In that case the first request
+is built as HTTPS on the configured Indexer's host and port; the HTTP address is
+never requested and no redirect is followed. An HTTP enclosure on another host
+is refused because the configured connection supplies no evidence that it can
+be upgraded safely. A deliberately configured HTTP Indexer remains HTTP.
+
+The other place that would have forced a redirect remains ruled out: the
+Newznab research rejects `t=get` as a route to discover an enclosure, because
+it is a 302 to the enclosure URL the tool is already holding.
 
 ## The governor sits in two places, doing two different jobs
 
@@ -159,7 +168,8 @@ credential, so one transport would express neither.
 
 **Let the indexer transport follow redirects, for compatibility.** Rejected: the
 credential is in the URL, so a redirect leaks it. The only endpoint that needed
-one is already ruled out.
+one is already ruled out. Upgrading a same-host HTTP enclosure before the first
+request handles the observed compatibility case without weakening this rule.
 
 **A response cache in front of `GET /sites`.** Rejected under *what is not
 cached*: ADR 0013 wrote down a behaviour that only makes sense to code that sees

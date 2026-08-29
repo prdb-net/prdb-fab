@@ -19,6 +19,32 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-29
+
+This patch release repairs NZB fetching against a real Newznab compatibility
+case and makes the complete path from a wanted Video to a confirmed Download
+visible without hunting through cached results or operational controls.
+
+### Changed
+
+- **A download-ready path is now visible from the catalogue to submission.**
+  Video cards mark Releases that pass the real ranking and retry-budget rules,
+  their action says `Download`, and the best eligible Release has a prominent
+  action at the top of the Video's Release page. Cached-result and empty states
+  now explain what background discovery has (and has not) found, while manual
+  discovery controls sit in a secondary disclosure.
+
+### Fixed
+
+- **An HTTPS Indexer can now supply an HTTP NZB enclosure without blocking the
+  Download.** Some Newznab services redirect that enclosure to the same host
+  over HTTPS. prdb-fab now upgrades the first request itself, keeping the API
+  key off plaintext HTTP while continuing to refuse redirects and HTTP
+  enclosures on a different host.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.7.1 has started against it.
+
 ## [0.7.0] - 2026-08-29
 
 This release tightens the desktop-first workspace after an end-to-end UI and

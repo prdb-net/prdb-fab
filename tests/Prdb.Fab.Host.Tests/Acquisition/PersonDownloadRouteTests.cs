@@ -171,6 +171,27 @@ public sealed class PersonDownloadRouteTests
     }
 
     [Fact]
+    public async Task An_http_nzb_from_the_configured_https_indexer_is_upgraded_without_following_a_redirect()
+    {
+        var indexer = new NzbIndexer();
+        var sabnzbd = new FakeSabnzbd();
+        await using var application = Application(indexer, sabnzbd);
+        using var client = await application.SignedInClientAsync();
+        var seeded = await SeedAsync(application, downloadUrl: $"http://indexer.invalid/nzb?apikey={NzbIndexer.Secret}");
+        var preview = await PreviewAsync(client, seeded);
+
+        var verdict = await PostAsync<Verdict>(
+            client,
+            $"/api/releases/{seeded.ReleaseId}/download",
+            new { downloadId = preview.DownloadId!.Value, videoId = seeded.VideoId });
+
+        Assert.Equal("Submitted", verdict.Outcome);
+        Assert.Equal(Uri.UriSchemeHttps, indexer.LastRequest?.Scheme);
+        Assert.Equal(1, indexer.Requests);
+        Assert.Equal(1, sabnzbd.Modes.Count(mode => mode == "addfile"));
+    }
+
+    [Fact]
     public async Task The_action_is_authenticated_and_never_returns_remote_credentials_or_the_download_url()
     {
         await using var application = Application(new NzbIndexer(), new FakeSabnzbd());
@@ -205,7 +226,10 @@ public sealed class PersonDownloadRouteTests
             .Answering(FabTransports.Indexers, indexer)
             .Answering(FabTransports.Sabnzbd, sabnzbd);
 
-    private static async Task<Seeded> SeedAsync(FabApplication application, string category = "xxx")
+    private static async Task<Seeded> SeedAsync(
+        FabApplication application,
+        string category = "xxx",
+        string? downloadUrl = null)
     {
         await using var scope = application.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
@@ -248,7 +272,7 @@ public sealed class PersonDownloadRouteTests
             Categories = "[]",
             PostDate = new DateTimeOffset(2026, 8, 28, 11, 0, 0, TimeSpan.Zero),
             PubDate = new DateTimeOffset(2026, 8, 28, 11, 0, 0, TimeSpan.Zero),
-            DownloadUrl = $"https://indexer.invalid/nzb?apikey={NzbIndexer.Secret}",
+            DownloadUrl = downloadUrl ?? $"https://indexer.invalid/nzb?apikey={NzbIndexer.Secret}",
             FirstSeenAt = new DateTimeOffset(2026, 8, 28, 12, 0, 0, TimeSpan.Zero),
             IdentificationState = IdentificationState.Matched,
             VideoId = video.Id,
@@ -284,6 +308,8 @@ public sealed class PersonDownloadRouteTests
 
         public int Requests { get; private set; }
 
+        public Uri? LastRequest { get; private set; }
+
         public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
 
         protected override Task<HttpResponseMessage> SendAsync(
@@ -291,6 +317,7 @@ public sealed class PersonDownloadRouteTests
             CancellationToken cancellationToken)
         {
             Requests++;
+            LastRequest = request.RequestUri;
             return Task.FromResult(new HttpResponseMessage(Status)
             {
                 Content = new StringContent(Nzb, Encoding.UTF8, "application/x-nzb"),

@@ -26,6 +26,22 @@
   max-width: 60ch;
 }
 
+.guide {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 0.25rem;
+  margin: 0 0 1.5rem;
+  max-width: 70ch;
+  padding: 0.8rem 1rem;
+}
+
+.guide span {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}
+
 /*
   ADR 0013: a running backfill is a fact and explicitly not a Gap. So it is a
   quiet line and not a warning — no border in the failure colour, no icon, and

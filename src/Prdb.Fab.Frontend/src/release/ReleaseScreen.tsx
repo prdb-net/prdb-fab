@@ -60,6 +60,13 @@ export function ReleaseScreen() {
       returnTo={releaseReturn(parameters, releases.data.context)}
       state={state}
       indexer={indexer}
+      clearFilters={() => {
+        const next = new URLSearchParams(parameters)
+        next.delete('state')
+        next.delete('indexer')
+        next.delete('page')
+        setParameters(next)
+      }}
       setFilter={(name, value) => {
         const next = new URLSearchParams(parameters)
         if (value) next.set(name, value)
@@ -83,6 +90,7 @@ function ReleaseTable({
   returnTo,
   state,
   indexer,
+  clearFilters,
   setFilter,
   goTo,
 }: {
@@ -90,6 +98,7 @@ function ReleaseTable({
   returnTo: { to: string; label: string }
   state: IdentificationState | undefined
   indexer: string | undefined
+  clearFilters: () => void
   setFilter: (name: 'state' | 'indexer', value: string) => void
   goTo: (page: number) => void
 }) {
@@ -113,13 +122,10 @@ function ReleaseTable({
       </div>
 
       <div className={styles.boundary}>
-        <strong>Acquisition.</strong> From a Video, choose an identified Release to fetch its
-        NZB and submit it to the checked SABnzbd category. prdb-fab follows that job and
-        automatically tries the next ranked Release after a release failure, within the
-        three-Download budget.
+        <strong>Cached results.</strong> This page shows Releases that background discovery has
+        already found. Opening it does not query an Indexer. For a Video, the best
+        download-ready Release appears first below.
       </div>
-
-      <ReleaseDiscoveryControls />
 
       {page.acquisition && (
         <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
@@ -161,7 +167,11 @@ function ReleaseTable({
       </div>
 
       {page.releases.length === 0 ? (
-        <p className={styles.empty}>No cached Releases match this context and filter.</p>
+        <ReleaseEmpty
+          filtered={Boolean(state || indexer)}
+          returnTo={returnTo}
+          clearFilters={clearFilters}
+        />
       ) : (
         <div className={styles.tableFrame}>
           <table>
@@ -230,6 +240,8 @@ function ReleaseTable({
           </button>
         </nav>
       )}
+
+      <ReleaseDiscoveryControls />
     </main>
   )
 }
@@ -268,35 +280,36 @@ function ReleaseDiscoveryControls() {
   })
 
   return (
-    <section className={styles.discovery}>
-      <div className={styles.discoveryHeading}>
-        <div>
-          <h2>Release discovery</h2>
-          <p>
-            These routines run automatically. Run now makes one due immediately; its lane,
-            Governor, and query budget still decide when work can proceed.
-          </p>
-        </div>
-      </div>
+    <details className={styles.discovery}>
+      <summary>
+        <strong>Release discovery</strong>
+        <span>Automatic schedules and manual controls</span>
+      </summary>
+      <div className={styles.discoveryBody}>
+        <p>
+          These routines run automatically. Run now makes one due immediately; its lane,
+          Governor, and query budget still decide when work can proceed.
+        </p>
 
-      {routines.isPending && <p className={styles.secondary}>Reading the schedule…</p>}
-      {routines.isError && (
-        <p className={styles.secondary}>The Release discovery schedule could not be read.</p>
-      )}
-      {routines.data && routines.data.length === 0 && (
-        <p className={styles.secondary}>No Release discovery routines are available.</p>
-      )}
-      {routines.data && routines.data.length > 0 && (
-        <div className={styles.routines}>
-          {routines.data.map((routine) => (
-            <ReleaseDiscoveryRoutineControl
-              key={`${routine.kind}:${routine.target ?? 'global'}`}
-              routine={routine}
-            />
-          ))}
-        </div>
-      )}
-    </section>
+        {routines.isPending && <p className={styles.secondary}>Reading the schedule…</p>}
+        {routines.isError && (
+          <p className={styles.secondary}>The Release discovery schedule could not be read.</p>
+        )}
+        {routines.data && routines.data.length === 0 && (
+          <p className={styles.secondary}>No Release discovery routines are available.</p>
+        )}
+        {routines.data && routines.data.length > 0 && (
+          <div className={styles.routines}>
+            {routines.data.map((routine) => (
+              <ReleaseDiscoveryRoutineControl
+                key={`${routine.kind}:${routine.target ?? 'global'}`}
+                routine={routine}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </details>
   )
 }
 
@@ -363,22 +376,36 @@ function AcquisitionSummary({
 
   const spent = Number(acquisition.downloadsSpent)
   const budget = Number(acquisition.retryBudget)
+  const ready = spent < budget ? acquisition.nextRelease : null
   return (
-    <section className={styles.acquisition}>
+    <section className={`${styles.acquisition} ${ready ? styles.ready : ''}`}>
       <div className={styles.acquisitionHeading}>
         <div>
-          <h2>Download attempts: {spent} of {budget}</h2>
+          <h2>{ready ? 'Ready to download' : 'No download-ready Release'}</h2>
           {spent >= budget ? (
-            <p>The Retry Budget is spent.</p>
-          ) : acquisition.nextRelease ? (
-            <p>Next ranked Release: <strong>{acquisition.nextRelease.title}</strong></p>
+            <p>The retry budget is spent ({spent} of {budget} attempts).</p>
+          ) : ready ? (
+            <p>
+              Best available Release: <strong>{ready.title}</strong>
+              <span className={styles.secondary}>Attempt {spent + 1} of {budget}</span>
+            </p>
           ) : (
             <p>No unconsumed eligible Release is currently available.</p>
           )}
         </div>
-        <button type="button" disabled={spent === 0 || reset.isPending} onClick={() => reset.mutate()}>
-          {reset.isPending ? 'Checking…' : 'Reset Download history'}
-        </button>
+        <div className={styles.acquisitionActions}>
+          {ready && (
+            <DownloadAction
+              releaseId={ready.id}
+              releaseTitle={ready.title}
+              videoId={videoId}
+              label="Download best Release"
+            />
+          )}
+          <button type="button" disabled={spent === 0 || reset.isPending} onClick={() => reset.mutate()}>
+            {reset.isPending ? 'Checking…' : 'Reset Download history'}
+          </button>
+        </div>
       </div>
       {reset.data?.detail && <p className={styles.secondary}>{reset.data.detail}</p>}
       {reset.isError && <p className={styles.secondary}>The Download history could not be checked.</p>}
@@ -403,10 +430,12 @@ function DownloadAction({
   releaseId,
   releaseTitle,
   videoId,
+  label = 'Download',
 }: {
   releaseId: number | string
   releaseTitle: string
   videoId: string
+  label?: string
 }) {
   const queryClient = useQueryClient()
   const action = useMutation({
@@ -421,7 +450,10 @@ function DownloadAction({
 
       return downloadRelease(releaseId, videoId, preview.downloadId)
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['releases'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['releases'] })
+      void queryClient.invalidateQueries({ queryKey: ['downloads'] })
+    },
   })
 
   const answer = action.data
@@ -431,10 +463,36 @@ function DownloadAction({
   return (
     <div className={styles.action}>
       <button type="button" onClick={() => action.mutate()} disabled={action.isPending}>
-        {action.isPending ? 'Submitting…' : 'Download'}
+        {action.isPending ? 'Submitting…' : label}
       </button>
       {outcome && <span data-outcome={outcome}>{detail}</span>}
       {action.isError && <span>The Download could not be planned.</span>}
+    </div>
+  )
+}
+
+function ReleaseEmpty({
+  filtered,
+  returnTo,
+  clearFilters,
+}: {
+  filtered: boolean
+  returnTo: { to: string; label: string }
+  clearFilters: () => void
+}) {
+  return (
+    <div className={styles.empty}>
+      <strong>{filtered ? 'No Releases match these filters.' : 'No cached Releases yet.'}</strong>
+      <p>
+        {filtered
+          ? 'Clear the filters to see every cached result for this context.'
+          : 'Discovery runs in the background. You can return later or choose another Video; opening this page does not start an Indexer search.'}
+      </p>
+      {filtered ? (
+        <button type="button" onClick={clearFilters}>Clear filters</button>
+      ) : (
+        <Link to={returnTo.to}>Back to {returnTo.label}</Link>
+      )}
     </div>
   )
 }

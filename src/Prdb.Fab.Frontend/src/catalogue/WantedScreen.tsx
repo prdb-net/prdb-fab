@@ -60,6 +60,16 @@ export function WantedScreen() {
         here — this list is read, never written.
       </p>
 
+      {total > 0 && (
+        <div className={styles.guide}>
+          <strong>To start a Download</strong>
+          <span>
+            Open a Video below. If discovery has found an eligible Release, the best one and
+            its Download button appear at the top of the Release page.
+          </span>
+        </div>
+      )}
+
       {wanted.data?.backfillRunning && (
         <p className={styles.working}>
           The first read of prdb&rsquo;s catalogue is still running in the
@@ -77,7 +87,7 @@ export function WantedScreen() {
             action={(video) => (
               <span className={gridStyles.actions}>
                 <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  Find releases
+                  {video.downloadReady ? 'Download' : 'View releases'}
                 </Link>
                 <a
                   className={gridStyles.action}
