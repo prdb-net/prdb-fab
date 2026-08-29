@@ -19,6 +19,12 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-29
+
+This patch release repairs NZB fetching against a real Newznab compatibility
+case and makes the complete path from a wanted Video to a confirmed Download
+visible without hunting through cached results or operational controls.
+
 ### Changed
 
 - **A download-ready path is now visible from the catalogue to submission.**
@@ -35,6 +41,9 @@ before changing the tag — the backup file is deliberately not the whole of it.
   over HTTPS. prdb-fab now upgrades the first request itself, keeping the API
   key off plaintext HTTP while continuing to refuse redirects and HTTP
   enclosures on a different host.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.7.1 has started against it.
 
 ## [0.7.0] - 2026-08-29
 
