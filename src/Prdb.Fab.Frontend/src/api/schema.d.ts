@@ -132,6 +132,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases/discovery-routines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReleaseDiscoveryRoutine"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/discovery-routines/run-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReleaseDiscoveryRunNowRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReleaseDiscoveryRunNowVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases/{releaseId}/download/preview": {
         parameters: {
             query?: never;
@@ -2391,6 +2465,32 @@ export interface components {
         };
         /** @enum {unknown} */
         ReleaseContextKind: "Video" | "Site" | "Actor";
+        ReleaseDiscoveryRoutine: {
+            kind: components["schemas"]["ReleaseDiscoveryRoutineKind"];
+            /** Format: uuid */
+            target: null | string;
+            label: string;
+            detail: string;
+            /** Format: date-time */
+            dueAt: string;
+            /** Format: date-time */
+            lastSuccessAt: null | string;
+            /** Format: date-time */
+            lastFailureAt: null | string;
+            /** Format: int32 */
+            consecutiveFailures: number | string;
+        };
+        /** @enum {unknown} */
+        ReleaseDiscoveryRoutineKind: "WantedSweep" | "Screening" | "BackwardsScreening" | "Identification";
+        ReleaseDiscoveryRunNowRequest: {
+            kind: components["schemas"]["ReleaseDiscoveryRoutineKind"];
+            /** Format: uuid */
+            target: null | string;
+        };
+        ReleaseDiscoveryRunNowVerdict: {
+            accepted: boolean;
+            detail: string;
+        };
         /** @enum {unknown} */
         ReleaseExclusion: "PasswordProtected" | "ConfidenceNotAllowed" | "Consumed" | "MissingDownload" | null;
         ReleaseIndexer: {

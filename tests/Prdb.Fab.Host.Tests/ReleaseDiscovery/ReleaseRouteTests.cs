@@ -99,6 +99,48 @@ public sealed class ReleaseRouteTests
         Assert.Equal(HttpStatusCode.Unauthorized, protectedAnswer.StatusCode);
     }
 
+    [Fact]
+    public async Task Release_discovery_routines_can_be_read_and_made_due_without_running_them_in_the_route()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+
+        using (var response = await client.GetAsync(
+            "/api/releases/discovery-routines",
+            TestContext.Current.CancellationToken))
+        {
+            response.EnsureSuccessStatusCode();
+            var controls = await response.Content.ReadFromJsonAsync<DiscoveryRoutine[]>(
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(
+                ["Screening", "Backwards Screening", "Release Identification"],
+                controls!.Select(control => control.Label));
+        }
+
+        using (var response = await client.PostAsJsonAsync(
+            "/api/releases/discovery-routines/run-now",
+            new { kind = "Screening", target = (Guid?)null },
+            TestContext.Current.CancellationToken))
+        {
+            response.EnsureSuccessStatusCode();
+            var verdict = await response.Content.ReadFromJsonAsync<RunNowAnswer>(
+                TestContext.Current.CancellationToken);
+            Assert.True(verdict!.Accepted);
+        }
+
+        using (var response = await client.PostAsJsonAsync(
+            "/api/releases/discovery-routines/run-now",
+            new { kind = "WantedSweep", target = (Guid?)null },
+            TestContext.Current.CancellationToken))
+        {
+            response.EnsureSuccessStatusCode();
+            var verdict = await response.Content.ReadFromJsonAsync<RunNowAnswer>(
+                TestContext.Current.CancellationToken);
+            Assert.False(verdict!.Accepted);
+        }
+    }
+
     private static async Task<Answer> ReadAsync(HttpClient client, string query)
     {
         using var response = await client.GetAsync($"/api/releases?{query}", TestContext.Current.CancellationToken);
@@ -157,6 +199,10 @@ public sealed class ReleaseRouteTests
         CreatedAtUtc = new DateTimeOffset(2026, 8, day, 12, 0, 0, TimeSpan.Zero),
         UpdatedAtUtc = new DateTimeOffset(2026, 8, day, 12, 0, 0, TimeSpan.Zero),
     };
+
+    private sealed record DiscoveryRoutine(string Label);
+
+    private sealed record RunNowAnswer(bool Accepted, string Detail);
 
     private static ReleaseRow Release(
         string title,

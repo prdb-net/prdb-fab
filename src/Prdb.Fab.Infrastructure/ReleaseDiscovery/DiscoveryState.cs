@@ -39,16 +39,15 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
             DiscoveryRoutineNames.WantedSweep,
             Lane.Sync,
             indexerId,
-            DateTimeOffset.MaxValue,
+            now,
             cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
 
     /// <summary>
-    /// Gives upgraded indexers their cache half and records every routine row
-    /// this slice owns. Rows whose implementation belongs to the next cut are
-    /// dormant until that cut activates them; they are still durable schedule
-    /// identities now, as ticket 01 requires.
+    /// Gives upgraded indexers their cache half, records every discovery
+    /// routine row and activates foundation rows left dormant by an earlier
+    /// release before their implementations arrived.
     /// </summary>
     public async Task EnsureFoundationAsync(CancellationToken cancellationToken)
     {
@@ -74,14 +73,40 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
                 await EnsureRoutineAsync(DiscoveryRoutineNames.Caps, Lane.Sync, indexer.Id, now, cancellationToken);
                 await EnsureRoutineAsync(DiscoveryRoutineNames.Walk, Lane.Sync, indexer.Id, now, cancellationToken);
                 await EnsureRoutineAsync(DiscoveryRoutineNames.Bootstrap, Lane.Bulk, indexer.Id, now, cancellationToken);
-                await EnsureRoutineAsync(DiscoveryRoutineNames.WantedSweep, Lane.Sync, indexer.Id, DateTimeOffset.MaxValue, cancellationToken);
+                await EnsureRoutineAsync(DiscoveryRoutineNames.WantedSweep, Lane.Sync, indexer.Id, now, cancellationToken);
             }
         }
 
-        await EnsureGlobalRoutineAsync(DiscoveryRoutineNames.Screening, Lane.Bulk, cancellationToken);
-        await EnsureGlobalRoutineAsync(DiscoveryRoutineNames.BackwardsSearch, Lane.Bulk, cancellationToken);
-        await EnsureGlobalRoutineAsync(DiscoveryRoutineNames.Identification, Lane.Sync, cancellationToken);
+        await EnsureGlobalRoutineAsync(DiscoveryRoutineNames.Screening, Lane.Bulk, now, cancellationToken);
+        await EnsureGlobalRoutineAsync(DiscoveryRoutineNames.BackwardsSearch, Lane.Bulk, now, cancellationToken);
+        await EnsureGlobalRoutineAsync(DiscoveryRoutineNames.Identification, Lane.Sync, now, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+
+        var enabledTargets = indexers
+            .Where(indexer => indexer.Enabled)
+            .Select(indexer => indexer.Id.ToString("D"))
+            .ToArray();
+        var activatedNames = new[]
+        {
+            DiscoveryRoutineNames.Screening,
+            DiscoveryRoutineNames.BackwardsSearch,
+            DiscoveryRoutineNames.Identification,
+        };
+
+        // These exact never-run rows are the dormant foundation written by
+        // the release-discovery schema cut. A row with any history is not that
+        // foundation state and remains untouched, including one deliberately
+        // stopped after a failure.
+        await context.Routines
+            .Where(row => row.DueAt == DateTimeOffset.MaxValue
+                && row.LastSuccessAt == null
+                && row.LastFailureAt == null
+                && row.ConsecutiveFailures == 0
+                && ((row.Target == null && activatedNames.Contains(row.Name))
+                    || (row.Name == DiscoveryRoutineNames.WantedSweep
+                        && row.Target != null
+                        && enabledTargets.Contains(row.Target))))
+            .ExecuteUpdateAsync(update => update.SetProperty(row => row.DueAt, now), cancellationToken);
     }
 
     public async Task<CapsChange> StoreCapsAsync(
@@ -154,7 +179,11 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
         }
     }
 
-    private async Task EnsureGlobalRoutineAsync(string name, Lane lane, CancellationToken cancellationToken)
+    private async Task EnsureGlobalRoutineAsync(
+        string name,
+        Lane lane,
+        DateTimeOffset dueAt,
+        CancellationToken cancellationToken)
     {
         if (!await context.Routines.AnyAsync(row => row.Name == name && row.Target == null, cancellationToken))
         {
@@ -163,7 +192,7 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
                 Name = name,
                 Target = null,
                 Lane = lane,
-                DueAt = DateTimeOffset.MaxValue,
+                DueAt = dueAt,
             });
         }
     }
