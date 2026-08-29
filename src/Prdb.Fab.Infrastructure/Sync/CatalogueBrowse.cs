@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core;
 using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Sync;
@@ -25,7 +26,10 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// are there, and a video whose image is missing costs this query nothing.
 /// </para>
 /// </remarks>
-public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
+public sealed class CatalogueBrowse(
+    FabDbContext context,
+    FeedCursors cursors,
+    ReleaseRankings rankings)
 {
     /// <summary>
     /// How many videos a page of a grid holds.
@@ -67,7 +71,11 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
                 row.ReleaseDate))
             .ToListAsync(cancellationToken);
 
-        return new VideoPage(videos, wanted, APage, total);
+        return new VideoPage(
+            await WithAvailabilityAsync(videos, cancellationToken),
+            wanted,
+            APage,
+            total);
     }
 
     /// <summary>
@@ -115,7 +123,7 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
             .ToListAsync(cancellationToken);
 
         return new WantedList(
-            videos,
+            await WithAvailabilityAsync(videos, cancellationToken),
             wanted,
             APage,
             total,
@@ -278,7 +286,21 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
                 row.ReleaseDate))
             .ToListAsync(cancellationToken);
 
-        return new VideoPage(videos, wanted, APage, total);
+        return new VideoPage(
+            await WithAvailabilityAsync(videos, cancellationToken),
+            wanted,
+            APage,
+            total);
+    }
+
+    private async Task<IReadOnlyList<VideoCard>> WithAvailabilityAsync(
+        IReadOnlyList<VideoCard> videos,
+        CancellationToken cancellationToken)
+    {
+        var ready = await rankings.ReadyVideosAsync(
+            videos.Select(video => video.PrdbId).ToArray(),
+            cancellationToken);
+        return [.. videos.Select(video => video with { DownloadReady = ready.Contains(video.PrdbId) })];
     }
 }
 
@@ -301,12 +323,18 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
 /// before it is a video whose site is not known here yet rather than one that
 /// is wrong.
 /// </param>
+/// <param name="DownloadReady">
+/// Whether the Video has a ranked, unconsumed Release and retry budget for one
+/// more submission. Computed by the acquisition ranking rather than inferred
+/// from the presence of a cached Release.
+/// </param>
 public sealed record VideoCard(
     long Id,
     Guid PrdbId,
     string Title,
     string? Site,
-    DateOnly? ReleaseDate);
+    DateOnly? ReleaseDate,
+    bool DownloadReady = false);
 
 /// <summary>One page of a grid, and where in the whole it sits.</summary>
 public sealed record VideoPage(IReadOnlyList<VideoCard> Videos, int Page, int PageSize, int Total);

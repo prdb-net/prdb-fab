@@ -41,20 +41,48 @@
 .discovery {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  margin-bottom: 1.25rem;
+  margin-top: 2rem;
+}
+
+.discovery summary {
+  cursor: pointer;
+  display: grid;
+  gap: 0.2rem;
+  grid-template-columns: 1fr auto;
+  padding: 0.85rem 1rem;
+}
+
+.discovery summary::after {
+  align-self: center;
+  content: '▾';
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.discovery[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.discovery summary span,
+.discoveryBody > p,
+.routine p {
+  color: var(--text-quiet);
+}
+
+.discovery summary span {
+  font-size: 0.85rem;
+  grid-column: 1;
+}
+
+.discoveryBody {
+  border-top: 1px solid var(--border);
   padding: 1rem;
 }
 
-.discoveryHeading h2,
-.discoveryHeading p,
+.discoveryBody > p,
 .routine h3,
 .routine p {
   margin: 0 0 0.35rem;
-}
-
-.discoveryHeading p,
-.routine p {
-  color: var(--text-quiet);
 }
 
 .routines {
@@ -95,6 +123,11 @@
   padding: 1rem;
 }
 
+.ready {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+
 .acquisitionHeading {
   align-items: start;
   display: flex;
@@ -107,7 +140,8 @@
   margin: 0 0 0.35rem;
 }
 
-.acquisitionHeading button {
+.acquisitionHeading > button,
+.acquisitionActions > button {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -116,9 +150,18 @@
   padding: 0.45rem 0.8rem;
 }
 
-.acquisitionHeading button:disabled {
+.acquisitionHeading > button:disabled,
+.acquisitionActions > button:disabled {
   color: var(--text-quiet);
   cursor: default;
+}
+
+.acquisitionActions {
+  align-items: end;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .attempts {
@@ -207,6 +250,24 @@
   padding: 1.5rem;
 }
 
+.empty strong {
+  color: var(--text);
+}
+
+.empty p {
+  margin: 0.45rem 0 0.8rem;
+  max-width: 65ch;
+}
+
+.empty button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.45rem 0.8rem;
+}
+
 .pager {
   align-items: center;
   color: var(--text-quiet);
@@ -255,4 +316,15 @@
   color: var(--text-quiet);
   font-size: 0.78rem;
   line-height: 1.3;
+}
+
+@media (max-width: 700px) {
+  .acquisitionHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .acquisitionActions {
+    align-items: stretch;
+  }
 }

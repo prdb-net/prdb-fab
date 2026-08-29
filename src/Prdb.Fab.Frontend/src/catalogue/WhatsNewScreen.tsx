@@ -56,6 +56,11 @@ export function WhatsNewScreen() {
         {total > 0 && <span className={styles.count}>{total} videos</span>}
       </div>
 
+      <p className={styles.lede}>
+        Browse the catalogue, then open a Video to see Releases already found by background
+        discovery. Downloads start from a Video&rsquo;s Release page.
+      </p>
+
       {total === 0 ? (
         <p className={styles.empty}>
           Nothing yet. prdb&rsquo;s catalogue is read in the background from the
@@ -69,7 +74,7 @@ export function WhatsNewScreen() {
             action={(video) => (
               <span className={gridStyles.actions}>
                 <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  Find releases
+                  {video.downloadReady ? 'Download' : 'View releases'}
                 </Link>
               </span>
             )}

@@ -139,7 +139,17 @@ function DownloadTable({
       </div>
 
       {answer.downloads.length === 0 ? (
-        <p className={styles.empty}>No local Downloads match this filter.</p>
+        <div className={styles.empty}>
+          <strong>{state || indexer ? 'No Downloads match these filters.' : 'No Downloads yet.'}</strong>
+          <p>
+            {state || indexer
+              ? 'Clear the filters to see the complete local history.'
+              : 'Open a wanted Video, then use the Download button on its Release page.'}
+          </p>
+          <Link to={state || indexer ? '/downloads' : '/wanted'}>
+            {state || indexer ? 'Clear filters' : 'Go to Wanted'}
+          </Link>
+        </div>
       ) : (
         <div className={styles.tableFrame}>
           <table>

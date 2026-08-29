@@ -18,4 +18,6 @@
 .release { min-width: 18rem; overflow-wrap: anywhere; }
 .release > span { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .empty { border: 1px dashed var(--border); border-radius: var(--radius); color: var(--text-quiet); padding: 1.5rem; }
+.empty strong { color: var(--text); }
+.empty p { margin: .45rem 0 .8rem; }
 .pager { align-items: center; color: var(--text-quiet); display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }

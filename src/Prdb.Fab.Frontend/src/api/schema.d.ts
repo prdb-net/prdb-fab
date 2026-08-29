@@ -2575,6 +2575,8 @@ export interface components {
             site: null | string;
             /** Format: date */
             releaseDate: null | string;
+            /** @default false */
+            downloadReady: boolean;
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];

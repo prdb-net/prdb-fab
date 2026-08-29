@@ -38,7 +38,10 @@ function Card({
 }) {
   return (
     <li className={styles.card}>
-      <Artwork videoId={video.id} title={video.title} />
+      <span className={styles.artwork}>
+        <Artwork videoId={video.id} title={video.title} />
+        {video.downloadReady && <span className={styles.ready}>Ready to download</span>}
+      </span>
       <span className={styles.title}>{video.title}</span>
       <span className={styles.detail}>{describe(video)}</span>
       {action?.(video)}

@@ -84,6 +84,44 @@ public sealed class AcquisitionTests
     }
 
     [Fact]
+    public async Task Download_readiness_uses_the_same_release_ranking_and_retry_budget_as_submission()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var seeded = await SeedAsync(database);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Releases.AddRange(
+                Release(seeded, "eligible", 1000, IdentificationConfidence.Exact),
+                Release(seeded, "password", 2000, IdentificationConfidence.Exact, password: "1"));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var scope = database.Scope())
+        {
+            var ready = await scope.ServiceProvider.GetRequiredService<ReleaseRankings>()
+                .ReadyVideosAsync([seeded.VideoId], TestContext.Current.CancellationToken);
+            Assert.Contains(seeded.VideoId, ready);
+        }
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Downloads.AddRange(Enumerable.Range(1, 3).Select(number =>
+                Download(database, seeded.VideoId, seeded.IndexerId, $"spent-{number}")));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var scope = database.Scope())
+        {
+            var ready = await scope.ServiceProvider.GetRequiredService<ReleaseRankings>()
+                .ReadyVideosAsync([seeded.VideoId], TestContext.Current.CancellationToken);
+            Assert.DoesNotContain(seeded.VideoId, ready);
+        }
+    }
+
+    [Fact]
     public async Task A_spent_budget_and_no_releases_left_are_distinct_plans()
     {
         await using var database = await TestDatabase.CreateAsync();

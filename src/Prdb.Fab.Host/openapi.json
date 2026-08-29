@@ -4641,6 +4641,10 @@
               "string"
             ],
             "format": "date"
+          },
+          "downloadReady": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
