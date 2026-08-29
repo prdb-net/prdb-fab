@@ -19,6 +19,47 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-29
+
+Release discovery can now be inspected and prompted from the browser, and the
+application navigation has been reorganised for a desktop workspace without
+turning the mobile view into an overflowing version of it.
+
+### Added
+
+- **Release discovery controls on every Releases view.** The page shows the
+  last completion or failure of each enabled Indexer's Wanted Sweep and the
+  global Screening, Backwards Screening and Release Identification routines.
+  *Run now* makes one routine due immediately while preserving its lane, the
+  Governor and every Indexer query-budget limit.
+- **A responsive application shell.** Desktop uses a persistent sidebar grouped
+  into Discover and Fetch & build. Mobile uses direct destinations for What's
+  New, Wanted, Downloads and Library plus a complete More sheet for Sites,
+  Actors, Review Queue, Operation Log and Settings.
+
+### Changed
+
+- The active destination is visible throughout the application, Settings stays
+  at the stable lower edge of the desktop sidebar, and the Review Queue count
+  remains present in both layouts without giving an empty queue warning weight.
+- The mobile navigation sheet traps keyboard focus, closes with Escape or its
+  backdrop, and prevents the page behind it from scrolling while it is open.
+
+### Fixed
+
+- A Completed Download on the Releases view no longer says that Filing is
+  absent; it now correctly says that the Download is waiting for collection.
+
+### Operational boundary
+
+- *Run now* schedules existing work; it never runs a routine inside the browser
+  request and never bypasses pacing or an Indexer's Daily Query Budget.
+- SABnzbd retry and delete remain under the person's control. Download
+  automation and fulfilment reporting remain absent.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.6.0 has started against it.
+
 ## [0.5.0] - 2026-08-29
 
 Completed Downloads now cross the filesystem boundary into a visible,

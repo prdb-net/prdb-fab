@@ -348,7 +348,7 @@ function AcquisitionSummary({
               <strong>{download.state}</strong>
               {download.cause && ` / ${download.cause}`} — {download.submittedName}
               {download.state === 'Completed' && (
-                <span> Waiting for collection; Filing is not in this version.</span>
+                <span> Waiting for collection.</span>
               )}
             </li>
           ))}

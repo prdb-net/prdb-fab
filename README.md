@@ -29,7 +29,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.5.0
+    image: prdbnet/prdb-fab:0.6.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -88,6 +88,10 @@ requests, is reserved for the Wanted Sweep; the rest carries the continuous
 Indexer Walk. The first walk reads up to 90 days of history and may therefore
 cost hundreds of queries or continue on a later day. It never spends past that
 Indexer's daily budget.
+
+The Releases view shows when each Wanted Sweep, Screening and Identification
+routine last completed or failed. **Run now** makes one due immediately; its
+normal lane, Governor and query budget still decide when it can proceed.
 
 From a Video's Releases table, **Download** fetches that exact NZB and submits
 it to the configured SABnzbd category. The choice is recorded before the remote

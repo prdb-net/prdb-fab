@@ -15,7 +15,7 @@ the way.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.5.0
+    image: prdbnet/prdb-fab:0.6.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -131,7 +131,7 @@ parent directory.
 
 The SABnzbd boundary is unchanged: prdb-fab performs only the initial `addfile`
 and never calls SABnzbd retry or delete. Download automation and fulfilment
-reporting are not in 0.5.0.
+reporting are not in 0.6.0.
 
 ## The mounts
 
@@ -188,6 +188,11 @@ The Wanted Sweep searches older Wanted Videos directly by title, which is why
 the two routines need separate shares of the same budget. Both write the same
 cache; neither identifies a Release by itself. prdb remains the only authority
 that assigns a Video.
+
+The Releases view shows the last completion or failure of each Wanted Sweep,
+Screening, Backwards Screening and Release Identification routine. **Run now**
+makes one due immediately; it does not bypass the routine's lane, the Governor
+or the Indexer's Daily Query Budget.
 
 **None of it is in a backup**, and it does not need to be — every row and image
 can be read from prdb or the Indexers again. A restored installation shows
@@ -317,7 +322,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.5.0` | A release. This is what documentation and Compose files should pin. |
+| `0.6.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 
