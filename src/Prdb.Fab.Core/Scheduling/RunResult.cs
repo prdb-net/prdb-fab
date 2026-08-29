@@ -53,9 +53,9 @@ public sealed record RunResult
     public int? RowsAdded { get; }
 
     /// <summary>
-    /// Why it failed, for a person reading the run log. Never read for control
-    /// flow — ADR 0016 fixed that for SABnzbd's strings and the reason
-    /// generalises: a sentence is for a reader.
+    /// A sentence worth retaining for a person reading the run log: ordinarily
+    /// why a run failed, or a terminal remote disagreement that succeeded as a
+    /// delivery but must not disappear. Never read for control flow.
     /// </summary>
     public string? Reason { get; }
 
@@ -68,6 +68,10 @@ public sealed record RunResult
     /// <summary>The routine got through <paramref name="itemsHandled"/> of its work set.</summary>
     public static RunResult Handled(int itemsHandled) =>
         new(RunOutcome.Succeeded, itemsHandled, reason: null);
+
+    /// <summary>A successful run with a terminal note worth retaining.</summary>
+    public static RunResult Handled(int itemsHandled, string reason) =>
+        new(RunOutcome.Succeeded, itemsHandled, reason);
 
     public static RunResult Discovered(int resultsSeen, int rowsAdded) =>
         new(RunOutcome.Succeeded, resultsSeen, reason: null, resultsSeen: resultsSeen, rowsAdded: rowsAdded);

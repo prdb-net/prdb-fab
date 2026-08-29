@@ -118,4 +118,10 @@ public sealed class InstallationRow
 
     /// <summary>Whether filing may delete non-video leftovers after it succeeds.</summary>
     public bool DeleteLeftovers { get; set; }
+
+    /// <summary>Whether held Wanted Videos may be reported as Fulfilments.</summary>
+    public bool ReportFulfilments { get; set; }
+
+    /// <summary>Whether a person's Confirmed Assignments may be sent to prdb.</summary>
+    public bool ReportConfirmedAssignments { get; set; }
 }

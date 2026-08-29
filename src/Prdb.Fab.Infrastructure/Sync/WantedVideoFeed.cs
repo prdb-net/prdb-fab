@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Core.Reporting;
 using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -74,6 +75,9 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
         }
 
         var applied = 0;
+        var userHash = await Context.Installation
+            .Select(row => row.PrdbUserHash)
+            .SingleAsync(cancellationToken);
 
         foreach (var entry in wanted)
         {
@@ -135,6 +139,19 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
             }
 
             await Context.SaveChangesAsync(cancellationToken);
+
+            // ADR 0019: NotWanted closes a report until prdb's feed says the
+            // wanted row is alive again. NotFound never clears.
+            if (!string.IsNullOrWhiteSpace(userHash))
+            {
+                await Context.ReportedStates
+                    .Where(row => row.VideoId == prdbId
+                        && row.UserHash == userHash
+                        && row.TerminalOutcome == ReportingOutcome.NotWanted)
+                    .ExecuteUpdateAsync(
+                        update => update.SetProperty(row => row.TerminalOutcome, (ReportingOutcome?)null),
+                        cancellationToken);
+            }
 
             applied++;
         }

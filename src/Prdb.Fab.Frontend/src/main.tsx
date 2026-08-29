@@ -20,6 +20,7 @@ import { PrdbSettings } from './settings/PrdbSettings.tsx'
 import { SabnzbdSettings } from './settings/SabnzbdSettings.tsx'
 import { SettingsGate } from './settings/SettingsPage.tsx'
 import { SettingsScreen } from './settings/SettingsScreen.tsx'
+import { ReportingScreen } from './settings/ReportingScreen.tsx'
 import { Chrome } from './shell/Chrome.tsx'
 import { ReleaseScreen } from './release/ReleaseScreen.tsx'
 import { DownloadsScreen } from './download/DownloadsScreen.tsx'
@@ -91,6 +92,7 @@ function pageTitle(pathname: string): string {
   if (pathname === '/settings/account') return 'Account'
   if (pathname === '/settings/identification') return 'Identification'
   if (pathname === '/settings/library') return 'Library settings'
+  if (pathname === '/settings/reporting') return 'Reporting settings'
   if (pathname.startsWith('/onboarding/')) return 'Setup'
   return 'Page not found'
 }
@@ -140,6 +142,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="account" element={<AccountScreen />} />
                 <Route path="identification" element={<IdentificationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
+                <Route path="reporting" element={<ReportingScreen />} />
               </Route>
               <Route path="*" element={<NotFoundScreen />} />
             </Routes>

@@ -61,6 +61,7 @@ export type LibraryPage = Schema['LibraryPage']
 export type LibraryEntry = Schema['LibraryEntry']
 export type LibrarySettingsState = Schema['LibrarySettingsState']
 export type OperationLogPage = Schema['OperationLogPage']
+export type ReportingSettingsState = Schema['ReportingSettingsState']
 
 /**
  * ADR 0010: an unauthenticated request gets 401 and never a redirect, so this
@@ -207,6 +208,20 @@ export async function saveIdentificationSettings(
   afterDownload: AfterDownloadGateChoice,
 ): Promise<IdentificationSettingsVerdict> {
   return post<IdentificationSettingsVerdict>('/api/settings/identification', { afterDownload })
+}
+
+export async function readReportingSettings(): Promise<ReportingSettingsState> {
+  return json<ReportingSettingsState>(await fetch('/api/settings/reporting'))
+}
+
+export async function saveReportingSettings(
+  reportFulfilments: boolean,
+  reportConfirmedAssignments: boolean,
+): Promise<ReportingSettingsState> {
+  return post<ReportingSettingsState>('/api/settings/reporting', {
+    reportFulfilments,
+    reportConfirmedAssignments,
+  })
 }
 
 /**

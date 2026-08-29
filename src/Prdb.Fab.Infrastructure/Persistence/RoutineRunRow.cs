@@ -28,8 +28,9 @@ public sealed class RoutineRunRow
     public int? RowsAdded { get; set; }
 
     /// <summary>
-    /// A sentence for whoever reads the log, never read for control flow. ADR
-    /// 0043 keeps it out of the stream's job: what asks to be fixed is a row.
+    /// A sentence for whoever reads the log, never read for control flow. It is
+    /// usually a failure reason, or a terminal remote disagreement that must be
+    /// visible even though retrying it would be wrong.
     /// </summary>
     public string? Reason { get; set; }
 }
