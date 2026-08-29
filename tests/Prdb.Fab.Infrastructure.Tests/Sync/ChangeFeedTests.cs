@@ -1,10 +1,16 @@
 using System.Globalization;
+using System.Net;
 using System.Web;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Automation;
+using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Core.Reporting;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -220,6 +226,101 @@ public sealed class ChangeFeedTests
 
         Assert.Equal(0, await context.WantedVideos.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.CatalogueVideos.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Wanted_removal_abandons_unfinished_automatic_downloads_without_writing_to_sabnzbd()
+    {
+        var prdb = new FakePrdbApi()
+            .Answers(Wanted, WantedPage(AVideo, "A Video", deleted: false, at: Noon))
+            .Answers(Wanted, WantedPage(AVideo, "A Video", deleted: true, at: Noon.AddMinutes(5)));
+        var sabnzbd = new CountingHandler();
+        await using var database = await TestDatabase.CreateAsync(prdb: prdb, also: services =>
+        {
+            services.AddFabSync();
+            services.AddHttpClient(FabTransports.Sabnzbd)
+                .ConfigurePrimaryHttpMessageHandler(() => sabnzbd);
+        });
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<FabDbContext>().Installation.ExecuteUpdateAsync(
+                row => row.SetProperty(installation => installation.PrdbApiKey, ApiKey),
+                TestContext.Current.CancellationToken);
+        }
+        await RunAsync<WantedVideoFeedRoutine>(database);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var localVideoId = await context.CatalogueVideos
+                .Where(row => row.PrdbId == AVideo)
+                .Select(row => row.Id)
+                .SingleAsync(TestContext.Current.CancellationToken);
+            var indexerId = Guid.NewGuid();
+            context.Indexers.Add(new IndexerRow
+            {
+                Id = indexerId,
+                Name = "Fixture",
+                Url = "https://indexer.invalid",
+                ApiKey = "fixture",
+                Categories = "Adult",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+                LastCheckedAt = Noon,
+            });
+            context.Downloads.AddRange(
+                AutomaticDownload(indexerId, "outstanding", DownloadState.Outstanding),
+                AutomaticDownload(indexerId, "completed", DownloadState.Completed));
+            context.Releases.Add(new ReleaseRow
+            {
+                IndexerId = indexerId,
+                DerivedReleaseId = "candidate",
+                RawGuid = "candidate",
+                Title = "candidate",
+                NormalisedTitle = "candidate",
+                Categories = "[]",
+                PostDate = Noon,
+                PubDate = Noon,
+                DownloadUrl = "https://indexer.invalid/nzb",
+                FirstSeenAt = Noon,
+                IdentificationState = IdentificationState.Matched,
+                VideoId = localVideoId,
+                Confidence = IdentificationConfidence.Exact,
+                AutomationPending = true,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await RunAsync<WantedVideoFeedRoutine>(database);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            Assert.All(
+                await context.Downloads.ToListAsync(TestContext.Current.CancellationToken),
+                download =>
+                {
+                    Assert.Equal(DownloadState.Abandoned, download.State);
+                    Assert.Null(download.Cause);
+                });
+            var release = await context.Releases.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.False(release.AutomationPending);
+            Assert.Equal(AutomationDecisionReason.NotWanted, release.AutomationDecisionReason);
+            Assert.Empty(await context.WantedVideos.ToListAsync(TestContext.Current.CancellationToken));
+        }
+        Assert.Equal(0, sabnzbd.Requests);
+
+        DownloadRow AutomaticDownload(Guid indexerId, string identity, DownloadState state) => new()
+        {
+            Id = Guid.NewGuid(),
+            VideoId = AVideo,
+            IndexerId = indexerId,
+            DerivedReleaseId = identity,
+            SubmittedName = identity,
+            State = state,
+            OutstandingSince = Noon,
+            OriginIsPerson = false,
+            CreatedAt = Noon,
+        };
     }
 
     [Fact]
@@ -465,4 +566,17 @@ public sealed class ChangeFeedTests
 
     private static string Stamp(DateTimeOffset at) =>
         at.UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
+
+    private sealed class CountingHandler : HttpMessageHandler
+    {
+        public int Requests { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Requests++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
 }

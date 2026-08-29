@@ -46,12 +46,11 @@ export function SettingsScreen() {
             The library root and the fixed leftover types filing may remove.
           </span>
         </li>
-        <li className={styles.pending}>
-          Automation
+        <li>
+          <Link to="/settings/automation">Automation</Link>
           <br />
           <span className={styles.detail}>
-            The rules, the cap on unfinished downloads, the retry budget.
-            Arrives with automation.
+            Permission rules and the cap on unfinished automatic Downloads.
           </span>
         </li>
         <li>

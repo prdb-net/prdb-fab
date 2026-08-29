@@ -17,8 +17,9 @@ public static class AcquisitionEndpoints
                 CancellationToken cancellationToken,
                 DownloadState? state = null,
                 Guid? indexer = null,
+                Guid? download = null,
                 int page = 1) => TypedResults.Ok(await downloads.ReadAsync(
-                    state, indexer, page, cancellationToken)))
+                    state, indexer, download, page, cancellationToken)))
             .WithTags("Acquisition");
 
         routes.MapPost(

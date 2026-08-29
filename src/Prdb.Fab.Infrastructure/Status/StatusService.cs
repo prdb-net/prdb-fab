@@ -4,6 +4,7 @@ using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Filing;
@@ -11,6 +12,7 @@ using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 using Prdb.Fab.Infrastructure.Reporting;
 using Prdb.Fab.Infrastructure.Sync;
+using Prdb.Fab.Infrastructure.Automation;
 
 namespace Prdb.Fab.Infrastructure.Status;
 
@@ -23,7 +25,6 @@ public sealed class StatusService(
     IRoutineStore routineStore,
     TimeProvider time)
 {
-    private const string BeforeDownloadGateName = "BeforeDownload";
     private static readonly string[] StageOrder = ["sync-prdb", "sync-indexers", "match", "decide", "download", "file"];
 
     public async Task<StatusState> ReadAsync(CancellationToken cancellationToken = default)
@@ -39,6 +40,19 @@ public sealed class StatusService(
         var indexers = await context.Indexers.OrderBy(row => row.Rank).ThenBy(row => row.Name).ToListAsync(cancellationToken);
         var walkStates = await context.IndexerWalkStates.ToListAsync(cancellationToken);
         var installation = await context.Installation.SingleAsync(cancellationToken);
+        var automationRules = await context.AutomationRules.OrderBy(row => row.Name).ToListAsync(cancellationToken);
+        var rulesWithIndexers = await context.AutomationRuleIndexers
+            .Where(row => row.Indexer != null && row.Indexer.Enabled)
+            .Select(row => row.AutomationRuleId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        foreach (var rule in automationRules.Where(rule => !rulesWithIndexers.Contains(rule.Id)))
+        {
+            // A deleted last Indexer leaves the rule visible and off. This is
+            // the observable safety state even for databases changed by an
+            // older build that did not persist the disabling write itself.
+            rule.Enabled = false;
+        }
         var reportingState = await reporting.ReadAsync(cancellationToken);
 
         var workSets = await WorkSetsAsync(routines, reportingState, cancellationToken);
@@ -68,6 +82,13 @@ public sealed class StatusService(
             .ToArray();
         AddGateBrakes(conditions, gateTallies, admissions);
 
+        var automaticDecisions = await context.Releases
+            .Where(row => row.AutomationDecisionReason != null)
+            .GroupBy(row => row.AutomationDecisionReason!.Value)
+            .Select(group => new StatusAutomaticDecision(group.Key, group.Count()))
+            .ToListAsync(cancellationToken);
+        AddAutomationBrakes(conditions, automaticDecisions);
+
         var downloads = await context.Downloads.ToListAsync(cancellationToken);
         var review = await context.ArrivingFiles.Where(row => row.Reason != null).ToListAsync(cancellationToken);
         var filing = await context.ArrivingFiles
@@ -88,6 +109,8 @@ public sealed class StatusService(
             review,
             filing,
             installation,
+            automationRules,
+            automaticDecisions,
             governor,
             now)).ToArray();
 
@@ -211,11 +234,13 @@ public sealed class StatusService(
             var retryable = await context.Downloads
                 .GroupBy(row => row.VideoId)
                 .CountAsync(group => group.Count() < retryBudget
-                    && group.All(row => row.State == DownloadState.Failed), cancellationToken);
+                    && group.All(row => row.State == DownloadState.Failed && row.OriginIsPerson), cancellationToken);
             return outstanding + retryable;
         });
         await SetAsync(ReportingRoutine.RoutineName,
             () => Task.FromResult(reportingState.FulfilmentBacklog + reportingState.ConfirmedAssignmentBacklog));
+        await SetAsync(AutomaticDecisionRoutine.RoutineName,
+            () => context.Releases.CountAsync(row => row.AutomationPending, cancellationToken));
         await SetAsync(DiscoveryRoutineNames.WantedSweep, async () =>
             (await context.WantedVideos
                 .Select(row => row.Video!.Title)
@@ -386,20 +411,39 @@ public sealed class StatusService(
     {
         foreach (var gate in tallies)
         {
-            // The before-download gate is the shape the next Automation slice
-            // will activate. Until then there are no automatic decisions and
-            // therefore no deliberate hold to call a Brake.
-            if (gate.Gate == BeforeDownloadGateName) continue;
             var allowed = admissions.Where(row => row.Gate == gate.Gate).Select(row => row.Confidence.ToString()).ToHashSet();
             var admitted = gate.Outcomes.Where(item => allowed.Contains(item.Name)).Sum(item => item.Count);
             if (gate.Total > 0 && admitted == 0)
             {
                 conditions.Add(Brake(
-                    "The after-download gate admitted nothing",
+                    $"The {gate.Gate} Gate admitted nothing",
                     $"All {gate.Total} named outcomes in the last seven days were outside the configured set.",
-                    "file",
+                    gate.Gate == BeforeDownloadGate.Name ? "decide" : "file",
                     "/settings/identification"));
             }
+        }
+    }
+
+    private static void AddAutomationBrakes(
+        ICollection<StatusCondition> conditions,
+        IReadOnlyList<StatusAutomaticDecision> decisions)
+    {
+        foreach (var decision in decisions.Where(item => item.Reason is not AutomationDecisionReason.NotWanted
+                     and not AutomationDecisionReason.DownloadInFlight))
+        {
+            var (title, detail, route) = decision.Reason switch
+            {
+                AutomationDecisionReason.ConfidenceGate => ("The BeforeDownload Gate held Releases", "Change the fixed named confidence set to reconsider them.", "/settings/identification"),
+                AutomationDecisionReason.Size => ("Automation Rule size bounds held Releases", "No enabled rule accepting the Indexer also accepted the Release size.", "/settings/automation"),
+                AutomationDecisionReason.IndexerNotAllowed => ("No enabled Automation Rule allowed an Indexer", "Enable or change a rule to permit Releases from that Indexer.", "/settings/automation"),
+                AutomationDecisionReason.HeldVideo => ("Held Videos were not automatically upgraded", "The first release never downloads another Quality for a Video the Library already holds.", "/library"),
+                AutomationDecisionReason.OpenReviewQueue => ("Open Review Queue entries held Videos", "Resolve the waiting file for each Video before automation continues.", "/review-queue"),
+                AutomationDecisionReason.AutomaticDownloadCap => ("The unfinished automatic Download cap was reached", "Work remains in the Decide work set and resumes as automatic Downloads finish.", "/settings/automation"),
+                AutomationDecisionReason.RetryBudgetSpent => ("Retry Budgets held automatic Downloads", "Reset one Video's local Download history from its Release view to reconsider it.", "/wanted"),
+                AutomationDecisionReason.NoReleasesLeft => ("No eligible Releases were left", "Every ranked Release was unavailable, excluded or already consumed.", "/wanted"),
+                _ => (decision.Reason.ToString(), "Automation deliberately did not start a Download.", "/settings/automation"),
+            };
+            conditions.Add(Brake(title, $"{decision.Count} Release(s). {detail}", "decide", route));
         }
     }
 
@@ -436,12 +480,12 @@ public sealed class StatusService(
     {
         var observed = await context.IdentificationOutcomes.Where(row => row.At >= since).ToListAsync(cancellationToken);
         var names = Enum.GetNames<IdentificationConfidence>().Concat(["SiteOnly", "Unknown"]).Distinct().ToArray();
-        return new[] { BeforeDownloadGateName, AfterDownloadGate.Name }.Select(gate =>
+        return new[] { BeforeDownloadGate.Name, AfterDownloadGate.Name }.Select(gate =>
         {
             var rows = observed.Where(row => row.Gate == gate).ToArray();
-            var allowed = gate == BeforeDownloadGateName
-                ? new HashSet<string>(["Exact", "Strong", "Probable"], StringComparer.Ordinal)
-                : admissions.Where(row => row.Gate == gate).Select(row => row.Confidence.ToString()).ToHashSet(StringComparer.Ordinal);
+            var allowed = admissions.Where(row => row.Gate == gate)
+                .Select(row => row.Confidence.ToString())
+                .ToHashSet(StringComparer.Ordinal);
             return new StatusGateTally(gate, rows.Length,
                 names.Select(name => new StatusNamedCount(name, rows.Count(row => row.Outcome == name), allowed.Contains(name))).ToArray());
         }).ToArray();
@@ -459,6 +503,8 @@ public sealed class StatusService(
         IReadOnlyList<ArrivingFileRow> review,
         IReadOnlyList<ArrivingFileRow> filing,
         InstallationRow installation,
+        IReadOnlyList<AutomationRuleRow> automationRules,
+        IReadOnlyList<StatusAutomaticDecision> automaticDecisions,
         PrdbGovernor governor,
         DateTimeOffset now)
     {
@@ -482,12 +528,22 @@ public sealed class StatusService(
         }
         if (id is "decide" or "file")
         {
-            var gate = gateTallies.Single(item => item.Gate == (id == "decide" ? BeforeDownloadGateName : AfterDownloadGate.Name));
-            facts.Add(new($"{gate.Gate} outcomes (7 days)", gate.Total == 0 ? "No named outcomes were observed." : string.Join(", ", gate.Outcomes.Select(item => $"{item.Name}{(item.Admitted ? " ✓" : string.Empty)} {item.Count}")), id == "file" ? "/settings/identification" : null));
+            var gate = gateTallies.Single(item => item.Gate == (id == "decide" ? BeforeDownloadGate.Name : AfterDownloadGate.Name));
+            facts.Add(new($"{gate.Gate} outcomes (7 days)", gate.Total == 0 ? "No named outcomes were observed." : string.Join(", ", gate.Outcomes.Select(item => $"{item.Name}{(item.Admitted ? " ✓" : string.Empty)} {item.Count}")), "/settings/identification"));
         }
         if (id == "decide")
         {
-            facts.Add(new("Automatic decisions", "None. Automation Rules are not available in this version.", null));
+            facts.Add(new(
+                "Automation Rules",
+                $"{automationRules.Count(rule => rule.Enabled)} enabled, {automationRules.Count(rule => !rule.Enabled)} disabled. No enabled rule is the off state.",
+                "/settings/automation"));
+            facts.Add(new("Unfinished automatic Download cap", installation.AutomaticDownloadCap.ToString(), "/settings/automation"));
+            facts.Add(new(
+                "Current automatic non-acts",
+                automaticDecisions.Count == 0
+                    ? "Every current automatic decision is clear."
+                    : string.Join(", ", automaticDecisions.Select(item => $"{item.Reason} {item.Count}")),
+                "/settings/automation"));
             facts.Add(new(
                 "Releases not downloaded (7 days)",
                 notDownloaded.Count == 0
@@ -553,6 +609,7 @@ public sealed class StatusService(
         or TidyUpRoutine.RoutineName
         or DownloadFollowingRoutine.RoutineName
         or ReportingRoutine.RoutineName
+        or AutomaticDecisionRoutine.RoutineName
         or CatalogueRepairRoutine.RoutineName;
 
     private static string StageOf(string name) => name switch
@@ -560,6 +617,7 @@ public sealed class StatusService(
         var value when value.StartsWith("prdb.", StringComparison.Ordinal) => "sync-prdb",
         DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.Bootstrap or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep => "sync-indexers",
         DiscoveryRoutineNames.Screening or DiscoveryRoutineNames.BackwardsSearch or DiscoveryRoutineNames.Identification or ArrivalIdentificationRoutine.RoutineName => "match",
+        AutomaticDecisionRoutine.RoutineName => "decide",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName => "download",
         CollectingRoutine.RoutineName or FilingRoutine.RoutineName or TidyUpRoutine.RoutineName or ReportingRoutine.RoutineName => "file",
         _ => "decide",
@@ -575,6 +633,7 @@ public sealed class StatusService(
         DiscoveryRoutineNames.Screening => "Release screening",
         DiscoveryRoutineNames.BackwardsSearch => "Backwards screening",
         DiscoveryRoutineNames.Identification => "Release identification",
+        AutomaticDecisionRoutine.RoutineName => "Automatic decisions",
         _ => name,
     };
 
@@ -583,6 +642,7 @@ public sealed class StatusService(
         var value when UsesPrdb(value) => "/settings/connections/prdb",
         DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.Bootstrap or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep when target is not null => $"/settings/connections/indexers/{target}",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName or CollectingRoutine.RoutineName => "/settings/connections/sabnzbd",
+        AutomaticDecisionRoutine.RoutineName => "/settings/automation",
         _ => null,
     };
 }
@@ -597,4 +657,5 @@ public sealed record StatusCondition(StatusConditionKind Kind, string Title, str
 public sealed record StatusRoutine(string Name, string? Target, string Label, string Stage, DateTimeOffset DueAt, DateTimeOffset? LastSuccessAt, DateTimeOffset? LastFailureAt, int ConsecutiveFailures, bool BackingOff, int? WorkSetSize, DateTimeOffset? LastCompletedAt, int? ResultsSeen, int? RowsAdded, DateTimeOffset? LastRunNowAt, RunNowOutcome? LastRunNowOutcome, string? LastRunNowDetail, bool RunNowPending);
 public sealed record StatusGateTally(string Gate, int Total, IReadOnlyList<StatusNamedCount> Outcomes);
 public sealed record StatusNamedCount(string Name, int Count, bool Admitted = false);
+public sealed record StatusAutomaticDecision(AutomationDecisionReason Reason, int Count);
 public sealed record StatusRunNowRequest(string Name, string? Target);

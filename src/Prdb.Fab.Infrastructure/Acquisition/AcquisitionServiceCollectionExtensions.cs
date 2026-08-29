@@ -12,6 +12,7 @@ public static class AcquisitionServiceCollectionExtensions
         services.AddScoped<ReleaseRankings>();
         services.AddScoped<PersonDownloads>();
         services.AddScoped<DownloadBrowse>();
+        services.AddScoped<DownloadOrigins>();
         services.AddScoped<IReleasePin, DownloadReleasePin>();
         services.AddScoped<SabnzbdRoutine>();
         services.AddScoped<DownloadFollowingRoutine>();

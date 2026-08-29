@@ -1,4 +1,5 @@
 using Prdb.Fab.Core.Filing;
+using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Infrastructure.Filing;
 
 using Microsoft.EntityFrameworkCore;
@@ -17,16 +18,22 @@ public static class FilingEndpoints
         group.MapGet("/", async (
             IdentificationSettings settings,
             CancellationToken cancellationToken) =>
-            TypedResults.Ok(new IdentificationSettingsState(
-                await settings.ReadAsync(cancellationToken))));
+            TypedResults.Ok(await settings.ReadAsync(cancellationToken)));
 
         group.MapPost("/", async (
             IdentificationSettingsRequest request,
             IdentificationSettings settings,
             CancellationToken cancellationToken) =>
         {
-            var reconsidered = await settings.SaveAsync(request.AfterDownload, cancellationToken);
-            return TypedResults.Ok(new IdentificationSettingsVerdict(request.AfterDownload, reconsidered));
+            var reconsidered = await settings.SaveAsync(
+                request.BeforeDownload,
+                request.AfterDownload,
+                cancellationToken);
+            return TypedResults.Ok(new IdentificationSettingsVerdict(
+                request.BeforeDownload,
+                request.AfterDownload,
+                reconsidered.ArrivingFilesReconsidered,
+                reconsidered.ReleasesReconsidered));
         });
 
         var library = routes.MapGroup("/api/settings/library").WithTags("Filing");
@@ -125,13 +132,15 @@ public static class FilingEndpoints
     }
 }
 
-public sealed record IdentificationSettingsState(AfterDownloadGateChoice AfterDownload);
-
-public sealed record IdentificationSettingsRequest(AfterDownloadGateChoice AfterDownload);
+public sealed record IdentificationSettingsRequest(
+    BeforeDownloadGateChoice BeforeDownload,
+    AfterDownloadGateChoice AfterDownload);
 
 public sealed record IdentificationSettingsVerdict(
+    BeforeDownloadGateChoice BeforeDownload,
     AfterDownloadGateChoice AfterDownload,
-    int Reconsidered);
+    int ArrivingFilesReconsidered,
+    int ReleasesReconsidered);
 
 public sealed record LibrarySettingsRequest(bool DeleteLeftovers);
 public sealed record ReviewSelectionRequest(IReadOnlyList<Guid> ArrivingFileIds);

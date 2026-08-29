@@ -2,11 +2,12 @@ using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Acquisition;
 
 namespace Prdb.Fab.Infrastructure.Filing;
 
 /// <summary>The read-only Operation Log. No control-flow code depends on it.</summary>
-public sealed class OperationLogBrowse(FabDbContext context)
+public sealed class OperationLogBrowse(FabDbContext context, DownloadOrigins origins)
 {
     public const int APage = 50;
 
@@ -32,24 +33,28 @@ public sealed class OperationLogBrowse(FabDbContext context)
         }
 
         var total = await query.CountAsync(cancellationToken);
-        var entries = await query
+        var rows = await query
             .OrderByDescending(row => row.At)
             .ThenByDescending(row => row.Id)
             .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
-            .Select(row => new OperationLogEntry(
-                row.Id,
-                row.Act,
-                row.VideoId,
-                row.DownloadId,
-                row.PathBefore,
-                row.PathAfter,
-                row.DisplacedPath,
-                row.LeftoverNamesJson,
-                row.Actor,
-                row.Reason,
-                row.At))
             .ToListAsync(cancellationToken);
+        var resolvedOrigins = await origins.ForAsync(
+            rows.Select(row => row.DownloadId).OfType<Guid>().ToArray(),
+            cancellationToken);
+        var entries = rows.Select(row => new OperationLogEntry(
+            row.Id,
+            row.Act,
+            row.VideoId,
+            row.DownloadId,
+            row.DownloadId is { } downloadId ? resolvedOrigins.GetValueOrDefault(downloadId) : null,
+            row.PathBefore,
+            row.PathAfter,
+            row.DisplacedPath,
+            row.LeftoverNamesJson,
+            row.Actor,
+            row.Reason,
+            row.At)).ToArray();
 
         return new OperationLogPage(entries, wanted, APage, total);
     }
@@ -60,6 +65,7 @@ public sealed record OperationLogEntry(
     string Act,
     Guid? VideoId,
     Guid? DownloadId,
+    DownloadOriginView? Origin,
     string? PathBefore,
     string? PathAfter,
     string? DisplacedPath,

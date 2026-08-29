@@ -1,12 +1,13 @@
 namespace Prdb.Fab.Core.Acquisition;
 
-/// <summary>The four places a submitted Download can stand (ADR 0016).</summary>
+/// <summary>The places a submitted Download can stand (ADRs 0016 and 0045).</summary>
 public enum DownloadState
 {
     Outstanding,
     Completed,
     Collected,
     Failed,
+    Abandoned,
 }
 
 /// <summary>

@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Reporting;
+using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Automation;
+using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -92,9 +95,31 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
                 // at all, which is why this is looked up rather than created.
                 if (await Catalogue.FindVideoAsync(prdbId, cancellationToken) is { } gone)
                 {
+                    await using var transaction = await Context.Database.BeginTransactionAsync(cancellationToken);
+                    // Completed is included for the race where SABnzbd's poll
+                    // observed completion while this feed transition was being
+                    // applied. Whichever writer arrives first, an uncollected
+                    // automatic Download converges on Abandoned and is never
+                    // filed after intent was withdrawn.
+                    await Context.Downloads
+                        .Where(row => row.VideoId == prdbId
+                            && !row.OriginIsPerson
+                            && (row.State == DownloadState.Outstanding
+                                || row.State == DownloadState.Completed))
+                        .ExecuteUpdateAsync(update => update
+                            .SetProperty(row => row.State, DownloadState.Abandoned)
+                            .SetProperty(row => row.Cause, (DownloadCause?)null),
+                            cancellationToken);
+                    await Context.Releases
+                        .Where(row => row.VideoId == gone)
+                        .ExecuteUpdateAsync(update => update
+                            .SetProperty(row => row.AutomationPending, false)
+                            .SetProperty(row => row.AutomationDecisionReason, AutomationDecisionReason.NotWanted),
+                            cancellationToken);
                     await Context.WantedVideos
                         .Where(row => row.VideoId == gone)
                         .ExecuteDeleteAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
                 }
 
                 applied++;
@@ -113,6 +138,7 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
             var held = await Context.WantedVideos
                 .AsTracking()
                 .SingleOrDefaultAsync(row => row.VideoId == videoId, cancellationToken);
+            var joined = held is null;
 
             // Since when prdb says it has been wanted, which is what ticket 10's
             // grid orders on. The fulfilment fields beside it are not stored:
@@ -139,6 +165,17 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
             }
 
             await Context.SaveChangesAsync(cancellationToken);
+
+            if (joined)
+            {
+                await Context.Releases
+                    .Where(row => row.VideoId == videoId
+                        && row.IdentificationState == IdentificationState.Matched)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(row => row.AutomationPending, true)
+                        .SetProperty(row => row.AutomationDecisionReason, (AutomationDecisionReason?)null),
+                        cancellationToken);
+            }
 
             // ADR 0019: NotWanted closes a report until prdb's feed says the
             // wanted row is alive again. NotFound never clears.

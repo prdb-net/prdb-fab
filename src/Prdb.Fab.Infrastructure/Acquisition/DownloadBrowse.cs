@@ -7,13 +7,21 @@ using Prdb.Fab.Infrastructure.Persistence;
 namespace Prdb.Fab.Infrastructure.Acquisition;
 
 /// <summary>The local Download record and its two local-only actions.</summary>
-public sealed class DownloadBrowse(FabDbContext context)
+public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins)
 {
     public const int APage = 50;
+
+    public Task<DownloadPage> ReadAsync(
+        DownloadState? state,
+        Guid? indexerId,
+        int page,
+        CancellationToken cancellationToken = default) =>
+        ReadAsync(state, indexerId, downloadId: null, page, cancellationToken);
 
     public async Task<DownloadPage> ReadAsync(
         DownloadState? state,
         Guid? indexerId,
+        Guid? downloadId,
         int page,
         CancellationToken cancellationToken = default)
     {
@@ -30,6 +38,7 @@ public sealed class DownloadBrowse(FabDbContext context)
 
         if (state is not null) relevant = relevant.Where(row => row.State == state);
         if (indexerId is not null) relevant = relevant.Where(row => row.IndexerId == indexerId);
+        if (downloadId is not null) relevant = relevant.Where(row => row.Id == downloadId);
 
         var total = await relevant.CountAsync(cancellationToken);
         var rows = await relevant
@@ -68,6 +77,7 @@ public sealed class DownloadBrowse(FabDbContext context)
                 row.CreatedAt,
             })
             .ToListAsync(cancellationToken);
+        var resolvedOrigins = await origins.ForAsync(rows.Select(row => row.Id).ToArray(), cancellationToken);
 
         return new(
             [.. rows.Select(row => new DownloadViewRow(
@@ -85,7 +95,7 @@ public sealed class DownloadBrowse(FabDbContext context)
                 row.FailMessage,
                 row.StageLog,
                 row.OutstandingSince,
-                row.OriginIsPerson ? DownloadOrigin.Person : DownloadOrigin.Automation,
+                resolvedOrigins[row.Id],
                 row.CreatedAt))],
             indexers,
             wanted,
@@ -127,6 +137,31 @@ public sealed class DownloadBrowse(FabDbContext context)
                 .SetProperty(row => row.State, DownloadState.Failed)
                 .SetProperty(row => row.Cause, DownloadCause.Abandoned), cancellationToken);
 
+        if (changed == ids.Length)
+        {
+            var automaticVideoIds = preview.Downloads
+                .Where(row => row.Origin.Kind == DownloadOrigin.Automation)
+                .Select(row => row.VideoId)
+                .Distinct()
+                .ToArray();
+            if (automaticVideoIds.Length > 0)
+            {
+                var localVideoIds = await context.CatalogueVideos
+                    .Where(row => automaticVideoIds.Contains(row.PrdbId)
+                        && context.WantedVideos.Any(wanted => wanted.VideoId == row.Id))
+                    .Select(row => row.Id)
+                    .ToArrayAsync(cancellationToken);
+                await context.Releases
+                    .Where(row => row.VideoId != null
+                        && localVideoIds.Contains(row.VideoId.Value)
+                        && row.IdentificationState == Prdb.Fab.Core.ReleaseDiscovery.IdentificationState.Matched)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(row => row.AutomationPending, true)
+                        .SetProperty(row => row.AutomationDecisionReason, (Prdb.Fab.Core.Automation.AutomationDecisionReason?)null),
+                        cancellationToken);
+            }
+        }
+
         return changed == ids.Length
             ? new(DownloadSelectionOutcome.Stopped, changed,
                 "Following stopped locally. SABnzbd was not changed.")
@@ -138,18 +173,7 @@ public sealed class DownloadBrowse(FabDbContext context)
         Guid videoId,
         CancellationToken cancellationToken = default)
     {
-        var downloads = await context.Downloads
-            .AsNoTracking()
-            .Where(row => row.VideoId == videoId)
-            .OrderByDescending(row => row.CreatedAt)
-            .Select(row => new DownloadSelectionRow(
-                row.Id,
-                row.VideoId,
-                row.SubmittedName,
-                row.State,
-                row.Cause,
-                row.NzoId))
-            .ToListAsync(cancellationToken);
+        var downloads = await ForVideoAsync(videoId, cancellationToken);
         return new(
             downloads.Count == 0 ? DownloadResetOutcome.NothingToReset : DownloadResetOutcome.Ready,
             videoId,
@@ -185,6 +209,22 @@ public sealed class DownloadBrowse(FabDbContext context)
                 && supplied.Contains(row.Id)
                 && context.Downloads.Count(candidate => candidate.VideoId == videoId) == supplied.Length)
             .ExecuteDeleteAsync(cancellationToken);
+        if (removed == supplied.Length)
+        {
+            var localVideoId = await context.CatalogueVideos
+                .Where(row => row.PrdbId == videoId)
+                .Select(row => (long?)row.Id)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (localVideoId is not null)
+            {
+                await context.Releases
+                    .Where(row => row.VideoId == localVideoId)
+                    .ExecuteUpdateAsync(update => update
+                        .SetProperty(row => row.AutomationPending, true)
+                        .SetProperty(row => row.AutomationDecisionReason, (Prdb.Fab.Core.Automation.AutomationDecisionReason?)null),
+                        cancellationToken);
+            }
+        }
         return removed == supplied.Length
             ? new(DownloadResetOutcome.Reset, removed,
                 "The local Download history for this Video was reset. SABnzbd was not changed.")
@@ -194,35 +234,43 @@ public sealed class DownloadBrowse(FabDbContext context)
 
     public async Task<IReadOnlyList<DownloadSelectionRow>> ForVideoAsync(
         Guid videoId,
-        CancellationToken cancellationToken = default) =>
-        await context.Downloads
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await context.Downloads
             .AsNoTracking()
             .Where(row => row.VideoId == videoId)
             .OrderByDescending(row => row.CreatedAt)
-            .Select(row => new DownloadSelectionRow(
-                row.Id,
-                row.VideoId,
-                row.SubmittedName,
-                row.State,
-                row.Cause,
-                row.NzoId))
             .ToListAsync(cancellationToken);
+        var resolvedOrigins = await origins.ForAsync(rows.Select(row => row.Id).ToArray(), cancellationToken);
+        return [.. rows.Select(row => new DownloadSelectionRow(
+            row.Id,
+            row.VideoId,
+            row.SubmittedName,
+            row.State,
+            row.Cause,
+            row.NzoId,
+            resolvedOrigins[row.Id]))];
+    }
 
     private async Task<IReadOnlyList<DownloadSelectionRow>> SelectionAsync(
         IReadOnlyCollection<Guid> ids,
-        CancellationToken cancellationToken) =>
-        await context.Downloads
+        CancellationToken cancellationToken)
+    {
+        var rows = await context.Downloads
             .AsNoTracking()
             .Where(row => ids.Contains(row.Id))
             .OrderByDescending(row => row.CreatedAt)
-            .Select(row => new DownloadSelectionRow(
-                row.Id,
-                row.VideoId,
-                row.SubmittedName,
-                row.State,
-                row.Cause,
-                row.NzoId))
             .ToListAsync(cancellationToken);
+        var resolvedOrigins = await origins.ForAsync(rows.Select(row => row.Id).ToArray(), cancellationToken);
+        return [.. rows.Select(row => new DownloadSelectionRow(
+            row.Id,
+            row.VideoId,
+            row.SubmittedName,
+            row.State,
+            row.Cause,
+            row.NzoId,
+            resolvedOrigins[row.Id]))];
+    }
 
     private static string DetailOf(DownloadSelectionOutcome outcome) => outcome switch
     {
@@ -231,7 +279,6 @@ public sealed class DownloadBrowse(FabDbContext context)
     };
 }
 
-public enum DownloadOrigin { Person, Automation }
 public enum DownloadSelectionOutcome { Ready, SelectionChanged, Stopped }
 public enum DownloadResetOutcome { Ready, NothingToReset, SelectionChanged, Reset }
 
@@ -251,7 +298,7 @@ public sealed record DownloadViewRow(
     string? FailMessage,
     string? StageLog,
     DateTimeOffset OutstandingSince,
-    DownloadOrigin Origin,
+    DownloadOriginView Origin,
     DateTimeOffset CreatedAt);
 public sealed record DownloadPage(
     IReadOnlyList<DownloadViewRow> Downloads,
@@ -265,7 +312,8 @@ public sealed record DownloadSelectionRow(
     string SubmittedName,
     DownloadState State,
     DownloadCause? Cause,
-    string? NzoId);
+    string? NzoId,
+    DownloadOriginView Origin);
 public sealed record DownloadSelectionPreview(
     DownloadSelectionOutcome Outcome,
     IReadOnlyList<DownloadSelectionRow> Downloads,

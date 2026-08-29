@@ -170,6 +170,10 @@ public sealed class ReleaseIdentificationRoutine(
             release.VideoId = await RequiredVideoAsync(videoId, cancellationToken);
             release.Confidence = Confidence(answer.Confidence);
             release.MatchedBy = Rung(answer.MatchedBy);
+            release.AutomationPending = await context.WantedVideos.AnyAsync(
+                wanted => wanted.VideoId == release.VideoId,
+                cancellationToken);
+            release.AutomationDecisionReason = null;
             outcome = release.Confidence.Value.ToString();
         }
         else if (answer.Confidence == (int)IdentificationConfidence.Ambiguous

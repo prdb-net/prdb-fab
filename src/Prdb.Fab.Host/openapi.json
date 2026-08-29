@@ -306,6 +306,14 @@
             }
           },
           {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "page",
             "in": "query",
             "schema": {
@@ -1216,6 +1224,223 @@
         }
       }
     },
+    "/api/settings/automation": {
+      "get": {
+        "tags": [
+          "Automation"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationSettingsState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/cap": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationCapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationCapVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/rules/{id}": {
+      "get": {
+        "tags": [
+          "Automation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/settings/automation/rules": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/rules/{id}/delete/preview": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleDeletePreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/settings/automation/rules/{id}/delete": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRuleDeleteVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/settings/identification": {
       "get": {
         "tags": [
@@ -1227,7 +1452,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IdentificationSettingsState"
+                  "$ref": "#/components/schemas/IdentificationGateChoices"
                 }
               }
             }
@@ -1871,6 +2096,22 @@
           "ExactAndStrong"
         ]
       },
+      "ApplicableAutomationRule": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "ArrivingFileReason": {
         "enum": [
           "IdenticalFile",
@@ -1878,6 +2119,306 @@
           "Unidentified",
           "Duplicate",
           "EntryMissing"
+        ]
+      },
+      "AutomationCapRequest": {
+        "required": [
+          "automaticDownloadCap"
+        ],
+        "type": "object",
+        "properties": {
+          "automaticDownloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AutomationCapVerdict": {
+        "required": [
+          "saved",
+          "automaticDownloadCap",
+          "reconsidered",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          },
+          "automaticDownloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomationDecisionReason": {
+        "enum": [
+          "NotWanted",
+          "ConfidenceGate",
+          "Size",
+          "IndexerNotAllowed",
+          "HeldVideo",
+          "OpenReviewQueue",
+          "AutomaticDownloadCap",
+          "RetryBudgetSpent",
+          "NoReleasesLeft",
+          "DownloadInFlight",
+          null
+        ]
+      },
+      "AutomationIndexer": {
+        "required": [
+          "id",
+          "name",
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AutomationRuleDeletePreview": {
+        "required": [
+          "ruleId",
+          "name",
+          "existingOrigins",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "existingOrigins": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomationRuleDeleteVerdict": {
+        "required": [
+          "ruleId",
+          "reconsidered",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomationRuleRequest": {
+        "required": [
+          "name",
+          "enabled",
+          "minimumSize",
+          "maximumSize",
+          "allowedIndexerIds"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "minimumSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maximumSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "allowedIndexerIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "AutomationRuleVerdict": {
+        "required": [
+          "saved",
+          "ruleId",
+          "reconsidered",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          },
+          "ruleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "AutomationRuleView": {
+        "required": [
+          "id",
+          "name",
+          "enabled",
+          "minimumSize",
+          "maximumSize",
+          "allowedIndexers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "minimumSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "maximumSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "allowedIndexers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationIndexer"
+            }
+          }
+        }
+      },
+      "AutomationSettingsState": {
+        "required": [
+          "automaticDownloadCap",
+          "rules",
+          "indexers"
+        ],
+        "type": "object",
+        "properties": {
+          "automaticDownloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationRuleView"
+            }
+          },
+          "indexers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationIndexer"
+            }
+          }
+        }
+      },
+      "BeforeDownloadGateChoice": {
+        "enum": [
+          "ExactOnly",
+          "ExactAndStrong",
+          "ThroughProbable"
         ]
       },
       "BrowseContext": {
@@ -2103,6 +2644,43 @@
           "Person",
           "Automation"
         ]
+      },
+      "DownloadOriginRuleView": {
+        "required": [
+          "ruleId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "DownloadOriginView": {
+        "required": [
+          "kind",
+          "rules"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/DownloadOrigin"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DownloadOriginRuleView"
+            }
+          }
+        }
       },
       "DownloadOutcome": {
         "enum": [
@@ -2371,7 +2949,8 @@
           "submittedName",
           "state",
           "cause",
-          "nzoId"
+          "nzoId",
+          "origin"
         ],
         "type": "object",
         "properties": {
@@ -2404,6 +2983,9 @@
               "null",
               "string"
             ]
+          },
+          "origin": {
+            "$ref": "#/components/schemas/DownloadOriginView"
           }
         }
       },
@@ -2436,7 +3018,8 @@
           "Outstanding",
           "Completed",
           "Collected",
-          "Failed"
+          "Failed",
+          "Abandoned"
         ]
       },
       "DownloadVerdict": {
@@ -2580,7 +3163,7 @@
             "format": "date-time"
           },
           "origin": {
-            "$ref": "#/components/schemas/DownloadOrigin"
+            "$ref": "#/components/schemas/DownloadOriginView"
           },
           "createdAt": {
             "type": "string",
@@ -2622,6 +3205,21 @@
           null
         ]
       },
+      "IdentificationGateChoices": {
+        "required": [
+          "beforeDownload",
+          "afterDownload"
+        ],
+        "type": "object",
+        "properties": {
+          "beforeDownload": {
+            "$ref": "#/components/schemas/BeforeDownloadGateChoice"
+          },
+          "afterDownload": {
+            "$ref": "#/components/schemas/AfterDownloadGateChoice"
+          }
+        }
+      },
       "IdentificationRung": {
         "enum": [
           "OsHash",
@@ -2634,21 +3232,14 @@
       },
       "IdentificationSettingsRequest": {
         "required": [
+          "beforeDownload",
           "afterDownload"
         ],
         "type": "object",
         "properties": {
-          "afterDownload": {
-            "$ref": "#/components/schemas/AfterDownloadGateChoice"
-          }
-        }
-      },
-      "IdentificationSettingsState": {
-        "required": [
-          "afterDownload"
-        ],
-        "type": "object",
-        "properties": {
+          "beforeDownload": {
+            "$ref": "#/components/schemas/BeforeDownloadGateChoice"
+          },
           "afterDownload": {
             "$ref": "#/components/schemas/AfterDownloadGateChoice"
           }
@@ -2656,15 +3247,28 @@
       },
       "IdentificationSettingsVerdict": {
         "required": [
+          "beforeDownload",
           "afterDownload",
-          "reconsidered"
+          "arrivingFilesReconsidered",
+          "releasesReconsidered"
         ],
         "type": "object",
         "properties": {
+          "beforeDownload": {
+            "$ref": "#/components/schemas/BeforeDownloadGateChoice"
+          },
           "afterDownload": {
             "$ref": "#/components/schemas/AfterDownloadGateChoice"
           },
-          "reconsidered": {
+          "arrivingFilesReconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "releasesReconsidered": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -3211,6 +3815,7 @@
           "act",
           "videoId",
           "downloadId",
+          "origin",
           "pathBefore",
           "pathAfter",
           "displacedPath",
@@ -3241,6 +3846,16 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "origin": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloadOriginView"
+              }
+            ]
           },
           "pathBefore": {
             "type": [
@@ -3745,7 +4360,9 @@
           "candidates",
           "siteOnlyMatch",
           "rankingPosition",
-          "rankingExclusion"
+          "rankingExclusion",
+          "applicableRules",
+          "automaticDecisionReason"
         ],
         "type": "object",
         "properties": {
@@ -3841,6 +4458,22 @@
               },
               {
                 "$ref": "#/components/schemas/ReleaseExclusion"
+              }
+            ]
+          },
+          "applicableRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApplicableAutomationRule"
+            }
+          },
+          "automaticDecisionReason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AutomationDecisionReason"
               }
             ]
           }
@@ -5264,6 +5897,9 @@
     },
     {
       "name": "Catalogue"
+    },
+    {
+      "name": "Automation"
     },
     {
       "name": "Reporting"

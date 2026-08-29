@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -119,6 +120,26 @@ public sealed class CollectingRoutine(
             }
 
             await context.SaveChangesAsync(cancellationToken);
+            if (download.State == DownloadState.Failed && !download.OriginIsPerson)
+            {
+                var localVideoId = await context.CatalogueVideos
+                    .Where(row => row.PrdbId == download.VideoId)
+                    .Select(row => (long?)row.Id)
+                    .SingleOrDefaultAsync(cancellationToken);
+                if (localVideoId is not null
+                    && await context.WantedVideos.AnyAsync(
+                        row => row.VideoId == localVideoId,
+                        cancellationToken))
+                {
+                    await context.Releases
+                        .Where(row => row.VideoId == localVideoId
+                            && row.IdentificationState == Prdb.Fab.Core.ReleaseDiscovery.IdentificationState.Matched)
+                        .ExecuteUpdateAsync(update => update
+                            .SetProperty(row => row.AutomationPending, true)
+                            .SetProperty(row => row.AutomationDecisionReason, (AutomationDecisionReason?)null),
+                            cancellationToken);
+                }
+            }
             handled++;
         }
 

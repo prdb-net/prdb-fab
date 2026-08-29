@@ -16,6 +16,7 @@ import {
 import styles from './ReleaseScreen.module.css'
 import type { ReleaseAddress } from './routes.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import { DownloadOrigin } from '../download/DownloadsScreen.tsx'
 
 const states: readonly IdentificationState[] = [
   'Matched',
@@ -186,6 +187,7 @@ function ReleaseTable({
                 <th>Identification</th>
                 <th>Confidence</th>
                 <th>matchedBy</th>
+                <th>Automation</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -209,6 +211,7 @@ function ReleaseTable({
                   <td>{identification(release)}</td>
                   <td>{release.confidence ?? '—'}</td>
                   <td>{release.matchedBy ?? '—'}</td>
+                  <td>{automationExplanation(release)}</td>
                   <td>
                     {page.context.kind === 'Video' && release.video && release.rankingPosition ? (
                       <DownloadAction
@@ -415,6 +418,7 @@ function AcquisitionSummary({
             <li key={download.id}>
               <strong>{download.state}</strong>
               {download.cause && ` / ${download.cause}`} — {download.submittedName}
+              {' · '}<DownloadOrigin origin={download.origin} />
               {download.state === 'Completed' && (
                 <span> Waiting for collection.</span>
               )}
@@ -542,6 +546,35 @@ function identification(release: ReleasePage['releases'][number]) {
   }
 
   return 'No Video identified'
+}
+
+function automationExplanation(release: ReleasePage['releases'][number]) {
+  if (release.applicableRules.length > 0) {
+    return (
+      <>
+        <strong>Matching rules</strong>
+        {release.applicableRules.map((rule) => (
+          <Link className={styles.secondary} key={rule.id} to={`/settings/automation/rules/${rule.id}`}>
+            {rule.name}
+          </Link>
+        ))}
+      </>
+    )
+  }
+  if (!release.automaticDecisionReason) return 'Not evaluated'
+  const reasons: Record<string, string> = {
+    NotWanted: 'Video is not Wanted',
+    ConfidenceGate: 'Held by the before-download gate',
+    Size: 'Outside every allowed size range',
+    IndexerNotAllowed: 'No enabled rule allows this Indexer',
+    HeldVideo: 'Video is already held in the Library',
+    OpenReviewQueue: 'Waiting for this Video’s Review Queue entry',
+    AutomaticDownloadCap: 'Waiting for the automatic Download cap',
+    RetryBudgetSpent: 'Retry Budget is spent',
+    NoReleasesLeft: 'No unconsumed Release remains',
+    DownloadInFlight: 'Waiting for this Video’s current Download',
+  }
+  return reasons[release.automaticDecisionReason] ?? release.automaticDecisionReason
 }
 
 function stateLabel(state: IdentificationState): string {

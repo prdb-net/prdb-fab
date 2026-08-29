@@ -65,8 +65,11 @@ public sealed class CatalogueSchemaTests
             [
                 "arriving_file",
                 "arriving_file_candidate",
+                "automation_rule",
+                "automation_rule_indexer",
                 "confirmed_assignment",
                 "download",
+                "download_origin_rule",
                 "gate_admission",
                 "indexer",
                 "installation",

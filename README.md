@@ -12,7 +12,8 @@ Self-hosted, Docker Compose, single user. A prdb API key is required.
 > to SABnzbd, follow it through completion, collect its Video Files and file
 > identified arrivals into a Jellyfin-compatible library. It exposes that
 > whole loop on Status and can report two separately enabled kinds of local
-> fact back to prdb. Unattended Download automation is not in this version.
+> fact back to prdb. Permission rules can run that same Download path unattended
+> for matched Wanted Videos.
 
 ## What you need
 
@@ -30,7 +31,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.8.0
+    image: prdbnet/prdb-fab:0.9.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -111,6 +112,18 @@ unconsumed Release after a release failure. Each Video has a budget of three
 Download attempts; its Release view shows the spent attempts, the next choice,
 and a confirmed reset of that Video's local history.
 
+**Settings → Automation** adds unordered permission rules over the Wanted list.
+A rule names its allowed enabled Indexers and optional minimum and maximum
+Release size. There is no global switch: with no enabled rule, automation is
+off. Enabling or changing a rule schedules a catch-up over already matched
+Wanted Releases without a preview; the configured cap on unfinished automatic
+Downloads (20 by default) bounds how much can be in SABnzbd at once, and the
+remainder waits durably. The before-download Identification gate, an open
+Review Queue entry, a held Library Video and the per-Video retry budget remain
+independent brakes. No rule uses a favourite or a Quality parsed from a Release
+name. See [docs/automation.md](docs/automation.md) for the complete safety and
+Wanted-removal behaviour.
+
 When SABnzbd reports Completed, prdb-fab collects supported Video Files,
 identifies each one, and files allowed matches into
 `<Site>/<Site> - <date> - <Title>/`. Moves within one filesystem are renames;
@@ -142,10 +155,10 @@ report for that channel; pending differences remain local, and reports prdb
 already accepted are not retracted. See
 [docs/privacy.md](docs/privacy.md).
 
-This version's remaining boundary is exact: **prdb-fab never retries or deletes
-a SABnzbd job**, and *Stop following* changes only the local record. The whole
-manual path from a wanted Video through filing works; unattended Download
-automation is still off.
+The SABnzbd boundary remains exact: **prdb-fab never calls SABnzbd retry or
+delete**, and *Stop following* changes only the local record. Removing a Video
+from Wanted abandons its unfinished automatic Download locally, does not retry
+it, and leaves the SABnzbd job and anything already filed untouched.
 
 ## Configuration
 

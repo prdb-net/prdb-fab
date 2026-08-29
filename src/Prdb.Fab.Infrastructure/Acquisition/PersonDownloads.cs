@@ -4,6 +4,7 @@ using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Automation;
 
 namespace Prdb.Fab.Infrastructure.Acquisition;
 
@@ -13,6 +14,7 @@ public sealed class PersonDownloads(
     ReleaseRankings rankings,
     NewznabGateway newznab,
     SabnzbdGateway sabnzbd,
+    AutomaticEligibility automaticEligibility,
     TimeProvider time)
 {
     /// <summary>
@@ -37,6 +39,7 @@ public sealed class PersonDownloads(
             videoId,
             next.Id,
             requireFailedHistory: true,
+            automatic: false,
             cancellationToken);
     }
 
@@ -68,6 +71,24 @@ public sealed class PersonDownloads(
             videoId,
             releaseId,
             requireFailedHistory: false,
+            automatic: false,
+            cancellationToken);
+
+    /// <summary>
+    /// Uses the same reservation, NZB retrieval and SABnzbd submission as a
+    /// person's action, while recording every rule that currently permits it.
+    /// </summary>
+    public async Task<DownloadVerdict?> AutomaticDownloadAsync(
+        Guid downloadId,
+        Guid videoId,
+        long releaseId,
+        CancellationToken cancellationToken = default) =>
+        await DownloadCoreAsync(
+            downloadId,
+            videoId,
+            releaseId,
+            requireFailedHistory: false,
+            automatic: true,
             cancellationToken);
 
     private async Task<DownloadVerdict?> DownloadCoreAsync(
@@ -75,6 +96,7 @@ public sealed class PersonDownloads(
         Guid videoId,
         long releaseId,
         bool requireFailedHistory,
+        bool automatic,
         CancellationToken cancellationToken)
     {
         if (await ExistingAsync(downloadId, cancellationToken) is { } existing)
@@ -143,7 +165,7 @@ public sealed class PersonDownloads(
             SubmittedName = release.Title,
             State = DownloadState.Outstanding,
             OutstandingSince = now,
-            OriginIsPerson = true,
+            OriginIsPerson = !automatic,
             CreatedAt = now,
         };
 
@@ -167,6 +189,22 @@ public sealed class PersonDownloads(
                     downloadId,
                     DownloadPlanOutcome.ReleaseNotEligible,
                     "Another Download for this Video is already active; no automatic retry was submitted.");
+            }
+
+            IReadOnlyList<PermittingAutomationRule> originRules = [];
+            if (automatic)
+            {
+                var current = await automaticEligibility.ForVideoAsync(videoId, [release], cancellationToken);
+                if (!current.TryGetValue(release.Id, out var permission) || !permission.Eligible)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return DownloadVerdict.Planning(
+                        downloadId,
+                        DownloadPlanOutcome.ReleaseNotEligible,
+                        "The automatic permission changed before the Download was reserved; nothing was submitted.");
+                }
+
+                originRules = permission.Rules;
             }
 
             var spent = await context.Downloads.CountAsync(row => row.VideoId == videoId, cancellationToken);
@@ -194,6 +232,13 @@ public sealed class PersonDownloads(
             }
 
             context.Downloads.Add(download);
+            context.DownloadOriginRules.AddRange(originRules.Select(rule => new DownloadOriginRuleRow
+            {
+                Id = Guid.CreateVersion7(now),
+                DownloadId = download.Id,
+                AutomationRuleId = rule.Id,
+                RuleName = rule.Name,
+            }));
             await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
@@ -222,17 +267,20 @@ public sealed class PersonDownloads(
 
         if (submission.NzoId is { Length: > 0 } nzoId)
         {
-            download.NzoId = nzoId;
+            await context.Downloads
+                .Where(row => row.Id == download.Id && row.State == DownloadState.Outstanding)
+                .ExecuteUpdateAsync(update => update.SetProperty(row => row.NzoId, nzoId), cancellationToken);
         }
         else
         {
-            download.State = DownloadState.Failed;
-            download.Cause = DownloadCause.Rejected;
+            await context.Downloads
+                .Where(row => row.Id == download.Id && row.State == DownloadState.Outstanding)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(row => row.State, DownloadState.Failed)
+                    .SetProperty(row => row.Cause, DownloadCause.Rejected), cancellationToken);
         }
 
-        context.Downloads.Update(download);
-        await context.SaveChangesAsync(cancellationToken);
-        return VerdictOf(download);
+        return VerdictOf((await ExistingAsync(download.Id, cancellationToken))!);
     }
 
     private Task<DownloadRow?> ExistingAsync(Guid id, CancellationToken cancellationToken) =>
