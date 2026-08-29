@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Scheduling;
-using Prdb.Fab.Infrastructure.Skeleton;
 
 namespace Prdb.Fab.Infrastructure.Scheduling;
 
@@ -25,11 +24,6 @@ public static class SchedulingServiceCollectionExtensions
         services.AddScoped<RoutineRunner>();
         services.AddScoped<RoutineRegistrar>();
         services.AddScoped<RunLog>();
-
-        // The skeleton's one routine. Scaffolding, and the only thing the
-        // schedule has to turn until a feature arrives.
-        services.AddScoped<IRoutine, SkeletonSweepRoutine>();
-        services.AddScoped<SkeletonItems>();
 
         return services;
     }

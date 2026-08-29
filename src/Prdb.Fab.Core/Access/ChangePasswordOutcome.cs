@@ -20,6 +20,12 @@ public enum ChangePasswordOutcome
     /// </summary>
     WrongPassword,
 
+    /// <summary>
+    /// Too many password guesses were made recently, so this attempt was not
+    /// checked. The caller may try again when the shared window ends.
+    /// </summary>
+    TooManyAttempts,
+
     /// <summary>The new password itself was not acceptable. See <see cref="PasswordRule"/>.</summary>
     Refused,
 }

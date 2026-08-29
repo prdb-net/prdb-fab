@@ -1,4 +1,4 @@
-import type { components, paths } from './schema.d.ts'
+import type { components } from './schema.d.ts'
 
 // ADR 0036 and ADR 0040: plain fetch against types generated from the committed
 // OpenAPI document. No client library — the contract is the document, and a
@@ -61,14 +61,6 @@ export type LibraryPage = Schema['LibraryPage']
 export type LibraryEntry = Schema['LibraryEntry']
 export type LibrarySettingsState = Schema['LibrarySettingsState']
 export type OperationLogPage = Schema['OperationLogPage']
-
-export type SkeletonItem = Schema['SkeletonItem']
-export type ItemPage = Schema['ItemPage']
-export type AddItemVerdict = Schema['AddItemVerdict']
-export type RunNowVerdict = Schema['RunNowVerdict']
-export type RecordedRun = Schema['RecordedRun']
-
-type ItemsQuery = NonNullable<paths['/api/skeleton/items']['get']['parameters']['query']>
 
 /**
  * ADR 0010: an unauthenticated request gets 401 and never a redirect, so this
@@ -471,26 +463,4 @@ function parameters(values: Record<string, string | undefined>): URLSearchParams
   }
 
   return answer
-}
-
-export async function listItems(page: ItemsQuery['page']): Promise<ItemPage> {
-  return json<ItemPage>(await fetch(`/api/skeleton/items?page=${page ?? 1}`))
-}
-
-export async function addItem(label: string): Promise<AddItemVerdict> {
-  return json<AddItemVerdict>(
-    await fetch('/api/skeleton/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label }),
-    }),
-  )
-}
-
-export async function runSweepNow(): Promise<RunNowVerdict> {
-  return json<RunNowVerdict>(await fetch('/api/skeleton/sweep/run-now', { method: 'POST' }))
-}
-
-export async function listRuns(): Promise<RecordedRun[]> {
-  return json<RecordedRun[]>(await fetch('/api/skeleton/runs'))
 }

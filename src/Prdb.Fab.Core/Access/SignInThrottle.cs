@@ -1,8 +1,8 @@
 namespace Prdb.Fab.Core.Access;
 
 /// <summary>
-/// ADR 0010: <em>sign-in is rate-limited, because one password with no username
-/// is the easiest thing in the world to try repeatedly.</em>
+/// ADR 0010: <em>password verification is rate-limited, because one password
+/// with no username is the easiest thing in the world to try repeatedly.</em>
 /// </summary>
 /// <remarks>
 /// <para>
@@ -15,8 +15,8 @@ namespace Prdb.Fab.Core.Access;
 /// <para>
 /// The cost of that choice is real and is accepted: someone else's guessing
 /// locks the owner out for the length of the window. Five minutes, and a
-/// successful sign-in clears the count, so the owner who knows their password
-/// waits once rather than repeatedly.
+/// successful verification clears the count, so the owner who knows their
+/// password waits once rather than repeatedly.
 /// </para>
 /// <para>
 /// In memory, not in the database. A restart clearing the count is a restart at

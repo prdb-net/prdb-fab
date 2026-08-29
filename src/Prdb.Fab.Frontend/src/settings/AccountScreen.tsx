@@ -124,6 +124,17 @@ function Verdict({ verdict }: { verdict: ChangePasswordVerdict | null }) {
     )
   }
 
+  if (verdict.outcome === 'TooManyAttempts') {
+    const minutes = Math.max(1, Math.ceil(Number(verdict.retryAfterSeconds) / 60))
+
+    return (
+      <p className={formStyles.refusal}>
+        Too many password attempts were made. Try again in about {minutes}{' '}
+        {minutes === 1 ? 'minute' : 'minutes'}.
+      </p>
+    )
+  }
+
   return (
     <p className={formStyles.refusal}>
       {verdict.outcome === 'WrongPassword'

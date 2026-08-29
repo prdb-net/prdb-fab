@@ -28,7 +28,6 @@ import { LibraryEntryScreen } from './filing/LibraryEntryScreen.tsx'
 import { ReviewQueueScreen } from './filing/ReviewQueueScreen.tsx'
 import { OperationLogScreen } from './filing/OperationLogScreen.tsx'
 import { LibrarySettingsScreen } from './settings/LibraryScreen.tsx'
-import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import { PageLoading } from './shell/LoadingScreen.tsx'
 import './index.css'
 
@@ -93,7 +92,6 @@ function pageTitle(pathname: string): string {
   if (pathname === '/settings/identification') return 'Identification'
   if (pathname === '/settings/library') return 'Library settings'
   if (pathname.startsWith('/onboarding/')) return 'Setup'
-  if (pathname === '/skeleton') return 'Walking skeleton'
   return 'Page not found'
 }
 
@@ -143,7 +141,6 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="identification" element={<IdentificationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
               </Route>
-              <Route path="/skeleton" element={<SkeletonScreen />} />
               <Route path="*" element={<NotFoundScreen />} />
             </Routes>
           </Chrome>

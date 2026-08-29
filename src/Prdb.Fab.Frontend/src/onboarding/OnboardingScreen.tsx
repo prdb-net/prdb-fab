@@ -244,5 +244,5 @@ export function routeFor(step: OnboardingStep | null | undefined): string {
 
   const match = steps.find((candidate) => candidate.step === step)
 
-  return match ? `/onboarding/${match.slug}` : '/skeleton'
+  return match ? `/onboarding/${match.slug}` : '/'
 }

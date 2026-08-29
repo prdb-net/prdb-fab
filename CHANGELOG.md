@@ -19,6 +19,39 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-29
+
+This release tightens the desktop-first workspace after an end-to-end UI and
+repository review. Loading, navigation, tables and actions now remain legible
+across desktop and mobile, while several unattended failure modes are contained
+instead of stopping work or consuming unbounded resources.
+
+### Added
+
+- **Visible loading states throughout the workspace.** A waking or slow host no
+  longer presents a blank document while access state or page data is being
+  read.
+- **Responsive table alternatives and mobile-safe actions.** Dense operational
+  views expose their important facts without horizontal page overflow, and
+  touch targets remain usable at narrow widths.
+
+### Changed
+
+- Release and detail links preserve the page and filter context they came from,
+  so returning to a catalogue or library view no longer starts that search
+  again.
+- Artwork is fetched only as cards approach the viewport and stale artwork URLs
+  are invalidated when their catalogue revision changes.
+- Password changes share the installation-wide password-attempt limit with
+  sign-in. Too many wrong current-password attempts pause further checks for up
+  to five minutes instead of repeatedly running the password hash.
+
+### Removed
+
+- The development-only Walking Skeleton page and API have been retired. Its
+  sample database table and scheduled routine are removed by the forward
+  migration; they never held application data.
+
 ### Fixed
 
 - **A site or title beginning with a dot no longer files into a hidden
@@ -48,6 +81,9 @@ before changing the tag — the backup file is deliberately not the whole of it.
 - **A page number past the end shows an empty page.** A number large enough to
   overflow the offset silently answered with the first page while reporting the
   number that had been asked for.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.7.0 has started against it.
 
 ## [0.6.0] - 2026-08-29
 

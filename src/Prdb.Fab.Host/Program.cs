@@ -15,7 +15,6 @@ using Prdb.Fab.Host.Filing;
 using Prdb.Fab.Host.Logging;
 using Prdb.Fab.Host.ReleaseDiscovery;
 using Prdb.Fab.Host.Scheduling;
-using Prdb.Fab.Host.Skeleton;
 using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Filing;
@@ -200,8 +199,6 @@ app.MapReleaseDiscovery();
 app.MapAcquisition();
 
 app.MapFiling();
-
-app.MapSkeleton();
 
 // ADR 0036: routing happens in the browser, so unknown paths return index.html
 // and let the frontend decide. Unknown API paths must not — a caller that asked

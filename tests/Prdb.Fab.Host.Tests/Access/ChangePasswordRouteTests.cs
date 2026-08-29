@@ -80,6 +80,31 @@ public sealed class ChangePasswordRouteTests
     }
 
     [Fact]
+    public async Task Repeated_wrong_current_passwords_are_throttled_before_the_hash()
+    {
+        await using var application = new FabApplication();
+
+        var client = await application.SignedInClientAsync(Password);
+        Verdict verdict;
+        var attempts = 0;
+
+        do
+        {
+            verdict = await ChangeAsync(client, "not the password", Replacement);
+            attempts++;
+        }
+        while (verdict.Outcome == "WrongPassword" && attempts < 50);
+
+        Assert.Equal("TooManyAttempts", verdict.Outcome);
+        Assert.True(verdict.RetryAfterSeconds is >= 1 and <= 300);
+
+        var correct = await ChangeAsync(client, Password, Replacement);
+
+        Assert.Equal("TooManyAttempts", correct.Outcome);
+        Assert.True(correct.RetryAfterSeconds is >= 1 and <= 300);
+    }
+
+    [Fact]
     public async Task A_new_password_the_rule_refuses_carries_its_reason()
     {
         await using var application = new FabApplication();
@@ -134,7 +159,11 @@ public sealed class ChangePasswordRouteTests
         return (await response.Content.ReadFromJsonAsync<SignIn>(TestContext.Current.CancellationToken))!;
     }
 
-    private sealed record Verdict(string Outcome, string? Refusal, int SessionsEnded);
+    private sealed record Verdict(
+        string Outcome,
+        string? Refusal,
+        int SessionsEnded,
+        int? RetryAfterSeconds);
 
     private sealed record SignIn(string Outcome);
 }
