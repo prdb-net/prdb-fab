@@ -7,14 +7,15 @@ the way.
 > takes you through setting up, checks every connection you give it against the
 > service it names, then keeps local catalogues of what prdb and your indexers
 > say. It discovers and identifies Releases, submits a selected one to SABnzbd,
-> and follows the job. It does not yet collect or file completed files.
+> follows the job, and files safely identified Video Files into the library.
+> Automation and reporting are not in this version.
 
 ## The quickstart
 
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.4.0
+    image: prdbnet/prdb-fab:0.5.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -93,10 +94,44 @@ The only SABnzbd write prdb-fab performs is the initial `addfile`. It never uses
 SABnzbd's retry or delete actions. **Stop following** likewise marks only the
 selected local Download; the SABnzbd job continues under your control.
 
-**Completed means SABnzbd has finished, not that prdb-fab has moved anything.**
-In 0.4.0 the finished files stay in SABnzbd's configured Download Directory.
-Collection and Filing arrive in a later version, so make sure that directory
-has enough space and do not expect the library root to change yet.
+**Completed means SABnzbd has finished; Collected means its supported Video
+Files have been handed to Filing.** Collection recursively recognises `.3gp`,
+`.asf`, `.avi`, `.flv`, `.m2ts`, `.m4v`, `.mkv`, `.mov`, `.mp4`, `.mpeg`,
+`.mpg`, `.mts`, `.ts` and `.wmv`. Every file is probed once, and only an Exact
+or Strong identification proceeds by default. The gate is editable under
+**Settings → Identification**.
+
+Filing writes a Jellyfin Movies layout under the configured Library root:
+`<Site>/<Site> - <yyyy-MM-dd> - <Title>/`, omitting the date segment when prdb
+does not know it. A first Video File uses the entry name; multiple qualities
+are grouped with ` - [<quality>]`. Each entry also gets `movie.nfo` and, when
+cached artwork exists, `fanart.jpg`. Later prdb corrections refresh those two
+files, but never recompute or rename a recorded Video File path.
+
+A move on one filesystem is a rename. Across filesystems, prdb-fab copies to a
+hidden `.filing-<download id>.part` beside the destination, flushes it, compares
+every byte with the source, renames it into place and only then deletes the
+source. A stopped container resumes from the durable intended path. Give the
+container enough free space for one full temporary copy when downloads and the
+library are on different filesystems.
+
+Files that cannot safely proceed wait in **Review queue**. Dismiss leaves the
+file untouched; Delete rechecks its exact path and size before deleting it.
+Only Unidentified, Duplicate and Entry Missing rows additionally offer File as,
+Replace and File as only copy respectively. **Library** shows held entries and
+their recorded files; **Operation log** shows newest-first Filed, Replaced,
+Deleted and Tidied acts.
+
+After every Video File from directory-shaped SABnzbd storage has reached a
+decision, tidy-up may remove only these fixed leftover types: `.nfo`, `.par2`,
+`.sfv`, `.srr`, `.url`, `.txt`, `.jpg` and `.png`. It then removes empty
+directories. This is enabled by default under **Settings → Library**. Unknown
+files are retained, and a single-file storage path is never widened to its
+parent directory.
+
+The SABnzbd boundary is unchanged: prdb-fab performs only the initial `addfile`
+and never calls SABnzbd retry or delete. Download automation and fulfilment
+reporting are not in 0.5.0.
 
 ## The mounts
 
@@ -282,7 +317,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.4.0` | A release. This is what documentation and Compose files should pin. |
+| `0.5.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 

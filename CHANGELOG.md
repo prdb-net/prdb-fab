@@ -19,6 +19,55 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-29
+
+Completed Downloads now cross the filesystem boundary into a visible,
+repairable Library. Every unsafe outcome stops in a Review Queue rather than
+being hidden or guessed through.
+
+### Added
+
+- **Collection and resumable Filing.** Supported Video Files are found
+  recursively, probed once, identified through prdb, and filed into the
+  Jellyfin Movies layout. Same-filesystem moves rename; cross-filesystem moves
+  copy to a hidden destination-side temporary file, flush, compare every byte,
+  rename, and only then delete the source.
+- **Review Queue with exactly two universal exits.** Dismiss leaves a file
+  untouched and Delete rechecks its path and size. Unidentified, Duplicate and
+  Entry Missing additionally offer only File as, Replace and File as only copy.
+  A File as choice records a durable Confirmed Assignment; Replace is performed
+  and resumed by the serial File lane.
+- **Library and Library Entry surfaces.** The held-only grid groups every
+  Quality of a Video into one card and filters by title, Site, Actor and
+  Quality. An entry shows recorded paths, file probe facts, prdb's non-deciding
+  Consensus Runtime and its own operation history.
+- **Operation Log**, a newest-first, paged audit surface for Filed, Replaced,
+  Deleted and Tidied acts, searchable by path or file name.
+- **Library settings.** The Library root can be checked again and fixed
+  leftover deletion can be switched off without a restart.
+
+### Changed
+
+- Catalogue repair now refreshes changed `movie.nfo` and chosen cached
+  `fanart.jpg` for held entries, without recomputing or renaming a recorded
+  Video File path.
+- Leftover deletion is enabled by default for both new and upgraded
+  installations. It removes only `.nfo`, `.par2`, `.sfv`, `.srr`, `.url`,
+  `.txt`, `.jpg` and `.png` from directory-shaped storage after every Video
+  File has reached a decision; unknown files and single-file parents remain.
+
+### Operational boundary
+
+- prdb-fab owns the Library paths it records and the sidecar and image beside
+  them. It does not scan arbitrary Library directories or rename old paths when
+  catalogue metadata changes.
+- SABnzbd is still written only through the initial `addfile`; retry and delete
+  remain a person's responsibility. Automation and fulfilment reporting remain
+  absent.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.5.0 has started against it.
+
 ## [0.4.0] - 2026-08-28
 
 Manual acquisition now reaches SABnzbd and remains visible after the click.

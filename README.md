@@ -9,8 +9,9 @@ Self-hosted, Docker Compose, single user. A prdb API key is required.
 > takes you through setting up, checks every connection you give it against the
 > service it names, keeps local catalogues of what prdb and your indexers say,
 > identifies cached releases through prdb, and can submit an identified Release
-> to SABnzbd and follow it through completion. It does not yet collect or file
-> the completed files.
+> to SABnzbd, follow it through completion, collect its Video Files and file
+> identified arrivals into a Jellyfin-compatible library. Automation and
+> reporting are not in this version.
 
 ## What you need
 
@@ -28,7 +29,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.4.0
+    image: prdbnet/prdb-fab:0.5.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -96,10 +97,30 @@ unconsumed Release after a release failure. Each Video has a budget of three
 Download attempts; its Release view shows the spent attempts, the next choice,
 and a confirmed reset of that Video's local history.
 
-This version's boundary is exact: **prdb-fab never retries or deletes a SABnzbd
-job**, and *Stop following* changes only the local record. When SABnzbd reports
-Completed, the files remain in its Download Directory. Collection and Filing
-are not in this version.
+When SABnzbd reports Completed, prdb-fab collects supported Video Files,
+identifies each one, and files allowed matches into
+`<Site>/<Site> - <date> - <Title>/`. Moves within one filesystem are renames;
+cross-filesystem moves copy to a hidden temporary file, compare every byte,
+rename it into place, and only then delete the source. The entry receives
+`movie.nfo` and cached `fanart.jpg`; catalogue repair keeps those two files up
+to date without renaming a recorded Video File.
+
+Anything that cannot safely proceed waits in **Review queue** with its evidence
+and one reason. Every row can be dismissed or its exact Video File deleted;
+Unidentified, Duplicate and Entry Missing add only their reason-specific File
+as, Replace or File as only copy action. **Library** shows only held entries and
+their qualities, and **Operation log** exposes the immutable Filed, Replaced,
+Deleted and Tidied acts.
+
+After all Video Files in a directory-shaped SABnzbd storage have reached a
+decision, tidy-up removes only `.nfo`, `.par2`, `.sfv`, `.srr`, `.url`, `.txt`,
+`.jpg` and `.png`, then empty directories. The setting is enabled by default.
+Unknown files remain, and the parent directory of single-file storage is never
+tidied.
+
+This version's remaining boundary is exact: **prdb-fab never retries or deletes
+a SABnzbd job**, and *Stop following* changes only the local record. Download
+automation and fulfilment reporting are not in this version.
 
 ## Configuration
 
