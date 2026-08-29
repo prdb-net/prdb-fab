@@ -64,15 +64,42 @@ internal sealed class LaneWorker(
         }
     }
 
+    /// <summary>
+    /// One turn, and the guarantee above made true for the parts of a turn that
+    /// are not a routine run.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="RoutineRunner.RunAsync"/> already turns an exception from a
+    /// routine into that run's failed outcome. What it cannot answer for is the
+    /// work around it — asking the plan, reading what is due, recording the
+    /// result, and opening the scope here — and an exception from any of those
+    /// would leave <see cref="ExecuteAsync"/> through a catch that only handles
+    /// cancellation. The host does not restart a <see cref="BackgroundService"/>
+    /// that returns, so the lane would be gone until the container is, with
+    /// nothing anywhere saying so: the dead lane ADR 0018 cannot draw and
+    /// ADR 0038 exists to prevent.
+    ///
+    /// A locked database past its busy timeout is the ordinary way to get here.
+    /// Logged and left, because the next tick is a second away and the condition
+    /// is usually gone by then.
+    /// </remarks>
     private async Task TurnAsync(CancellationToken stoppingToken)
     {
-        // A scope per turn, not per lane: ADR 0039 wants short-lived contexts,
-        // and a context held for the life of the container would hold a
-        // connection with it.
-        await using var scope = scopes.CreateAsyncScope();
+        try
+        {
+            // A scope per turn, not per lane: ADR 0039 wants short-lived
+            // contexts, and a context held for the life of the container would
+            // hold a connection with it.
+            await using var scope = scopes.CreateAsyncScope();
 
-        await scope.ServiceProvider
-            .GetRequiredService<RoutineRunner>()
-            .TurnAsync(lane, stoppingToken);
+            await scope.ServiceProvider
+                .GetRequiredService<RoutineRunner>()
+                .TurnAsync(lane, stoppingToken);
+        }
+        catch (Exception turn) when (turn is not OperationCanceledException
+                                     || !stoppingToken.IsCancellationRequested)
+        {
+            logger.LogError(turn, "A turn of the {Lane} lane failed. It keeps turning.", lane);
+        }
     }
 }
