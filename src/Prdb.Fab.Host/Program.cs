@@ -29,6 +29,12 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ADR 0040: the build-time generator loads this application to read its
+// endpoints and stops it where it would start listening. Everything that
+// prepares or runs a real installation is skipped there — a build has no
+// business creating a database, and no business turning a lane against one.
+var readingTheEndpoints = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
+
 // ADR 0034: the container environment carries only what has to exist before the
 // application starts. Everything the user answers lives in the database this
 // points at, and /data is where the image mounts it.
@@ -75,17 +81,25 @@ builder.Services.AddAuthorizationBuilder()
 // implementation type. Every lane is the same class, so the second call would be
 // dropped and one lane would simply never turn — with nothing anywhere saying
 // so, which is the shape of failure ADR 0018 cannot draw.
-builder.Services.AddSingleton<IHostedService>(provider =>
-    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Sync));
+//
+// Not registered at all while the endpoints are being read: a lane turns the
+// moment the host starts, and the document generator starts one. Four lanes
+// querying a schedule under FAB_DATA_DIRECTORY is a build reaching into a real
+// installation's data — the same reason the migrations below are skipped.
+if (!readingTheEndpoints)
+{
+    builder.Services.AddSingleton<IHostedService>(provider =>
+        ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Sync));
 
-builder.Services.AddSingleton<IHostedService>(provider =>
-    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Bulk));
+    builder.Services.AddSingleton<IHostedService>(provider =>
+        ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Bulk));
 
-builder.Services.AddSingleton<IHostedService>(provider =>
-    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Live));
+    builder.Services.AddSingleton<IHostedService>(provider =>
+        ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.Live));
 
-builder.Services.AddSingleton<IHostedService>(provider =>
-    ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.File));
+    builder.Services.AddSingleton<IHostedService>(provider =>
+        ActivatorUtilities.CreateInstance<LaneWorker>(provider, Lane.File));
+}
 
 // ADR 0040: an outcome crosses the contract as its name rather than as its
 // position in a C# enum. The number would be stable only for as long as nobody
@@ -112,12 +126,6 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document,
 }));
 
 var app = builder.Build();
-
-// ADR 0040: the build-time generator loads this application to read its
-// endpoints and stops it where it would start listening. Everything below runs
-// in that process too, so what prepares a real installation is skipped there —
-// a build has no business creating a database.
-var readingTheEndpoints = Assembly.GetEntryAssembly()?.GetName().Name == "GetDocument.Insider";
 
 if (!readingTheEndpoints)
 {
