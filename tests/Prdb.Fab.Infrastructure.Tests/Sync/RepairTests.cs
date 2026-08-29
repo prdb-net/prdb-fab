@@ -1,11 +1,14 @@
 using System.Globalization;
+using System.Xml.Linq;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Sync;
+using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Infrastructure.Connections;
+using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Sync;
 
@@ -91,6 +94,66 @@ public sealed class RepairTests
         // the test holds, so the next pass sorts this row behind whatever has
         // not been read yet.
         Assert.Equal(database.Time.GetUtcNow(), row.LastReadAt);
+    }
+
+    [Fact]
+    public async Task A_repair_refreshes_held_sidecar_and_changed_cached_image_without_renaming_video()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "prdb-fab-repair", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var filedPath = Path.Combine(root, "Recorded Name.mkv");
+        await File.WriteAllBytesAsync(filedPath, [1, 2, 3], TestContext.Current.CancellationToken);
+        var oldImage = Guid.Parse("eeeeeeee-0000-4000-8000-000000000001");
+        var newImage = ImageOf(First);
+
+        try
+        {
+            var prdb = new FakePrdbApi().Answers(Batch, Details([(First, "The Corrected Title", Images: true)]));
+            await using var database = await CreateAsync(prdb);
+            var video = await HoldAsync(database, First, "The Old Title");
+            await GiveArtworkAsync(database, video, oldImage);
+
+            await using (var scope = database.Scope())
+            {
+                var store = scope.ServiceProvider.GetRequiredService<ArtworkStore>();
+                await store.WriteAsync(oldImage, [1, 1, 1], TestContext.Current.CancellationToken);
+                await store.WriteAsync(newImage, [2, 2, 2], TestContext.Current.CancellationToken);
+                var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+                context.LibraryEntries.Add(new LibraryEntryRow
+                {
+                    VideoId = First,
+                    EntryDirectory = root,
+                    FiledAt = database.Time.GetUtcNow(),
+                });
+                context.VideoFiles.Add(new VideoFileRow
+                {
+                    Id = Guid.NewGuid(),
+                    LibraryEntryVideoId = First,
+                    FiledPath = filedPath,
+                    QualityLabel = "1080p",
+                    SizeBytes = 3,
+                });
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+                await scope.ServiceProvider.GetRequiredService<EntryFiles>()
+                    .WriteAsync(root, First, TestContext.Current.CancellationToken);
+            }
+
+            await RepairAsync(database);
+
+            var sidecar = XDocument.Load(Path.Combine(root, EntryPath.SidecarFileName));
+            Assert.Equal("The Corrected Title", sidecar.Root!.Element("title")!.Value);
+            Assert.Equal([2, 2, 2], await File.ReadAllBytesAsync(
+                Path.Combine(root, EntryPath.EntryImageFileName),
+                TestContext.Current.CancellationToken));
+            await using var check = database.Scope();
+            Assert.Equal(filedPath, (await check.ServiceProvider.GetRequiredService<FabDbContext>()
+                .VideoFiles.SingleAsync(TestContext.Current.CancellationToken)).FiledPath);
+            Assert.True(File.Exists(filedPath));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     /// <summary>

@@ -23,6 +23,11 @@ import { SettingsScreen } from './settings/SettingsScreen.tsx'
 import { Chrome } from './shell/Chrome.tsx'
 import { ReleaseScreen } from './release/ReleaseScreen.tsx'
 import { DownloadsScreen } from './download/DownloadsScreen.tsx'
+import { LibraryScreen } from './filing/LibraryScreen.tsx'
+import { LibraryEntryScreen } from './filing/LibraryEntryScreen.tsx'
+import { ReviewQueueScreen } from './filing/ReviewQueueScreen.tsx'
+import { OperationLogScreen } from './filing/OperationLogScreen.tsx'
+import { LibrarySettingsScreen } from './settings/LibraryScreen.tsx'
 import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
 import './index.css'
 
@@ -73,6 +78,10 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/actors/:id" element={<ActorsScreen />} />
             <Route path="/releases" element={<ReleaseScreen />} />
             <Route path="/downloads" element={<DownloadsScreen />} />
+            <Route path="/library" element={<LibraryScreen />} />
+            <Route path="/library/:id" element={<LibraryEntryScreen />} />
+            <Route path="/review-queue" element={<ReviewQueueScreen />} />
+            <Route path="/operation-log" element={<OperationLogScreen />} />
             {/* ADR 0020: routes rather than one page with anchors, one level
                 down as well — every indexer has its own. */}
             <Route path="/settings" element={<SettingsGate />}>
@@ -84,6 +93,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="connections/indexers/:id" element={<IndexerSettings />} />
               <Route path="account" element={<AccountScreen />} />
               <Route path="identification" element={<IdentificationScreen />} />
+              <Route path="library" element={<LibrarySettingsScreen />} />
             </Route>
             <Route path="/skeleton" element={<SkeletonScreen />} />
             <Route path="*" element={<Navigate to="/" replace />} />

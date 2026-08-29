@@ -40,11 +40,11 @@ export function SettingsScreen() {
             Which named confidence lets an identified arrival proceed to filing.
           </span>
         </li>
-        <li className={styles.pending}>
-          Library
+        <li>
+          <Link to="/settings/library">Library</Link>
           <br />
           <span className={styles.detail}>
-            The library root and what filing leaves behind. Arrives with filing.
+            The library root and the fixed leftover types filing may remove.
           </span>
         </li>
         <li className={styles.pending}>

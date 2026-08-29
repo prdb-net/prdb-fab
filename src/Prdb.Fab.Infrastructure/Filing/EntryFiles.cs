@@ -21,10 +21,12 @@ namespace Prdb.Fab.Infrastructure.Filing;
 /// bad image, it is a file at the name the next write would otherwise use.
 /// </para>
 /// <para>
-/// Neither file carries a marker and both are replaced unconditionally. The
-/// library is the only directory this tool owns, an entry directory exists only
-/// because this tool made it, and the sidecar is the single route a correction
-/// from prdb has to the user (ADR 0027).
+/// Neither file carries a marker. Initial Filing replaces both when source
+/// artwork exists; catalogue repair compares the rendered sidecar and chosen
+/// image identity before replacing only what changed. The library is the only
+/// directory this tool owns, an entry directory exists only because this tool
+/// made it, and the sidecar is the single route a correction from prdb has to
+/// the user (ADR 0027).
 /// </para>
 /// <para>
 /// The image is copied out of the artwork cache and never fetched here. The file
@@ -67,6 +69,64 @@ public sealed class EntryFiles(
 
         await WriteImageAsync(entryDirectory, videoId, cancellationToken);
     }
+
+    /// <summary>
+    /// Brings the files beside a held Video back into agreement with the
+    /// catalogue without changing any recorded or physical content path.
+    /// </summary>
+    public async Task RefreshAsync(
+        Guid videoId,
+        bool chosenImageChanged,
+        CancellationToken cancellationToken)
+    {
+        var entry = await context.LibraryEntries
+            .AsNoTracking()
+            .Where(row => row.VideoId == videoId)
+            .Select(row => row.EntryDirectory)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (entry is null)
+        {
+            return;
+        }
+
+        var recordedPaths = await context.VideoFiles
+            .AsNoTracking()
+            .Where(row => row.LibraryEntryVideoId == videoId)
+            .Select(row => row.FiledPath)
+            .ToListAsync(cancellationToken);
+        if (!recordedPaths.Any(File.Exists))
+        {
+            // A missing mount and a deleted Entry look alike. Repair creates
+            // neither a directory nor a Review Queue entry when no file is there.
+            return;
+        }
+
+        var metadata = await MetadataAsync(videoId, cancellationToken)
+            ?? throw new InvalidOperationException("A Library Entry has no catalogue Video.");
+        var sidecar = Path.Combine(entry, EntryPath.SidecarFileName);
+        var rendered = Sidecar.For(metadata);
+        var held = File.Exists(sidecar) ? await File.ReadAllTextAsync(sidecar, cancellationToken) : null;
+        if (!string.Equals(held, rendered, StringComparison.Ordinal))
+        {
+            await ReplaceAsync(
+                sidecar,
+                async (stream, token) =>
+                {
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(rendered);
+                    await stream.WriteAsync(bytes, token);
+                },
+                cancellationToken);
+        }
+
+        var imagePath = Path.Combine(entry, EntryPath.EntryImageFileName);
+        if (chosenImageChanged || !File.Exists(imagePath))
+        {
+            await WriteImageAsync(entry, videoId, cancellationToken);
+        }
+    }
+
+    public Task<Guid?> ChosenImageIdAsync(Guid videoId, CancellationToken cancellationToken) =>
+        ChosenImageAsync(videoId, cancellationToken);
 
     private async Task WriteImageAsync(
         string entryDirectory,
@@ -207,6 +267,10 @@ public sealed class EntryFiles(
 
         var image = await ChosenImages.OfAsync(context, video.Value, cancellationToken);
 
-        return image is null || image.FoundDead || !image.Cached ? null : image.PrdbId;
+        return image is null
+            || image.FoundDead
+            || (!image.Cached && !artwork.Holds(image.PrdbId))
+                ? null
+                : image.PrdbId;
     }
 }

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 
-import { readAccessState } from '../api/client.ts'
+import { readAccessState, readReviewQueueCount } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
 import styles from './Chrome.module.css'
 
@@ -16,6 +16,11 @@ import styles from './Chrome.module.css'
  */
 export function Chrome() {
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
+  const review = useQuery({
+    queryKey: ['review-queue-count'],
+    queryFn: readReviewQueueCount,
+    enabled: state.data?.nextStep === 'Complete',
+  })
 
   if (state.data?.nextStep !== 'Complete') {
     return null
@@ -31,6 +36,9 @@ export function Chrome() {
       <Link to="/actors">Actors</Link>
       <Link to="/wanted">Wanted</Link>
       <Link to="/downloads">Downloads</Link>
+      <Link to="/library">Library</Link>
+      <Link to="/review-queue">Review queue ({Number(review.data?.open ?? 0)})</Link>
+      <Link to="/operation-log">Operation log</Link>
       <Link to="/settings">Settings</Link>
     </nav>
   )

@@ -55,5 +55,8 @@ public sealed class UpgradeTests
         command.CommandText = "SELECT count(*) FROM catalogue_video;";
 
         Assert.Equal(0L, await command.ExecuteScalarAsync(TestContext.Current.CancellationToken));
+
+        command.CommandText = "SELECT DeleteLeftovers FROM installation;";
+        Assert.Equal(1L, await command.ExecuteScalarAsync(TestContext.Current.CancellationToken));
     }
 }

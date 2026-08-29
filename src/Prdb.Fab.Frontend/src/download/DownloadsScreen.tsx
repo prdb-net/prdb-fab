@@ -183,7 +183,7 @@ function DownloadTable({
 }
 
 function stateDetail(download: DownloadPage['downloads'][number]): string {
-  if (download.state === 'Completed') return 'Waiting for collection; Filing is not in this version.'
+  if (download.state === 'Completed') return 'Waiting for collection.'
   if (download.state === 'Outstanding') return download.lastSabnzbdStatus ?? 'Waiting for SABnzbd.'
   if (download.state === 'Collected') return 'Files were handed to Filing.'
   const causes: Record<string, string> = {

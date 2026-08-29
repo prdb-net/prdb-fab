@@ -432,6 +432,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/operation-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    act?: string;
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OperationLogPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/access/state": {
         parameters: {
             query?: never;
@@ -1294,6 +1333,494 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibrarySettingsState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LibrarySettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibrarySettingsState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    reason?: components["schemas"]["ArrivingFileReason"];
+                    download?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewQueuePage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewQueueCount"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    site?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewVideoSearchPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/delete/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReviewSelectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewSelectionPreview"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReviewSelectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewSelectionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReviewSelectionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewSelectionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/{arrivingFileId}/file-as": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    arrivingFileId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FileAsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/{arrivingFileId}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    arrivingFileId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/review-queue/{arrivingFileId}/file-as-only-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    arrivingFileId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewDecisionVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    site?: string;
+                    actor?: string;
+                    quality?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibraryPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{videoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    videoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibraryEntry"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/skeleton/items": {
         parameters: {
             query?: never;
@@ -1462,6 +1989,8 @@ export interface components {
         };
         /** @enum {unknown} */
         AfterDownloadGateChoice: "ExactOnly" | "ExactAndStrong";
+        /** @enum {unknown} */
+        ArrivingFileReason: "IdenticalFile" | "UnreadableQuality" | "Unidentified" | "Duplicate" | "EntryMissing";
         BrowseContext: {
             /** Format: uuid */
             prdbId: string;
@@ -1626,6 +2155,10 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        FileAsRequest: {
+            /** Format: uuid */
+            videoId: string;
+        };
         HealthResponse: {
             status: string;
         };
@@ -1673,6 +2206,77 @@ export interface components {
             /** Format: int32 */
             total: number | string;
         };
+        LibraryActor: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        LibraryCard: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            site: null | string;
+            /** Format: date */
+            releaseDate: null | string;
+            qualities: string[];
+            /** Format: int64 */
+            runtimeSeconds: null | number | string;
+        };
+        LibraryEntry: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            site: null | string;
+            /** Format: date */
+            releaseDate: null | string;
+            /** Format: int64 */
+            consensusRuntimeMs: null | number | string;
+            /** Format: int64 */
+            consensusRuntimeSpreadMs: null | number | string;
+            /** Format: int32 */
+            consensusRuntimeFileCount: null | number | string;
+            entryDirectory: string;
+            /** Format: date-time */
+            filedAt: string;
+            actors: components["schemas"]["LibraryActor"][];
+            files: components["schemas"]["LibraryFile"][];
+            operations: components["schemas"]["OperationLogPage"];
+        };
+        LibraryFile: {
+            /** Format: uuid */
+            id: string;
+            filedPath: string;
+            quality: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: int64 */
+            runtimeSeconds: null | number | string;
+            /** Format: int32 */
+            width: null | number | string;
+            /** Format: int32 */
+            height: null | number | string;
+            videoCodec: null | string;
+        };
+        LibraryFilter: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        LibraryFilters: {
+            sites: components["schemas"]["LibraryFilter"][];
+            actors: components["schemas"]["LibraryFilter"][];
+            qualities: string[];
+        };
+        LibraryPage: {
+            entries: components["schemas"]["LibraryCard"][];
+            filters: components["schemas"]["LibraryFilters"];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
         /** @enum {unknown} */
         LibraryRootOutcome: "Saved" | "SavedWithWarning" | "NotAbsolute" | "Missing" | "NotWritable" | "InsideDownloadDirectory" | "ContainsDownloadDirectory";
         LibraryRootRequest: {
@@ -1681,6 +2285,13 @@ export interface components {
         LibraryRootVerdict: {
             outcome: components["schemas"]["LibraryRootOutcome"];
             detail: string;
+        };
+        LibrarySettingsRequest: {
+            deleteLeftovers: boolean;
+        };
+        LibrarySettingsState: {
+            libraryRoot: null | string;
+            deleteLeftovers: boolean;
         };
         /** @enum {unknown} */
         OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";
@@ -1693,6 +2304,32 @@ export interface components {
             outcome: components["schemas"]["OnboardingOutcome"];
             detail: string;
             nextStep: components["schemas"]["OnboardingStep"];
+        };
+        OperationLogEntry: {
+            /** Format: uuid */
+            id: string;
+            act: string;
+            /** Format: uuid */
+            videoId: null | string;
+            /** Format: uuid */
+            downloadId: null | string;
+            pathBefore: null | string;
+            pathAfter: null | string;
+            displacedPath: null | string;
+            leftoverNamesJson: null | string;
+            actor: string;
+            reason: string;
+            /** Format: date-time */
+            at: string;
+        };
+        OperationLogPage: {
+            entries: components["schemas"]["OperationLogEntry"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
         };
         /** @enum {unknown} */
         PrdbConnectionOutcome: "Saved" | "WrongKey" | "NoApiAccess" | "QuotaSpent" | "NotRightNow" | "AnotherAccount";
@@ -1793,6 +2430,115 @@ export interface components {
             /** Format: int32 */
             rankingPosition: null | number | string;
             rankingExclusion: null | components["schemas"]["ReleaseExclusion"];
+        };
+        /** @enum {unknown} */
+        ReviewDecisionOutcome: "SelectionChanged" | "CannotAct" | "VideoNotFound" | "QueuedForFiling" | "QueuedForReplacement";
+        ReviewDecisionVerdict: {
+            outcome: components["schemas"]["ReviewDecisionOutcome"];
+            detail: string;
+        };
+        ReviewDownload: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        ReviewFiledFile: {
+            path: string;
+            quality: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+        };
+        /** @enum {unknown} */
+        ReviewQueueAction: "FileAs" | "Replace" | "FileAsOnlyCopy" | null;
+        ReviewQueueCount: {
+            /** Format: int32 */
+            open: number | string;
+        };
+        ReviewQueueEntry: {
+            /** Format: uuid */
+            id: string;
+            reason: components["schemas"]["ArrivingFileReason"];
+            actingAction: null | components["schemas"]["ReviewQueueAction"];
+            fileName: string;
+            path: string;
+            isOnDisk: boolean;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: int64 */
+            runtimeSeconds: null | number | string;
+            quality: null | string;
+            /** Format: int32 */
+            width: null | number | string;
+            /** Format: int32 */
+            height: null | number | string;
+            videoCodec: null | string;
+            probeError: null | string;
+            confidence: null | components["schemas"]["IdentificationConfidence"];
+            matchedBy: null | components["schemas"]["IdentificationRung"];
+            video: null | components["schemas"]["ReviewVideo"];
+            candidates: components["schemas"]["ReviewVideo"][];
+            filedFile: null | components["schemas"]["ReviewFiledFile"];
+            download: components["schemas"]["ReviewDownload"];
+            release: string;
+            indexer: string;
+        };
+        ReviewQueuePage: {
+            entries: components["schemas"]["ReviewQueueEntry"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            globalCount: number | string;
+        };
+        ReviewSelectionFile: {
+            /** Format: uuid */
+            id: string;
+            fileName: string;
+            path: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            reason: components["schemas"]["ArrivingFileReason"];
+            isOnDisk: boolean;
+        };
+        /** @enum {unknown} */
+        ReviewSelectionOutcome: "Ready" | "SelectionChanged" | "Deleted" | "Dismissed";
+        ReviewSelectionPreview: {
+            outcome: components["schemas"]["ReviewSelectionOutcome"];
+            files: components["schemas"]["ReviewSelectionFile"][];
+            detail: string;
+        };
+        ReviewSelectionRequest: {
+            arrivingFileIds: string[];
+        };
+        ReviewSelectionVerdict: {
+            outcome: components["schemas"]["ReviewSelectionOutcome"];
+            /** Format: int32 */
+            changed: number | string;
+            detail: string;
+        };
+        ReviewVideo: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            site: null | string;
+            /** Format: date */
+            releaseDate: null | string;
+            /** Format: int64 */
+            consensusRuntimeMs?: null | number | string;
+            /** Format: int32 */
+            consensusRuntimeFileCount?: null | number | string;
+        };
+        ReviewVideoSearchPage: {
+            videos: components["schemas"]["ReviewVideo"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
         };
         RunNowVerdict: {
             accepted: boolean;
