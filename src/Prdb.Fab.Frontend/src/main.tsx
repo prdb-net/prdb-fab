@@ -65,39 +65,40 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queries}>
       <BrowserRouter>
         <AccessGate>
-          <Chrome />
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/onboarding/:step" element={<OnboardingScreen />} />
-            {/* ADR 0010's last step lands here, which is what makes onboarding
-                lead to a first download rather than to a page saying it could. */}
-            <Route path="/wanted" element={<WantedScreen />} />
-            <Route path="/sites" element={<SitesScreen />} />
-            <Route path="/sites/:id" element={<SitesScreen />} />
-            <Route path="/actors" element={<ActorsScreen />} />
-            <Route path="/actors/:id" element={<ActorsScreen />} />
-            <Route path="/releases" element={<ReleaseScreen />} />
-            <Route path="/downloads" element={<DownloadsScreen />} />
-            <Route path="/library" element={<LibraryScreen />} />
-            <Route path="/library/:id" element={<LibraryEntryScreen />} />
-            <Route path="/review-queue" element={<ReviewQueueScreen />} />
-            <Route path="/operation-log" element={<OperationLogScreen />} />
-            {/* ADR 0020: routes rather than one page with anchors, one level
-                down as well — every indexer has its own. */}
-            <Route path="/settings" element={<SettingsGate />}>
-              <Route index element={<SettingsScreen />} />
-              <Route path="connections" element={<ConnectionsScreen />} />
-              <Route path="connections/prdb" element={<PrdbSettings />} />
-              <Route path="connections/sabnzbd" element={<SabnzbdSettings />} />
-              <Route path="connections/indexers/new" element={<IndexerSettings />} />
-              <Route path="connections/indexers/:id" element={<IndexerSettings />} />
-              <Route path="account" element={<AccountScreen />} />
-              <Route path="identification" element={<IdentificationScreen />} />
-              <Route path="library" element={<LibrarySettingsScreen />} />
-            </Route>
-            <Route path="/skeleton" element={<SkeletonScreen />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <Chrome>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/onboarding/:step" element={<OnboardingScreen />} />
+              {/* ADR 0010's last step lands here, which is what makes onboarding
+                  lead to a first download rather than to a page saying it could. */}
+              <Route path="/wanted" element={<WantedScreen />} />
+              <Route path="/sites" element={<SitesScreen />} />
+              <Route path="/sites/:id" element={<SitesScreen />} />
+              <Route path="/actors" element={<ActorsScreen />} />
+              <Route path="/actors/:id" element={<ActorsScreen />} />
+              <Route path="/releases" element={<ReleaseScreen />} />
+              <Route path="/downloads" element={<DownloadsScreen />} />
+              <Route path="/library" element={<LibraryScreen />} />
+              <Route path="/library/:id" element={<LibraryEntryScreen />} />
+              <Route path="/review-queue" element={<ReviewQueueScreen />} />
+              <Route path="/operation-log" element={<OperationLogScreen />} />
+              {/* ADR 0020: routes rather than one page with anchors, one level
+                  down as well — every indexer has its own. */}
+              <Route path="/settings" element={<SettingsGate />}>
+                <Route index element={<SettingsScreen />} />
+                <Route path="connections" element={<ConnectionsScreen />} />
+                <Route path="connections/prdb" element={<PrdbSettings />} />
+                <Route path="connections/sabnzbd" element={<SabnzbdSettings />} />
+                <Route path="connections/indexers/new" element={<IndexerSettings />} />
+                <Route path="connections/indexers/:id" element={<IndexerSettings />} />
+                <Route path="account" element={<AccountScreen />} />
+                <Route path="identification" element={<IdentificationScreen />} />
+                <Route path="library" element={<LibrarySettingsScreen />} />
+              </Route>
+              <Route path="/skeleton" element={<SkeletonScreen />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Chrome>
         </AccessGate>
       </BrowserRouter>
     </QueryClientProvider>
