@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
@@ -106,8 +107,14 @@ public sealed partial class NewznabGateway(
             {
                 parsed = null;
             }
-            if (parsed is null) dropped++;
-            else items.Add(parsed);
+            if (parsed is null)
+            {
+                dropped++;
+            }
+            else
+            {
+                items.Add(parsed);
+            }
         }
 
         return new(null, null, items, dropped, null);
@@ -163,7 +170,18 @@ public sealed partial class NewznabGateway(
 
             try
             {
-                var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+                var bytes = await BoundedAsync(response, IndexerAnswerCeiling.AnNzb, cancellationToken);
+
+                if (bytes is null)
+                {
+                    logger.LogWarning(
+                        "{Host} offered more than the ceiling of {Ceiling} bytes for one NZB.",
+                        address!.Host,
+                        IndexerAnswerCeiling.AnNzb);
+
+                    return NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotAnIndexer);
+                }
+
                 return bytes.Length == 0
                     ? NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotAnIndexer)
                     : new(null, bytes);
@@ -185,10 +203,26 @@ public sealed partial class NewznabGateway(
         var categories = document?.Root?.Elements().FirstOrDefault(element => element.Name.LocalName == "categories")?
             .Elements().Where(element => element.Name.LocalName == "category");
 
-        return categories is null
-            ? []
-            : [.. categories.Select(category => Node(category, [.. category.Elements().Where(element => element.Name.LocalName == "subcat").Select(sub => Node(sub, [])).OfType<CapsCategory>()])).OfType<CapsCategory>()];
+        if (categories is null)
+        {
+            return [];
+        }
+
+        return
+        [
+            .. categories
+                .Select(category => Node(category, SubcategoriesOf(category)))
+                .OfType<CapsCategory>(),
+        ];
     }
+
+    private static IReadOnlyList<CapsCategory> SubcategoriesOf(XElement category) =>
+    [
+        .. category.Elements()
+            .Where(element => element.Name.LocalName == "subcat")
+            .Select(sub => Node(sub, []))
+            .OfType<CapsCategory>(),
+    ];
 
     private static CapsCategory? Node(XElement element, IReadOnlyList<CapsCategory> children)
     {
@@ -227,7 +261,20 @@ public sealed partial class NewznabGateway(
 
             try
             {
-                body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var bytes = await BoundedAsync(response, IndexerAnswerCeiling.ADocument, cancellationToken);
+
+                if (bytes is null)
+                {
+                    logger.LogWarning(
+                        "{Host} offered more than the ceiling of {Ceiling} bytes for one answer.",
+                        address.Host,
+                        IndexerAnswerCeiling.ADocument);
+
+                    return NewznabDocument.Refusing(
+                        IndexerConnectionOutcome.NotAnIndexer, retryAfter: retryAfter);
+                }
+
+                body = Text(response, bytes);
             }
             catch (Exception unreadable) when (unreadable is HttpRequestException or IOException or TaskCanceledException
                                                && !cancellationToken.IsCancellationRequested)
@@ -273,6 +320,75 @@ public sealed partial class NewznabGateway(
             return response.IsSuccessStatusCode
                 ? new(null, null, document, null)
                 : NewznabDocument.Refusing(IndexerConnectionOutcome.NotRightNow, retryAfter: retryAfter);
+        }
+    }
+
+    /// <summary>
+    /// The body, up to <paramref name="ceiling"/>, or null where it went past it.
+    /// </summary>
+    /// <remarks>
+    /// The same shape as <c>ArtworkGateway</c>'s bounded read and for the same
+    /// reason: the indexer walk runs unattended against a service the user
+    /// reached by pasting a URL, and buffering whatever it sends is how a
+    /// misbehaving remote takes the container down rather than one run. Read
+    /// rather than trusted, because a server that sends no <c>Content-Length</c>
+    /// or lies about it is exactly the one this is for.
+    /// </remarks>
+    private static async Task<byte[]?> BoundedAsync(
+        HttpResponseMessage response,
+        long ceiling,
+        CancellationToken cancellationToken)
+    {
+        if (response.Content.Headers.ContentLength is { } announced && announced > ceiling)
+        {
+            return null;
+        }
+
+        await using var body = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+        using var kept = new MemoryStream();
+
+        var buffer = new byte[64 * 1024];
+
+        while (true)
+        {
+            var read = await body.ReadAsync(buffer, cancellationToken);
+
+            if (read == 0)
+            {
+                return kept.ToArray();
+            }
+
+            if (kept.Length + read > ceiling)
+            {
+                return null;
+            }
+
+            kept.Write(buffer, 0, read);
+        }
+    }
+
+    /// <summary>
+    /// The bytes as text, decoded the way <c>ReadAsStringAsync</c> would have:
+    /// the charset the response declares, and UTF-8 where it declares none or
+    /// names one this runtime does not have.
+    /// </summary>
+    private static string Text(HttpResponseMessage response, byte[] bytes)
+    {
+        var charset = response.Content.Headers.ContentType?.CharSet?.Trim('"', ' ');
+
+        if (string.IsNullOrEmpty(charset))
+        {
+            return Encoding.UTF8.GetString(bytes);
+        }
+
+        try
+        {
+            return Encoding.GetEncoding(charset).GetString(bytes);
+        }
+        catch (ArgumentException)
+        {
+            return Encoding.UTF8.GetString(bytes);
         }
     }
 

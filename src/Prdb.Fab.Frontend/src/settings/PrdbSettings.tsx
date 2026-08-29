@@ -4,6 +4,7 @@ import { readConnections } from '../api/client.ts'
 import { connectionsKey } from '../onboarding/state.ts'
 import { PrdbForm } from '../onboarding/PrdbForm.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 /**
  * ADR 0020: the onboarding step, wrapped in *save* instead of *continue*. The
@@ -14,7 +15,7 @@ export function PrdbSettings() {
   const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
 
   if (connections.isPending) {
-    return null
+    return <PageLoading label="Loading prdb connection" />
   }
 
   return (

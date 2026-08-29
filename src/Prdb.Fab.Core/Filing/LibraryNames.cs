@@ -88,7 +88,31 @@ public static class LibraryNames
         // A leading dot hides the directory from a file manager, from the media
         // server's scanner and from this tool's own walk. A trailing dot or space
         // is what the share stores and other clients disagree about.
-        return kept.ToString().Trim().Trim('.').Trim();
+        //
+        // Repeatedly, because one pass of each is not enough: ". .Site" loses its
+        // dots to Trim('.') only at the ends, and trimming the space it exposes
+        // then leaves ".Site" — a hidden directory produced by the very code that
+        // exists to prevent one.
+        return TrimEnds(kept.ToString());
+    }
+
+    /// <summary>
+    /// Takes whitespace and periods off both ends until neither is there,
+    /// rather than in one fixed pass.
+    /// </summary>
+    private static string TrimEnds(string name)
+    {
+        string trimmed = name;
+        string previous;
+
+        do
+        {
+            previous = trimmed;
+            trimmed = previous.Trim().Trim('.');
+        }
+        while (trimmed.Length != previous.Length);
+
+        return trimmed;
     }
 
     /// <summary>

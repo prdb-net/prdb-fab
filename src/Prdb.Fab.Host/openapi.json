@@ -1660,108 +1660,6 @@
           }
         }
       }
-    },
-    "/api/skeleton/items": {
-      "get": {
-        "tags": [
-          "Skeleton"
-        ],
-        "parameters": [
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32",
-              "default": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ItemPage"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Skeleton"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddItemRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AddItemVerdict"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/skeleton/sweep/run-now": {
-      "post": {
-        "tags": [
-          "Skeleton"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunNowVerdict"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/skeleton/runs": {
-      "get": {
-        "tags": [
-          "Skeleton"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/RecordedRun"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -1873,45 +1771,6 @@
           }
         }
       },
-      "AddItemRequest": {
-        "required": [
-          "label"
-        ],
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "AddItemVerdict": {
-        "required": [
-          "added",
-          "refusal"
-        ],
-        "type": "object",
-        "properties": {
-          "added": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/SkeletonItem"
-              }
-            ]
-          },
-          "refusal": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "AfterDownloadGateChoice": {
         "enum": [
           "ExactOnly",
@@ -1947,6 +1806,7 @@
         "enum": [
           "Changed",
           "WrongPassword",
+          "TooManyAttempts",
           "Refused"
         ]
       },
@@ -1975,7 +1835,8 @@
         "required": [
           "outcome",
           "refusal",
-          "sessionsEnded"
+          "sessionsEnded",
+          "retryAfterSeconds"
         ],
         "type": "object",
         "properties": {
@@ -1991,6 +1852,15 @@
           "sessionsEnded": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryAfterSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
               "integer",
               "string"
             ],
@@ -2806,47 +2676,6 @@
           }
         }
       },
-      "ItemPage": {
-        "required": [
-          "items",
-          "page",
-          "pageSize",
-          "total"
-        ],
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SkeletonItem"
-            }
-          },
-          "page": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "pageSize": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "total": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        }
-      },
       "LibraryActor": {
         "required": [
           "id",
@@ -2866,6 +2695,7 @@
       "LibraryCard": {
         "required": [
           "id",
+          "artworkId",
           "title",
           "site",
           "releaseDate",
@@ -2877,6 +2707,14 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "artworkId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           },
           "title": {
             "type": "string"
@@ -3471,51 +3309,6 @@
             ]
           },
           "instance": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "RecordedRun": {
-        "required": [
-          "id",
-          "routineName",
-          "startedAt",
-          "outcome",
-          "itemsHandled",
-          "reason"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "routineName": {
-            "type": "string"
-          },
-          "startedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "outcome": {
-            "$ref": "#/components/schemas/RunOutcome"
-          },
-          "itemsHandled": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "reason": {
             "type": [
               "null",
               "string"
@@ -4455,28 +4248,6 @@
           }
         }
       },
-      "RunNowVerdict": {
-        "required": [
-          "accepted",
-          "detail"
-        ],
-        "type": "object",
-        "properties": {
-          "accepted": {
-            "type": "boolean"
-          },
-          "detail": {
-            "type": "string"
-          }
-        }
-      },
-      "RunOutcome": {
-        "enum": [
-          "Succeeded",
-          "Failed",
-          "Interrupted"
-        ]
-      },
       "SabnzbdCategoriesRequest": {
         "required": [
           "url",
@@ -4790,39 +4561,6 @@
           }
         }
       },
-      "SkeletonItem": {
-        "required": [
-          "id",
-          "label",
-          "addedAt",
-          "sweptAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int64"
-          },
-          "label": {
-            "type": "string"
-          },
-          "addedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "sweptAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
       "VideoAcquisition": {
         "required": [
           "downloadsSpent",
@@ -5025,9 +4763,6 @@
     },
     {
       "name": "Catalogue"
-    },
-    {
-      "name": "Skeleton"
     }
   ]
 }

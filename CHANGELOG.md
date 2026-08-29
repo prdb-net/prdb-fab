@@ -19,6 +19,72 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-29
+
+This release tightens the desktop-first workspace after an end-to-end UI and
+repository review. Loading, navigation, tables and actions now remain legible
+across desktop and mobile, while several unattended failure modes are contained
+instead of stopping work or consuming unbounded resources.
+
+### Added
+
+- **Visible loading states throughout the workspace.** A waking or slow host no
+  longer presents a blank document while access state or page data is being
+  read.
+- **Responsive table alternatives and mobile-safe actions.** Dense operational
+  views expose their important facts without horizontal page overflow, and
+  touch targets remain usable at narrow widths.
+
+### Changed
+
+- Release and detail links preserve the page and filter context they came from,
+  so returning to a catalogue or library view no longer starts that search
+  again.
+- Artwork is fetched only as cards approach the viewport and stale artwork URLs
+  are invalidated when their catalogue revision changes.
+- Password changes share the installation-wide password-attempt limit with
+  sign-in. Too many wrong current-password attempts pause further checks for up
+  to five minutes instead of repeatedly running the password hash.
+
+### Removed
+
+- The development-only Walking Skeleton page and API have been retired. Its
+  sample database table and scheduled routine are removed by the forward
+  migration; they never held application data.
+
+### Fixed
+
+- **A site or title beginning with a dot no longer files into a hidden
+  directory.** Names are stripped of leading dots so that a directory is not
+  invisible to a media server's scanner, but the stripping ran once — so a name
+  like `. .Example` lost its first dot, then the space behind it, and arrived
+  on disk as `.Example` after all. A site that sanitised to nothing but a dot
+  was worse: the site level vanished from the path entirely and the entry was
+  filed directly under the library root. Names are now trimmed until nothing is
+  left to trim. Entries already filed keep the paths they have; ADR 0017 records
+  a filed path rather than recomputing it.
+- **A lane no longer stops for good when something around a routine fails.** An
+  exception from a routine was already that run's failure, but one from the work
+  around it — reading what is due, recording what happened, opening a database
+  connection — ended the lane's loop instead. The lane was then gone until the
+  container restarted, with no failure, no Gap and nothing on any page saying
+  so. Such a turn is now logged and the lane keeps turning.
+- **A video whose container claims an impossible duration no longer jams
+  filing.** ffprobe reports what the file claims, and a corrupt one can claim a
+  number no counter holds; reading it threw, which failed the filing routine on
+  every attempt and left the file stuck in front of everything behind it. The
+  duration is now read as unknown, which is what it is.
+- **An indexer answer larger than 32 MB is refused rather than buffered.** The
+  indexer walk runs unattended, and an answer that size is not the thing being
+  asked for. Artwork already had this ceiling; searches, capabilities and NZB
+  downloads now have it too.
+- **A page number past the end shows an empty page.** A number large enough to
+  overflow the offset silently answered with the first page while reporting the
+  number that had been asked for.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.7.0 has started against it.
+
 ## [0.6.0] - 2026-08-29
 
 Release discovery can now be inspected and prompted from the browser, and the

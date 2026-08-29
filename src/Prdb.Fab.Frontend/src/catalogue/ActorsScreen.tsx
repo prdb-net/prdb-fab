@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 
 import { listActors, readActor, type ActorPage, type ActorVideos } from '../api/client.ts'
 import { releasePath, videoReleasePath } from '../release/routes.ts'
 import { DirectoryView, VideoContextView } from './ContextBrowse.tsx'
 import { actorsKey } from './state.ts'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 export function ActorsScreen() {
   const { id } = useParams()
+  const location = useLocation()
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
@@ -16,7 +18,7 @@ export function ActorsScreen() {
     queryFn: () => (id ? readActor(id, search, page) : listActors(search, page)),
   })
 
-  if (answer.isPending) return null
+  if (answer.isPending) return <PageLoading label="Loading Actors" />
   if (answer.isError) return <main>That Actor could not be read.</main>
 
   const write = (searchValue: string | undefined, pageValue: number | undefined) => {
@@ -43,7 +45,7 @@ export function ActorsScreen() {
         title={selected.actor.title}
         backTo="/actors"
         backLabel="All Actors"
-        releaseAction={releasePath({ actor: selected.actor.prdbId })}
+        releaseAction={releasePath({ actor: selected.actor.prdbId }, location.pathname + location.search)}
         videos={videos.videos}
         search={search}
         page={Number(videos.page)}
@@ -52,7 +54,9 @@ export function ActorsScreen() {
         setFilter={(value) => write(value, undefined)}
         goTo={(wanted) => write(undefined, wanted)}
         videoAction={(video) => (
-          <Link to={videoReleasePath(video.prdbId)}>Find releases for this Video</Link>
+          <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
+            Find releases for this Video
+          </Link>
         )}
       />
     )
@@ -74,7 +78,7 @@ export function ActorsScreen() {
       pages={pages}
       total={Number(directory.total)}
       selectPath={(actor) => `/actors/${actor.prdbId}`}
-      releasePath={(actor) => releasePath({ actor: actor.prdbId })}
+      releasePath={(actor) => releasePath({ actor: actor.prdbId }, location.pathname + location.search)}
       setFilter={(value) => write(value, undefined)}
       goTo={(wanted) => write(undefined, wanted)}
     />

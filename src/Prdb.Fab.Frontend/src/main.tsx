@@ -1,8 +1,8 @@
-import { StrictMode } from 'react'
+import { StrictMode, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useQuery } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router'
 
 import { readAccessState } from './api/client.ts'
 import { AccessGate } from './access/AccessGate.tsx'
@@ -28,7 +28,7 @@ import { LibraryEntryScreen } from './filing/LibraryEntryScreen.tsx'
 import { ReviewQueueScreen } from './filing/ReviewQueueScreen.tsx'
 import { OperationLogScreen } from './filing/OperationLogScreen.tsx'
 import { LibrarySettingsScreen } from './settings/LibraryScreen.tsx'
-import { SkeletonScreen } from './skeleton/SkeletonScreen.tsx'
+import { PageLoading } from './shell/LoadingScreen.tsx'
 import './index.css'
 
 // ADR 0036: React Router in library mode only — the router is a library this
@@ -50,7 +50,7 @@ function Landing() {
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
 
   if (state.isPending) {
-    return null
+    return <PageLoading label="Loading What’s new" />
   }
 
   if (state.data?.nextStep === 'Complete') {
@@ -60,10 +60,56 @@ function Landing() {
   return <Navigate to={routeFor(state.data?.nextStep)} replace />
 }
 
+function DocumentTitle() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    document.title = `${pageTitle(pathname)} · prdb-fab`
+  }, [pathname])
+
+  return null
+}
+
+function pageTitle(pathname: string): string {
+  if (pathname === '/') return 'What’s new'
+  if (pathname === '/wanted') return 'Wanted'
+  if (pathname === '/sites') return 'Sites'
+  if (pathname.startsWith('/sites/')) return 'Site'
+  if (pathname === '/actors') return 'Actors'
+  if (pathname.startsWith('/actors/')) return 'Actor'
+  if (pathname === '/releases') return 'Releases'
+  if (pathname === '/downloads') return 'Downloads'
+  if (pathname === '/library') return 'Library'
+  if (pathname.startsWith('/library/')) return 'Library entry'
+  if (pathname === '/review-queue') return 'Review queue'
+  if (pathname === '/operation-log') return 'Operation log'
+  if (pathname === '/settings') return 'Settings'
+  if (pathname === '/settings/connections') return 'Connections'
+  if (pathname.startsWith('/settings/connections/indexers/')) return 'Indexer'
+  if (pathname === '/settings/connections/prdb') return 'prdb connection'
+  if (pathname === '/settings/connections/sabnzbd') return 'SABnzbd connection'
+  if (pathname === '/settings/account') return 'Account'
+  if (pathname === '/settings/identification') return 'Identification'
+  if (pathname === '/settings/library') return 'Library settings'
+  if (pathname.startsWith('/onboarding/')) return 'Setup'
+  return 'Page not found'
+}
+
+function NotFoundScreen() {
+  return (
+    <main className="routeMessage">
+      <h1>Page not found</h1>
+      <p>The address does not name a page in prdb-fab.</p>
+      <Link to="/">Go to What&rsquo;s new</Link>
+    </main>
+  )
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queries}>
       <BrowserRouter>
+        <DocumentTitle />
         <AccessGate>
           <Chrome>
             <Routes>
@@ -95,8 +141,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="identification" element={<IdentificationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
               </Route>
-              <Route path="/skeleton" element={<SkeletonScreen />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundScreen />} />
             </Routes>
           </Chrome>
         </AccessGate>

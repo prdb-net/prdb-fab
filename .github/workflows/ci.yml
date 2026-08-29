@@ -28,13 +28,13 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm
@@ -103,14 +103,16 @@ jobs:
             platform: linux/arm64
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build for ${{ matrix.platform }}
+        env:
+          PLATFORM: ${{ matrix.platform }}
         run: |
           started=$(date +%s)
-          docker buildx build --platform ${{ matrix.platform }} --load --tag prdb-fab:ci .
+          docker buildx build --platform "$PLATFORM" --load --tag prdb-fab:ci .
           echo "seconds=$(($(date +%s) - started))" >> "$GITHUB_ENV"
 
       - name: Start it
@@ -118,9 +120,11 @@ jobs:
 
       - name: How long the build took
         if: always()
+        env:
+          PLATFORM: ${{ matrix.platform }}
         run: |
           {
             echo "| Build | Seconds |"
             echo "| --- | --- |"
-            echo "| ${{ matrix.platform }}, native | ${seconds:-?} |"
+            echo "| $PLATFORM, native | ${seconds:-?} |"
           } >> "$GITHUB_STEP_SUMMARY"

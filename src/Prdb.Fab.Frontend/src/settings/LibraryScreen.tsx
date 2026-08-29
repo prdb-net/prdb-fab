@@ -20,7 +20,7 @@ export function LibrarySettingsScreen() {
     <LibraryRootForm submitLabel="Save Library root" />
     <form className={formStyles.form} onSubmit={(event) => { event.preventDefault(); setSaved(false); save.mutate() }}>
       <label className={formStyles.label}>After filing</label>
-      <label><input type="checkbox" checked={selected} onChange={(event) => { setChoice(event.target.checked); setSaved(false) }} /> Delete known leftover files from directory-shaped SABnzbd storage</label>
+      <label><input id="delete-library-leftovers" name="deleteLeftovers" type="checkbox" checked={selected} onChange={(event) => { setChoice(event.target.checked); setSaved(false) }} /> Delete known leftover files from directory-shaped SABnzbd storage</label>
       <p className={formStyles.hint}>Enabled by default. Only .nfo, .par2, .sfv, .srr, .url, .txt, .jpg and .png are removed. Unsupported files and non-empty directories remain, and the parent directory of a single-file download is never tidied.</p>
       {saved && <p className={formStyles.done}>Library settings saved.</p>}
       {save.isError && <p className={formStyles.refusal}>{String(save.error)}</p>}

@@ -40,7 +40,7 @@ public sealed class ArtworkGateway(IHttpClientFactory clients, ILogger<ArtworkGa
     /// absent. Collapsing them would turn one flaky minute into a grid of
     /// permanent blanks.
     /// </remarks>
-    public async Task<ArtworkFetch> FetchAsync(string url, CancellationToken cancellationToken)
+    public async Task<ArtworkFetch> FetchAsync(string? url, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate((url ?? string.Empty).Trim(), UriKind.Absolute, out var address)
             || address.Scheme is not ("http" or "https"))

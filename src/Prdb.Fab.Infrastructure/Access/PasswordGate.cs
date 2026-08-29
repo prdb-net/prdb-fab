@@ -91,7 +91,10 @@ public sealed class PasswordGate(
         long currentSessionId,
         CancellationToken cancellationToken = default)
     {
-        if (await VerifyAsync(current, cancellationToken) is not true)
+        var installation = await context.Installation.SingleAsync(cancellationToken);
+        var verification = Verify(installation, current);
+
+        if (verification is null or PasswordVerificationResult.Failed)
         {
             return (ChangePasswordOutcome.WrongPassword, null, 0);
         }
@@ -101,8 +104,6 @@ public sealed class PasswordGate(
         {
             return (ChangePasswordOutcome.Refused, refusal, 0);
         }
-
-        var installation = await context.Installation.SingleAsync(cancellationToken);
 
         installation.PasswordHash = Hasher.HashPassword(installation, next!);
 
@@ -126,18 +127,12 @@ public sealed class PasswordGate(
     public async Task<bool?> VerifyAsync(string? password, CancellationToken cancellationToken = default)
     {
         var installation = await context.Installation.SingleAsync(cancellationToken);
+        var result = Verify(installation, password);
 
-        if (installation.PasswordHash is null)
+        if (result is null)
         {
             return null;
         }
-
-        if (string.IsNullOrEmpty(password))
-        {
-            return false;
-        }
-
-        var result = Hasher.VerifyHashedPassword(installation, installation.PasswordHash, password);
 
         if (result == PasswordVerificationResult.Failed)
         {
@@ -149,7 +144,7 @@ public sealed class PasswordGate(
             // The whole reason ADR 0010 named this hasher: it is versioned, and
             // the version moves under an installation that has been running for
             // years.
-            installation.PasswordHash = Hasher.HashPassword(installation, password);
+            installation.PasswordHash = Hasher.HashPassword(installation, password!);
             context.Installation.Update(installation);
             await context.SaveChangesAsync(cancellationToken);
 
@@ -157,6 +152,21 @@ public sealed class PasswordGate(
         }
 
         return true;
+    }
+
+    private static PasswordVerificationResult? Verify(InstallationRow installation, string? password)
+    {
+        if (installation.PasswordHash is null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(password))
+        {
+            return PasswordVerificationResult.Failed;
+        }
+
+        return Hasher.VerifyHashedPassword(installation, installation.PasswordHash, password);
     }
 
     /// <summary>

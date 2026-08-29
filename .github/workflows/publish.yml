@@ -39,7 +39,7 @@ jobs:
     if: github.repository == 'prdb-net/prdb-fab'
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # The credential is an account-level Docker Hub access token in the
       # repository secrets. Until it is there, this is a warning and a skipped
@@ -65,8 +65,10 @@ jobs:
       # `latest` container still names exactly one build.
       - name: Work out the version
         id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
+          if [ "$EVENT_NAME" = "release" ]; then
             version="${GITHUB_REF_NAME#v}"
           else
             prefix="$(grep -o '<VersionPrefix>[^<]*' Directory.Build.props | cut -d'>' -f2)"
@@ -76,13 +78,13 @@ jobs:
           echo "value=$version" >> "$GITHUB_OUTPUT"
           echo "Building $version"
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
         if: steps.credentials.outputs.present == 'true'
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
         if: steps.credentials.outputs.present == 'true'
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         if: steps.credentials.outputs.present == 'true'
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -93,7 +95,7 @@ jobs:
       - name: Work out the tags
         id: metadata
         if: steps.credentials.outputs.present == 'true'
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.IMAGE }}
           tags: |
@@ -103,13 +105,23 @@ jobs:
 
       - name: Build and push
         if: steps.credentials.outputs.present == 'true'
+        env:
+          TAGS: ${{ steps.metadata.outputs.tags }}
+          VERSION: ${{ steps.version.outputs.value }}
         run: |
           started=$(date +%s)
 
+          tag_args=()
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              tag_args+=(--tag "$tag")
+            fi
+          done <<< "$TAGS"
+
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            --build-arg "VERSION=${{ steps.version.outputs.value }}" \
-            $(echo "${{ steps.metadata.outputs.tags }}" | sed 's/^/--tag /') \
+            --build-arg "VERSION=$VERSION" \
+            "${tag_args[@]}" \
             --cache-from type=gha \
             --cache-to type=gha,mode=max \
             --push \
@@ -131,7 +143,7 @@ jobs:
       # anything else here — not typed into a web form.
       - name: Publish the Docker Hub description
         if: steps.credentials.outputs.present == 'true' && github.event_name == 'release'
-        uses: peter-evans/dockerhub-description@v4
+        uses: peter-evans/dockerhub-description@432a30c9e07499fd01da9f8a49f0faf9e0ca5b77 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

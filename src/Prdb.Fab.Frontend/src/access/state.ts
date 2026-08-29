@@ -34,5 +34,10 @@ export function createQueryClient(): QueryClient {
     },
   })
 
+  // Access state changes only after one of our own mutations or after a 401.
+  // Keeping it fresh prevents the nested shell from repeating the request that
+  // AccessGate just completed; each of those transitions invalidates this key.
+  queries.setQueryDefaults(accessStateKey, { staleTime: Infinity })
+
   return queries
 }

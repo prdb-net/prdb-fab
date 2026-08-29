@@ -2,10 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Scheduling;
-using Prdb.Fab.Core.Skeleton;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
-using Prdb.Fab.Infrastructure.Skeleton;
 
 using Xunit;
 
@@ -16,10 +14,13 @@ namespace Prdb.Fab.Infrastructure.Tests;
 /// </summary>
 public sealed class ScheduleTests
 {
+    private const int ItemsPerRun = 20;
+    private const string RoutineName = "schedule-test";
+
     [Fact]
     public async Task A_routine_gets_a_row_and_is_due_at_once()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         await using var scope = database.Scope();
@@ -27,7 +28,7 @@ public sealed class ScheduleTests
 
         var due = await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken);
 
-        Assert.Equal(SkeletonSweep.RoutineName, Assert.Single(due).Name);
+        Assert.Equal(RoutineName, Assert.Single(due, row => row.Name == RoutineName).Name);
     }
 
     /// <summary>
@@ -38,7 +39,7 @@ public sealed class ScheduleTests
     [Fact]
     public async Task Another_lane_does_not_see_it()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         await using var scope = database.Scope();
@@ -46,7 +47,7 @@ public sealed class ScheduleTests
 
         Assert.DoesNotContain(
             await store.DueAsync(Lane.Live, TestContext.Current.CancellationToken),
-            row => row.Name == SkeletonSweep.RoutineName);
+            row => row.Name == RoutineName);
     }
 
     /// <summary>
@@ -57,7 +58,7 @@ public sealed class ScheduleTests
     [Fact]
     public async Task An_empty_tick_records_nothing_but_still_moves_the_due_time()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         var before = database.Time.GetUtcNow();
@@ -69,7 +70,7 @@ public sealed class ScheduleTests
         Assert.Empty(await context.RoutineRuns.ToListAsync(TestContext.Current.CancellationToken));
 
         var routine = await context.Routines.SingleAsync(
-            row => row.Name == SkeletonSweep.RoutineName,
+            row => row.Name == RoutineName,
             TestContext.Current.CancellationToken);
         Assert.True(routine.DueAt > before, "an empty tick still moves the due time, or the lane spins");
         Assert.Equal(0, routine.ConsecutiveFailures);
@@ -83,14 +84,12 @@ public sealed class ScheduleTests
     [Fact]
     public async Task Work_in_the_set_is_a_recorded_run()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         await using (var scope = database.Scope())
         {
-            var items = scope.ServiceProvider.GetRequiredService<SkeletonItems>();
-            await items.AddAsync("one", TestContext.Current.CancellationToken);
-            await items.AddAsync("two", TestContext.Current.CancellationToken);
+            scope.ServiceProvider.GetRequiredService<ScheduleWork>().Add(2);
         }
 
         await TurnAsync(database);
@@ -103,14 +102,12 @@ public sealed class ScheduleTests
         Assert.Equal(2, run.ItemsHandled);
 
         var routine = await context.Routines.SingleAsync(
-            row => row.Name == SkeletonSweep.RoutineName,
+            row => row.Name == RoutineName,
             TestContext.Current.CancellationToken);
         Assert.Equal(database.Time.GetUtcNow(), routine.LastSuccessAt);
 
         // And the work is gone from the set, so the next turn is an empty tick.
-        Assert.Empty(await context.SkeletonItems
-            .Where(row => row.SweptAt == null)
-            .ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(0, reading.ServiceProvider.GetRequiredService<ScheduleWork>().Count);
     }
 
     /// <summary>
@@ -120,17 +117,12 @@ public sealed class ScheduleTests
     [Fact]
     public async Task A_run_is_bounded_and_the_rest_waits_for_the_next_one()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         await using (var scope = database.Scope())
         {
-            var items = scope.ServiceProvider.GetRequiredService<SkeletonItems>();
-
-            for (var index = 0; index < SkeletonSweep.ItemsPerRun + 5; index++)
-            {
-                await items.AddAsync($"item {index}", TestContext.Current.CancellationToken);
-            }
+            scope.ServiceProvider.GetRequiredService<ScheduleWork>().Add(ItemsPerRun + 5);
         }
 
         await TurnAsync(database);
@@ -139,10 +131,9 @@ public sealed class ScheduleTests
         var context = reading.ServiceProvider.GetRequiredService<FabDbContext>();
 
         var run = await context.RoutineRuns.SingleAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(SkeletonSweep.ItemsPerRun, run.ItemsHandled);
+        Assert.Equal(ItemsPerRun, run.ItemsHandled);
 
-        Assert.Equal(5, await context.SkeletonItems
-            .CountAsync(row => row.SweptAt == null, TestContext.Current.CancellationToken));
+        Assert.Equal(5, reading.ServiceProvider.GetRequiredService<ScheduleWork>().Count);
     }
 
     /// <summary>
@@ -153,7 +144,7 @@ public sealed class ScheduleTests
     [Fact]
     public async Task Run_now_only_makes_the_row_due()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         await TurnAsync(database);
@@ -163,12 +154,16 @@ public sealed class ScheduleTests
         var store = scope.ServiceProvider.GetRequiredService<IRoutineStore>();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
 
-        Assert.Empty(await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken));
+        Assert.DoesNotContain(
+            await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken),
+            row => row.Name == RoutineName);
 
         Assert.True(await store.RunNowAsync(
-            SkeletonSweep.RoutineName, target: null, TestContext.Current.CancellationToken));
+            RoutineName, target: null, TestContext.Current.CancellationToken));
 
-        Assert.Single(await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken));
+        Assert.Single(
+            await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken),
+            row => row.Name == RoutineName);
 
         // Still nothing in the log: making something due is not running it.
         Assert.Empty(await context.RoutineRuns.ToListAsync(TestContext.Current.CancellationToken));
@@ -181,16 +176,14 @@ public sealed class ScheduleTests
     [Fact]
     public async Task The_run_log_keeps_fifty_runs()
     {
-        await using var database = await TestDatabase.CreateAsync();
+        await using var database = await CreateAsync();
         await RegisterAsync(database);
 
         for (var turn = 0; turn < RoutineStore.RunsKeptPerRoutine + 10; turn++)
         {
             await using (var scope = database.Scope())
             {
-                await scope.ServiceProvider
-                    .GetRequiredService<SkeletonItems>()
-                    .AddAsync($"turn {turn}", TestContext.Current.CancellationToken);
+                scope.ServiceProvider.GetRequiredService<ScheduleWork>().Add(1);
             }
 
             await TurnAsync(database);
@@ -205,8 +198,20 @@ public sealed class ScheduleTests
             await context.RoutineRuns.CountAsync(TestContext.Current.CancellationToken));
     }
 
-    private static async Task RegisterAsync(TestDatabase database) =>
-        await database.Services.PrepareFabScheduleAsync(TestContext.Current.CancellationToken);
+    private static async Task RegisterAsync(TestDatabase database)
+    {
+        await using var scope = database.Scope();
+        await scope.ServiceProvider.GetRequiredService<RoutineRegistrar>()
+            .EnsureRowsExistAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static Task<TestDatabase> CreateAsync() =>
+        TestDatabase.CreateAsync(also: services =>
+        {
+            services.AddSingleton<ScheduleWork>();
+            services.AddScoped<IRoutine>(provider =>
+                new ScheduleRoutine(provider.GetRequiredService<ScheduleWork>()));
+        });
 
     /// <summary>
     /// One turn of a lane, without the worker: ask what is due, run it, record
@@ -219,13 +224,44 @@ public sealed class ScheduleTests
         var store = scope.ServiceProvider.GetRequiredService<IRoutineStore>();
         var routines = scope.ServiceProvider.GetServices<IRoutine>().ToDictionary(routine => routine.Name);
 
-        foreach (var row in await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken))
+        foreach (var row in (await store.DueAsync(Lane.Bulk, TestContext.Current.CancellationToken))
+            .Where(row => row.Name == RoutineName))
         {
             var routine = routines[row.Name];
             var result = await routine.RunAsync(row.Target, TestContext.Current.CancellationToken);
 
             await store.RecordAsync(
                 row.Id, result, routine.Cadence, TestContext.Current.CancellationToken);
+        }
+    }
+
+    private sealed class ScheduleWork
+    {
+        public int Count { get; private set; }
+
+        public void Add(int count) => Count += count;
+
+        public int Take(int count)
+        {
+            var taken = Math.Min(count, Count);
+            Count -= taken;
+            return taken;
+        }
+    }
+
+    private sealed class ScheduleRoutine(ScheduleWork work) : IRoutine
+    {
+        public string Name => RoutineName;
+
+        public Lane Lane => Lane.Bulk;
+
+        public TimeSpan Cadence => TimeSpan.FromSeconds(15);
+
+        public Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
+        {
+            var handled = work.Take(ItemsPerRun);
+
+            return Task.FromResult(handled == 0 ? RunResult.NothingToDo : RunResult.Handled(handled));
         }
     }
 }

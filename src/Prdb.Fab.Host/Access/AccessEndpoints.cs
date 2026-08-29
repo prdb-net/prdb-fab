@@ -71,9 +71,19 @@ public static class AccessEndpoints
         group.MapPost("/change-password", async (
             ChangePasswordRequest request,
             PasswordGate passwords,
+            SignInThrottle throttle,
             HttpContext http,
             CancellationToken cancellationToken) =>
         {
+            if (throttle.RetryAfter() is { } wait)
+            {
+                return TypedResults.Ok(new ChangePasswordVerdict(
+                    ChangePasswordOutcome.TooManyAttempts,
+                    Refusal: null,
+                    SessionsEnded: 0,
+                    RetryAfterSeconds: (int)Math.Ceiling(wait.TotalSeconds)));
+            }
+
             // Present by definition — the fallback policy let this request in —
             // and read from the claim rather than from the cookie, so that what
             // survives is the session this request was authenticated by.
@@ -85,7 +95,22 @@ public static class AccessEndpoints
                 sessionId,
                 cancellationToken);
 
-            return TypedResults.Ok(new ChangePasswordVerdict(outcome, refusal, ended));
+            if (outcome is ChangePasswordOutcome.WrongPassword)
+            {
+                throttle.RecordFailure();
+            }
+            else
+            {
+                // Refusing the new password still proved knowledge of the
+                // current one, so it clears the shared guessing budget too.
+                throttle.RecordSuccess();
+            }
+
+            return TypedResults.Ok(new ChangePasswordVerdict(
+                outcome,
+                refusal,
+                ended,
+                RetryAfterSeconds: null));
         });
 
         group.MapPost("/sign-in", async (
@@ -166,7 +191,8 @@ public sealed record ChangePasswordRequest(string? Current, string? Next);
 public sealed record ChangePasswordVerdict(
     ChangePasswordOutcome Outcome,
     string? Refusal,
-    int SessionsEnded);
+    int SessionsEnded,
+    int? RetryAfterSeconds);
 
 public sealed record SignInRequest(string? Password);
 

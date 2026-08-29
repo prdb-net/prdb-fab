@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import {
   listReleases,
@@ -15,6 +15,7 @@ import {
 } from '../api/client.ts'
 import styles from './ReleaseScreen.module.css'
 import type { ReleaseAddress } from './routes.ts'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 const states: readonly IdentificationState[] = [
   'Matched',
@@ -48,7 +49,7 @@ export function ReleaseScreen() {
     )
   }
 
-  if (releases.isPending) return null
+  if (releases.isPending) return <PageLoading label="Loading Releases" />
   if (releases.isError) {
     return <main className={styles.screen}>That Release context could not be read.</main>
   }
@@ -56,6 +57,7 @@ export function ReleaseScreen() {
   return (
     <ReleaseTable
       page={releases.data}
+      returnTo={releaseReturn(parameters, releases.data.context)}
       state={state}
       indexer={indexer}
       setFilter={(name, value) => {
@@ -78,12 +80,14 @@ export function ReleaseScreen() {
 
 function ReleaseTable({
   page,
+  returnTo,
   state,
   indexer,
   setFilter,
   goTo,
 }: {
   page: ReleasePage
+  returnTo: { to: string; label: string }
   state: IdentificationState | undefined
   indexer: string | undefined
   setFilter: (name: 'state' | 'indexer', value: string) => void
@@ -95,6 +99,9 @@ function ReleaseTable({
 
   return (
     <main className={styles.screen}>
+      <Link className={styles.back} to={returnTo.to}>
+        &larr; {returnTo.label}
+      </Link>
       <div className={styles.heading}>
         <div>
           <h1>Releases</h1>
@@ -121,7 +128,12 @@ function ReleaseTable({
       <div className={styles.filters}>
         <label>
           Identification State
-          <select value={state ?? ''} onChange={(event) => setFilter('state', event.target.value)}>
+          <select
+            id="releases-state"
+            name="state"
+            value={state ?? ''}
+            onChange={(event) => setFilter('state', event.target.value)}
+          >
             <option value="">All visible states</option>
             {states.map((value) => (
               <option value={value} key={value}>
@@ -133,6 +145,8 @@ function ReleaseTable({
         <label>
           Indexer
           <select
+            id="releases-indexer"
+            name="indexer"
             value={indexer ?? ''}
             onChange={(event) => setFilter('indexer', event.target.value)}
           >
@@ -218,6 +232,33 @@ function ReleaseTable({
       )}
     </main>
   )
+}
+
+function releaseReturn(
+  parameters: URLSearchParams,
+  context: ReleasePage['context'],
+): { to: string; label: string } {
+  const supplied = parameters.get('from')
+  if (supplied?.startsWith('/') && !supplied.startsWith('//') && !supplied.startsWith('/releases')) {
+    return { to: supplied, label: returnLabel(supplied) }
+  }
+
+  if (context.kind === 'Site') {
+    return { to: `/sites/${context.prdbId}`, label: context.title }
+  }
+  if (context.kind === 'Actor') {
+    return { to: `/actors/${context.prdbId}`, label: context.title }
+  }
+  return { to: '/', label: 'What’s new' }
+}
+
+function returnLabel(path: string): string {
+  const pathname = path.split('?')[0]
+  if (pathname === '/wanted') return 'Wanted'
+  if (pathname.startsWith('/sites')) return 'Sites'
+  if (pathname.startsWith('/actors')) return 'Actors'
+  if (pathname.startsWith('/library')) return 'Library'
+  return 'What’s new'
 }
 
 function ReleaseDiscoveryControls() {

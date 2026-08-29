@@ -56,6 +56,41 @@ public sealed class FilingTests
         }
     }
 
+    /// <summary>
+    /// ffprobe reports what the container claims, and a corrupt one can claim a
+    /// duration no long holds. ADR 0021 says the reading decides nothing, so an
+    /// impossible number is unknown — not an exception out of the probe, which
+    /// none of the filters around it catch and which leaves the Arriving File
+    /// failing the routine on every attempt.
+    /// </summary>
+    [Theory]
+    [InlineData("1e30")]
+    [InlineData("-1e30")]
+    [InlineData("9223372036854775808")]
+    [InlineData("Infinity")]
+    public async Task A_duration_no_long_holds_is_read_as_unknown(string duration)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"probe-{Guid.NewGuid():N}.mkv");
+        await File.WriteAllBytesAsync(path, new byte[1024], TestContext.Current.CancellationToken);
+        try
+        {
+            var reading = await new VideoProbe(new RecordedProbeProcess(ProbeJsonWith(duration)))
+                .ReadAsync(path, TestContext.Current.CancellationToken);
+
+            Assert.Equal(ProbeOutcome.Read, reading.Outcome);
+            Assert.Null(reading.RuntimeSeconds);
+
+            // Everything else the probe read is still there: the duration is the
+            // one value that could not be believed.
+            Assert.Equal(1920, reading.Width);
+            Assert.Equal("1080p", reading.QualityLabel);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public async Task Collecting_handles_file_and_directory_storage_and_never_probes_a_durable_path_twice()
     {
@@ -453,6 +488,15 @@ public sealed class FilingTests
             { "width": 1920, "height": 1080, "codec_name": "h264", "disposition": { "attached_pic": 0 } }
           ],
           "format": { "duration": "62.6" }
+        }
+        """;
+
+    private static string ProbeJsonWith(string duration) => $$"""
+        {
+          "streams": [
+            { "width": 1920, "height": 1080, "codec_name": "h264", "disposition": { "attached_pic": 0 } }
+          ],
+          "format": { "duration": "{{duration}}" }
         }
         """;
 

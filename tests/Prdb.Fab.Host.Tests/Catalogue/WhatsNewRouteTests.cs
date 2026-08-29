@@ -118,7 +118,7 @@ public sealed class WhatsNewRouteTests
             $"/api/artwork/{page.Videos[0].Id}",
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.NotFound, artwork.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, artwork.StatusCode);
     }
 
     /// <summary>

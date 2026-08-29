@@ -1,4 +1,4 @@
-import type { components, paths } from './schema.d.ts'
+import type { components } from './schema.d.ts'
 
 // ADR 0036 and ADR 0040: plain fetch against types generated from the committed
 // OpenAPI document. No client library — the contract is the document, and a
@@ -61,14 +61,6 @@ export type LibraryPage = Schema['LibraryPage']
 export type LibraryEntry = Schema['LibraryEntry']
 export type LibrarySettingsState = Schema['LibrarySettingsState']
 export type OperationLogPage = Schema['OperationLogPage']
-
-export type SkeletonItem = Schema['SkeletonItem']
-export type ItemPage = Schema['ItemPage']
-export type AddItemVerdict = Schema['AddItemVerdict']
-export type RunNowVerdict = Schema['RunNowVerdict']
-export type RecordedRun = Schema['RecordedRun']
-
-type ItemsQuery = NonNullable<paths['/api/skeleton/items']['get']['parameters']['query']>
 
 /**
  * ADR 0010: an unauthenticated request gets 401 and never a redirect, so this
@@ -200,7 +192,7 @@ export async function editIndexer(
   id: string,
   indexer: { name: string; url: string; apiKey: string },
 ): Promise<IndexerConnectionVerdict> {
-  return post<IndexerConnectionVerdict>(`/api/connections/indexers/${id}`, indexer)
+  return post<IndexerConnectionVerdict>(`/api/connections/indexers/${segment(id)}`, indexer)
 }
 
 export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict> {
@@ -246,7 +238,7 @@ export async function readSite(
   page: number,
 ): Promise<SiteVideos> {
   return json<SiteVideos>(
-    await fetch(`/api/catalogue/sites/${prdbId}?${parameters({ search, page: String(page) })}`),
+    await fetch(`/api/catalogue/sites/${segment(prdbId)}?${parameters({ search, page: String(page) })}`),
   )
 }
 
@@ -262,7 +254,7 @@ export async function readActor(
   page: number,
 ): Promise<ActorVideos> {
   return json<ActorVideos>(
-    await fetch(`/api/catalogue/actors/${prdbId}?${parameters({ search, page: String(page) })}`),
+    await fetch(`/api/catalogue/actors/${segment(prdbId)}?${parameters({ search, page: String(page) })}`),
   )
 }
 
@@ -307,7 +299,7 @@ export async function previewReleaseDownload(
   releaseId: number | string,
   videoId: string,
 ): Promise<DownloadPreview> {
-  return post<DownloadPreview>(`/api/releases/${releaseId}/download/preview`, { videoId })
+  return post<DownloadPreview>(`/api/releases/${segment(releaseId)}/download/preview`, { videoId })
 }
 
 export async function downloadRelease(
@@ -315,7 +307,7 @@ export async function downloadRelease(
   videoId: string,
   downloadId: string,
 ): Promise<DownloadVerdict> {
-  return post<DownloadVerdict>(`/api/releases/${releaseId}/download`, { videoId, downloadId })
+  return post<DownloadVerdict>(`/api/releases/${segment(releaseId)}/download`, { videoId, downloadId })
 }
 
 export async function listDownloads(filters: {
@@ -345,14 +337,14 @@ export async function stopFollowing(downloadIds: string[]): Promise<DownloadSele
 }
 
 export async function previewResetDownloads(videoId: string): Promise<DownloadResetPreview> {
-  return post<DownloadResetPreview>(`/api/releases/video/${videoId}/reset-downloads/preview`)
+  return post<DownloadResetPreview>(`/api/releases/video/${segment(videoId)}/reset-downloads/preview`)
 }
 
 export async function resetDownloads(
   videoId: string,
   downloadIds: string[],
 ): Promise<DownloadResetVerdict> {
-  return post<DownloadResetVerdict>(`/api/releases/video/${videoId}/reset-downloads`, {
+  return post<DownloadResetVerdict>(`/api/releases/video/${segment(videoId)}/reset-downloads`, {
     downloadIds,
   })
 }
@@ -398,15 +390,15 @@ export async function dismissReviewEntries(ids: string[]): Promise<ReviewSelecti
 }
 
 export async function fileReviewAs(id: string, videoId: string): Promise<ReviewDecisionVerdict> {
-  return post<ReviewDecisionVerdict>(`/api/review-queue/${id}/file-as`, { videoId })
+  return post<ReviewDecisionVerdict>(`/api/review-queue/${segment(id)}/file-as`, { videoId })
 }
 
 export async function replaceFromReview(id: string): Promise<ReviewDecisionVerdict> {
-  return post<ReviewDecisionVerdict>(`/api/review-queue/${id}/replace`)
+  return post<ReviewDecisionVerdict>(`/api/review-queue/${segment(id)}/replace`)
 }
 
 export async function fileOnlyCopyFromReview(id: string): Promise<ReviewDecisionVerdict> {
-  return post<ReviewDecisionVerdict>(`/api/review-queue/${id}/file-as-only-copy`)
+  return post<ReviewDecisionVerdict>(`/api/review-queue/${segment(id)}/file-as-only-copy`)
 }
 
 export async function readLibrary(filters: {
@@ -428,7 +420,7 @@ export async function readLibrary(filters: {
 }
 
 export async function readLibraryEntry(videoId: string): Promise<LibraryEntry> {
-  return json<LibraryEntry>(await fetch(`/api/library/${videoId}`))
+  return json<LibraryEntry>(await fetch(`/api/library/${segment(videoId)}`))
 }
 
 export async function readOperationLog(filters: {
@@ -453,6 +445,16 @@ export async function saveLibrarySettings(deleteLeftovers: boolean): Promise<Lib
   return post<LibrarySettingsState>('/api/settings/library', { deleteLeftovers })
 }
 
+/**
+ * One value as a path segment. The ids are GUIDs today, so nothing is broken
+ * without this — but several of them arrive from `useParams`, which is the
+ * address bar, and the query parameters beside them already go through
+ * `parameters()`. An address is built the same way wherever it is built.
+ */
+function segment(value: string | number): string {
+  return encodeURIComponent(String(value))
+}
+
 function parameters(values: Record<string, string | undefined>): URLSearchParams {
   const answer = new URLSearchParams()
 
@@ -461,26 +463,4 @@ function parameters(values: Record<string, string | undefined>): URLSearchParams
   }
 
   return answer
-}
-
-export async function listItems(page: ItemsQuery['page']): Promise<ItemPage> {
-  return json<ItemPage>(await fetch(`/api/skeleton/items?page=${page ?? 1}`))
-}
-
-export async function addItem(label: string): Promise<AddItemVerdict> {
-  return json<AddItemVerdict>(
-    await fetch('/api/skeleton/items', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label }),
-    }),
-  )
-}
-
-export async function runSweepNow(): Promise<RunNowVerdict> {
-  return json<RunNowVerdict>(await fetch('/api/skeleton/sweep/run-now', { method: 'POST' }))
-}
-
-export async function listRuns(): Promise<RecordedRun[]> {
-  return json<RecordedRun[]>(await fetch('/api/skeleton/runs'))
 }

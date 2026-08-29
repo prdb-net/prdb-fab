@@ -21,8 +21,6 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<RoutineRunRow> RoutineRuns => Set<RoutineRunRow>();
 
-    public DbSet<SkeletonItemRow> SkeletonItems => Set<SkeletonItemRow>();
-
     /// <summary>The one row. See <see cref="InstallationRow"/>.</summary>
     public DbSet<InstallationRow> Installation => Set<InstallationRow>();
 
@@ -214,18 +212,6 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             // configuration: two rows would walk it twice, spend ADR 0024's
             // budget twice, and give the same package two release identities.
             indexer.HasIndex(row => row.Url).IsUnique();
-        });
-
-        builder.Entity<SkeletonItemRow>(item =>
-        {
-            item.ToTable("skeleton_item");
-            item.HasKey(row => row.Id);
-            item.Declares(AccountClass.AccountFree);
-            item.Property(row => row.Label).IsRequired();
-
-            // The work set: rows the sweep has not been past. Indexed because
-            // asking "is there anything to do" is what the lane does all day.
-            item.HasIndex(row => row.SweptAt);
         });
 
         // The catalogue. Integer surrogates throughout, because ADR 0033 spends

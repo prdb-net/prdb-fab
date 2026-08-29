@@ -12,8 +12,8 @@ namespace Prdb.Fab.Host.Catalogue;
 /// deliberately: it answers with bytes rather than with a typed verdict, because
 /// what asks for it is an <c>&lt;img&gt;</c> tag rather than the generated
 /// client. So there is nothing here for the frontend's types to carry — the
-/// address is the contract, and a browser that gets a 404 draws the no-artwork
-/// tile the same way it would for any other image.
+/// address is the contract, and an empty answer tells the browser to draw the
+/// no-artwork tile without recording a failed resource request.
 /// </para>
 /// <para>
 /// <strong>Named by the video and not by the image.</strong> A caller listing a
@@ -42,6 +42,9 @@ public static class ArtworkEndpoints
     /// </remarks>
     public const int CacheSeconds = 24 * 60 * 60;
 
+    /// <summary>How long a browser may remember that no image is available.</summary>
+    public const int AbsentCacheSeconds = 5 * 60;
+
     public static void MapArtwork(this IEndpointRouteBuilder routes)
     {
         routes.MapGet("/api/artwork/{videoId:long}", async (
@@ -56,7 +59,8 @@ public static class ArtworkEndpoints
             {
                 // No image, a URL found dead, or a CDN that did not answer in
                 // time. All three are the same thing to a grid: draw the tile.
-                return Results.NotFound();
+                http.Response.Headers.CacheControl = $"private, max-age={AbsentCacheSeconds}";
+                return Results.NoContent();
             }
 
             http.Response.Headers.CacheControl = $"private, max-age={CacheSeconds}";

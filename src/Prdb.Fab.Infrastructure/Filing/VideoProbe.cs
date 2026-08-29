@@ -186,9 +186,24 @@ public sealed class VideoProbe(IProbeProcess process)
         var text = duration.ValueKind == JsonValueKind.String
             ? duration.GetString()
             : duration.GetRawText();
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)
-            ? checked((long)Math.Round(seconds, MidpointRounding.AwayFromZero))
-            : null;
+
+        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds))
+        {
+            return null;
+        }
+
+        var rounded = Math.Round(seconds, MidpointRounding.AwayFromZero);
+
+        // A duration outside what a long can hold is unknown rather than fatal.
+        // ffprobe reports what the container claims, and a corrupt one can claim
+        // 1e30 — which the cast below would answer with an OverflowException that
+        // none of the callers' filters catch. ADR 0021 says a probe reading
+        // decides nothing, so the honest answer to an impossible number is the
+        // same as to a missing one.
+        // Compared against a bound well inside the range rather than against
+        // long.MaxValue itself, which has no exact double and would let the
+        // boundary through to a cast that has no defined answer for it.
+        return double.IsFinite(rounded) && Math.Abs(rounded) < 9.2e18 ? (long)rounded : null;
     }
 
     private static VideoProbeReading Failed(

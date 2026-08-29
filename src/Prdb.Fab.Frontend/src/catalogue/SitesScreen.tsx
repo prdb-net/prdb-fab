@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 
 import { listSites, readSite, type SitePage, type SiteVideos } from '../api/client.ts'
 import { releasePath, videoReleasePath } from '../release/routes.ts'
 import { DirectoryView, VideoContextView } from './ContextBrowse.tsx'
 import { sitesKey } from './state.ts'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 export function SitesScreen() {
   const { id } = useParams()
+  const location = useLocation()
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
@@ -16,7 +18,7 @@ export function SitesScreen() {
     queryFn: () => (id ? readSite(id, search, page) : listSites(search, page)),
   })
 
-  if (answer.isPending) return null
+  if (answer.isPending) return <PageLoading label="Loading Sites" />
   if (answer.isError) return <main>That Site could not be read.</main>
 
   const setFilter = (value: string) => set(parameters, setParameters, { search: value })
@@ -31,7 +33,7 @@ export function SitesScreen() {
         title={selected.site.title}
         backTo="/sites"
         backLabel="All Sites"
-        releaseAction={releasePath({ site: selected.site.prdbId })}
+        releaseAction={releasePath({ site: selected.site.prdbId }, location.pathname + location.search)}
         videos={videos.videos}
         search={search}
         page={Number(videos.page)}
@@ -40,7 +42,9 @@ export function SitesScreen() {
         setFilter={setFilter}
         goTo={goTo}
         videoAction={(video) => (
-          <Link to={videoReleasePath(video.prdbId)}>Find releases for this Video</Link>
+          <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
+            Find releases for this Video
+          </Link>
         )}
       />
     )
@@ -63,7 +67,7 @@ export function SitesScreen() {
       pages={pages}
       total={Number(directory.total)}
       selectPath={(site) => `/sites/${site.prdbId}`}
-      releasePath={(site) => releasePath({ site: site.prdbId })}
+      releasePath={(site) => releasePath({ site: site.prdbId }, location.pathname + location.search)}
       setFilter={setFilter}
       goTo={goTo}
     />

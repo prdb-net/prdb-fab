@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 
 import { listWanted } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
@@ -8,6 +8,7 @@ import { prdbVideoUrl } from './prdb.ts'
 import { wantedKey } from './state.ts'
 import { videoReleasePath } from '../release/routes.ts'
 import styles from './Wanted.module.css'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 /**
  * The wanted list, and where setting up ends.
@@ -25,6 +26,7 @@ import styles from './Wanted.module.css'
 export function WantedScreen() {
   // ADR 0036: where in the grid the user is, in the address.
   const [parameters, setParameters] = useSearchParams()
+  const location = useLocation()
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
 
   const wanted = useQuery({
@@ -43,7 +45,7 @@ export function WantedScreen() {
   }
 
   if (wanted.isPending && !wanted.data) {
-    return null
+    return <PageLoading label="Loading Wanted videos" />
   }
 
   return (
@@ -74,7 +76,9 @@ export function WantedScreen() {
             videos={wanted.data?.videos ?? []}
             action={(video) => (
               <span className={gridStyles.actions}>
-                <Link to={videoReleasePath(video.prdbId)}>Find releases</Link>
+                <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
+                  Find releases
+                </Link>
                 <a
                   className={gridStyles.action}
                   href={prdbVideoUrl(String(video.prdbId))}

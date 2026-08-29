@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Scheduling;
-using Prdb.Fab.Core.Skeleton;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 
@@ -15,6 +14,8 @@ namespace Prdb.Fab.Infrastructure.Tests;
 /// </summary>
 public sealed class RestartTests
 {
+    private const string RoutineName = "restart-test";
+
     /// <summary>
     /// What a container coming back from an update actually looks like: every
     /// routine in the table has been overdue for as long as it was down, so on
@@ -98,7 +99,7 @@ public sealed class RestartTests
         {
             context.Routines.Add(new RoutineRow
             {
-                Name = SkeletonSweep.RoutineName,
+                Name = RoutineName,
                 Target = $"{lane}-{index}",
                 Lane = lane,
 

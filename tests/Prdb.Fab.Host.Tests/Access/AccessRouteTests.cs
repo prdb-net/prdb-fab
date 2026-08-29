@@ -27,7 +27,7 @@ public sealed class AccessRouteTests
             AllowAutoRedirect = false,
         });
 
-        using var response = await client.GetAsync("/api/skeleton/items", TestContext.Current.CancellationToken);
+        using var response = await client.GetAsync("/api/connections", TestContext.Current.CancellationToken);
 
         // ADR 0010: 401, never a redirect. The browser side is one page that
         // decides for itself what to show.
@@ -60,7 +60,7 @@ public sealed class AccessRouteTests
         using var application = new FabApplication();
         using var client = await application.SignedInClientAsync(Password);
 
-        using var response = await client.GetAsync("/api/skeleton/items", TestContext.Current.CancellationToken);
+        using var response = await client.GetAsync("/api/connections", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -136,7 +136,7 @@ public sealed class AccessRouteTests
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         }
 
-        using var afterwards = await client.GetAsync("/api/skeleton/items", TestContext.Current.CancellationToken);
+        using var afterwards = await client.GetAsync("/api/connections", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, afterwards.StatusCode);
     }
@@ -188,7 +188,7 @@ public sealed class AccessRouteTests
             using (var client = await original.SignedInClientAsync(Password))
             {
                 using var response = await client.GetAsync(
-                    "/api/skeleton/items", TestContext.Current.CancellationToken);
+                    "/api/connections", TestContext.Current.CancellationToken);
 
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Filing;
@@ -16,25 +17,25 @@ public sealed class OperationLogBrowse(FabDbContext context)
         int page,
         CancellationToken cancellationToken = default)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var query = context.OperationLogEntries.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(act)) query = query.Where(row => row.Act == act);
         if (videoId is not null) query = query.Where(row => row.VideoId == videoId);
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var pattern = $"%{Escape(search.Trim())}%";
+            var pattern = SearchPattern.Containing(search);
             query = query.Where(row =>
-                (row.PathBefore != null && EF.Functions.Like(row.PathBefore, pattern, "\\"))
-                || (row.PathAfter != null && EF.Functions.Like(row.PathAfter, pattern, "\\"))
-                || (row.DisplacedPath != null && EF.Functions.Like(row.DisplacedPath, pattern, "\\")));
+                (row.PathBefore != null && EF.Functions.Like(row.PathBefore, pattern, SearchPattern.Escape))
+                || (row.PathAfter != null && EF.Functions.Like(row.PathAfter, pattern, SearchPattern.Escape))
+                || (row.DisplacedPath != null && EF.Functions.Like(row.DisplacedPath, pattern, SearchPattern.Escape)));
         }
 
         var total = await query.CountAsync(cancellationToken);
         var entries = await query
             .OrderByDescending(row => row.At)
             .ThenByDescending(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new OperationLogEntry(
                 row.Id,
@@ -52,11 +53,6 @@ public sealed class OperationLogBrowse(FabDbContext context)
 
         return new OperationLogPage(entries, wanted, APage, total);
     }
-
-    private static string Escape(string value) => value
-        .Replace("\\", "\\\\", StringComparison.Ordinal)
-        .Replace("%", "\\%", StringComparison.Ordinal)
-        .Replace("_", "\\_", StringComparison.Ordinal);
 }
 
 public sealed record OperationLogEntry(
