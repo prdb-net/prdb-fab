@@ -119,7 +119,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
             "get_cats",
             cancellationToken);
 
-        return refusal is { } outcome || body?.Categories is not { } categories
+        return refusal is not null || body?.Categories is not { } categories
             ? new(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd, [])
             : new(
                 SabnzbdConnectionOutcome.Saved,
@@ -228,7 +228,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
             var queueMode = "queue&nzo_ids=" + Uri.EscapeDataString(string.Join(',', knownIds));
             var (refusal, body) = await ReadAsync<QueueEnvelope>(
                 client, address, apiKey, queueMode, cancellationToken);
-            if (refusal is { } outcome || body?.Queue is null)
+            if (refusal is not null || body?.Queue is null)
             {
                 return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
             }
@@ -241,7 +241,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
         {
             var (refusal, body) = await ReadAsync<QueueEnvelope>(
                 client, address, apiKey, "queue&start=0&limit=100", cancellationToken);
-            if (refusal is { } outcome || body?.Queue is null)
+            if (refusal is not null || body?.Queue is null)
             {
                 return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
             }
@@ -259,7 +259,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
                 + Uri.EscapeDataString(string.Join(',', missingIds));
             var (refusal, body) = await ReadAsync<HistoryEnvelope>(
                 client, address, apiKey, historyMode, cancellationToken);
-            if (refusal is { } outcome || body?.History is null)
+            if (refusal is not null || body?.History is null)
             {
                 return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
             }
@@ -271,7 +271,7 @@ public sealed class SabnzbdGateway(IHttpClientFactory clients, ILogger<SabnzbdGa
         {
             var (refusal, body) = await ReadAsync<HistoryEnvelope>(
                 client, address, apiKey, "history&start=0&limit=100", cancellationToken);
-            if (refusal is { } outcome || body?.History is null)
+            if (refusal is not null || body?.History is null)
             {
                 return SabnzbdObservation.Refused(refusal ?? SabnzbdConnectionOutcome.NotSabnzbd);
             }
