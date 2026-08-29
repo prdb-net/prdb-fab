@@ -49,6 +49,29 @@
         }
       }
     },
+    "/api/artwork/actors/{actorId}": {
+      "get": {
+        "tags": [
+          "Artwork"
+        ],
+        "parameters": [
+          {
+            "name": "actorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/releases": {
       "get": {
         "tags": [
@@ -994,10 +1017,32 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VideoPage"
+                  "$ref": "#/components/schemas/WhatsNewPage"
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/catalogue/whats-new/observed": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhatsNewObservation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -1036,6 +1081,213 @@
         }
       }
     },
+    "/api/catalogue/wanted/{prdbId}": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPreferenceVerdict"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPreferenceVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/actors/{prdbId}/favourite": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPreferenceVerdict"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPreferenceVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/sites/{prdbId}/favourite": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPreferenceVerdict"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountPreferenceVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/videos/{prdbId}/download-best": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/catalogue/sites": {
       "get": {
         "tags": [
@@ -1060,6 +1312,13 @@
               ],
               "format": "int32",
               "default": 1
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -1154,6 +1413,13 @@
               ],
               "format": "int32",
               "default": 1
+            }
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -2009,11 +2275,53 @@
           }
         }
       },
+      "AccountPreferenceOutcome": {
+        "enum": [
+          "Updated",
+          "Deferred",
+          "Rejected",
+          "NotFound",
+          "Failed"
+        ]
+      },
+      "AccountPreferenceVerdict": {
+        "required": [
+          "outcome",
+          "desired",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/AccountPreferenceOutcome"
+          },
+          "desired": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "updated": {
+            "type": "boolean"
+          }
+        }
+      },
       "ActorCard": {
         "required": [
           "prdbId",
           "name",
-          "videoCount"
+          "videoCount",
+          "favourite",
+          "hasArtwork"
         ],
         "type": "object",
         "properties": {
@@ -2031,6 +2339,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "favourite": {
+            "type": "boolean"
+          },
+          "hasArtwork": {
+            "type": "boolean"
           }
         }
       },
@@ -2039,7 +2353,8 @@
           "actors",
           "page",
           "pageSize",
-          "total"
+          "total",
+          "scope"
         ],
         "type": "object",
         "properties": {
@@ -2072,6 +2387,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/CatalogueScope"
           }
         }
       },
@@ -2424,7 +2742,8 @@
       "BrowseContext": {
         "required": [
           "prdbId",
-          "title"
+          "title",
+          "favourite"
         ],
         "type": "object",
         "properties": {
@@ -2434,8 +2753,17 @@
           },
           "title": {
             "type": "string"
+          },
+          "favourite": {
+            "type": "boolean"
           }
         }
+      },
+      "CatalogueScope": {
+        "enum": [
+          "Favourites",
+          "All"
+        ]
       },
       "ChangePasswordOutcome": {
         "enum": [
@@ -2684,6 +3012,7 @@
       },
       "DownloadOutcome": {
         "enum": [
+          "Pending",
           "Submitted",
           "Rejected",
           "SubmissionUnknown",
@@ -5263,7 +5592,9 @@
           "prdbId",
           "title",
           "network",
-          "videoCount"
+          "videoCount",
+          "favourite",
+          "representativeVideoId"
         ],
         "type": "object",
         "properties": {
@@ -5287,6 +5618,18 @@
               "string"
             ],
             "format": "int32"
+          },
+          "favourite": {
+            "type": "boolean"
+          },
+          "representativeVideoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -5311,7 +5654,8 @@
           "sites",
           "page",
           "pageSize",
-          "total"
+          "total",
+          "scope"
         ],
         "type": "object",
         "properties": {
@@ -5344,6 +5688,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/CatalogueScope"
           }
         }
       },
@@ -5731,12 +6078,21 @@
           }
         }
       },
+      "VideoAvailability": {
+        "enum": [
+          "Ready",
+          "ReleasesNeedInspection",
+          "NoIdentifiedRelease"
+        ],
+        "default": "NoIdentifiedRelease"
+      },
       "VideoCard": {
         "required": [
           "id",
           "prdbId",
           "title",
           "site",
+          "sitePrdbId",
           "releaseDate"
         ],
         "type": "object",
@@ -5762,6 +6118,13 @@
               "string"
             ]
           },
+          "sitePrdbId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
           "releaseDate": {
             "type": [
               "null",
@@ -5772,6 +6135,36 @@
           "downloadReady": {
             "type": "boolean",
             "default": false
+          },
+          "wanted": {
+            "type": "boolean",
+            "default": false
+          },
+          "wantedSyncPending": {
+            "type": "boolean",
+            "default": false
+          },
+          "wantedSyncFailure": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "outstanding": {
+            "type": "boolean",
+            "default": false
+          },
+          "heldQualities": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "availability": {
+            "$ref": "#/components/schemas/VideoAvailability"
           }
         }
       },
@@ -5862,6 +6255,95 @@
           },
           "backfillRunning": {
             "type": "boolean"
+          }
+        }
+      },
+      "WhatsNewObservation": {
+        "required": [
+          "videoId",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WhatsNewPage": {
+        "required": [
+          "videos",
+          "page",
+          "pageSize",
+          "total",
+          "newCount",
+          "checkpointVideoId",
+          "checkpointCreatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoCard"
+            }
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "newCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "checkpointVideoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "checkpointCreatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       }

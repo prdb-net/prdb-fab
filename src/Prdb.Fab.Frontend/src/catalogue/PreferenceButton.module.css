@@ -1,0 +1,12 @@
+.control {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.error {
+  color: var(--danger, #b42318);
+  font-size: 0.78rem;
+  max-width: 24rem;
+}

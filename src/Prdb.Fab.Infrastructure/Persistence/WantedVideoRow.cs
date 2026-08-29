@@ -2,8 +2,8 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
 /// ADR 0033's <c>WantedVideo</c>: a video the user has marked in prdb as one
-/// they want to have. Read here and written nowhere — <c>CONTEXT.md</c> defines
-/// the list as prdb's, and ADR 0007 makes it the only source of intent.
+/// they want to have. Usually projected from prdb's feed; ADR 0048 also writes
+/// the desired state before a manual acquisition leaves the tool.
 /// </summary>
 /// <remarks>
 /// Account-scoped: a key belonging to a different prdb account drops this table

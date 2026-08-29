@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 
-import { listSites, readSite, type SitePage, type SiteVideos } from '../api/client.ts'
+import { listSites, readSite, setFavouriteSite, type SitePage, type SiteVideos } from '../api/client.ts'
 import { releasePath, videoReleasePath } from '../release/routes.ts'
 import { DirectoryView, VideoContextView } from './ContextBrowse.tsx'
 import { sitesKey } from './state.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import { PreferenceButton } from './PreferenceButton.tsx'
 
 export function SitesScreen() {
   const { id } = useParams()
@@ -13,9 +14,10 @@ export function SitesScreen() {
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const scope = parameters.get('scope') === 'all' ? 'All' : 'Favourites'
   const answer = useQuery<SitePage | SiteVideos>({
-    queryKey: sitesKey(id, search, page),
-    queryFn: () => (id ? readSite(id, search, page) : listSites(search, page)),
+    queryKey: sitesKey(id, search, page, scope),
+    queryFn: () => (id ? readSite(id, search, page) : listSites(search, page, scope)),
   })
 
   if (answer.isPending) return <PageLoading label="Loading Sites" />
@@ -46,6 +48,14 @@ export function SitesScreen() {
             Find releases for this Video
           </Link>
         )}
+        contextAction={(
+          <PreferenceButton
+            active={selected.site.favourite}
+            activeLabel="Unfavourite"
+            inactiveLabel="Favourite"
+            write={(desired) => setFavouriteSite(selected.site.prdbId, desired)}
+          />
+        )}
       />
     )
   }
@@ -61,6 +71,14 @@ export function SitesScreen() {
         title: site.title,
         detail: site.network,
         videoCount: Number(site.videoCount),
+        favourite: site.favourite,
+        artworkPath: site.representativeVideoId
+          ? `/api/artwork/${site.representativeVideoId}`
+          : null,
+        artworkLabel: site.representativeVideoId
+          ? `Representative video artwork for ${site.title}`
+          : `No representative video artwork for ${site.title}`,
+        artworkCaption: site.representativeVideoId ? 'Representative Video' : undefined,
       }))}
       search={search}
       page={Number(directory.page)}
@@ -70,6 +88,22 @@ export function SitesScreen() {
       releasePath={(site) => releasePath({ site: site.prdbId }, location.pathname + location.search)}
       setFilter={setFilter}
       goTo={goTo}
+      scope={scope}
+      setScope={(nextScope) => {
+        const next = new URLSearchParams(parameters)
+        if (nextScope === 'All') next.set('scope', 'all')
+        else next.delete('scope')
+        next.delete('page')
+        setParameters(next)
+      }}
+      toggleFavourite={(site) => (
+        <PreferenceButton
+          active={site.favourite}
+          activeLabel="Unfavourite"
+          inactiveLabel="Favourite"
+          write={(desired) => setFavouriteSite(site.prdbId, desired)}
+        />
+      )}
     />
   )
 }

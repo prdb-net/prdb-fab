@@ -26,6 +26,15 @@
   font-size: 0.9rem;
 }
 
+.newCount {
+  background: #122d24;
+  border: 1px solid #28634e;
+  border-radius: 999px;
+  color: #8fe0bd;
+  font-size: 0.78rem;
+  padding: 0.18rem 0.55rem;
+}
+
 .empty {
   border: 1px dashed var(--border);
   border-radius: var(--radius);

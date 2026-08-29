@@ -39,6 +39,8 @@ export type RunNowVerdict = Schema['RunNowVerdict']
 
 export type VideoCard = Schema['VideoCard']
 export type VideoPage = Schema['VideoPage']
+export type WhatsNewPage = Schema['WhatsNewPage']
+export type AccountPreferenceVerdict = Schema['AccountPreferenceVerdict']
 export type WantedList = Schema['WantedList']
 export type SitePage = Schema['SitePage']
 export type SiteVideos = Schema['SiteVideos']
@@ -297,21 +299,24 @@ export async function saveReportingSettings(
  * the page is a query over what the sync routines have already written, which
  * is why a reload spends no request (ADR 0018).
  */
-export async function listWhatsNew(page: number): Promise<VideoPage> {
-  return json<VideoPage>(await fetch(`/api/catalogue/whats-new?page=${page}`))
+export async function listWhatsNew(page: number): Promise<WhatsNewPage> {
+  return json<WhatsNewPage>(await fetch(`/api/catalogue/whats-new?page=${page}`))
+}
+
+export async function observeWhatsNew(videoId: number | string, createdAt: string): Promise<void> {
+  await post<unknown>('/api/catalogue/whats-new/observed', { videoId, createdAt })
 }
 
 /**
- * ADR 0007's only source of intent, read out of the catalogue. There is no
- * call beside this one that writes to it: wanting happens in prdb.
+ * The connected account's Wanted state, projected locally.
  */
 export async function listWanted(page: number): Promise<WantedList> {
   return json<WantedList>(await fetch(`/api/catalogue/wanted?page=${page}`))
 }
 
-export async function listSites(search: string, page: number): Promise<SitePage> {
+export async function listSites(search: string, page: number, scope: 'Favourites' | 'All'): Promise<SitePage> {
   return json<SitePage>(
-    await fetch(`/api/catalogue/sites?${parameters({ search, page: String(page) })}`),
+    await fetch(`/api/catalogue/sites?${parameters({ search, page: String(page), scope: scope.toLowerCase() })}`),
   )
 }
 
@@ -325,10 +330,30 @@ export async function readSite(
   )
 }
 
-export async function listActors(search: string, page: number): Promise<ActorPage> {
+export async function listActors(search: string, page: number, scope: 'Favourites' | 'All'): Promise<ActorPage> {
   return json<ActorPage>(
-    await fetch(`/api/catalogue/actors?${parameters({ search, page: String(page) })}`),
+    await fetch(`/api/catalogue/actors?${parameters({ search, page: String(page), scope: scope.toLowerCase() })}`),
   )
+}
+
+export async function setWanted(prdbId: string, desired: boolean): Promise<AccountPreferenceVerdict> {
+  return preference(`/api/catalogue/wanted/${segment(prdbId)}`, desired)
+}
+
+export async function setFavouriteActor(prdbId: string, desired: boolean): Promise<AccountPreferenceVerdict> {
+  return preference(`/api/catalogue/actors/${segment(prdbId)}/favourite`, desired)
+}
+
+export async function setFavouriteSite(prdbId: string, desired: boolean): Promise<AccountPreferenceVerdict> {
+  return preference(`/api/catalogue/sites/${segment(prdbId)}/favourite`, desired)
+}
+
+export async function downloadBest(prdbId: string): Promise<DownloadVerdict> {
+  return post<DownloadVerdict>(`/api/catalogue/videos/${segment(prdbId)}/download-best`)
+}
+
+async function preference(path: string, desired: boolean): Promise<AccountPreferenceVerdict> {
+  return json<AccountPreferenceVerdict>(await fetch(path, { method: desired ? 'POST' : 'DELETE' }))
 }
 
 export async function readActor(

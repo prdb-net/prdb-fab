@@ -39,6 +39,10 @@ public sealed class SitesAndActorsRouteTests
         Assert.Equal("Northline", Assert.Single(sites.Sites).Title);
         Assert.NotNull(actors);
         Assert.Equal("Mira Vance", Assert.Single(actors.Actors).Name);
+        var allSites = await client.GetFromJsonAsync<SitePage>(
+            "/api/catalogue/sites?scope=all",
+            TestContext.Current.CancellationToken);
+        Assert.Equal(["Northline", "Blue Harbour"], allSites!.Sites.Select(item => item.Title));
 
         Assert.NotNull(site);
         Assert.Equal("Northline", site.Site.Title);
@@ -81,6 +85,8 @@ public sealed class SitesAndActorsRouteTests
         context.CatalogueVideoActors.AddRange(
             new CatalogueVideoActorRow { VideoId = first.Id, ActorId = actor.Id },
             new CatalogueVideoActorRow { VideoId = second.Id, ActorId = actor.Id });
+        context.FavouriteSites.Add(new FavouriteSiteRow { SiteId = site.Id });
+        context.FavouriteActors.Add(new FavouriteActorRow { ActorId = actor.Id });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         return new(site.PrdbId, actor.PrdbId);

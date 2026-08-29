@@ -26,7 +26,8 @@ public sealed class DownloadFollowingRoutine(
     {
         var outstanding = await context.Downloads
             .AsNoTracking()
-            .Where(row => row.State == DownloadState.Outstanding)
+            .Where(row => row.State == DownloadState.Outstanding
+                && row.SubmissionState != DownloadSubmissionState.Pending)
             .OrderBy(row => row.CreatedAt)
             .ThenBy(row => row.Id)
             .Take(BatchSize)
@@ -184,6 +185,9 @@ public sealed class DownloadFollowingRoutine(
                 .SetProperty(candidate => candidate.FailMessage, job == null ? row.FailMessage : job.FailMessage)
                 .SetProperty(candidate => candidate.StageLog, job == null ? row.StageLog : job.StageLog)
                 .SetProperty(candidate => candidate.Storage, storage)
+                .SetProperty(
+                    candidate => candidate.SubmissionState,
+                    job == null ? row.SubmissionState : DownloadSubmissionState.Submitted)
                 .SetProperty(candidate => candidate.State, result.State)
                 .SetProperty(candidate => candidate.Cause, result.Cause)
                 .SetProperty(candidate => candidate.ConsecutiveAbsences, result.ConsecutiveAbsences),

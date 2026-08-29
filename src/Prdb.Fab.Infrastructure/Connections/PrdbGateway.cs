@@ -137,6 +137,20 @@ public sealed class PrdbGateway(
         return await ask(client, cancellationToken);
     }
 
+    /// <summary>Makes one no-content prdb write through the governed transport.</summary>
+    public async Task ActAsync(
+        string apiKey,
+        PrdbWork work,
+        Func<PrdbClient, CancellationToken, Task> act,
+        CancellationToken cancellationToken = default)
+    {
+        var client = Client(apiKey);
+
+        using var doing = governor.For(work);
+
+        await act(client, cancellationToken);
+    }
+
     /// <summary>
     /// A client per use over the pooled transport, which is ADR 0041's choice
     /// and ADR 0020's reason: the key is something a person changes in a form

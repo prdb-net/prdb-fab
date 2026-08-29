@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useSearchParams } from 'react-router'
 
-import { listWanted } from '../api/client.ts'
+import { listWanted, setWanted } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
 import gridStyles from './Grid.module.css'
 import { prdbVideoUrl } from './prdb.ts'
@@ -9,6 +9,7 @@ import { wantedKey } from './state.ts'
 import { videoReleasePath } from '../release/routes.ts'
 import styles from './Wanted.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import { PreferenceButton } from './PreferenceButton.tsx'
 
 /**
  * The wanted list, and where setting up ends.
@@ -18,10 +19,9 @@ import { PageLoading } from '../shell/LoadingScreen.tsx'
  * leads to a first download rather than by whether it completes. What stood
  * here until the catalogue existed was a page saying so; this replaces it.
  *
- * Wanting happens in prdb. `CONTEXT.md` defines a Wanted Video as one the user
- * has marked there and ADR 0007 makes that list the only source of intent, so
- * this surface reads and never writes — there is no way to add to it here, and
- * that is not a missing feature.
+ * The list is prdb account state projected locally. ADR 0048 lets a person
+ * change it here through the governed backend write path without exposing the
+ * account key to the browser.
  */
 export function WantedScreen() {
   // ADR 0036: where in the grid the user is, in the address.
@@ -56,8 +56,7 @@ export function WantedScreen() {
       </div>
 
       <p className={styles.lede}>
-        What you have marked as wanted in prdb. Mark them there and they arrive
-        here — this list is read, never written.
+        Your prdb Wanted list. Changes made here are written back to the connected account.
       </p>
 
       {total > 0 && (
@@ -89,6 +88,12 @@ export function WantedScreen() {
                 <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
                   {video.downloadReady ? 'Download' : 'View releases'}
                 </Link>
+                <PreferenceButton
+                  active
+                  activeLabel="Remove Wanted"
+                  inactiveLabel="Mark Wanted"
+                  write={(desired) => setWanted(video.prdbId, desired)}
+                />
                 <a
                   className={gridStyles.action}
                   href={prdbVideoUrl(String(video.prdbId))}

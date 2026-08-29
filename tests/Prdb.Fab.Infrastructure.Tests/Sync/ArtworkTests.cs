@@ -98,6 +98,31 @@ public sealed class ArtworkTests
         Assert.Equal(1, cdn.Requests);
     }
 
+    [Fact]
+    public async Task An_actor_profile_is_served_from_the_same_bounded_cache_after_one_fetch()
+    {
+        var cdn = new FakeCdn().Serves(Url(1));
+        await using var database = await CreateAsync(cdn);
+        var actorId = Guid.NewGuid();
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.CatalogueActors.Add(new CatalogueActorRow
+            {
+                PrdbId = actorId,
+                Name = "Actor",
+                ProfileImageUrl = Url(1),
+                ArtworkCacheKey = Image(1),
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        Assert.NotNull(await ServeActorAsync(database, actorId));
+        Assert.NotNull(await ServeActorAsync(database, actorId));
+        Assert.Equal(1, cdn.Requests);
+        Assert.Equal(0, (await SweepAsync(database, long.MaxValue)).Orphans);
+    }
+
     /// <summary>
     /// Nothing prefetches an unpinned video's artwork. The four browse surfaces
     /// range over a catalogue nobody scrolls all of, and ADR 0030 rejected
@@ -386,6 +411,17 @@ public sealed class ArtworkTests
 
         await served.Bytes.DisposeAsync();
 
+        return served.MediaType;
+    }
+
+    private static async Task<string?> ServeActorAsync(TestDatabase database, Guid actorId)
+    {
+        await using var scope = database.Scope();
+        var served = await scope.ServiceProvider
+            .GetRequiredService<ActorArtworkCache>()
+            .ServeAsync(actorId, TestContext.Current.CancellationToken);
+        if (served is null) return null;
+        await served.Bytes.DisposeAsync();
         return served.MediaType;
     }
 

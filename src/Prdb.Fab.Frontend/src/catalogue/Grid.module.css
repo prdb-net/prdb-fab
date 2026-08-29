@@ -82,6 +82,12 @@
   white-space: nowrap;
 }
 
+.status {
+  color: var(--text-quiet);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 /* What a surface puts under a card, where it puts one. */
 .action {
   font-size: 0.85rem;

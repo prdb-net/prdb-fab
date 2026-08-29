@@ -61,6 +61,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<FavouriteActorRow> FavouriteActors => Set<FavouriteActorRow>();
 
+    public DbSet<AccountPreferenceWriteRow> AccountPreferenceWrites => Set<AccountPreferenceWriteRow>();
+
     public DbSet<IndexerWalkStateRow> IndexerWalkStates => Set<IndexerWalkStateRow>();
 
     public DbSet<ReleaseRow> Releases => Set<ReleaseRow>();
@@ -324,6 +326,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             actor.HasIndex(row => row.PrdbId).IsUnique();
 
             actor.Property(row => row.Name).IsRequired();
+            actor.HasIndex(row => row.ArtworkCacheKey).IsUnique();
         });
 
         builder.Entity<CatalogueImageRow>(image =>
@@ -418,6 +421,16 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(row => row.ActorId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<AccountPreferenceWriteRow>(write =>
+        {
+            write.ToTable("account_preference_write");
+            write.HasKey(row => row.Id);
+            write.Declares(AccountClass.AccountScoped);
+            write.HasIndex(row => new { row.Kind, row.EntityId }).IsUnique();
+            write.HasIndex(row => new { row.Blocked, row.RequestedAt });
+            write.Property(row => row.Kind).HasConversion<string>();
         });
 
         builder.Entity<IndexerWalkStateRow>(state =>
@@ -549,7 +562,11 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             download.Property(row => row.DerivedReleaseId).IsRequired();
             download.Property(row => row.SubmittedName).IsRequired();
             download.Property(row => row.State).HasConversion<string>();
+            download.Property(row => row.SubmissionState)
+                .HasConversion<string>()
+                .HasDefaultValue(DownloadSubmissionState.Submitted);
             download.Property(row => row.Cause).HasConversion<string>();
+            download.HasIndex(row => new { row.SubmissionState, row.CreatedAt });
         });
 
         builder.Entity<DownloadOriginRuleRow>(origin =>
@@ -709,5 +726,6 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<ReportedStateRow>().Declares(ExportClass.Exported);
         builder.Entity<OperationLogEntryRow>().Declares(ExportClass.Exported);
         builder.Entity<GateAdmissionRow>().Declares(ExportClass.Exported);
+        builder.Entity<AccountPreferenceWriteRow>().Declares(ExportClass.Exported);
     }
 }

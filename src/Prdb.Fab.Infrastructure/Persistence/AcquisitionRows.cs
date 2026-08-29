@@ -11,6 +11,7 @@ public sealed class DownloadRow
     public string DerivedReleaseId { get; set; } = string.Empty;
     public string SubmittedName { get; set; } = string.Empty;
     public string? NzoId { get; set; }
+    public DownloadSubmissionState SubmissionState { get; set; } = DownloadSubmissionState.Submitted;
     public DownloadState State { get; set; }
     public DownloadCause? Cause { get; set; }
     public string? LastSabnzbdStatus { get; set; }

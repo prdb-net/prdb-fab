@@ -27,6 +27,25 @@
   margin: 1rem 0 1.5rem;
 }
 
+.scope {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.scope button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.35rem 0.75rem;
+}
+
+.scope button[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
 .filter input {
   background: var(--surface-raised);
   border: 1px solid var(--border);
@@ -61,6 +80,45 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 0;
+}
+
+.directoryVisual {
+  flex: 0 0 10rem;
+}
+
+.directoryFrame {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.artworkCaption {
+  color: var(--text-quiet);
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.25rem;
+}
+
+.directoryImage {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.directoryAbsent {
+  color: var(--text-quiet);
+}
+
+.directoryActions {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
 }
 
 .itemTitle,
