@@ -221,11 +221,18 @@ public sealed class AnotherAccountTests
 
         Assert.Equal(declared, [.. dropped.OrderBy(table => table, StringComparer.Ordinal)]);
 
-        // The three ADR 0013 choices and the per-account position of each
-        // wanted-video/indexer sweep go. The release cache itself belongs to no
-        // account and deliberately is not here.
+        // The three ADR 0013 choices, their pending account write, and the
+        // per-account position of each wanted-video/indexer sweep go. The
+        // release cache itself belongs to no account and deliberately is not
+        // here.
         Assert.Equal(
-            ["favourite_actor", "favourite_site", "wanted_video", "wanted_video_sweep_state"],
+            [
+                "account_preference_write",
+                "favourite_actor",
+                "favourite_site",
+                "wanted_video",
+                "wanted_video_sweep_state",
+            ],
             declared);
 
         // ADR 0019's record of what was reported is account-stamped rather than

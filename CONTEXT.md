@@ -22,11 +22,14 @@ A person credited on a video.
 _Avoid_: Performer, Star, Model
 
 **Wanted Video**:
-A video the user has marked in prdb as one they want to have.
+A video the user has marked as one they want to have. prdb holds the account
+preference; after a manual Download, fab may already show the durable desired
+state while its governed write to prdb is still pending.
 _Avoid_: Watchlist entry, Request, Wish
 
 **Favourite**:
-A site or an actor the user follows in prdb.
+A site or an actor the user follows. prdb holds the account preference, and fab
+writes a person's change there before projecting it locally.
 _Avoid_: Subscription, Follow
 
 **Fulfilment**:

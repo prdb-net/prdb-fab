@@ -97,7 +97,11 @@ public sealed class ActorFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
             }
             else if (row is null)
             {
-                var arrived = new CatalogueActorRow { PrdbId = id, Name = actor.Name ?? string.Empty };
+                var arrived = new CatalogueActorRow
+                {
+                    PrdbId = id,
+                    Name = actor.Name ?? string.Empty,
+                };
 
                 Context.CatalogueActors.Add(arrived);
 
@@ -113,6 +117,7 @@ public sealed class ActorFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
                 // whole of it rather than a diff — and applying it twice is the
                 // same as applying it once, which is what the overlap needs.
                 row.Name = actor.Name ?? string.Empty;
+                row.ProfileCheckedAt = null;
             }
         }
 
@@ -120,4 +125,5 @@ public sealed class ActorFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
 
         return named.Count;
     }
+
 }

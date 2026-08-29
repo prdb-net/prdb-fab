@@ -68,5 +68,22 @@ public static class ArtworkEndpoints
             return Results.Stream(served.Bytes, served.MediaType);
         })
         .WithTags("Artwork");
+
+        routes.MapGet("/api/artwork/actors/{actorId:guid}", async (
+            Guid actorId,
+            ActorArtworkCache cache,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            var served = await cache.ServeAsync(actorId, cancellationToken);
+            if (served is null)
+            {
+                http.Response.Headers.CacheControl = $"private, max-age={AbsentCacheSeconds}";
+                return Results.NoContent();
+            }
+
+            http.Response.Headers.CacheControl = $"private, max-age={CacheSeconds}";
+            return Results.Stream(served.Bytes, served.MediaType);
+        }).WithTags("Artwork");
     }
 }

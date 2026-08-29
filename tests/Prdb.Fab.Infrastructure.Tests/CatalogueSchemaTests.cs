@@ -63,6 +63,7 @@ public sealed class CatalogueSchemaTests
 
         Assert.Equal(
             [
+                "account_preference_write",
                 "arriving_file",
                 "arriving_file_candidate",
                 "automation_rule",

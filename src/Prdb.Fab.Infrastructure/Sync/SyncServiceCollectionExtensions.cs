@@ -37,12 +37,14 @@ public static class SyncServiceCollectionExtensions
         // is the half of the cache no routine turns.
         services.TryAddScoped<ArtworkStore>();
         services.AddScoped<ArtworkCache>();
+        services.AddScoped<ActorArtworkCache>();
         services.AddScoped<ArtworkEviction>();
 
         // What the browse surfaces read. Registered here because what it reads
         // is what the routines above write, and there is nothing else to it —
         // it holds no state and reaches nothing.
         services.AddScoped<CatalogueBrowse>();
+        services.AddScoped<AccountPreferences>();
 
         services.AddScoped<ActorFeed>();
         services.AddScoped<VideoImageFeed>();
@@ -60,6 +62,7 @@ public static class SyncServiceCollectionExtensions
         // schedule only ever sees IRoutine.
         Routine<ActorFeedRoutine>(services);
         Routine<ActorDrainRoutine>(services);
+        Routine<ActorProfileRoutine>(services);
         Routine<VideoImageFeedRoutine>(services);
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);
@@ -69,6 +72,7 @@ public static class SyncServiceCollectionExtensions
         Routine<SiteListRoutine>(services);
         Routine<CatalogueRepairRoutine>(services);
         Routine<ArtworkRoutine>(services);
+        Routine<AccountPreferenceRoutine>(services);
 
         return services;
     }

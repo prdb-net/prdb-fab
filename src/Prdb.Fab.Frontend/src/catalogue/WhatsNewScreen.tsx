@@ -1,13 +1,16 @@
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useSearchParams } from 'react-router'
 
-import { listWhatsNew } from '../api/client.ts'
+import { listWhatsNew, observeWhatsNew, setWanted } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
 import gridStyles from './Grid.module.css'
 import { videoReleasePath } from '../release/routes.ts'
 import { whatsNewKey } from './state.ts'
 import styles from './WhatsNew.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import { PreferenceButton } from './PreferenceButton.tsx'
+import { DownloadBestButton } from './DownloadBestButton.tsx'
 
 /**
  * What's New, and the landing page. ADR 0013 calls it that and it is what the
@@ -39,6 +42,14 @@ export function WhatsNewScreen() {
   const total = Number(videos.data?.total ?? 0)
   const pageSize = Number(videos.data?.pageSize ?? 48)
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  const checkpointVideoId = videos.data?.checkpointVideoId
+  const checkpointCreatedAt = videos.data?.checkpointCreatedAt
+
+  useEffect(() => {
+    if (page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
+      void observeWhatsNew(checkpointVideoId, checkpointCreatedAt).catch(() => undefined)
+    }
+  }, [page, checkpointVideoId, checkpointCreatedAt])
 
   const goTo = (wanted: number) => {
     setParameters(wanted === 1 ? {} : { page: String(wanted) })
@@ -54,6 +65,9 @@ export function WhatsNewScreen() {
       <div className={styles.heading}>
         <h1>What&rsquo;s new</h1>
         {total > 0 && <span className={styles.count}>{total} videos</span>}
+        {Number(videos.data?.newCount ?? 0) > 0 && (
+          <span className={styles.newCount}>{videos.data?.newCount} new since your previous visit</span>
+        )}
       </div>
 
       <p className={styles.lede}>
@@ -73,9 +87,21 @@ export function WhatsNewScreen() {
             videos={videos.data?.videos ?? []}
             action={(video) => (
               <span className={gridStyles.actions}>
+                <PreferenceButton
+                  active={video.wanted}
+                  activeLabel="Remove Wanted"
+                  inactiveLabel="Mark Wanted"
+                  write={(desired) => setWanted(video.prdbId, desired)}
+                />
+                {video.downloadReady && !video.outstanding && !video.heldQualities?.length && (
+                  <DownloadBestButton prdbId={video.prdbId} />
+                )}
                 <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  {video.downloadReady ? 'Download' : 'View releases'}
+                  View releases
                 </Link>
+                {video.sitePrdbId && (
+                  <Link to={`/sites/${video.sitePrdbId}`}>{video.site ?? 'View Site'}</Link>
+                )}
               </span>
             )}
           />

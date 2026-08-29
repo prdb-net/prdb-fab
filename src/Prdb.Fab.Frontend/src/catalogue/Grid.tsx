@@ -44,6 +44,7 @@ function Card({
       </span>
       <span className={styles.title}>{video.title}</span>
       <span className={styles.detail}>{describe(video)}</span>
+      <span className={styles.status}>{statusOf(video).join(' · ')}</span>
       {action?.(video)}
     </li>
   )
@@ -69,6 +70,30 @@ export function Artwork({
   imageClassName?: string
   absentClassName?: string
 }) {
+  return (
+    <CachedArtwork
+      path={`/api/artwork/${videoId}`}
+      title={title}
+      frameClassName={frameClassName}
+      imageClassName={imageClassName}
+      absentClassName={absentClassName}
+    />
+  )
+}
+
+export function CachedArtwork({
+  path,
+  title,
+  frameClassName = styles.frame,
+  imageClassName = styles.image,
+  absentClassName = styles.absent,
+}: {
+  path: string
+  title: string
+  frameClassName?: string
+  imageClassName?: string
+  absentClassName?: string
+}) {
   const frame = useRef<HTMLSpanElement>(null)
   const [source, setSource] = useState<string | null>(null)
   const [absent, setAbsent] = useState(false)
@@ -79,7 +104,7 @@ export function Artwork({
 
     const load = async () => {
       try {
-        const answer = await fetch(`/api/artwork/${videoId}`, { signal: controller.signal })
+        const answer = await fetch(path, { signal: controller.signal })
         if (answer.status === 204 || !answer.ok) {
           setAbsent(true)
           return
@@ -117,7 +142,7 @@ export function Artwork({
       controller.abort()
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [videoId])
+  }, [path])
 
   return (
     <span className={frameClassName} ref={frame}>
@@ -146,4 +171,22 @@ function describe(video: VideoCard): string {
   const released = video.releaseDate
 
   return [video.site, released].filter(Boolean).join(' · ')
+}
+
+function statusOf(video: VideoCard): string[] {
+  const held = video.heldQualities?.length
+    ? `Held: ${video.heldQualities.join(', ')}`
+    : null
+  const available = video.availability === 'Ready'
+    ? 'Best Release ready'
+    : video.availability === 'ReleasesNeedInspection'
+      ? 'Releases need inspection'
+      : 'No identified Release'
+  const wanted = video.wantedSyncFailure
+    ? `Wanted sync blocked: ${video.wantedSyncFailure}`
+    : video.wantedSyncPending
+      ? 'Wanted sync pending'
+      : video.wanted ? 'Wanted' : 'Not wanted'
+  return [wanted, video.outstanding ? 'Download outstanding' : null, held, available]
+    .filter((value): value is string => Boolean(value))
 }

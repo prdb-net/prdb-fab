@@ -127,4 +127,12 @@ public sealed class InstallationRow
 
     /// <summary>Whether a person's Confirmed Assignments may be sent to prdb.</summary>
     public bool ReportConfirmedAssignments { get; set; }
+
+    /// <summary>
+    /// The newest What's New row observed by a loaded page, as a stable tuple
+    /// because several Videos may share prdb's creation timestamp.
+    /// </summary>
+    public DateTimeOffset? WhatsNewObservedAt { get; set; }
+
+    public long? WhatsNewObservedVideoId { get; set; }
 }

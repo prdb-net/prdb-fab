@@ -74,6 +74,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/artwork/actors/{actorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    actorId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases": {
         parameters: {
             query?: never;
@@ -1204,13 +1239,50 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["VideoPage"];
+                        "application/json": components["schemas"]["WhatsNewPage"];
                     };
                 };
             };
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/whats-new/observed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WhatsNewObservation"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1254,6 +1326,224 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalogue/wanted/{prdbId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPreferenceVerdict"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPreferenceVerdict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/actors/{prdbId}/favourite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPreferenceVerdict"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPreferenceVerdict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/sites/{prdbId}/favourite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPreferenceVerdict"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountPreferenceVerdict"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/videos/{prdbId}/download-best": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadVerdict"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalogue/sites": {
         parameters: {
             query?: never;
@@ -1266,6 +1556,7 @@ export interface paths {
                 query?: {
                     search?: string;
                     page?: number | string;
+                    scope?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1351,6 +1642,7 @@ export interface paths {
                 query?: {
                     search?: string;
                     page?: number | string;
+                    scope?: string;
                 };
                 header?: never;
                 path?: never;
@@ -2314,12 +2606,24 @@ export interface components {
             signedIn: boolean;
             nextStep: null | components["schemas"]["OnboardingStep"];
         };
+        /** @enum {unknown} */
+        AccountPreferenceOutcome: "Updated" | "Deferred" | "Rejected" | "NotFound" | "Failed";
+        AccountPreferenceVerdict: {
+            outcome: components["schemas"]["AccountPreferenceOutcome"];
+            desired: boolean;
+            detail: string;
+            /** Format: int32 */
+            retryAfterSeconds?: null | number | string;
+            updated?: boolean;
+        };
         ActorCard: {
             /** Format: uuid */
             prdbId: string;
             name: string;
             /** Format: int32 */
             videoCount: number | string;
+            favourite: boolean;
+            hasArtwork: boolean;
         };
         ActorPage: {
             actors: components["schemas"]["ActorCard"][];
@@ -2329,6 +2633,7 @@ export interface components {
             pageSize: number | string;
             /** Format: int32 */
             total: number | string;
+            scope: components["schemas"]["CatalogueScope"];
         };
         ActorVideos: {
             actor: components["schemas"]["BrowseContext"];
@@ -2418,7 +2723,10 @@ export interface components {
             /** Format: uuid */
             prdbId: string;
             title: string;
+            favourite: boolean;
         };
+        /** @enum {unknown} */
+        CatalogueScope: "Favourites" | "All";
         /** @enum {unknown} */
         ChangePasswordOutcome: "Changed" | "WrongPassword" | "TooManyAttempts" | "Refused";
         ChangePasswordRequest: {
@@ -2477,7 +2785,7 @@ export interface components {
             rules: components["schemas"]["DownloadOriginRuleView"][];
         };
         /** @enum {unknown} */
-        DownloadOutcome: "Submitted" | "Rejected" | "SubmissionUnknown" | "ConnectionProblem" | "IndexerProblem" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
+        DownloadOutcome: "Pending" | "Submitted" | "Rejected" | "SubmissionUnknown" | "ConnectionProblem" | "IndexerProblem" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
         DownloadPage: {
             downloads: components["schemas"]["DownloadViewRow"][];
             indexers: components["schemas"]["DownloadIndexer"][];
@@ -3062,6 +3370,9 @@ export interface components {
             network: null | string;
             /** Format: int32 */
             videoCount: number | string;
+            favourite: boolean;
+            /** Format: int64 */
+            representativeVideoId: null | number | string;
         };
         SiteOnlyMatch: {
             /** Format: uuid */
@@ -3076,6 +3387,7 @@ export interface components {
             pageSize: number | string;
             /** Format: int32 */
             total: number | string;
+            scope: components["schemas"]["CatalogueScope"];
         };
         SiteVideos: {
             site: components["schemas"]["BrowseContext"];
@@ -3160,6 +3472,11 @@ export interface components {
             nextRelease: null | components["schemas"]["ReleaseChoice"];
             downloads: components["schemas"]["DownloadSelectionRow"][];
         };
+        /**
+         * @default NoIdentifiedRelease
+         * @enum {unknown}
+         */
+        VideoAvailability: "Ready" | "ReleasesNeedInspection" | "NoIdentifiedRelease";
         VideoCard: {
             /** Format: int64 */
             id: number | string;
@@ -3167,10 +3484,21 @@ export interface components {
             prdbId: string;
             title: string;
             site: null | string;
+            /** Format: uuid */
+            sitePrdbId: null | string;
             /** Format: date */
             releaseDate: null | string;
             /** @default false */
             downloadReady: boolean;
+            /** @default false */
+            wanted: boolean;
+            /** @default false */
+            wantedSyncPending: boolean;
+            wantedSyncFailure?: null | string;
+            /** @default false */
+            outstanding: boolean;
+            heldQualities?: null | string[];
+            availability?: components["schemas"]["VideoAvailability"];
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];
@@ -3191,6 +3519,27 @@ export interface components {
             total: number | string;
             feedHasRun: boolean;
             backfillRunning: boolean;
+        };
+        WhatsNewObservation: {
+            /** Format: int64 */
+            videoId: number | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        WhatsNewPage: {
+            videos: components["schemas"]["VideoCard"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            newCount: number | string;
+            /** Format: int64 */
+            checkpointVideoId: null | number | string;
+            /** Format: date-time */
+            checkpointCreatedAt: null | string;
         };
     };
     responses: never;

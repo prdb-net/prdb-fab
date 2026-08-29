@@ -5,6 +5,7 @@ using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Automation;
+using Prdb.Fab.Infrastructure.Sync;
 
 namespace Prdb.Fab.Infrastructure.Acquisition;
 
@@ -15,6 +16,7 @@ public sealed class PersonDownloads(
     NewznabGateway newznab,
     SabnzbdGateway sabnzbd,
     AutomaticEligibility automaticEligibility,
+    AccountPreferences accountPreferences,
     TimeProvider time)
 {
     /// <summary>
@@ -74,6 +76,33 @@ public sealed class PersonDownloads(
             automatic: false,
             cancellationToken);
 
+    public async Task<DownloadVerdict?> DownloadBestAsync(
+        Guid videoId,
+        CancellationToken cancellationToken = default)
+    {
+        var ranking = await rankings.ForVideoAsync(videoId, observeDecision: false, cancellationToken);
+        if (ranking is null) return null;
+        if (ranking.Ranked.FirstOrDefault() is not { } best)
+        {
+            await PersistWantedIntentAsync(videoId, cancellationToken);
+            var outcome = ranking.DownloadsSpent >= ranking.RetryBudget
+                ? DownloadPlanOutcome.RetryBudgetSpent
+                : DownloadPlanOutcome.NoReleasesLeft;
+            return DownloadVerdict.Planning(
+                Guid.CreateVersion7(time.GetUtcNow()),
+                outcome,
+                DetailOf(outcome));
+        }
+
+        return await DownloadCoreAsync(
+            Guid.CreateVersion7(time.GetUtcNow()),
+            videoId,
+            best.Id,
+            requireFailedHistory: false,
+            automatic: false,
+            cancellationToken);
+    }
+
     /// <summary>
     /// Uses the same reservation, NZB retrieval and SABnzbd submission as a
     /// person's action, while recording every rule that currently permits it.
@@ -90,6 +119,104 @@ public sealed class PersonDownloads(
             requireFailedHistory: false,
             automatic: true,
             cancellationToken);
+
+    /// <summary>Resumes a manual reservation that crashed before SABnzbd was called.</summary>
+    public async Task<DownloadVerdict?> SubmitPendingAsync(
+        Guid downloadId,
+        CancellationToken cancellationToken = default)
+    {
+        var download = await context.Downloads
+            .AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == downloadId, cancellationToken);
+        if (download is null) return null;
+        if (download.SubmissionState != DownloadSubmissionState.Pending) return VerdictOf(download);
+
+        var installation = await context.Installation.AsNoTracking().SingleAsync(cancellationToken);
+        if (installation.SabnzbdUrl is null
+            || installation.SabnzbdApiKey is null
+            || installation.SabnzbdCategory is null)
+        {
+            return DownloadVerdict.Connection(downloadId, "SABnzbd is not configured.");
+        }
+
+        var storedRelease = await context.Releases
+            .AsNoTracking()
+            .Where(row => row.IndexerId == download.IndexerId
+                && row.DerivedReleaseId == download.DerivedReleaseId
+                && row.Video != null
+                && row.Video.PrdbId == download.VideoId)
+            .Select(row => new { row.DownloadUrl, IndexerUrl = row.Indexer!.Url })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (storedRelease is null)
+        {
+            return DownloadVerdict.Indexer(downloadId, "The reserved Release is no longer in the local cache.");
+        }
+
+        var categories = await sabnzbd.CategoryNamesAsync(
+            installation.SabnzbdUrl,
+            installation.SabnzbdApiKey,
+            cancellationToken);
+        if (categories.Outcome != SabnzbdConnectionOutcome.Saved
+            || !categories.Categories.Contains(installation.SabnzbdCategory, StringComparer.Ordinal))
+        {
+            return DownloadVerdict.Connection(downloadId, "SABnzbd could not be checked.");
+        }
+
+        var nzb = await newznab.NzbAsync(
+            storedRelease.DownloadUrl,
+            storedRelease.IndexerUrl,
+            cancellationToken);
+        if (nzb.Refusal is not null)
+        {
+            return DownloadVerdict.Indexer(downloadId, "The NZB could not be fetched from the indexer.");
+        }
+
+        var claimed = await context.Downloads
+            .Where(row => row.Id == downloadId && row.SubmissionState == DownloadSubmissionState.Pending)
+            .ExecuteUpdateAsync(
+                update => update.SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitting),
+                cancellationToken);
+        if (claimed == 0) return VerdictOf((await ExistingAsync(downloadId, cancellationToken))!);
+
+        var submission = await sabnzbd.SubmitAsync(
+            installation.SabnzbdUrl,
+            installation.SabnzbdApiKey,
+            installation.SabnzbdCategory,
+            download.SubmittedName,
+            nzb.Bytes,
+            cancellationToken);
+        if (submission.Outcome != SabnzbdConnectionOutcome.Saved)
+        {
+            await context.Downloads
+                .Where(row => row.Id == downloadId)
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(row => row.SubmissionState, DownloadSubmissionState.Unknown),
+                    cancellationToken);
+            return VerdictOf((await ExistingAsync(downloadId, cancellationToken))!);
+        }
+
+        if (submission.NzoId is { Length: > 0 } nzoId)
+        {
+            await context.Downloads
+                .Where(row => row.Id == downloadId)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(row => row.NzoId, nzoId)
+                    .SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitted),
+                    cancellationToken);
+        }
+        else
+        {
+            await context.Downloads
+                .Where(row => row.Id == downloadId)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(row => row.State, DownloadState.Failed)
+                    .SetProperty(row => row.Cause, DownloadCause.Rejected)
+                    .SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitted),
+                    cancellationToken);
+        }
+
+        return VerdictOf((await ExistingAsync(downloadId, cancellationToken))!);
+    }
 
     private async Task<DownloadVerdict?> DownloadCoreAsync(
         Guid downloadId,
@@ -110,6 +237,10 @@ public sealed class PersonDownloads(
         var planOutcome = OutcomeOf(ranking, release);
         if (planOutcome != DownloadPlanOutcome.Ready)
         {
+            if (!automatic)
+            {
+                await PersistWantedIntentAsync(videoId, cancellationToken);
+            }
             return DownloadVerdict.Planning(downloadId, planOutcome, DetailOf(planOutcome));
         }
 
@@ -118,6 +249,7 @@ public sealed class PersonDownloads(
             || installation.SabnzbdApiKey is null
             || installation.SabnzbdCategory is null)
         {
+            if (!automatic) await PersistWantedIntentAsync(videoId, cancellationToken);
             return DownloadVerdict.Connection(downloadId, "SABnzbd is not configured.");
         }
 
@@ -128,6 +260,7 @@ public sealed class PersonDownloads(
         if (categories.Outcome != SabnzbdConnectionOutcome.Saved
             || !categories.Categories.Contains(installation.SabnzbdCategory, StringComparer.Ordinal))
         {
+            if (!automatic) await PersistWantedIntentAsync(videoId, cancellationToken);
             return DownloadVerdict.Connection(
                 downloadId,
                 categories.Outcome == SabnzbdConnectionOutcome.Saved
@@ -152,6 +285,7 @@ public sealed class PersonDownloads(
             cancellationToken);
         if (nzb.Refusal is not null)
         {
+            if (!automatic) await PersistWantedIntentAsync(videoId, cancellationToken);
             return DownloadVerdict.Indexer(downloadId, "The NZB could not be fetched from the indexer.");
         }
 
@@ -164,6 +298,9 @@ public sealed class PersonDownloads(
             DerivedReleaseId = release.DerivedReleaseId,
             SubmittedName = release.Title,
             State = DownloadState.Outstanding,
+            SubmissionState = automatic
+                ? DownloadSubmissionState.Submitted
+                : DownloadSubmissionState.Pending,
             OutstandingSince = now,
             OriginIsPerson = !automatic,
             CreatedAt = now,
@@ -232,6 +369,10 @@ public sealed class PersonDownloads(
             }
 
             context.Downloads.Add(download);
+            if (!automatic)
+            {
+                await accountPreferences.StageWantedAsync(videoId, now, cancellationToken);
+            }
             context.DownloadOriginRules.AddRange(originRules.Select(rule => new DownloadOriginRuleRow
             {
                 Id = Guid.CreateVersion7(now),
@@ -241,6 +382,19 @@ public sealed class PersonDownloads(
             }));
             await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
+        }
+
+        if (!automatic)
+        {
+            var claimed = await context.Downloads
+                .Where(row => row.Id == download.Id && row.SubmissionState == DownloadSubmissionState.Pending)
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitting),
+                    cancellationToken);
+            if (claimed == 0)
+            {
+                return VerdictOf((await ExistingAsync(download.Id, cancellationToken))!);
+            }
         }
 
         var submission = await sabnzbd.SubmitAsync(
@@ -253,6 +407,11 @@ public sealed class PersonDownloads(
 
         if (submission.Outcome != SabnzbdConnectionOutcome.Saved)
         {
+            await context.Downloads
+                .Where(row => row.Id == download.Id)
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(row => row.SubmissionState, DownloadSubmissionState.Unknown),
+                    cancellationToken);
             // The request may have reached SABnzbd even though its answer did
             // not return. The durable reservation prevents a blind duplicate;
             // its missing nzo_id makes the uncertainty explicit.
@@ -269,7 +428,9 @@ public sealed class PersonDownloads(
         {
             await context.Downloads
                 .Where(row => row.Id == download.Id && row.State == DownloadState.Outstanding)
-                .ExecuteUpdateAsync(update => update.SetProperty(row => row.NzoId, nzoId), cancellationToken);
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(row => row.NzoId, nzoId)
+                    .SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitted), cancellationToken);
         }
         else
         {
@@ -277,10 +438,19 @@ public sealed class PersonDownloads(
                 .Where(row => row.Id == download.Id && row.State == DownloadState.Outstanding)
                 .ExecuteUpdateAsync(update => update
                     .SetProperty(row => row.State, DownloadState.Failed)
-                    .SetProperty(row => row.Cause, DownloadCause.Rejected), cancellationToken);
+                    .SetProperty(row => row.Cause, DownloadCause.Rejected)
+                    .SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitted), cancellationToken);
         }
 
         return VerdictOf((await ExistingAsync(download.Id, cancellationToken))!);
+    }
+
+    private async Task PersistWantedIntentAsync(Guid videoId, CancellationToken cancellationToken)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        await accountPreferences.StageWantedAsync(videoId, time.GetUtcNow(), cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private Task<DownloadRow?> ExistingAsync(Guid id, CancellationToken cancellationToken) =>
@@ -304,6 +474,13 @@ public sealed class PersonDownloads(
 
     private static DownloadVerdict VerdictOf(DownloadRow row) => row switch
     {
+        { SubmissionState: DownloadSubmissionState.Pending } => new(
+            DownloadOutcome.Pending,
+            row.Id,
+            row.State,
+            row.Cause,
+            null,
+            "The manual Download is durably queued for SABnzbd submission."),
         { NzoId.Length: > 0 } => new(
             DownloadOutcome.Submitted,
             row.Id,
@@ -338,6 +515,7 @@ public enum DownloadPlanOutcome
 
 public enum DownloadOutcome
 {
+    Pending,
     Submitted,
     Rejected,
     SubmissionUnknown,

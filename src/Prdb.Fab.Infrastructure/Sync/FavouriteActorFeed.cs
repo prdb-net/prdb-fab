@@ -85,6 +85,19 @@ public sealed class FavouriteActorFeed(FabDbContext context, PrdbGateway prdb, C
 
             var actorId = await Catalogue.ActorAsync(prdbId, favourite.Name, cancellationToken);
 
+            var actor = await Context.CatalogueActors
+                .AsTracking()
+                .SingleAsync(row => row.Id == actorId, cancellationToken);
+            if (!string.Equals(actor.ProfileImageUrl, favourite.ProfileImageUrl, StringComparison.Ordinal))
+            {
+                actor.ProfileImageUrl = favourite.ProfileImageUrl;
+                actor.ArtworkCacheKey = favourite.ProfileImageUrl is null ? null : ActorArtworkKey.Of(prdbId);
+                actor.ArtworkCached = false;
+                actor.ArtworkFoundDead = false;
+                actor.ArtworkLastServedAt = null;
+            }
+            actor.ProfileCheckedAt = favourite.UpdatedAtUtc ?? favourite.FavoritedAtUtc;
+
             var held = await Context.FavouriteActors
                 .AsTracking()
                 .SingleOrDefaultAsync(row => row.ActorId == actorId, cancellationToken);

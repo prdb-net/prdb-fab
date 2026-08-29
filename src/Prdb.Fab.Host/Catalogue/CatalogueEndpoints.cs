@@ -1,4 +1,6 @@
+using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Sync;
+using Prdb.Fab.Infrastructure.Acquisition;
 
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -25,22 +27,45 @@ public static class CatalogueEndpoints
             CancellationToken cancellationToken,
             int page = 1) =>
             TypedResults.Ok(await browse.WhatsNewAsync(page, cancellationToken)));
+        group.MapPost("/whats-new/observed", async (
+            WhatsNewObservation observation,
+            CatalogueBrowse browse,
+            CancellationToken cancellationToken) =>
+        {
+            await browse.ObserveWhatsNewAsync(
+                observation.VideoId,
+                observation.CreatedAt,
+                cancellationToken);
+            return TypedResults.Ok();
+        });
 
-        // ADR 0007's only source of intent, read. There is no route beside this
-        // one to add to it: wanting happens in prdb, and the feed is how it
-        // arrives.
+        // The locally projected account list, including accepted catalogue
+        // actions and a manual acquisition's durable pending intent (ADR 0048).
         group.MapGet("/wanted", async (
             CatalogueBrowse browse,
             CancellationToken cancellationToken,
             int page = 1) =>
             TypedResults.Ok(await browse.WantedAsync(page, cancellationToken)));
 
+        MapPreference(group, "/wanted/{prdbId:guid}", AccountPreferenceKind.WantedVideo);
+        MapPreference(group, "/actors/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteActor);
+        MapPreference(group, "/sites/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteSite);
+        group.MapPost("/videos/{prdbId:guid}/download-best", async Task<Results<Ok<DownloadVerdict>, NotFound>> (
+            Guid prdbId,
+            PersonDownloads downloads,
+            CancellationToken cancellationToken) =>
+        {
+            var verdict = await downloads.DownloadBestAsync(prdbId, cancellationToken);
+            return verdict is null ? TypedResults.NotFound() : TypedResults.Ok(verdict);
+        });
+
         group.MapGet("/sites", async (
             CatalogueBrowse browse,
             CancellationToken cancellationToken,
             string? search = null,
-            int page = 1) =>
-            TypedResults.Ok(await browse.SitesAsync(search, page, cancellationToken)));
+            int page = 1,
+            string? scope = null) =>
+            TypedResults.Ok(await browse.SitesAsync(search, page, ScopeOf(scope), cancellationToken)));
 
         group.MapGet("/sites/{prdbId:guid}", ReadSiteAsync);
 
@@ -48,10 +73,33 @@ public static class CatalogueEndpoints
             CatalogueBrowse browse,
             CancellationToken cancellationToken,
             string? search = null,
-            int page = 1) =>
-            TypedResults.Ok(await browse.ActorsAsync(search, page, cancellationToken)));
+            int page = 1,
+            string? scope = null) =>
+            TypedResults.Ok(await browse.ActorsAsync(search, page, ScopeOf(scope), cancellationToken)));
 
         group.MapGet("/actors/{prdbId:guid}", ReadActorAsync);
+    }
+
+    private static CatalogueScope ScopeOf(string? scope) =>
+        string.Equals(scope, "all", StringComparison.OrdinalIgnoreCase)
+            ? CatalogueScope.All
+            : CatalogueScope.Favourites;
+
+    private static void MapPreference(
+        RouteGroupBuilder group,
+        string pattern,
+        AccountPreferenceKind kind)
+    {
+        group.MapPost(pattern, async (
+            Guid prdbId,
+            AccountPreferences preferences,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await preferences.SetAsync(kind, prdbId, desired: true, cancellationToken)));
+        group.MapDelete(pattern, async (
+            Guid prdbId,
+            AccountPreferences preferences,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await preferences.SetAsync(kind, prdbId, desired: false, cancellationToken)));
     }
 
     private static async Task<Results<Ok<SiteVideos>, NotFound>> ReadSiteAsync(
@@ -76,3 +124,5 @@ public static class CatalogueEndpoints
         return answer is null ? TypedResults.NotFound() : TypedResults.Ok(answer);
     }
 }
+
+public sealed record WhatsNewObservation(long VideoId, DateTimeOffset CreatedAt);

@@ -13,17 +13,16 @@ using Prdb.Sdk.Generated.Models;
 namespace Prdb.Fab.Infrastructure.Sync;
 
 /// <summary>
-/// <c>GET /wanted-videos/changes</c>: the list ADR 0007 makes the only source
-/// of intent.
+/// <c>GET /wanted-videos/changes</c>: the ordinary projection of prdb Wanted
+/// state.
 /// </summary>
 /// <remarks>
 /// Account-scoped, and so is its cursor: a position into another account's list
 /// would resume a walk over answers this installation can no longer see. What a
 /// key from a different account takes with it is ticket 11's list of deletes.
 /// <para>
-/// Read here and written nowhere. <c>CONTEXT.md</c> defines a Wanted Video as
-/// one the user has marked <em>in prdb</em>, so wanting happens there and this
-/// feed is how it arrives.
+/// ADR 0048's pending manual intent is protected from a stale tombstone until
+/// its write converges; otherwise this feed remains the account authority.
 /// </para>
 /// </remarks>
 public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueRows catalogue)
@@ -88,6 +87,22 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
 
             if (entry.IsDeleted is true)
             {
+                var desiredLocally = await Context.AccountPreferenceWrites.AnyAsync(
+                    row => row.Kind == AccountPreferenceKind.WantedVideo
+                        && row.EntityId == prdbId
+                        && row.Desired
+                        && !row.Blocked,
+                    cancellationToken);
+                if (desiredLocally)
+                {
+                    // A feed page can have been produced before a manual
+                    // acquisition committed its Wanted write. Until that
+                    // durable write converges, its desired state wins over the
+                    // stale tombstone rather than flickering out locally.
+                    applied++;
+                    continue;
+                }
+
                 // Off the list. The catalogue row stays: it belongs to no
                 // account and something else may still point at it, and losing
                 // the pin is what eviction is for rather than what a delete is.

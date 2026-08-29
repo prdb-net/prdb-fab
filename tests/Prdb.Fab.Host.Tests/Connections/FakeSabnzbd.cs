@@ -51,6 +51,8 @@ internal sealed class FakeSabnzbd : HttpMessageHandler
 
     public Exception? AddFileThrows { get; set; }
 
+    public Func<Task>? BeforeAddFileAnswer { get; set; }
+
     public string? LastAddFileBody { get; private set; }
 
     public string? LastAddFileCategory { get; private set; }
@@ -71,6 +73,11 @@ internal sealed class FakeSabnzbd : HttpMessageHandler
                 : await request.Content.ReadAsStringAsync(cancellationToken);
             LastAddFileCategory = query["cat"];
             LastAddFileName = query["nzbname"];
+
+            if (BeforeAddFileAnswer is not null)
+            {
+                await BeforeAddFileAnswer();
+            }
 
             if (AddFileThrows is { } refusal)
             {

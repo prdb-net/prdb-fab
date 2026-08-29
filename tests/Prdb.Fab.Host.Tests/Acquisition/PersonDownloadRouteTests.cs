@@ -6,11 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Host.Tests.Connections;
 using Prdb.Fab.Infrastructure.Connections;
+using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Sync;
 
 using Xunit;
 
@@ -23,9 +26,27 @@ public sealed class PersonDownloadRouteTests
     {
         var indexer = new NzbIndexer();
         var sabnzbd = new FakeSabnzbd();
-        await using var application = Application(indexer, sabnzbd);
+        var prdb = new PreferencePrdb();
+        await using var application = Application(indexer, sabnzbd, prdb);
         using var client = await application.SignedInClientAsync();
         var seeded = await SeedAsync(application);
+        sabnzbd.BeforeAddFileAnswer = async () =>
+        {
+            await using var atSubmission = application.Services.CreateAsyncScope();
+            var context = atSubmission.ServiceProvider.GetRequiredService<FabDbContext>();
+            Assert.True(await context.WantedVideos.AnyAsync(
+                row => row.Video!.PrdbId == seeded.VideoId,
+                TestContext.Current.CancellationToken));
+            Assert.True(await context.AccountPreferenceWrites.AnyAsync(
+                row => row.Kind == AccountPreferenceKind.WantedVideo
+                    && row.EntityId == seeded.VideoId
+                    && row.Desired,
+                TestContext.Current.CancellationToken));
+            Assert.Equal(
+                DownloadSubmissionState.Submitting,
+                await context.Downloads.Select(row => row.SubmissionState)
+                    .SingleAsync(TestContext.Current.CancellationToken));
+        };
 
         var preview = await PreviewAsync(client, seeded);
         Assert.Equal("Ready", preview.Outcome);
@@ -51,14 +72,24 @@ public sealed class PersonDownloadRouteTests
         Assert.Contains(NzbIndexer.Nzb, sabnzbd.LastAddFileBody);
 
         await using var scope = application.Services.CreateAsyncScope();
-        var stored = await scope.ServiceProvider.GetRequiredService<FabDbContext>().Downloads.SingleAsync(
-            TestContext.Current.CancellationToken);
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        var stored = await context.Downloads.SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal(7, stored.Id.Version);
         Assert.True(stored.OriginIsPerson);
         Assert.Equal(DownloadState.Outstanding, stored.State);
         Assert.Equal("A.Release.Name", stored.SubmittedName);
         Assert.Equal("SABnzbd_nzo_fixture", stored.NzoId);
         Assert.Equal(seeded.VideoId, stored.VideoId);
+        Assert.Equal(DownloadSubmissionState.Submitted, stored.SubmissionState);
+
+        await context.Installation.ExecuteUpdateAsync(
+            update => update.SetProperty(row => row.PrdbApiKey, "fixture"),
+            TestContext.Current.CancellationToken);
+        var sync = await scope.ServiceProvider.GetRequiredService<AccountPreferenceRoutine>()
+            .RunAsync(null, TestContext.Current.CancellationToken);
+        Assert.Equal(1, sync.ItemsHandled);
+        Assert.Equal(1, prdb.Posts);
+        Assert.False(await context.AccountPreferenceWrites.AnyAsync(TestContext.Current.CancellationToken));
 
         var log = string.Join(
             '\n',
@@ -121,6 +152,15 @@ public sealed class PersonDownloadRouteTests
             0,
             await scope.ServiceProvider.GetRequiredService<FabDbContext>().Downloads.CountAsync(
                 TestContext.Current.CancellationToken));
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        Assert.True(await context.WantedVideos.AnyAsync(
+            row => row.Video!.PrdbId == seeded.VideoId,
+            TestContext.Current.CancellationToken));
+        Assert.True(await context.AccountPreferenceWrites.AnyAsync(
+            row => row.Kind == AccountPreferenceKind.WantedVideo
+                && row.EntityId == seeded.VideoId
+                && row.Desired,
+            TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -148,6 +188,52 @@ public sealed class PersonDownloadRouteTests
             TestContext.Current.CancellationToken);
         Assert.Equal(DownloadState.Outstanding, stored.State);
         Assert.Null(stored.NzoId);
+    }
+
+    [Fact]
+    public async Task A_pending_manual_reservation_resumes_once_after_a_process_boundary()
+    {
+        var indexer = new NzbIndexer();
+        var sabnzbd = new FakeSabnzbd();
+        await using var application = Application(indexer, sabnzbd);
+        _ = await application.SignedInClientAsync();
+        var seeded = await SeedAsync(application);
+        var downloadId = Guid.CreateVersion7();
+
+        await using (var beforeCrash = application.Services.CreateAsyncScope())
+        {
+            var context = beforeCrash.ServiceProvider.GetRequiredService<FabDbContext>();
+            var release = await context.Releases.SingleAsync(TestContext.Current.CancellationToken);
+            context.Downloads.Add(new DownloadRow
+            {
+                Id = downloadId,
+                VideoId = seeded.VideoId,
+                IndexerId = release.IndexerId,
+                DerivedReleaseId = release.DerivedReleaseId,
+                SubmittedName = release.Title,
+                SubmissionState = DownloadSubmissionState.Pending,
+                State = DownloadState.Outstanding,
+                OutstandingSince = DateTimeOffset.UtcNow,
+                OriginIsPerson = true,
+                CreatedAt = DateTimeOffset.UtcNow,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var afterRestart = application.Services.CreateAsyncScope())
+        {
+            var routine = afterRestart.ServiceProvider.GetRequiredService<DownloadSubmissionRoutine>();
+            Assert.Equal(1, (await routine.RunAsync(null, TestContext.Current.CancellationToken)).ItemsHandled);
+        }
+        await using (var nextTurn = application.Services.CreateAsyncScope())
+        {
+            var routine = nextTurn.ServiceProvider.GetRequiredService<DownloadSubmissionRoutine>();
+            Assert.Null((await routine.RunAsync(null, TestContext.Current.CancellationToken)).Outcome);
+            var stored = await nextTurn.ServiceProvider.GetRequiredService<FabDbContext>()
+                .Downloads.SingleAsync(row => row.Id == downloadId, TestContext.Current.CancellationToken);
+            Assert.Equal(DownloadSubmissionState.Submitted, stored.SubmissionState);
+        }
+        Assert.Equal(1, sabnzbd.Modes.Count(mode => mode == "addfile"));
     }
 
     [Fact]
@@ -221,10 +307,16 @@ public sealed class PersonDownloadRouteTests
         Assert.DoesNotContain("/nzb", body, StringComparison.Ordinal);
     }
 
-    private static FabApplication Application(HttpMessageHandler indexer, HttpMessageHandler sabnzbd) =>
-        new FabApplication()
+    private static FabApplication Application(
+        HttpMessageHandler indexer,
+        HttpMessageHandler sabnzbd,
+        HttpMessageHandler? prdb = null)
+    {
+        var application = new FabApplication()
             .Answering(FabTransports.Indexers, indexer)
             .Answering(FabTransports.Sabnzbd, sabnzbd);
+        return prdb is null ? application : application.Answering(FabTransports.Prdb, prdb);
+    }
 
     private static async Task<Seeded> SeedAsync(
         FabApplication application,
@@ -322,6 +414,19 @@ public sealed class PersonDownloadRouteTests
             {
                 Content = new StringContent(Nzb, Encoding.UTF8, "application/x-nzb"),
             });
+        }
+    }
+
+    private sealed class PreferencePrdb : HttpMessageHandler
+    {
+        public int Posts { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.Method == HttpMethod.Post) Posts++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
         }
     }
 }

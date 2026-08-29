@@ -19,6 +19,38 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-29
+
+This release turns the local catalogue into the front of the acquisition loop:
+account preferences can be changed without leaving fab, and What's New exposes
+the decisions that were previously hidden behind Release tables.
+
+### Added
+
+- **Wanted and Favourite actions backed by prdb.** Video, Actor and Site
+  preferences are written through the governed SDK connection, projected
+  locally after success, and expose retryable inline failures without sending
+  the account key to the browser.
+- **Favourite-first visual Actor and Site directories.** Both default to the
+  favourite scope, preserve scope, search and page in the URL, and order by
+  local Video count. Actor profile artwork uses fab's bounded cache; Sites use
+  a clearly representative Video preview while canonical Site artwork remains
+  an upstream API request.
+- **A decision-ready What's New.** Cards show Wanted, outstanding Download,
+  held Quality and Release availability, with Wanted, one-click best Release,
+  Release inspection and Site actions. A server-side checkpoint reports what
+  is new since the previous loaded visit across browsers.
+
+### Changed
+
+- A manual Video Download now durably records Wanted intent and its SABnzbd
+  reservation before either account or Download submission can be written
+  remotely. Pending work resumes after restart; an uncertain submission is
+  never repeated blindly, and stale feed data cannot erase pending intent.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.10.0 has started against it.
+
 ## [0.9.0] - 2026-08-29
 
 This release completes Wanted automation. Unordered permission rules can now

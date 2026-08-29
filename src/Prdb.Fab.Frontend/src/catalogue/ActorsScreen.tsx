@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 
-import { listActors, readActor, type ActorPage, type ActorVideos } from '../api/client.ts'
+import { listActors, readActor, setFavouriteActor, type ActorPage, type ActorVideos } from '../api/client.ts'
 import { releasePath, videoReleasePath } from '../release/routes.ts'
 import { DirectoryView, VideoContextView } from './ContextBrowse.tsx'
 import { actorsKey } from './state.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import { PreferenceButton } from './PreferenceButton.tsx'
 
 export function ActorsScreen() {
   const { id } = useParams()
@@ -13,9 +14,10 @@ export function ActorsScreen() {
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const scope = parameters.get('scope') === 'all' ? 'All' : 'Favourites'
   const answer = useQuery<ActorPage | ActorVideos>({
-    queryKey: actorsKey(id, search, page),
-    queryFn: () => (id ? readActor(id, search, page) : listActors(search, page)),
+    queryKey: actorsKey(id, search, page, scope),
+    queryFn: () => (id ? readActor(id, search, page) : listActors(search, page, scope)),
   })
 
   if (answer.isPending) return <PageLoading label="Loading Actors" />
@@ -58,6 +60,14 @@ export function ActorsScreen() {
             Find releases for this Video
           </Link>
         )}
+        contextAction={(
+          <PreferenceButton
+            active={selected.actor.favourite}
+            activeLabel="Unfavourite"
+            inactiveLabel="Favourite"
+            write={(desired) => setFavouriteActor(selected.actor.prdbId, desired)}
+          />
+        )}
       />
     )
   }
@@ -72,6 +82,8 @@ export function ActorsScreen() {
         prdbId: actor.prdbId,
         title: actor.name,
         videoCount: Number(actor.videoCount),
+        favourite: actor.favourite,
+        artworkPath: `/api/artwork/actors/${actor.prdbId}`,
       }))}
       search={search}
       page={Number(directory.page)}
@@ -81,6 +93,22 @@ export function ActorsScreen() {
       releasePath={(actor) => releasePath({ actor: actor.prdbId }, location.pathname + location.search)}
       setFilter={(value) => write(value, undefined)}
       goTo={(wanted) => write(undefined, wanted)}
+      scope={scope}
+      setScope={(nextScope) => {
+        const next = new URLSearchParams(parameters)
+        if (nextScope === 'All') next.set('scope', 'all')
+        else next.delete('scope')
+        next.delete('page')
+        setParameters(next)
+      }}
+      toggleFavourite={(actor) => (
+        <PreferenceButton
+          active={actor.favourite}
+          activeLabel="Unfavourite"
+          inactiveLabel="Favourite"
+          write={(desired) => setFavouriteActor(actor.prdbId, desired)}
+        />
+      )}
     />
   )
 }

@@ -148,6 +148,10 @@ public sealed class ArtworkEviction(
             .Where(row => batch.Contains(row.PrdbId))
             .Select(row => new { row.Id, row.PrdbId, row.LastServedAt })
             .ToListAsync(cancellationToken);
+        var knownActors = await context.CatalogueActors
+            .Where(row => row.ArtworkCacheKey.HasValue && batch.Contains(row.ArtworkCacheKey.Value))
+            .Select(row => new { row.Id, CacheKey = row.ArtworkCacheKey!.Value, row.ArtworkLastServedAt })
+            .ToListAsync(cancellationToken);
 
         // The pinned ones of this batch, by the query ADR 0033 made pinning
         // into. Joined from the video side because that is the side the clauses
@@ -160,13 +164,21 @@ public sealed class ArtworkEviction(
                 (_, image) => image.PrdbId)
             .ToListAsync(cancellationToken);
 
-        var named = known.Select(row => row.PrdbId).ToHashSet();
+        var named = known.Select(row => row.PrdbId)
+            .Concat(knownActors.Select(row => row.CacheKey))
+            .ToHashSet();
 
         orphans.AddRange(batch.Where(imageId => !named.Contains(imageId)));
 
         evictable.AddRange(known
             .Where(row => !isPinned.Contains(row.PrdbId))
-            .Select(row => new Cached(row.Id, row.PrdbId, row.LastServedAt, onDisk[row.PrdbId])));
+            .Select(row => new Cached(row.Id, row.PrdbId, row.LastServedAt, onDisk[row.PrdbId], Actor: false)));
+        evictable.AddRange(knownActors.Select(row => new Cached(
+            row.Id,
+            row.CacheKey,
+            row.ArtworkLastServedAt,
+            onDisk[row.CacheKey],
+            Actor: true)));
     }
 
     /// <summary>
@@ -185,7 +197,8 @@ public sealed class ArtworkEviction(
         CancellationToken cancellationToken)
     {
         var freed = 0L;
-        var dropped = new List<long>();
+        var droppedVideos = new List<long>();
+        var droppedActors = new List<long>();
 
         foreach (var image in evictable
                      .OrderBy(image => image.LastServedAt ?? DateTimeOffset.MinValue)
@@ -199,10 +212,10 @@ public sealed class ArtworkEviction(
             store.Delete(image.PrdbId);
 
             freed += image.Bytes;
-            dropped.Add(image.Id);
+            (image.Actor ? droppedActors : droppedVideos).Add(image.Id);
         }
 
-        foreach (var batch in dropped.Chunk(ABatch))
+        foreach (var batch in droppedVideos.Chunk(ABatch))
         {
             await context.CatalogueImages
                 .Where(row => batch.Contains(row.Id))
@@ -213,11 +226,27 @@ public sealed class ArtworkEviction(
                     cancellationToken);
         }
 
-        return dropped.Count;
+        foreach (var batch in droppedActors.Chunk(ABatch))
+        {
+            await context.CatalogueActors
+                .Where(row => batch.Contains(row.Id))
+                .ExecuteUpdateAsync(
+                    row => row
+                        .SetProperty(actor => actor.ArtworkCached, false)
+                        .SetProperty(actor => actor.ArtworkLastServedAt, (DateTimeOffset?)null),
+                    cancellationToken);
+        }
+
+        return droppedVideos.Count + droppedActors.Count;
     }
 
     /// <summary>One file in the cache, by both of its names and its weight.</summary>
-    private sealed record Cached(long Id, Guid PrdbId, DateTimeOffset? LastServedAt, long Bytes);
+    private sealed record Cached(
+        long Id,
+        Guid PrdbId,
+        DateTimeOffset? LastServedAt,
+        long Bytes,
+        bool Actor);
 }
 
 /// <summary>What one pass over the artwork cache did.</summary>

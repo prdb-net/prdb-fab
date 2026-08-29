@@ -2,7 +2,7 @@ import type { FormEvent, ReactNode } from 'react'
 import { Link } from 'react-router'
 
 import type { VideoCard } from '../api/client.ts'
-import { Grid } from './Grid.tsx'
+import { CachedArtwork, Grid } from './Grid.tsx'
 import gridStyles from './Grid.module.css'
 import styles from './ContextBrowse.module.css'
 
@@ -11,6 +11,10 @@ export type DirectoryItem = {
   title: string
   detail?: string | null
   videoCount: number
+  favourite: boolean
+  artworkPath?: string | null
+  artworkLabel?: string
+  artworkCaption?: string
 }
 
 export function DirectoryView({
@@ -25,6 +29,9 @@ export function DirectoryView({
   releasePath,
   setFilter,
   goTo,
+  toggleFavourite,
+  scope,
+  setScope,
 }: {
   title: string
   noun: string
@@ -37,18 +44,54 @@ export function DirectoryView({
   releasePath: (item: DirectoryItem) => string
   setFilter: (search: string) => void
   goTo: (page: number) => void
+  toggleFavourite: (item: DirectoryItem) => ReactNode
+  scope: 'Favourites' | 'All'
+  setScope: (scope: 'Favourites' | 'All') => void
 }) {
   return (
     <main className={styles.screen}>
       <Heading title={title} total={total} noun={noun} />
+      <nav className={styles.scope} aria-label={`${title} scope`}>
+        <button type="button" aria-pressed={scope === 'Favourites'} onClick={() => setScope('Favourites')}>
+          Favourites
+        </button>
+        <button type="button" aria-pressed={scope === 'All'} onClick={() => setScope('All')}>
+          All
+        </button>
+      </nav>
       <Filter value={search} placeholder={`Filter ${title.toLowerCase()}…`} apply={setFilter} />
 
       {items.length === 0 ? (
-        <p className={styles.empty}>No {noun}s match this filter.</p>
+        <div className={styles.empty}>
+          <p>
+            {scope === 'Favourites'
+              ? `No favourite ${noun}s match this filter.`
+              : `No ${noun}s match this filter.`}
+          </p>
+          {scope === 'Favourites' && (
+            <button type="button" onClick={() => setScope('All')}>Show all</button>
+          )}
+        </div>
       ) : (
         <ul className={styles.directory}>
           {items.map((item) => (
             <li key={item.prdbId}>
+              <div className={styles.directoryVisual}>
+                {item.artworkPath ? (
+                  <CachedArtwork
+                    path={item.artworkPath}
+                    title={item.artworkLabel ?? item.title}
+                    frameClassName={styles.directoryFrame}
+                    imageClassName={styles.directoryImage}
+                    absentClassName={styles.directoryAbsent}
+                  />
+                ) : (
+                  <span className={styles.directoryFrame} aria-label={item.artworkLabel ?? item.title}>
+                    <span className={styles.directoryAbsent}>▤</span>
+                  </span>
+                )}
+                {item.artworkCaption && <span className={styles.artworkCaption}>{item.artworkCaption}</span>}
+              </div>
               <div>
                 <Link className={styles.itemTitle} to={selectPath(item)}>
                   {item.title}
@@ -57,7 +100,10 @@ export function DirectoryView({
                   {[item.detail, `${item.videoCount} videos`].filter(Boolean).join(' · ')}
                 </span>
               </div>
-              <Link to={releasePath(item)}>Find releases</Link>
+              <div className={styles.directoryActions}>
+                {toggleFavourite(item)}
+                <Link to={releasePath(item)}>Find releases</Link>
+              </div>
             </li>
           ))}
         </ul>
@@ -81,6 +127,7 @@ export function VideoContextView({
   setFilter,
   goTo,
   videoAction,
+  contextAction,
 }: {
   title: string
   backTo: string
@@ -94,6 +141,7 @@ export function VideoContextView({
   setFilter: (search: string) => void
   goTo: (page: number) => void
   videoAction: (video: VideoCard) => ReactNode
+  contextAction?: ReactNode
 }) {
   return (
     <main className={styles.screen}>
@@ -102,7 +150,10 @@ export function VideoContextView({
       </Link>
       <div className={styles.contextHeading}>
         <Heading title={title} total={total} noun="video" />
-        <Link to={releaseAction}>Find releases for this selection</Link>
+        <div className={styles.directoryActions}>
+          {contextAction}
+          <Link to={releaseAction}>Find releases for this selection</Link>
+        </div>
       </div>
       <Filter value={search} placeholder="Filter video titles…" apply={setFilter} />
 

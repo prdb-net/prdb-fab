@@ -6,6 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.ReleaseDiscovery;
 
 using Xunit;
 
@@ -98,6 +101,93 @@ public sealed class WhatsNewRouteTests
         Assert.Equal(0, prdb.Requests);
     }
 
+    [Fact]
+    public async Task New_since_the_previous_visit_advances_only_after_the_loaded_page_is_observed()
+    {
+        await using var application = new FabApplication();
+        using var firstBrowser = await application.SignedInClientAsync();
+        using var secondBrowser = await application.SignedInClientAsync();
+        await FillAsync(application, ("Already here", 2));
+
+        var loaded = await ReadAsync(firstBrowser, page: 1);
+        Assert.Equal(1, loaded.NewCount);
+
+        using var observed = await firstBrowser.PostAsJsonAsync(
+            "/api/catalogue/whats-new/observed",
+            new { videoId = loaded.CheckpointVideoId, createdAt = loaded.CheckpointCreatedAt },
+            TestContext.Current.CancellationToken);
+        observed.EnsureSuccessStatusCode();
+
+        Assert.Equal(0, (await ReadAsync(secondBrowser, page: 1)).NewCount);
+        await FillAsync(application, ("New arrival", 1));
+        Assert.Equal(1, (await ReadAsync(secondBrowser, page: 1)).NewCount);
+    }
+
+    [Fact]
+    public async Task Cards_distinguish_ready_inspection_wanted_outstanding_and_held_states()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        await FillAsync(application, ("Ready", 1), ("Needs inspection", 2), ("Held", 3));
+
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var videos = await context.CatalogueVideos.ToDictionaryAsync(
+                row => row.Title,
+                TestContext.Current.CancellationToken);
+            var indexer = new IndexerRow
+            {
+                Id = Guid.NewGuid(),
+                Name = "Fixture",
+                Url = "https://indexer.invalid/api",
+                ApiKey = "fixture",
+                Categories = "Adult",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+                Rank = 1,
+            };
+            context.Indexers.Add(indexer);
+            context.Releases.AddRange(
+                Release(videos["Ready"].Id, indexer.Id, "ready", password: null),
+                Release(videos["Needs inspection"].Id, indexer.Id, "blocked", password: "1"));
+            context.WantedVideos.Add(new WantedVideoRow { VideoId = videos["Held"].Id, SinceAt = Noon });
+            context.Downloads.Add(new DownloadRow
+            {
+                Id = Guid.CreateVersion7(),
+                VideoId = videos["Held"].PrdbId,
+                IndexerId = indexer.Id,
+                DerivedReleaseId = "held",
+                SubmittedName = "held",
+                State = DownloadState.Outstanding,
+                OutstandingSince = Noon,
+                OriginIsPerson = true,
+                CreatedAt = Noon,
+            });
+            context.LibraryEntries.Add(new LibraryEntryRow
+            {
+                VideoId = videos["Held"].PrdbId,
+                EntryDirectory = "/library/held",
+                FiledAt = Noon,
+            });
+            context.VideoFiles.Add(new VideoFileRow
+            {
+                Id = Guid.CreateVersion7(),
+                LibraryEntryVideoId = videos["Held"].PrdbId,
+                FiledPath = "/library/held/video.mkv",
+                QualityLabel = "1080p",
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var cards = (await ReadAsync(client, page: 1)).Videos.ToDictionary(card => card.Title);
+        Assert.True(cards["Ready"].DownloadReady);
+        Assert.Equal("Ready", cards["Ready"].Availability);
+        Assert.Equal("ReleasesNeedInspection", cards["Needs inspection"].Availability);
+        Assert.True(cards["Held"].Wanted);
+        Assert.True(cards["Held"].Outstanding);
+        Assert.Equal(["1080p"], cards["Held"].HeldQualities);
+    }
+
     /// <summary>
     /// A card whose video publishes no image. ADR 0030 answers nothing, and the
     /// grid draws the frame it was going to draw anyway — the layout is the box,
@@ -176,9 +266,42 @@ public sealed class WhatsNewRouteTests
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private sealed record Card(long Id, string Title, string? Site, DateOnly? ReleaseDate);
+    private static ReleaseRow Release(long videoId, Guid indexerId, string identity, string? password) => new()
+    {
+        IndexerId = indexerId,
+        DerivedReleaseId = identity,
+        RawGuid = identity,
+        Title = identity,
+        NormalisedTitle = identity,
+        Categories = "[]",
+        DownloadUrl = "https://indexer.invalid/nzb",
+        FirstSeenAt = Noon,
+        IdentificationState = IdentificationState.Matched,
+        VideoId = videoId,
+        Confidence = IdentificationConfidence.Exact,
+        MatchedBy = IdentificationRung.ReleaseName,
+        Password = password,
+    };
 
-    private sealed record Answer(IReadOnlyList<Card> Videos, int Page, int PageSize, int Total);
+    private sealed record Card(
+        long Id,
+        string Title,
+        string? Site,
+        DateOnly? ReleaseDate,
+        bool DownloadReady,
+        bool Wanted,
+        bool Outstanding,
+        IReadOnlyList<string>? HeldQualities,
+        string Availability);
+
+    private sealed record Answer(
+        IReadOnlyList<Card> Videos,
+        int Page,
+        int PageSize,
+        int Total,
+        int NewCount,
+        long? CheckpointVideoId,
+        DateTimeOffset? CheckpointCreatedAt);
 
     /// <summary>
     /// A socket that answers nothing. ADR 0042 puts the fake here rather than at

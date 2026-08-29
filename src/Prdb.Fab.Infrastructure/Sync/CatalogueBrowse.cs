@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core;
+using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -48,7 +50,7 @@ public sealed class CatalogueBrowse(
     /// Counted from one, because it is in the address bar (ADR 0036) and a
     /// person reads it there.
     /// </param>
-    public async Task<VideoPage> WhatsNewAsync(int page, CancellationToken cancellationToken)
+    public async Task<WhatsNewPage> WhatsNewAsync(int page, CancellationToken cancellationToken)
     {
         var wanted = Paging.Wanted(page);
 
@@ -68,14 +70,58 @@ public sealed class CatalogueBrowse(
                 row.PrdbId,
                 row.Title,
                 row.Site == null ? null : row.Site.Title,
+                row.Site == null ? null : row.Site.PrdbId,
                 row.ReleaseDate))
             .ToListAsync(cancellationToken);
 
-        return new VideoPage(
+        var observed = await context.Installation
+            .Select(row => new { row.WhatsNewObservedAt, row.WhatsNewObservedVideoId })
+            .SingleAsync(cancellationToken);
+        var newCount = observed.WhatsNewObservedAt is null
+            ? total
+            : await context.CatalogueVideos.CountAsync(row =>
+                row.CreatedAtUtc > observed.WhatsNewObservedAt
+                || (row.CreatedAtUtc == observed.WhatsNewObservedAt
+                    && row.Id > observed.WhatsNewObservedVideoId), cancellationToken);
+        var checkpoint = page == 1
+            ? videos.FirstOrDefault()
+            : null;
+
+        return new WhatsNewPage(
             await WithAvailabilityAsync(videos, cancellationToken),
             wanted,
             APage,
-            total);
+            total,
+            newCount,
+            checkpoint?.Id,
+            checkpoint is null
+                ? null
+                : await context.CatalogueVideos
+                    .Where(row => row.Id == checkpoint.Id)
+                    .Select(row => (DateTimeOffset?)row.CreatedAtUtc)
+                    .SingleAsync(cancellationToken));
+    }
+
+    public async Task ObserveWhatsNewAsync(
+        long videoId,
+        DateTimeOffset createdAt,
+        CancellationToken cancellationToken)
+    {
+        var exists = await context.CatalogueVideos.AnyAsync(
+            row => row.Id == videoId && row.CreatedAtUtc == createdAt,
+            cancellationToken);
+        if (!exists) return;
+
+        var installation = await context.Installation.AsTracking().SingleAsync(cancellationToken);
+        if (installation.WhatsNewObservedAt is null
+            || createdAt > installation.WhatsNewObservedAt
+            || (createdAt == installation.WhatsNewObservedAt
+                && videoId > installation.WhatsNewObservedVideoId))
+        {
+            installation.WhatsNewObservedAt = createdAt;
+            installation.WhatsNewObservedVideoId = videoId;
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     /// <summary>
@@ -84,10 +130,8 @@ public sealed class CatalogueBrowse(
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Read and never written. <c>CONTEXT.md</c> defines a Wanted Video as one
-    /// the user has marked <em>in prdb</em>, and ADR 0007 makes that list the
-    /// only source of intent — so this surface has no way to add to it and is
-    /// not missing one.
+    /// Projected from the connected account, including ADR 0048's durable
+    /// pending state while a manual acquisition converges its prdb write.
     /// </para>
     /// <para>
     /// <strong>It reads the catalogue, not the feed's payload.</strong> ADR 0013
@@ -119,6 +163,7 @@ public sealed class CatalogueBrowse(
                 row.Video.PrdbId,
                 row.Video.Title,
                 row.Video.Site == null ? null : row.Video.Site.Title,
+                row.Video.Site == null ? null : row.Video.Site.PrdbId,
                 row.Video.ReleaseDate))
             .ToListAsync(cancellationToken);
 
@@ -135,10 +180,16 @@ public sealed class CatalogueBrowse(
     public async Task<SitePage> SitesAsync(
         string? search,
         int page,
+        CatalogueScope scope,
         CancellationToken cancellationToken)
     {
         var wanted = Paging.Wanted(page);
         var query = context.CatalogueSites.AsNoTracking();
+
+        if (scope == CatalogueScope.Favourites)
+        {
+            query = query.Where(row => context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -148,7 +199,8 @@ public sealed class CatalogueBrowse(
 
         var total = await query.CountAsync(cancellationToken);
         var sites = await query
-            .OrderBy(row => row.Title)
+            .OrderByDescending(row => context.CatalogueVideos.Count(video => video.SiteId == row.Id))
+            .ThenBy(row => row.Title)
             .ThenBy(row => row.Id)
             .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
@@ -156,20 +208,33 @@ public sealed class CatalogueBrowse(
                 row.PrdbId,
                 row.Title,
                 row.Network,
-                context.CatalogueVideos.Count(video => video.SiteId == row.Id)))
+                context.CatalogueVideos.Count(video => video.SiteId == row.Id),
+                context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id),
+                context.CatalogueVideos
+                    .Where(video => video.SiteId == row.Id)
+                    .OrderByDescending(video => video.CreatedAtUtc)
+                    .ThenBy(video => video.Id)
+                    .Select(video => (long?)video.Id)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
 
-        return new SitePage(sites, wanted, APage, total);
+        return new SitePage(sites, wanted, APage, total, scope);
     }
 
     /// <summary>Actors kept by the catalogue, alphabetically and searched locally.</summary>
     public async Task<ActorPage> ActorsAsync(
         string? search,
         int page,
+        CatalogueScope scope,
         CancellationToken cancellationToken)
     {
         var wanted = Paging.Wanted(page);
         var query = context.CatalogueActors.AsNoTracking();
+
+        if (scope == CatalogueScope.Favourites)
+        {
+            query = query.Where(row => context.FavouriteActors.Any(favourite => favourite.ActorId == row.Id));
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -179,17 +244,20 @@ public sealed class CatalogueBrowse(
 
         var total = await query.CountAsync(cancellationToken);
         var actors = await query
-            .OrderBy(row => row.Name)
+            .OrderByDescending(row => context.CatalogueVideoActors.Count(credit => credit.ActorId == row.Id))
+            .ThenBy(row => row.Name)
             .ThenBy(row => row.Id)
             .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new ActorCard(
                 row.PrdbId,
                 row.Name,
-                context.CatalogueVideoActors.Count(credit => credit.ActorId == row.Id)))
+                context.CatalogueVideoActors.Count(credit => credit.ActorId == row.Id),
+                context.FavouriteActors.Any(favourite => favourite.ActorId == row.Id),
+                row.ProfileImageUrl != null))
             .ToListAsync(cancellationToken);
 
-        return new ActorPage(actors, wanted, APage, total);
+        return new ActorPage(actors, wanted, APage, total, scope);
     }
 
     /// <summary>One Site and the catalogue Videos released by it.</summary>
@@ -202,7 +270,10 @@ public sealed class CatalogueBrowse(
         var site = await context.CatalogueSites
             .AsNoTracking()
             .Where(row => row.PrdbId == prdbId)
-            .Select(row => new BrowseContext(row.PrdbId, row.Title))
+            .Select(row => new BrowseContext(
+                row.PrdbId,
+                row.Title,
+                context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id)))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (site is null)
@@ -227,7 +298,10 @@ public sealed class CatalogueBrowse(
         var actor = await context.CatalogueActors
             .AsNoTracking()
             .Where(row => row.PrdbId == prdbId)
-            .Select(row => new BrowseContext(row.PrdbId, row.Name))
+            .Select(row => new BrowseContext(
+                row.PrdbId,
+                row.Name,
+                context.FavouriteActors.Any(favourite => favourite.ActorId == row.Id)))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (actor is null)
@@ -283,6 +357,7 @@ public sealed class CatalogueBrowse(
                 row.PrdbId,
                 row.Title,
                 row.Site == null ? null : row.Site.Title,
+                row.Site == null ? null : row.Site.PrdbId,
                 row.ReleaseDate))
             .ToListAsync(cancellationToken);
 
@@ -300,7 +375,56 @@ public sealed class CatalogueBrowse(
         var ready = await rankings.ReadyVideosAsync(
             videos.Select(video => video.PrdbId).ToArray(),
             cancellationToken);
-        return [.. videos.Select(video => video with { DownloadReady = ready.Contains(video.PrdbId) })];
+        var ids = videos.Select(video => video.PrdbId).ToArray();
+        var localIds = videos.Select(video => video.Id).ToArray();
+        var wanted = await context.WantedVideos
+            .Where(row => localIds.Contains(row.VideoId))
+            .Select(row => row.Video!.PrdbId)
+            .ToListAsync(cancellationToken);
+        var outstanding = await context.Downloads
+            .Where(row => ids.Contains(row.VideoId) && row.State == DownloadState.Outstanding)
+            .Select(row => row.VideoId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var qualityRows = await context.VideoFiles
+            .Where(row => ids.Contains(row.LibraryEntryVideoId))
+            .Select(row => new { VideoId = row.LibraryEntryVideoId, row.QualityLabel })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var qualities = qualityRows
+            .GroupBy(row => row.VideoId)
+            .ToDictionary(
+                group => group.Key,
+                group => (IReadOnlyList<string>)[.. group.Select(row => row.QualityLabel).Order()]);
+        var matched = await context.Releases
+            .Where(row => row.VideoId.HasValue
+                && localIds.Contains(row.VideoId.Value)
+                && row.IdentificationState == IdentificationState.Matched)
+            .Select(row => row.VideoId!.Value)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var wantedWrites = await context.AccountPreferenceWrites
+            .Where(row => row.Kind == AccountPreferenceKind.WantedVideo && ids.Contains(row.EntityId))
+            .Select(row => new { row.EntityId, row.Blocked, row.LastFailure })
+            .ToDictionaryAsync(row => row.EntityId, cancellationToken);
+
+        var wantedSet = wanted.ToHashSet();
+        var outstandingSet = outstanding.ToHashSet();
+        var matchedSet = matched.ToHashSet();
+        return [.. videos.Select(video => video with
+        {
+            DownloadReady = ready.Contains(video.PrdbId),
+            Wanted = wantedSet.Contains(video.PrdbId),
+            WantedSyncPending = wantedWrites.TryGetValue(video.PrdbId, out var write) && !write.Blocked,
+            WantedSyncFailure = wantedWrites.GetValueOrDefault(video.PrdbId)?.LastFailure,
+            Outstanding = outstandingSet.Contains(video.PrdbId),
+            HeldQualities = qualities.GetValueOrDefault(video.PrdbId, []),
+            Availability = ready.Contains(video.PrdbId)
+                ? VideoAvailability.Ready
+                : matchedSet.Contains(video.Id)
+                    ? VideoAvailability.ReleasesNeedInspection
+                    : VideoAvailability.NoIdentifiedRelease,
+        })];
     }
 }
 
@@ -333,11 +457,34 @@ public sealed record VideoCard(
     Guid PrdbId,
     string Title,
     string? Site,
+    Guid? SitePrdbId,
     DateOnly? ReleaseDate,
-    bool DownloadReady = false);
+    bool DownloadReady = false,
+    bool Wanted = false,
+    bool WantedSyncPending = false,
+    string? WantedSyncFailure = null,
+    bool Outstanding = false,
+    IReadOnlyList<string>? HeldQualities = null,
+    VideoAvailability Availability = VideoAvailability.NoIdentifiedRelease);
+
+public enum VideoAvailability
+{
+    Ready,
+    ReleasesNeedInspection,
+    NoIdentifiedRelease,
+}
 
 /// <summary>One page of a grid, and where in the whole it sits.</summary>
 public sealed record VideoPage(IReadOnlyList<VideoCard> Videos, int Page, int PageSize, int Total);
+
+public sealed record WhatsNewPage(
+    IReadOnlyList<VideoCard> Videos,
+    int Page,
+    int PageSize,
+    int Total,
+    int NewCount,
+    long? CheckpointVideoId,
+    DateTimeOffset? CheckpointCreatedAt);
 
 /// <summary>
 /// One page of the wanted list, and the two facts about the sync that decide
@@ -362,15 +509,37 @@ public sealed record WantedList(
     bool FeedHasRun,
     bool BackfillRunning);
 
-public sealed record BrowseContext(Guid PrdbId, string Title);
+public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite);
 
-public sealed record SiteCard(Guid PrdbId, string Title, string? Network, int VideoCount);
+public sealed record SiteCard(
+    Guid PrdbId,
+    string Title,
+    string? Network,
+    int VideoCount,
+    bool Favourite,
+    long? RepresentativeVideoId);
 
-public sealed record ActorCard(Guid PrdbId, string Name, int VideoCount);
+public sealed record ActorCard(Guid PrdbId, string Name, int VideoCount, bool Favourite, bool HasArtwork);
 
-public sealed record SitePage(IReadOnlyList<SiteCard> Sites, int Page, int PageSize, int Total);
+public sealed record SitePage(
+    IReadOnlyList<SiteCard> Sites,
+    int Page,
+    int PageSize,
+    int Total,
+    CatalogueScope Scope);
 
-public sealed record ActorPage(IReadOnlyList<ActorCard> Actors, int Page, int PageSize, int Total);
+public sealed record ActorPage(
+    IReadOnlyList<ActorCard> Actors,
+    int Page,
+    int PageSize,
+    int Total,
+    CatalogueScope Scope);
+
+public enum CatalogueScope
+{
+    Favourites,
+    All,
+}
 
 public sealed record SiteVideos(BrowseContext Site, VideoPage Videos);
 
