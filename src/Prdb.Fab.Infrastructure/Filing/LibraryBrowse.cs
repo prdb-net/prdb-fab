@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Filing;
@@ -17,7 +18,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         int page,
         CancellationToken cancellationToken = default)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var entries = context.LibraryEntries
             .AsNoTracking()
             .Join(
@@ -28,8 +29,8 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var pattern = $"%{Escape(search.Trim())}%";
-            entries = entries.Where(row => EF.Functions.Like(row.Video.Title, pattern, "\\"));
+            var pattern = SearchPattern.Containing(search);
+            entries = entries.Where(row => EF.Functions.Like(row.Video.Title, pattern, SearchPattern.Escape));
         }
         if (siteId is not null)
         {
@@ -50,7 +51,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         var rows = await entries
             .OrderBy(row => row.Video.Title)
             .ThenBy(row => row.Video.PrdbId)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new
             {
@@ -188,11 +189,6 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         "240p" => 1,
         _ => 0,
     };
-
-    private static string Escape(string value) => value
-        .Replace("\\", "\\\\", StringComparison.Ordinal)
-        .Replace("%", "\\%", StringComparison.Ordinal)
-        .Replace("_", "\\_", StringComparison.Ordinal);
 }
 
 public sealed record LibraryFilter(Guid Id, string Name);

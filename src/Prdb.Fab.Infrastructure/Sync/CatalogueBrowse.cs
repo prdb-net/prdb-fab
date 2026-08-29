@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Prdb.Fab.Core;
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -45,7 +46,7 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
     /// </param>
     public async Task<VideoPage> WhatsNewAsync(int page, CancellationToken cancellationToken)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
 
         var total = await context.CatalogueVideos.CountAsync(cancellationToken);
 
@@ -56,7 +57,7 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
             // order is unstable is not).
             .OrderByDescending(row => row.CreatedAtUtc)
             .ThenByDescending(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new VideoCard(
                 row.Id,
@@ -93,7 +94,7 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
     /// </remarks>
     public async Task<WantedList> WantedAsync(int page, CancellationToken cancellationToken)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
 
         var total = await context.WantedVideos.CountAsync(cancellationToken);
 
@@ -103,7 +104,7 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
             // back in the order the user built it.
             .OrderByDescending(row => row.SinceAt)
             .ThenByDescending(row => row.VideoId)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new VideoCard(
                 row.Video!.Id,
@@ -128,19 +129,20 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
         int page,
         CancellationToken cancellationToken)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var query = context.CatalogueSites.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(row => EF.Functions.Like(row.Title, Like(search), "\\"));
+            query = query.Where(row => EF.Functions.Like(
+                row.Title, SearchPattern.Containing(search), SearchPattern.Escape));
         }
 
         var total = await query.CountAsync(cancellationToken);
         var sites = await query
             .OrderBy(row => row.Title)
             .ThenBy(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new SiteCard(
                 row.PrdbId,
@@ -158,19 +160,20 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
         int page,
         CancellationToken cancellationToken)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
         var query = context.CatalogueActors.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(row => EF.Functions.Like(row.Name, Like(search), "\\"));
+            query = query.Where(row => EF.Functions.Like(
+                row.Name, SearchPattern.Containing(search), SearchPattern.Escape));
         }
 
         var total = await query.CountAsync(cancellationToken);
         var actors = await query
             .OrderBy(row => row.Name)
             .ThenBy(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new ActorCard(
                 row.PrdbId,
@@ -253,18 +256,19 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
         int page,
         CancellationToken cancellationToken)
     {
-        var wanted = Math.Max(page, 1);
+        var wanted = Paging.Wanted(page);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(row => EF.Functions.Like(row.Title, Like(search), "\\"));
+            query = query.Where(row => EF.Functions.Like(
+                row.Title, SearchPattern.Containing(search), SearchPattern.Escape));
         }
 
         var total = await query.CountAsync(cancellationToken);
         var videos = await query
             .OrderBy(row => row.Title)
             .ThenBy(row => row.Id)
-            .Skip((wanted - 1) * APage)
+            .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new VideoCard(
                 row.Id,
@@ -276,9 +280,6 @@ public sealed class CatalogueBrowse(FabDbContext context, FeedCursors cursors)
 
         return new VideoPage(videos, wanted, APage, total);
     }
-
-    private static string Like(string value) =>
-        $"%{value.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal)}%";
 }
 
 /// <summary>
