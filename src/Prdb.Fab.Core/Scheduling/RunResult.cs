@@ -113,8 +113,8 @@ public sealed record RunResult
     /// writes no run — the same absence ADR 0032 gave the empty tick, and
     /// expressed in the same one place.
     /// </remarks>
-    public static RunResult Deferred(TimeSpan waitFor) =>
-        new(outcome: null, itemsHandled: 0, reason: null, dueIn: waitFor);
+    public static RunResult Deferred(TimeSpan waitFor, string? reason = null) =>
+        new(outcome: null, itemsHandled: 0, reason, dueIn: waitFor);
 
     /// <summary>Whether this belongs in the run log at all.</summary>
     public bool IsRecorded => Outcome is not null;

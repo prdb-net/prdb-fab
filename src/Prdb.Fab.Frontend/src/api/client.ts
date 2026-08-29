@@ -27,6 +27,8 @@ export type LibraryRootVerdict = Schema['LibraryRootVerdict']
 export type AfterDownloadGateChoice = Schema['AfterDownloadGateChoice']
 export type IdentificationSettingsState = Schema['IdentificationSettingsState']
 export type IdentificationSettingsVerdict = Schema['IdentificationSettingsVerdict']
+export type StatusState = Schema['StatusState']
+export type RunNowVerdict = Schema['RunNowVerdict']
 
 export type VideoCard = Schema['VideoCard']
 export type VideoPage = Schema['VideoPage']
@@ -208,6 +210,14 @@ export async function saveIdentificationSettings(
   afterDownload: AfterDownloadGateChoice,
 ): Promise<IdentificationSettingsVerdict> {
   return post<IdentificationSettingsVerdict>('/api/settings/identification', { afterDownload })
+}
+
+export async function readStatus(): Promise<StatusState> {
+  return json<StatusState>(await fetch('/api/status'))
+}
+
+export async function runRoutineNow(name: string, target: string | null): Promise<RunNowVerdict> {
+  return post<RunNowVerdict>('/api/status/run-now', { name, target })
 }
 
 export async function readReportingSettings(): Promise<ReportingSettingsState> {

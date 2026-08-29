@@ -4,7 +4,8 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 
 /// <summary>
 /// ADR 0014's routine table, and under ADR 0038 the only truth about what is
-/// due. <em>Run now</em> is one write to <see cref="DueAt"/> and nothing else.
+/// due. <em>Run now</em> changes <see cref="DueAt"/> here and records its visible
+/// verdict beside the same scheduler fact.
 /// </summary>
 public sealed class RoutineRow
 {
@@ -39,4 +40,20 @@ public sealed class RoutineRow
     /// whether the thing works.
     /// </summary>
     public int ConsecutiveFailures { get; set; }
+
+    /// <summary>The latest scheduler deferral, retained as a Status Brake.</summary>
+    public DateTimeOffset? LastDeferredAt { get; set; }
+
+    public DateTimeOffset? DeferredUntil { get; set; }
+
+    public string? LastDeferredReason { get; set; }
+
+    /// <summary>The latest person's Run now request and what became of it.</summary>
+    public DateTimeOffset? LastRunNowAt { get; set; }
+
+    public RunNowOutcome? LastRunNowOutcome { get; set; }
+
+    public string? LastRunNowDetail { get; set; }
+
+    public bool RunNowPending { get; set; }
 }

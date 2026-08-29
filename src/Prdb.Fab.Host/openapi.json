@@ -509,6 +509,54 @@
         }
       }
     },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status/run-now": {
+      "post": {
+        "tags": [
+          "Status"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusRunNowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunNowVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/access/state": {
       "get": {
         "tags": [
@@ -4342,6 +4390,32 @@
           }
         }
       },
+      "RunNowOutcome": {
+        "enum": [
+          "Accepted",
+          "Deferred",
+          "Refused",
+          null
+        ]
+      },
+      "RunNowVerdict": {
+        "required": [
+          "outcome",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/RunNowOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "accepted": {
+            "type": "boolean"
+          }
+        }
+      },
       "SabnzbdCategoriesRequest": {
         "required": [
           "url",
@@ -4655,6 +4729,332 @@
           }
         }
       },
+      "StatusCondition": {
+        "required": [
+          "kind",
+          "title",
+          "detail",
+          "stage",
+          "route",
+          "cleared"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/StatusConditionKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cleared": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StatusConditionKind": {
+        "enum": [
+          "Gap",
+          "Brake"
+        ]
+      },
+      "StatusFact": {
+        "required": [
+          "label",
+          "value",
+          "route"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StatusLink": {
+        "required": [
+          "label",
+          "route"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "route": {
+            "type": "string"
+          }
+        }
+      },
+      "StatusRoutine": {
+        "required": [
+          "name",
+          "target",
+          "label",
+          "stage",
+          "dueAt",
+          "lastSuccessAt",
+          "lastFailureAt",
+          "consecutiveFailures",
+          "backingOff",
+          "workSetSize",
+          "lastCompletedAt",
+          "resultsSeen",
+          "rowsAdded",
+          "lastRunNowAt",
+          "lastRunNowOutcome",
+          "lastRunNowDetail",
+          "runNowPending"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "dueAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastFailureAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "consecutiveFailures": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "backingOff": {
+            "type": "boolean"
+          },
+          "workSetSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastCompletedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "resultsSeen": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rowsAdded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastRunNowAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastRunNowOutcome": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunNowOutcome"
+              }
+            ]
+          },
+          "lastRunNowDetail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "runNowPending": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StatusRunNowRequest": {
+        "required": [
+          "name",
+          "target"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StatusStage": {
+        "required": [
+          "id",
+          "title",
+          "routines",
+          "facts",
+          "gaps",
+          "brakes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "routines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusRoutine"
+            }
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusFact"
+            }
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusCondition"
+            }
+          },
+          "brakes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusCondition"
+            }
+          }
+        }
+      },
+      "StatusState": {
+        "required": [
+          "gapCount",
+          "lastUsefulAct",
+          "stages",
+          "related"
+        ],
+        "type": "object",
+        "properties": {
+          "gapCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lastUsefulAct": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StatusUsefulAct"
+              }
+            ]
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusStage"
+            }
+          },
+          "related": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusLink"
+            }
+          }
+        }
+      },
+      "StatusUsefulAct": {
+        "required": [
+          "act",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "act": {
+            "type": "string"
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "VideoAcquisition": {
         "required": [
           "downloadsSpent",
@@ -4849,6 +5249,9 @@
     },
     {
       "name": "Filing"
+    },
+    {
+      "name": "Status"
     },
     {
       "name": "Access"

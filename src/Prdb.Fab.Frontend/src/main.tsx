@@ -30,6 +30,7 @@ import { ReviewQueueScreen } from './filing/ReviewQueueScreen.tsx'
 import { OperationLogScreen } from './filing/OperationLogScreen.tsx'
 import { LibrarySettingsScreen } from './settings/LibraryScreen.tsx'
 import { PageLoading } from './shell/LoadingScreen.tsx'
+import { StatusScreen } from './status/StatusScreen.tsx'
 import './index.css'
 
 // ADR 0036: React Router in library mode only — the router is a library this
@@ -84,6 +85,7 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith('/library/')) return 'Library entry'
   if (pathname === '/review-queue') return 'Review queue'
   if (pathname === '/operation-log') return 'Operation log'
+  if (pathname === '/status') return 'Status'
   if (pathname === '/settings') return 'Settings'
   if (pathname === '/settings/connections') return 'Connections'
   if (pathname.startsWith('/settings/connections/indexers/')) return 'Indexer'
@@ -130,6 +132,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/library/:id" element={<LibraryEntryScreen />} />
               <Route path="/review-queue" element={<ReviewQueueScreen />} />
               <Route path="/operation-log" element={<OperationLogScreen />} />
+              <Route path="/status" element={<StatusScreen />} />
               {/* ADR 0020: routes rather than one page with anchors, one level
                   down as well — every indexer has its own. */}
               <Route path="/settings" element={<SettingsGate />}>

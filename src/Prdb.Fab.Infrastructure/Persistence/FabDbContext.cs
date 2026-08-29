@@ -138,6 +138,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
             routine.Property(row => row.Name).IsRequired();
             routine.Property(row => row.Lane).HasConversion<string>();
+            routine.Property(row => row.LastRunNowOutcome).HasConversion<string>();
         });
 
         builder.Entity<RoutineRunRow>(run =>

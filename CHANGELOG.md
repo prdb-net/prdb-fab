@@ -19,6 +19,37 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-29
+
+This release finishes the Reporting and Status slice. It adds separately
+opted-in reporting to prdb and makes the complete local loop inspectable without
+turning observation into more remote work.
+
+### Added
+
+- **Status follows the six-stage loop.** Sync from prdb, Sync from Indexers,
+  Match, Decide, Download and File show their routine facts, work-set progress,
+  seven-day named gate tallies, budgets and local liveness. Only repairable Gaps
+  count in the headline; deliberate Brakes explain their choice and route to
+  its owner. Cleared routine Gaps remain visible while their failed run remains
+  in retained history.
+- **Run now stays inside the scheduler.** Requests are accepted, deferred or
+  refused visibly and cannot overlap. They never bypass the prdb Governor, an
+  Indexer's Daily Query Budget, a permanent refusal or an empty work set.
+- **Two independent Reporting channels.** Both default off. Fulfilments report
+  the held state and truthfully rounded-down quality of locally held Wanted
+  Videos; Confirmed Assignments report only exact file-to-Video decisions made
+  by a person in the Review Queue. Delivery is governed, bounded, account-scoped
+  and idempotent.
+### Documentation
+
+- Added a precise outbound-data and Reporting description, and updated the
+  operator guide to distinguish Gaps from Brakes and the complete manual loop
+  from Download automation, which remains unavailable.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.8.0 has started against it.
+
 ## [0.7.1] - 2026-08-29
 
 This patch release repairs NZB fetching against a real Newznab compatibility

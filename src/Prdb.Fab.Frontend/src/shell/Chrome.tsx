@@ -16,6 +16,7 @@ type IconName =
   | 'new'
   | 'review'
   | 'settings'
+  | 'status'
   | 'sites'
   | 'wanted'
 
@@ -126,6 +127,11 @@ export function Chrome({ children }: { children: ReactNode }) {
         </nav>
         <nav className={styles.navBottom} aria-label="System navigation">
           <DestinationLink
+            destination={{ label: 'Status', to: '/status', icon: 'status' }}
+            activeTo={contextDestination}
+            reviewCount={reviewCount}
+          />
+          <DestinationLink
             destination={{ label: 'Settings', to: '/settings', icon: 'settings' }}
             activeTo={contextDestination}
             reviewCount={reviewCount}
@@ -213,6 +219,12 @@ export function Chrome({ children }: { children: ReactNode }) {
                 reviewCount={reviewCount}
               />
               <span className={styles.sheetLabel}>System</span>
+              <DestinationLink
+                destination={{ label: 'Status', to: '/status', icon: 'status' }}
+                activeTo={contextDestination}
+                reviewCount={reviewCount}
+                sheet
+              />
               <DestinationLink
                 destination={{ label: 'Settings', to: '/settings', icon: 'settings' }}
                 activeTo={contextDestination}
@@ -334,7 +346,7 @@ function DestinationLink({
 }
 
 function isMoreDestination(pathname: string): boolean {
-  return ['/sites', '/actors', '/review-queue', '/operation-log', '/settings'].some(
+  return ['/sites', '/actors', '/review-queue', '/operation-log', '/status', '/settings'].some(
     (destination) => pathname === destination || pathname.startsWith(`${destination}/`),
   )
 }
@@ -383,6 +395,7 @@ function Icon({ name }: { name: IconName }) {
       {name === 'library' && <path d="M4 5h16v15H4V5Zm4 0v15m9-15v15M3 9h18" {...common} />}
       {name === 'review' && <path d="M12 3 3.5 19h17L12 3Zm0 5v5m0 3v.2" {...common} />}
       {name === 'log' && <path d="M6 3h12v18H6V3Zm3 5h6m-6 4h6m-6 4h4" {...common} />}
+      {name === 'status' && <path d="M4 18V9m5 9V5m5 13v-7m5 7V3M3 21h18" {...common} />}
       {name === 'settings' && <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Zm8-3.2-2.1-1 .2-2.3-2.2-2.2-2.3.3-1-2.2H9.4l-1 2.2-2.3-.3-2.2 2.2.2 2.3L2 12l1.1 3 2.3.4.7 2.2 3 1.2 1.8-1.5 1.8 1.5 3-1.2.7-2.2 2.3-.4 1.1-3Z" {...common} />}
       {name === 'more' && <path d="M5 12h.01M12 12h.01M19 12h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />}
     </svg>

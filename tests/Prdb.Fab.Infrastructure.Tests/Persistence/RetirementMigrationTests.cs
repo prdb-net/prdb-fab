@@ -21,28 +21,18 @@ public sealed class RetirementMigrationTests
         await using (var scope = database.Scope())
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
-            var routine = new RoutineRow
-            {
-                Name = "skeleton-sweep",
-                Lane = Lane.Bulk,
-                DueAt = database.Time.GetUtcNow(),
-            };
-
-            context.Routines.Add(routine);
-            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            context.RoutineRuns.Add(new RoutineRunRow
-            {
-                RoutineId = routine.Id,
-                StartedAt = database.Time.GetUtcNow(),
-                FinishedAt = database.Time.GetUtcNow(),
-                Outcome = RunOutcome.Succeeded,
-                ItemsHandled = 1,
-            });
+            // This database deliberately has the old shape. Insert through
+            // that contract rather than through today's entity, whose newer
+            // Status columns cannot exist until the final migration below.
+            await context.Database.ExecuteSqlRawAsync(
+                "INSERT INTO routine (Name, Target, Lane, DueAt, ConsecutiveFailures) VALUES ('skeleton-sweep', NULL, 'Bulk', '2026-08-29 12:00:00', 0)",
+                TestContext.Current.CancellationToken);
+            await context.Database.ExecuteSqlRawAsync(
+                "INSERT INTO routine_run (RoutineId, StartedAt, FinishedAt, Outcome, ItemsHandled) SELECT Id, '2026-08-29 12:00:00', '2026-08-29 12:00:00', 'Succeeded', 1 FROM routine WHERE Name = 'skeleton-sweep'",
+                TestContext.Current.CancellationToken);
             await context.Database.ExecuteSqlRawAsync(
                 "INSERT INTO skeleton_item (Label, AddedAt) VALUES ('retire me', '2026-08-29 12:00:00')",
                 TestContext.Current.CancellationToken);
-            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await context.Database.MigrateAsync(TestContext.Current.CancellationToken);
         }

@@ -98,7 +98,7 @@ public sealed class RoutineRunner(
                 (int)deferred.Wait.TotalSeconds,
                 deferred.Deferral);
 
-            result = RunResult.Deferred(deferred.Wait);
+            result = RunResult.Deferred(deferred.Wait, deferred.Deferral);
         }
         catch (Exception exception)
         {
