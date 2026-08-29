@@ -126,9 +126,10 @@ public sealed partial class NewznabGateway(
     /// </summary>
     public async Task<NewznabNzbRead> NzbAsync(
         string downloadUrl,
+        string indexerUrl,
         CancellationToken cancellationToken = default)
     {
-        if (!Address(downloadUrl, out var address))
+        if (!NzbAddress(downloadUrl, indexerUrl, out var address))
         {
             return NewznabNzbRead.Refusing(IndexerConnectionOutcome.NotAnIndexer);
         }
@@ -488,6 +489,30 @@ public sealed partial class NewznabGateway(
     private static bool Address(string? url, out Uri? address) =>
         Uri.TryCreate((url ?? string.Empty).Trim(), UriKind.Absolute, out address)
         && address.Scheme is "http" or "https";
+
+    /// <summary>
+    /// Keeps an Indexer's credential on the transport the person configured.
+    /// Some Newznab implementations advertise an HTTP enclosure even when
+    /// their configured API endpoint is HTTPS, then redirect that enclosure
+    /// to the same host over HTTPS. The credentialled transport still follows
+    /// no redirect: this upgrades the first request itself, and refuses an HTTP
+    /// enclosure on another host because it cannot be upgraded by evidence the
+    /// person supplied.
+    /// </summary>
+    private static bool NzbAddress(string downloadUrl, string indexerUrl, out Uri? address)
+    {
+        if (!Address(downloadUrl, out address) || !Address(indexerUrl, out var indexer)) return false;
+        if (address!.Scheme != Uri.UriSchemeHttp || indexer!.Scheme != Uri.UriSchemeHttps) return true;
+        if (!string.Equals(address.IdnHost, indexer.IdnHost, StringComparison.OrdinalIgnoreCase)) return false;
+
+        var upgraded = new UriBuilder(address)
+        {
+            Scheme = Uri.UriSchemeHttps,
+            Port = indexer.IsDefaultPort ? -1 : indexer.Port,
+        };
+        address = upgraded.Uri;
+        return true;
+    }
 
     private static string SearchQuery(IReadOnlyCollection<int> categoryIds, int offset, int? maxAgeDays, string? query, int limit)
     {

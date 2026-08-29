@@ -81,6 +81,39 @@ public sealed class ReleaseDiscoveryTests
     }
 
     [Fact]
+    public async Task An_http_nzb_from_an_https_indexer_is_upgraded_before_the_key_is_sent()
+    {
+        var fake = new RecordedIndexer("nzb bytes");
+        await using var services = Services(fake);
+
+        var read = await services.GetRequiredService<NewznabGateway>().NzbAsync(
+            "http://indexer.invalid/api?t=get&id=release&apikey=secret-key",
+            "https://indexer.invalid/api",
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(read.Refusal);
+        var request = Assert.Single(fake.Requests);
+        Assert.Equal(Uri.UriSchemeHttps, request.Scheme);
+        Assert.Equal("indexer.invalid", request.Host);
+        Assert.Equal("secret-key", HttpUtility.ParseQueryString(request.Query)["apikey"]);
+    }
+
+    [Fact]
+    public async Task An_http_nzb_on_another_host_is_refused_before_the_key_is_sent()
+    {
+        var fake = new RecordedIndexer("must not be read");
+        await using var services = Services(fake);
+
+        var read = await services.GetRequiredService<NewznabGateway>().NzbAsync(
+            "http://download.invalid/api?t=get&id=release&apikey=secret-key",
+            "https://indexer.invalid/api",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(IndexerConnectionOutcome.NotAnIndexer, read.Refusal);
+        Assert.Empty(fake.Requests);
+    }
+
+    [Fact]
     public async Task Repeated_reads_and_key_rotation_update_one_release_without_moving_state_or_first_seen()
     {
         await using var database = await TestDatabase.CreateAsync();

@@ -115,10 +115,19 @@ public sealed class PersonDownloads(
 
         var storedRelease = await context.Releases
             .AsNoTracking()
-            .SingleOrDefaultAsync(row => row.Id == releaseId, cancellationToken);
+            .Where(row => row.Id == releaseId)
+            .Select(row => new
+            {
+                row.DownloadUrl,
+                IndexerUrl = row.Indexer!.Url,
+            })
+            .SingleOrDefaultAsync(cancellationToken);
         if (storedRelease is null) return null;
 
-        var nzb = await newznab.NzbAsync(storedRelease.DownloadUrl, cancellationToken);
+        var nzb = await newznab.NzbAsync(
+            storedRelease.DownloadUrl,
+            storedRelease.IndexerUrl,
+            cancellationToken);
         if (nzb.Refusal is not null)
         {
             return DownloadVerdict.Indexer(downloadId, "The NZB could not be fetched from the indexer.");

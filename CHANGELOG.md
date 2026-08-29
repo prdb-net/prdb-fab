@@ -19,6 +19,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Fixed
+
+- **An HTTPS Indexer can now supply an HTTP NZB enclosure without blocking the
+  Download.** Some Newznab services redirect that enclosure to the same host
+  over HTTPS. prdb-fab now upgrades the first request itself, keeping the API
+  key off plaintext HTTP while continuing to refuse redirects and HTTP
+  enclosures on a different host.
+
 ## [0.7.0] - 2026-08-29
 
 This release tightens the desktop-first workspace after an end-to-end UI and
