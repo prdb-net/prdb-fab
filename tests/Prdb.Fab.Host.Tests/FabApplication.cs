@@ -21,7 +21,7 @@ namespace Prdb.Fab.Host.Tests;
 /// </remarks>
 public sealed class FabApplication : WebApplicationFactory<Program>
 {
-    private readonly IReadOnlyDictionary<string, string> settings;
+    private readonly Dictionary<string, string> settings;
 
     /// <summary>
     /// ADR 0042: the network is replaced at the socket and never at an
@@ -51,7 +51,7 @@ public sealed class FabApplication : WebApplicationFactory<Program>
     {
         DataDirectory = dataDirectory;
         this.ownsDataDirectory = ownsDataDirectory;
-        this.settings = settings ?? new Dictionary<string, string>();
+        this.settings = settings is null ? [] : new(settings);
     }
 
     /// <summary>
@@ -64,6 +64,17 @@ public sealed class FabApplication : WebApplicationFactory<Program>
         new(dataDirectory, ownsDataDirectory: true, settings: null);
 
     public string DataDirectory { get; }
+
+    /// <summary>
+    /// Points the composed application at a local prdb stand-in. The SDK still
+    /// decides which origins are safe for an authenticated plain-HTTP request.
+    /// </summary>
+    public FabApplication AtPrdb(string baseUrl)
+    {
+        settings["Prdb:BaseUrl"] = baseUrl;
+
+        return this;
+    }
 
     /// <summary>
     /// Puts a fake at one of ADR 0041's transports. Has to be called before the

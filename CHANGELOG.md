@@ -19,6 +19,12 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- Updated `Prdb.Sdk` to 0.13.0. Local development can now point the composed
+  application at an HTTP loopback prdb stand-in through `Prdb:BaseUrl`; the SDK
+  continues to require HTTPS for every non-loopback authenticated origin.
+
 ## [0.11.0] - 2026-08-30
 
 This release makes the primary manual use case explicit: choose a known Video,

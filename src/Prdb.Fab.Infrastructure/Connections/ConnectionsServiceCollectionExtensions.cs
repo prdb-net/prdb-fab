@@ -11,8 +11,17 @@ public static class ConnectionsServiceCollectionExtensions
     /// gateways that are the only places each service is reached from, and the
     /// four things that write what was checked.
     /// </summary>
-    public static IServiceCollection AddFabConnections(this IServiceCollection services)
+    public static IServiceCollection AddFabConnections(
+        this IServiceCollection services,
+        string? prdbBaseUrl = null)
     {
+        // Production deliberately uses the SDK's canonical origin. A local
+        // development host may supply one of the SDK's narrowly accepted
+        // loopback HTTP origins without turning that address into an
+        // installation setting or a second source of truth for the API key.
+        services.AddSingleton(new PrdbEndpoint(
+            prdbBaseUrl ?? PrdbEndpoint.Production));
+
         // ADR 0014's governor is one for the process: what it holds is one
         // account's hourly window, and every routine spends from the same one.
         // Registered before the transports, because the handler that asks it is

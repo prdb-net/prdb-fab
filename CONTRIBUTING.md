@@ -64,6 +64,18 @@ npm run lint
 npm run build
 ```
 
+To run the backend against a local prdb stand-in without making that stand-in
+serve TLS, pass an SDK-approved loopback origin on the command line:
+
+```bash
+dotnet run --project src/Prdb.Fab.Host -- \
+  --Prdb:BaseUrl=http://127.0.0.1:5080
+```
+
+The authenticated SDK accepts plain HTTP only for `localhost`, `127.0.0.1` and
+`[::1]`; every other origin still requires HTTPS. This is a development input,
+not a container setting or an alternative place to store the prdb API key.
+
 **The API document and the generated types are committed**, and CI fails when
 they do not match the code. If you changed an endpoint, run `npm run
 generate:api` and commit the result with it.

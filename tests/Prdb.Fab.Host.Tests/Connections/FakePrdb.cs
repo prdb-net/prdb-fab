@@ -39,6 +39,9 @@ internal sealed class FakePrdb : HttpMessageHandler
     /// <summary>What the last request said it was.</summary>
     public string? LastUserAgent { get; private set; }
 
+    /// <summary>The complete API address the SDK built for the last request.</summary>
+    public Uri? LastUri { get; private set; }
+
     /// <summary>
     /// Every path that has been asked for, newest last. What it is for is the
     /// question a route test cannot ask: whether the lanes turn — a routine in a
@@ -73,6 +76,7 @@ internal sealed class FakePrdb : HttpMessageHandler
         Requests++;
         LastKey = request.Headers.TryGetValues("X-Api-Key", out var keys) ? keys.FirstOrDefault() : null;
         LastUserAgent = request.Headers.UserAgent.ToString();
+        LastUri = request.RequestUri;
 
         lock (paths)
         {

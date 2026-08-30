@@ -57,6 +57,42 @@ public sealed class PrdbConnectionRouteTests
     }
 
     /// <summary>
+    /// Prdb.Sdk 0.13.0's loopback exemption, reached through the real Host
+    /// composition: local API work needs neither a certificate nor a different
+    /// client path, while the SDK still owns the authenticated-origin rule.
+    /// </summary>
+    [Fact]
+    public async Task Plain_http_loopback_can_stand_in_for_prdb_during_local_development()
+    {
+        var prdb = new FakePrdb();
+        await using var application = new FabApplication()
+            .AtPrdb("http://127.0.0.1:5080")
+            .Answering(FabTransports.Prdb, prdb);
+        var client = await application.SignedInClientAsync();
+
+        Assert.Equal("Saved", (await SubmitAsync(client, AKey)).Outcome);
+        Assert.Equal(new Uri("http://127.0.0.1:5080/user-identity"), prdb.LastUri);
+    }
+
+    [Fact]
+    public async Task Plain_http_for_a_non_loopback_prdb_origin_is_still_refused()
+    {
+        var prdb = new FakePrdb();
+        await using var application = new FabApplication()
+            .AtPrdb("http://api.example.test:5080")
+            .Answering(FabTransports.Prdb, prdb);
+        var client = await application.SignedInClientAsync();
+
+        using var refusal = await client.PostAsJsonAsync(
+            "/api/connections/prdb",
+            new { apiKey = AKey, confirmAnotherAccount = false },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, refusal.StatusCode);
+        Assert.Equal(0, prdb.Requests);
+    }
+
+    /// <summary>
     /// The four ADR 0010 names. Two ask for a correction and two ask for
     /// patience, which is the whole reason they are four.
     /// </summary>

@@ -34,6 +34,7 @@ namespace Prdb.Fab.Infrastructure.Connections;
 public sealed class PrdbGateway(
     IHttpMessageHandlerFactory transports,
     PrdbGovernor governor,
+    PrdbEndpoint endpoint,
     ILogger<PrdbGateway> logger)
 {
     /// <summary>
@@ -158,6 +159,7 @@ public sealed class PrdbGateway(
     /// </summary>
     private PrdbClient Client(string apiKey) => PrdbClientFactory.Create(
         apiKey,
+        baseUrl: endpoint.BaseUrl,
         transport: transports.CreateHandler(FabTransports.Prdb),
         retry: PrdbRetryOptions.Disabled,
         timeout: FabTransports.PrdbTimeout);
@@ -197,3 +199,10 @@ public sealed class PrdbGateway(
 /// recognised rather than silently swapping the wanted list out.
 /// </param>
 public sealed record PrdbCheck(PrdbConnectionOutcome Outcome, string? UserHash, int? RetryAfterSeconds);
+
+/// <summary>The API origin chosen before the process starts.</summary>
+public sealed record PrdbEndpoint(string BaseUrl)
+{
+    /// <summary>The canonical production origin owned by the SDK.</summary>
+    public static string Production { get; } = PrdbClientFactory.DefaultBaseUrl;
+}
