@@ -34,6 +34,9 @@ public sealed class SitesAndActorsRouteTests
         var actor = await client.GetFromJsonAsync<ActorVideos>(
             $"/api/catalogue/actors/{seeded.ActorId}?page=1",
             TestContext.Current.CancellationToken);
+        var videos = await client.GetFromJsonAsync<VideoPage>(
+            "/api/catalogue/videos?search=Second&page=1",
+            TestContext.Current.CancellationToken);
 
         Assert.NotNull(sites);
         Assert.Equal("Northline", Assert.Single(sites.Sites).Title);
@@ -51,6 +54,7 @@ public sealed class SitesAndActorsRouteTests
         Assert.NotNull(actor);
         Assert.Equal("Mira Vance", actor.Actor.Title);
         Assert.Equal(["First Light", "Second Shift"], actor.Videos.Videos.Select(video => video.Title));
+        Assert.Equal("Second Shift", Assert.Single(videos!.Videos).Title);
         Assert.Equal(0, prdb.Requests);
     }
 
@@ -62,9 +66,11 @@ public sealed class SitesAndActorsRouteTests
 
         using var sites = await client.GetAsync("/api/catalogue/sites", TestContext.Current.CancellationToken);
         using var actors = await client.GetAsync("/api/catalogue/actors", TestContext.Current.CancellationToken);
+        using var videos = await client.GetAsync("/api/catalogue/videos", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, sites.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, actors.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, videos.StatusCode);
     }
 
     private static async Task<Seeded> SeedAsync(FabApplication application)

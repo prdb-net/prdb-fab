@@ -1,0 +1,75 @@
+.screen {
+  margin: 0 auto;
+  max-width: 1400px;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.heading {
+  align-items: baseline;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.heading h1,
+.heading p {
+  margin: 0 0 0.35rem;
+}
+
+.heading p,
+.heading span,
+.empty {
+  color: var(--text-quiet);
+}
+
+.filter {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.25rem 0;
+}
+
+.filter input {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  flex: 1;
+  max-width: 42rem;
+  padding: 0.65rem 0.8rem;
+}
+
+.filter button,
+.pager button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.55rem 0.8rem;
+}
+
+.filter button[type='submit'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+.empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.pager {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+@media (max-width: 620px) {
+  .filter { flex-wrap: wrap; }
+  .filter input { flex-basis: 100%; }
+}

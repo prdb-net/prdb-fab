@@ -15,6 +15,7 @@ type IconName =
   | 'more'
   | 'new'
   | 'review'
+  | 'search'
   | 'settings'
   | 'status'
   | 'sites'
@@ -29,6 +30,7 @@ type Destination = {
 
 const discover: Destination[] = [
   { label: 'What’s new', mobileLabel: 'New', to: '/', icon: 'new' },
+  { label: 'Search', to: '/search', icon: 'search' },
   { label: 'Sites', to: '/sites', icon: 'sites' },
   { label: 'Actors', to: '/actors', icon: 'actors' },
   { label: 'Wanted', to: '/wanted', icon: 'wanted' },
@@ -41,7 +43,7 @@ const work: Destination[] = [
   { label: 'Operation log', to: '/operation-log', icon: 'log' },
 ]
 
-const primaryMobile = [discover[0], discover[3], work[0], work[1]]
+const primaryMobile = [discover[0], discover[1], work[0], work[1]]
 
 /**
  * The way between the application's two bodies of work: discovering what to
@@ -346,7 +348,7 @@ function DestinationLink({
 }
 
 function isMoreDestination(pathname: string): boolean {
-  return ['/sites', '/actors', '/review-queue', '/operation-log', '/status', '/settings'].some(
+  return ['/wanted', '/sites', '/actors', '/review-queue', '/operation-log', '/status', '/settings'].some(
     (destination) => pathname === destination || pathname.startsWith(`${destination}/`),
   )
 }
@@ -388,6 +390,7 @@ function Icon({ name }: { name: IconName }) {
   return (
     <svg aria-hidden="true" className={styles.icon} viewBox="0 0 24 24">
       {name === 'new' && <path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3Zm7 12 .6 2.4L22 18l-2.4.6L19 21l-.6-2.4L16 18l2.4-.6L19 15Z" fill="currentColor" />}
+      {name === 'search' && <path d="m20 20-4.3-4.3m2.3-5.2a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" {...common} />}
       {name === 'sites' && <path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" {...common} />}
       {name === 'actors' && <path d="M8.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7-1a3 3 0 1 0 0-6m-7 9C5.3 13 3 14.8 3 17.2V20h11v-2.8c0-2.4-2.3-4.2-5.5-4.2Zm7 0c2.9 0 5.5 1.7 5.5 4v3h-5" {...common} />}
       {name === 'wanted' && <path d="M12 20S4 15.6 4 9.5A4.5 4.5 0 0 1 12 6.7a4.5 4.5 0 0 1 8 2.8C20 15.6 12 20 12 20Z" {...common} />}

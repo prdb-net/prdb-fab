@@ -86,7 +86,7 @@ export function WantedScreen() {
             action={(video) => (
               <span className={gridStyles.actions}>
                 <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  {video.downloadReady ? 'Download' : 'View releases'}
+                  {video.downloadReady ? 'Download' : 'Search Indexers'}
                 </Link>
                 <PreferenceButton
                   active

@@ -65,6 +65,15 @@ public sealed class ReleaseDiscoveryTests
             sweepHasWork: false));
     }
 
+    [Fact]
+    public void A_manual_search_can_preempt_a_walk_but_not_the_wanted_sweeps_reservation()
+    {
+        Assert.True(IndexerQueryBudget.Admits(
+            10, spent: 4, spentBySweep: 0, purpose: IndexerQueryPurpose.ManualSearch));
+        Assert.False(IndexerQueryBudget.Admits(
+            10, spent: 5, spentBySweep: 0, purpose: IndexerQueryPurpose.ManualSearch));
+    }
+
     [Theory]
     [InlineData("A Long Title", "A Long Title", true)]
     [InlineData("Scene 3", "Scene 3", false)]

@@ -51,6 +51,9 @@ export type IdentificationState = Schema['IdentificationState']
 export type ReleaseDiscoveryRoutine = Schema['ReleaseDiscoveryRoutine']
 export type ReleaseDiscoveryRoutineKind = Schema['ReleaseDiscoveryRoutineKind']
 export type ReleaseDiscoveryRunNowVerdict = Schema['ReleaseDiscoveryRunNowVerdict']
+export type ManualSearchView = Schema['ManualSearchView']
+export type ManualSearchStartVerdict = Schema['ManualSearchStartVerdict']
+export type ManualSearchRetryVerdict = Schema['ManualSearchRetryVerdict']
 export type DownloadPreview = Schema['DownloadPreview']
 export type DownloadVerdict = Schema['DownloadVerdict']
 export type DownloadPage = Schema['DownloadPage']
@@ -314,6 +317,12 @@ export async function listWanted(page: number): Promise<WantedList> {
   return json<WantedList>(await fetch(`/api/catalogue/wanted?page=${page}`))
 }
 
+export async function listVideos(search: string, page: number): Promise<VideoPage> {
+  return json<VideoPage>(
+    await fetch(`/api/catalogue/videos?${parameters({ search, page: String(page) })}`),
+  )
+}
+
 export async function listSites(search: string, page: number, scope: 'Favourites' | 'All'): Promise<SitePage> {
   return json<SitePage>(
     await fetch(`/api/catalogue/sites?${parameters({ search, page: String(page), scope: scope.toLowerCase() })}`),
@@ -385,6 +394,28 @@ export async function listReleases(filters: {
         page: String(filters.page),
       })}`,
     ),
+  )
+}
+
+export async function startManualSearch(
+  videoId: string,
+  indexerId: string | null,
+): Promise<ManualSearchStartVerdict> {
+  return post<ManualSearchStartVerdict>('/api/releases/searches', { videoId, indexerId })
+}
+
+export async function readLatestManualSearch(videoId: string): Promise<ManualSearchView | null> {
+  const response = await fetch(`/api/releases/searches/latest?video=${segment(videoId)}`)
+  if (response.status === 204) return null
+  return json<ManualSearchView>(response)
+}
+
+export async function retryManualSearchIndexer(
+  searchId: string,
+  indexerId: string,
+): Promise<ManualSearchRetryVerdict> {
+  return post<ManualSearchRetryVerdict>(
+    `/api/releases/searches/${segment(searchId)}/indexers/${segment(indexerId)}/retry`,
   )
 }
 

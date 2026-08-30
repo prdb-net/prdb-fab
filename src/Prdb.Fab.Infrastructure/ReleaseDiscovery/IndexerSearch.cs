@@ -35,7 +35,7 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
                     .SetProperty(state => state.SweepQueriesSpentToday, 0),
                 cancellationToken);
 
-        var wantedTitles = purpose == IndexerQueryPurpose.Walk
+        var wantedTitles = purpose is IndexerQueryPurpose.Walk or IndexerQueryPurpose.ManualSearch
             ? await context.WantedVideos.Select(row => row.Video!.Title).ToListAsync(cancellationToken)
             : [];
         var sweepHasWork = purpose == IndexerQueryPurpose.WantedSweep
@@ -55,7 +55,7 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
                         .SetProperty(state => state.QueriesSpentToday, state => state.QueriesSpentToday + 1)
                         .SetProperty(state => state.SweepQueriesSpentToday, state => state.SweepQueriesSpentToday + 1),
                     cancellationToken),
-            IndexerQueryPurpose.Walk => await context.IndexerWalkStates
+            IndexerQueryPurpose.Walk or IndexerQueryPurpose.ManualSearch => await context.IndexerWalkStates
                 .Where(state => state.IndexerId == indexerId
                                 && state.QueriesSpentToday < indexer.DailyQueryBudget
                                 && state.QueriesSpentToday - state.SweepQueriesSpentToday

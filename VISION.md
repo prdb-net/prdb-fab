@@ -114,11 +114,11 @@ categories, and each can be enabled or disabled without being deleted. The
 Newznab-style API that indexers share is what the tool speaks, so adding one is
 entering a URL and a key rather than waiting for support to be written.
 
-Their content is pulled continuously and kept locally, rather than searched live
-on every user action. That is what makes the UI fast, what makes matching
-against prdb a background job rather than something the user waits for, and what
-makes rate limits survivable: an indexer's API budget is spent by a scheduler
-that knows what it already has, not by a person clicking search.
+Their content is pulled continuously and kept locally. Ordinary browsing reads
+that cache and performs no remote work. A person may also explicitly request a
+Manual Search for one Video; the request becomes durable scheduled work, so the
+page can show its progress without holding an Indexer call open or bypassing the
+same query budget that protects the continuous sync.
 
 The local index is a cache of what the indexers offer. It is not a copy of
 prdb's corpus, it expires, and it can be thrown away and rebuilt.
@@ -249,7 +249,7 @@ and seeing what exists are the same activity:
 - **What's new** — the newest videos prdb knows about, as the landing page for
   "is there anything for me today".
 - **Sites**, **actors** and **wanted videos** — browsable, with prdb's artwork,
-  and with the obvious action attached: find this on the indexers.
+  and with the obvious action attached: search the indexers for this Video.
 - **The library** — what has actually been downloaded, with prdb's thumbnails,
   filtered by site and actor, searchable by title, filterable by quality.
 

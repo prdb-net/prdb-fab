@@ -49,4 +49,7 @@ public enum PinReason
     /// still wanted names it.
     /// </summary>
     CachedRelease,
+
+    /// <summary>A recent person-requested Manual Search names the video.</summary>
+    ManualSearch,
 }

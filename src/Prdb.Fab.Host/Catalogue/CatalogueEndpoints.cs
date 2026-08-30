@@ -47,6 +47,13 @@ public static class CatalogueEndpoints
             int page = 1) =>
             TypedResults.Ok(await browse.WantedAsync(page, cancellationToken)));
 
+        group.MapGet("/videos", async (
+            CatalogueBrowse browse,
+            CancellationToken cancellationToken,
+            string? search = null,
+            int page = 1) =>
+            TypedResults.Ok(await browse.VideosAsync(search, page, cancellationToken)));
+
         MapPreference(group, "/wanted/{prdbId:guid}", AccountPreferenceKind.WantedVideo);
         MapPreference(group, "/actors/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteActor);
         MapPreference(group, "/sites/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteSite);

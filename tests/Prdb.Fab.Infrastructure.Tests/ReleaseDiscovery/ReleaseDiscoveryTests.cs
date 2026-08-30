@@ -338,7 +338,8 @@ public sealed class ReleaseDiscoveryTests
             .Where(row => row.Name.StartsWith("indexer.") || row.Name.StartsWith("release."))
             .ToListAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(7, rows.Count);
+        Assert.Equal(8, rows.Count);
+        Assert.Contains(rows, row => row.Name == DiscoveryRoutineNames.ManualSearchRetention);
         Assert.All(
             rows.Where(row => row.Target is not null),
             row => Assert.Equal(IndexerId.ToString("D"), row.Target));

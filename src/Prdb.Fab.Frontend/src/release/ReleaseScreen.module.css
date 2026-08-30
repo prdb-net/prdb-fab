@@ -38,82 +38,84 @@
   padding: 0.75rem 1rem;
 }
 
-.discovery {
-  border: 1px solid var(--border);
+.manualSearch {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
   border-radius: var(--radius);
-  margin-top: 2rem;
-}
-
-.discovery summary {
-  cursor: pointer;
-  display: grid;
-  gap: 0.2rem;
-  grid-template-columns: 1fr auto;
-  padding: 0.85rem 1rem;
-}
-
-.discovery summary::after {
-  align-self: center;
-  content: '▾';
-  grid-column: 2;
-  grid-row: 1 / span 2;
-}
-
-.discovery[open] summary::after {
-  transform: rotate(180deg);
-}
-
-.discovery summary span,
-.discoveryBody > p,
-.routine p {
-  color: var(--text-quiet);
-}
-
-.discovery summary span {
-  font-size: 0.85rem;
-  grid-column: 1;
-}
-
-.discoveryBody {
-  border-top: 1px solid var(--border);
+  margin-bottom: 1.25rem;
   padding: 1rem;
 }
 
-.discoveryBody > p,
-.routine h3,
-.routine p {
-  margin: 0 0 0.35rem;
-}
-
-.routines {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.routine {
+.manualSearchHeading {
   align-items: start;
-  border-top: 1px solid var(--border);
   display: flex;
   gap: 1rem;
   justify-content: space-between;
-  padding-top: 0.75rem;
 }
 
-.routine button {
-  background: var(--accent);
-  border: 0;
-  border-radius: var(--radius);
-  color: var(--surface);
-  cursor: pointer;
+.manualSearchHeading h2,
+.manualSearchHeading p,
+.searchProgress p {
+  margin: 0 0 0.35rem;
+}
+
+.manualSearchHeading form {
+  display: flex;
   flex: none;
-  font-weight: 700;
-  padding: 0.45rem 0.8rem;
+  gap: 0.5rem;
 }
 
-.routine button:disabled {
-  cursor: wait;
+.manualSearch select,
+.manualSearch button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.5rem 0.7rem;
+}
+
+.manualSearch button {
+  cursor: pointer;
+}
+
+.manualSearchHeading button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+  font-weight: 700;
+}
+
+.manualSearch button:disabled {
+  cursor: default;
   opacity: 0.65;
+}
+
+.searchVerdict {
+  margin: 0.75rem 0 0;
+}
+
+.searchProgress {
+  border-top: 1px solid var(--border);
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+}
+
+.searchProgress ul {
+  margin: 0.65rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.searchProgress li button {
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.45rem;
+}
+
+@media (max-width: 760px) {
+  .manualSearchHeading,
+  .manualSearchHeading form {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 .acquisition {

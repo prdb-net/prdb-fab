@@ -10,6 +10,7 @@ import { WantedScreen } from './catalogue/WantedScreen.tsx'
 import { WhatsNewScreen } from './catalogue/WhatsNewScreen.tsx'
 import { ActorsScreen } from './catalogue/ActorsScreen.tsx'
 import { SitesScreen } from './catalogue/SitesScreen.tsx'
+import { SearchScreen } from './catalogue/SearchScreen.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
 import { AccountScreen } from './settings/AccountScreen.tsx'
@@ -76,6 +77,7 @@ function DocumentTitle() {
 function pageTitle(pathname: string): string {
   if (pathname === '/') return 'What’s new'
   if (pathname === '/wanted') return 'Wanted'
+  if (pathname === '/search') return 'Search'
   if (pathname === '/sites') return 'Sites'
   if (pathname.startsWith('/sites/')) return 'Site'
   if (pathname === '/actors') return 'Actors'
@@ -125,6 +127,7 @@ createRoot(document.getElementById('root')!).render(
               {/* ADR 0010's last step lands here, which is what makes onboarding
                   lead to a first download rather than to a page saying it could. */}
               <Route path="/wanted" element={<WantedScreen />} />
+              <Route path="/search" element={<SearchScreen />} />
               <Route path="/sites" element={<SitesScreen />} />
               <Route path="/sites/:id" element={<SitesScreen />} />
               <Route path="/actors" element={<ActorsScreen />} />

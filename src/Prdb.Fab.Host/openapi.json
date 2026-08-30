@@ -158,6 +158,140 @@
         }
       }
     },
+    "/api/releases/searches": {
+      "post": {
+        "tags": [
+          "Release discovery"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualSearchStartVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/searches/latest": {
+      "get": {
+        "tags": [
+          "Release discovery"
+        ],
+        "parameters": [
+          {
+            "name": "video",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualSearchView"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/api/releases/searches/{searchId}": {
+      "get": {
+        "tags": [
+          "Release discovery"
+        ],
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualSearchView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/releases/searches/{searchId}/indexers/{indexerId}/retry": {
+      "post": {
+        "tags": [
+          "Release discovery"
+        ],
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "indexerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualSearchRetryVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/releases/discovery-routines": {
       "get": {
         "tags": [
@@ -1074,6 +1208,47 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WantedList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/videos": {
+      "get": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoPage"
                 }
               }
             }
@@ -2837,6 +3012,7 @@
           "name",
           "url",
           "categories",
+          "enabled",
           "rank",
           "lastVerdict",
           "lastCheckedAt"
@@ -2855,6 +3031,9 @@
           },
           "categories": {
             "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
           },
           "rank": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -4085,6 +4264,316 @@
           },
           "deleteLeftovers": {
             "type": "boolean"
+          }
+        }
+      },
+      "ManualSearchIndexerState": {
+        "enum": [
+          "Queued",
+          "Searching",
+          "Deferred",
+          "Searched",
+          "Failed"
+        ]
+      },
+      "ManualSearchIndexerView": {
+        "required": [
+          "indexerId",
+          "indexer",
+          "state",
+          "startedAt",
+          "finishedAt",
+          "deferredUntil",
+          "resultsSeen",
+          "rowsAdded",
+          "detail",
+          "canRetry"
+        ],
+        "type": "object",
+        "properties": {
+          "indexerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "indexer": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ManualSearchIndexerState"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "deferredUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "resultsSeen": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rowsAdded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canRetry": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ManualSearchPhase": {
+        "enum": [
+          "Queued",
+          "Searching",
+          "Deferred",
+          "Identifying",
+          "Complete",
+          "Failed"
+        ]
+      },
+      "ManualSearchRequest": {
+        "required": [
+          "videoId",
+          "indexerId"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "indexerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ManualSearchResultCounts": {
+        "required": [
+          "seen",
+          "added",
+          "pending",
+          "awaiting",
+          "matchedVideo",
+          "matchedOtherVideo",
+          "ambiguous",
+          "siteOnly",
+          "unknown",
+          "unremarkable"
+        ],
+        "type": "object",
+        "properties": {
+          "seen": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "added": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "awaiting": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchedVideo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchedOtherVideo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ambiguous": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "siteOnly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unknown": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unremarkable": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ManualSearchRetryOutcome": {
+        "enum": [
+          "Scheduled",
+          "SearchNotFound",
+          "IndexerNotSelected",
+          "NotRetryable"
+        ]
+      },
+      "ManualSearchRetryVerdict": {
+        "required": [
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ManualSearchRetryOutcome"
+          }
+        }
+      },
+      "ManualSearchStartOutcome": {
+        "enum": [
+          "Started",
+          "AlreadyRunning",
+          "VideoNotFound",
+          "TitleNotSearchable",
+          "NoEnabledIndexers",
+          "IndexerNotEnabled"
+        ]
+      },
+      "ManualSearchStartVerdict": {
+        "required": [
+          "outcome",
+          "searchId",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ManualSearchStartOutcome"
+          },
+          "searchId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "ManualSearchView": {
+        "required": [
+          "id",
+          "videoId",
+          "videoTitle",
+          "query",
+          "requestedAt",
+          "phase",
+          "active",
+          "indexers",
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "videoTitle": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/ManualSearchPhase"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "indexers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManualSearchIndexerView"
+            }
+          },
+          "results": {
+            "$ref": "#/components/schemas/ManualSearchResultCounts"
           }
         }
       },

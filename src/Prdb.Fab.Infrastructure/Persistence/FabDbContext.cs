@@ -71,6 +71,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<WantedVideoSweepStateRow> WantedVideoSweepStates => Set<WantedVideoSweepStateRow>();
 
+    public DbSet<ManualSearchRow> ManualSearches => Set<ManualSearchRow>();
+
+    public DbSet<ManualSearchIndexerRow> ManualSearchIndexers => Set<ManualSearchIndexerRow>();
+
+    public DbSet<ManualSearchResultRow> ManualSearchResults => Set<ManualSearchResultRow>();
+
     public DbSet<IdentificationOutcomeRow> IdentificationOutcomes => Set<IdentificationOutcomeRow>();
 
     public DbSet<DownloadRow> Downloads => Set<DownloadRow>();
@@ -538,6 +544,54 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             state.HasOne(row => row.Indexer)
                 .WithMany()
                 .HasForeignKey(row => row.IndexerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ManualSearchRow>(search =>
+        {
+            search.ToTable("manual_search");
+            search.HasKey(row => row.Id);
+            search.Declares(AccountClass.AccountFree);
+            search.HasIndex(row => new { row.VideoId, row.RequestedAt });
+            search.Property(row => row.Query).IsRequired();
+            search.HasOne(row => row.Video)
+                .WithMany()
+                .HasForeignKey(row => row.VideoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ManualSearchIndexerRow>(part =>
+        {
+            part.ToTable("manual_search_indexer", table => table.HasCheckConstraint(
+                "CK_manual_search_indexer_state",
+                $"\"State\" IN ({string.Join(',', Enum.GetNames<ManualSearchIndexerState>().Select(name => $"'{name}'"))})"));
+            part.HasKey(row => new { row.SearchId, row.IndexerId });
+            part.Declares(AccountClass.AccountFree);
+            part.HasIndex(row => row.IndexerId);
+            part.Property(row => row.State).HasConversion<string>();
+            part.HasOne(row => row.Search)
+                .WithMany()
+                .HasForeignKey(row => row.SearchId)
+                .OnDelete(DeleteBehavior.Cascade);
+            part.HasOne(row => row.Indexer)
+                .WithMany()
+                .HasForeignKey(row => row.IndexerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ManualSearchResultRow>(result =>
+        {
+            result.ToTable("manual_search_result");
+            result.HasKey(row => new { row.SearchId, row.ReleaseId });
+            result.Declares(AccountClass.AccountFree);
+            result.HasIndex(row => row.ReleaseId);
+            result.HasOne(row => row.Search)
+                .WithMany()
+                .HasForeignKey(row => row.SearchId)
+                .OnDelete(DeleteBehavior.Cascade);
+            result.HasOne(row => row.Release)
+                .WithMany()
+                .HasForeignKey(row => row.ReleaseId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

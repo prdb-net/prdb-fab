@@ -3,14 +3,16 @@ import { Link, useSearchParams } from 'react-router'
 
 import {
   listReleases,
+  listIndexers,
   downloadRelease,
   previewResetDownloads,
   previewReleaseDownload,
-  readReleaseDiscoveryRoutines,
+  readLatestManualSearch,
   resetDownloads,
-  runReleaseDiscoveryRoutine,
+  retryManualSearchIndexer,
+  startManualSearch,
   type IdentificationState,
-  type ReleaseDiscoveryRoutine,
+  type ManualSearchView,
   type ReleasePage,
 } from '../api/client.ts'
 import styles from './ReleaseScreen.module.css'
@@ -39,6 +41,7 @@ export function ReleaseScreen() {
       return listReleases({ ...context, state, indexer, page })
     },
     enabled: context !== null,
+    refetchInterval: context && 'video' in context ? 3000 : false,
   })
 
   if (!context) {
@@ -123,10 +126,11 @@ function ReleaseTable({
       </div>
 
       <div className={styles.boundary}>
-        <strong>Cached results.</strong> This page shows Releases that background discovery has
-        already found. Opening it does not query an Indexer. For a Video, the best
-        download-ready Release appears first below.
+        <strong>Cached results.</strong> Reading or refreshing this table never queries an Indexer.
+        For a Video, use Manual Search below to queue a fresh title search through the scheduler.
       </div>
+
+      {page.context.kind === 'Video' && <ManualSearchPanel videoId={page.context.prdbId} />}
 
       {page.acquisition && (
         <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
@@ -213,15 +217,7 @@ function ReleaseTable({
                   <td>{release.matchedBy ?? '—'}</td>
                   <td>{automationExplanation(release)}</td>
                   <td>
-                    {page.context.kind === 'Video' && release.video && release.rankingPosition ? (
-                      <DownloadAction
-                        releaseId={release.id}
-                        releaseTitle={release.title}
-                        videoId={page.context.prdbId}
-                      />
-                    ) : (
-                      '—'
-                    )}
+                    <ReleaseActionCell page={page} release={release} />
                   </td>
                 </tr>
               ))}
@@ -244,9 +240,52 @@ function ReleaseTable({
         </nav>
       )}
 
-      <ReleaseDiscoveryControls />
     </main>
   )
+}
+
+function ReleaseActionCell({
+  page,
+  release,
+}: {
+  page: ReleasePage
+  release: ReleasePage['releases'][number]
+}) {
+  if (page.context.kind !== 'Video') {
+    return release.video ? (
+      <Link to={videoReleasePathFor(release.video.prdbId)}>Open identified Video</Link>
+    ) : actionReason(release)
+  }
+  if (release.video && release.rankingPosition) {
+    return (
+      <DownloadAction
+        releaseId={release.id}
+        releaseTitle={release.title}
+        videoId={page.context.prdbId}
+      />
+    )
+  }
+  return release.rankingExclusion
+    ? `Cannot download — ${release.rankingExclusion}`
+    : actionReason(release)
+}
+
+function videoReleasePathFor(videoId: string): string {
+  const parameters = new URLSearchParams({ video: videoId })
+  return `/releases?${parameters}`
+}
+
+function actionReason(release: ReleasePage['releases'][number]): string {
+  const reasons: Record<IdentificationState, string> = {
+    Unexamined: 'Cannot download — not screened yet',
+    Unremarkable: 'Cannot download — not a relevant Release',
+    Awaiting: 'Cannot download — awaiting Identification',
+    Matched: 'Not eligible for this Video',
+    Ambiguous: 'Cannot download — ambiguous Video',
+    SiteOnly: 'Cannot download — Site-Only Match',
+    Unknown: 'Cannot download — no Video identified',
+  }
+  return reasons[release.identificationState]
 }
 
 function releaseReturn(
@@ -270,85 +309,96 @@ function releaseReturn(
 function returnLabel(path: string): string {
   const pathname = path.split('?')[0]
   if (pathname === '/wanted') return 'Wanted'
+  if (pathname === '/search') return 'Search'
   if (pathname.startsWith('/sites')) return 'Sites'
   if (pathname.startsWith('/actors')) return 'Actors'
   if (pathname.startsWith('/library')) return 'Library'
   return 'What’s new'
 }
 
-function ReleaseDiscoveryControls() {
-  const routines = useQuery({
-    queryKey: ['release-discovery-routines'],
-    queryFn: readReleaseDiscoveryRoutines,
+function ManualSearchPanel({ videoId }: { videoId: string }) {
+  const queryClient = useQueryClient()
+  const latest = useQuery({
+    queryKey: ['manual-search', videoId],
+    queryFn: () => readLatestManualSearch(videoId),
+    refetchInterval: (query) => query.state.data?.active ? 1500 : false,
+  })
+  const indexers = useQuery({ queryKey: ['indexers'], queryFn: listIndexers })
+  const start = useMutation({
+    mutationFn: (indexerId: string | null) => startManualSearch(videoId, indexerId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['manual-search', videoId] })
+      await queryClient.invalidateQueries({ queryKey: ['releases'] })
+    },
+  })
+  const retry = useMutation({
+    mutationFn: ({ searchId, indexerId }: { searchId: string; indexerId: string }) =>
+      retryManualSearchIndexer(searchId, indexerId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['manual-search', videoId] }),
   })
 
   return (
-    <details className={styles.discovery}>
-      <summary>
-        <strong>Release discovery</strong>
-        <span>Automatic schedules and manual controls</span>
-      </summary>
-      <div className={styles.discoveryBody}>
-        <p>
-          These routines run automatically. Run now makes one due immediately; its lane,
-          Governor, and query budget still decide when work can proceed.
-        </p>
-
-        {routines.isPending && <p className={styles.secondary}>Reading the schedule…</p>}
-        {routines.isError && (
-          <p className={styles.secondary}>The Release discovery schedule could not be read.</p>
-        )}
-        {routines.data && routines.data.length === 0 && (
-          <p className={styles.secondary}>No Release discovery routines are available.</p>
-        )}
-        {routines.data && routines.data.length > 0 && (
-          <div className={styles.routines}>
-            {routines.data.map((routine) => (
-              <ReleaseDiscoveryRoutineControl
-                key={`${routine.kind}:${routine.target ?? 'global'}`}
-                routine={routine}
-              />
+    <section className={styles.manualSearch}>
+      <div className={styles.manualSearchHeading}>
+        <div>
+          <h2>Search Indexers</h2>
+          <p>Queue one title search per selected Indexer. Results flow through Identification before they can be downloaded.</p>
+        </div>
+        <form onSubmit={(event) => {
+          event.preventDefault()
+          const selected = String(new FormData(event.currentTarget).get('indexer') ?? '')
+          start.mutate(selected || null)
+        }}>
+          <select name="indexer" aria-label="Indexer">
+            <option value="">All enabled Indexers</option>
+            {indexers.data?.filter((indexer) => indexer.enabled).map((indexer) => (
+              <option key={indexer.id} value={indexer.id}>{indexer.name}</option>
             ))}
-          </div>
-        )}
+          </select>
+          <button type="submit" disabled={start.isPending || latest.data?.active === true}>
+            {start.isPending ? 'Queueing…' : latest.data?.active ? 'Search in progress' : 'Search now'}
+          </button>
+        </form>
       </div>
-    </details>
+      {start.data && <p className={styles.searchVerdict}>{start.data.detail}</p>}
+      {start.isError && <p className={styles.searchVerdict}>The Manual Search could not be queued.</p>}
+      {latest.data && <ManualSearchProgress search={latest.data} retry={(indexerId) => retry.mutate({ searchId: latest.data!.id, indexerId })} />}
+    </section>
   )
 }
 
-function ReleaseDiscoveryRoutineControl({ routine }: { routine: ReleaseDiscoveryRoutine }) {
-  const queryClient = useQueryClient()
-  const runNow = useMutation({
-    mutationFn: () => runReleaseDiscoveryRoutine(routine),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['release-discovery-routines'] }),
-  })
-
+function ManualSearchProgress({ search, retry }: { search: ManualSearchView; retry: (indexerId: string) => void }) {
+  const results = search.results
   return (
-    <div className={styles.routine}>
-      <div>
-        <h3>{routine.label}</h3>
-        <p>{routine.detail}</p>
-        <span className={styles.secondary}>{routineActivity(routine)}</span>
-        {runNow.data && <span className={styles.secondary}>{runNow.data.detail}</span>}
-        {runNow.isError && (
-          <span className={styles.secondary}>The routine could not be made due.</span>
-        )}
-      </div>
-      <button type="button" onClick={() => runNow.mutate()} disabled={runNow.isPending}>
-        {runNow.isPending ? 'Scheduling…' : 'Run now'}
-      </button>
+    <div className={styles.searchProgress}>
+      <p><strong>{phaseLabel(search.phase)}</strong> · query “{search.query}” · {Number(results.seen)} results seen, {Number(results.added)} new</p>
+      <p className={styles.secondary}>
+        {Number(results.pending)} awaiting screening or Identification · {Number(results.matchedVideo)} matched this Video · {Number(results.ambiguous)} ambiguous · {Number(results.siteOnly)} Site-Only Match · {Number(results.unknown)} unknown
+      </p>
+      <ul>
+        {search.indexers.map((part) => (
+          <li key={part.indexerId}>
+            <strong>{part.indexer}</strong> — {part.state}
+            {part.detail && `: ${part.detail}`}
+            {part.deferredUntil && ` until ${new Date(part.deferredUntil).toLocaleString()}`}
+            {part.canRetry && <button type="button" onClick={() => retry(part.indexerId)}>Retry</button>}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
 
-function routineActivity(routine: ReleaseDiscoveryRoutine): string {
-  if (routine.lastFailureAt && Number(routine.consecutiveFailures) > 0) {
-    return `Last failed ${new Date(routine.lastFailureAt).toLocaleString()} (${routine.consecutiveFailures} consecutive).`
+function phaseLabel(phase: ManualSearchView['phase']): string {
+  const labels: Record<ManualSearchView['phase'], string> = {
+    Queued: 'Queued',
+    Searching: 'Searching Indexers',
+    Deferred: 'Waiting for query budget',
+    Identifying: 'Identifying Releases',
+    Complete: 'Search complete',
+    Failed: 'Search failed',
   }
-  if (routine.lastSuccessAt) {
-    return `Last completed ${new Date(routine.lastSuccessAt).toLocaleString()}.`
-  }
-  return 'No completed run recorded yet.'
+  return labels[phase]
 }
 
 function AcquisitionSummary({

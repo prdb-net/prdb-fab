@@ -393,6 +393,12 @@ release: having been searched for is a reason to ask about a name, never an
 answer about it.
 _Avoid_: Backfill, Deep search, Rescan
 
+**Manual Search**:
+A person's durable request to search one or all enabled indexers for one named
+Video. Its results are provenance, never Identification evidence, and the
+ordinary schedule executes it within the Daily Query Budget.
+_Avoid_: Live search, Refresh, Ad-hoc search, Manual sweep
+
 **Governor**:
 What decides whether a prdb request is sent now or deferred, from the rate
 limit read off the last response rather than from a number known in advance.

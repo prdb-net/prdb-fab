@@ -19,6 +19,39 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-30
+
+This release makes the primary manual use case explicit: choose a known Video,
+ask enabled Indexers for it, inspect Identification, and submit an eligible
+Release without hunting through operational controls.
+
+### Added
+
+- **A first-class Search destination.** Local title search leads directly from
+  any Catalogue Video to its Release workspace; Video cards now name the
+  Indexer-search action while Site and Actor actions truthfully name cached
+  Release views.
+- **Durable Manual Search.** A person can search all enabled Indexers or one
+  selected Indexer for a Video. The request is stored before the response and
+  the ordinary sync scheduler performs one bounded title query per Indexer
+  within unreserved Daily Query Budget. Progress, deferral, failures, retries
+  and Identification counts remain visible after refresh or restart.
+- **Release-level manual Download choices.** Eligible Releases expose their
+  existing preview-and-confirm Download action; every ineligible row now says
+  why it cannot be submitted or links to the Video it was identified as.
+
+### Changed
+
+- A Manual Search result is provenance, not Identification evidence. New rows
+  enter `Awaiting`, settled rows stay settled, and only prdb may attach a Video,
+  Confidence and `matchedBy`.
+- Recent Manual Search records are disposable, retained for seven days and
+  excluded from Backup. They pin their Video and returned Releases only while
+  retained.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.11.0 has started against it.
+
 ## [0.10.0] - 2026-08-29
 
 This release turns the local catalogue into the front of the acquisition loop:

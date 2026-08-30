@@ -102,7 +102,7 @@ export function DirectoryView({
               </div>
               <div className={styles.directoryActions}>
                 {toggleFavourite(item)}
-                <Link to={releasePath(item)}>Find releases</Link>
+                <Link to={releasePath(item)}>View cached Releases</Link>
               </div>
             </li>
           ))}
@@ -152,7 +152,7 @@ export function VideoContextView({
         <Heading title={title} total={total} noun="video" />
         <div className={styles.directoryActions}>
           {contextAction}
-          <Link to={releaseAction}>Find releases for this selection</Link>
+          <Link to={releaseAction}>View cached Releases for this selection</Link>
         </div>
       </div>
       <Filter value={search} placeholder="Filter video titles…" apply={setFilter} />

@@ -32,10 +32,10 @@ public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
                     IndexerId = indexerId,
                     DerivedReleaseId = release.DerivedReleaseId,
                     FirstSeenAt = firstSeen,
-                    IdentificationState = source == ReleaseSource.WantedSweep
+                    IdentificationState = source is ReleaseSource.WantedSweep or ReleaseSource.ManualSearch
                         ? IdentificationState.Awaiting
                         : IdentificationState.Unexamined,
-                    SearchWasReason = source == ReleaseSource.WantedSweep,
+                    SearchWasReason = source is ReleaseSource.WantedSweep or ReleaseSource.ManualSearch,
                 };
                 context.Releases.Add(row);
                 stored.Add(row.DerivedReleaseId, row);
@@ -58,8 +58,14 @@ public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        if (source == ReleaseSource.ManualSearch)
+        {
+            // The Manual Search result rows are the pin. Its routine writes
+            // those immediately after this returns and only then evicts.
+            return new(releases.Count, added, 0, [.. stored.Values.Select(row => row.Id)]);
+        }
         var bounded = await eviction.EvictAsync(indexerId, cancellationToken: cancellationToken);
-        return new(releases.Count, added, bounded.OverBy);
+        return new(releases.Count, added, bounded.OverBy, [.. stored.Values.Select(row => row.Id)]);
     }
 }
 
@@ -67,6 +73,7 @@ public enum ReleaseSource
 {
     IndexerWalk,
     WantedSweep,
+    ManualSearch,
 }
 
-public sealed record ReleaseWrite(int Seen, int Added, int CacheOverBy);
+public sealed record ReleaseWrite(int Seen, int Added, int CacheOverBy, IReadOnlyList<long> ReleaseIds);

@@ -97,7 +97,7 @@ export function WhatsNewScreen() {
                   <DownloadBestButton prdbId={video.prdbId} />
                 )}
                 <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  View releases
+                  Search Indexers
                 </Link>
                 {video.sitePrdbId && (
                   <Link to={`/sites/${video.sitePrdbId}`}>{video.site ?? 'View Site'}</Link>

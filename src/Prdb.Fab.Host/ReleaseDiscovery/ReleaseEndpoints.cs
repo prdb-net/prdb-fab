@@ -14,6 +14,47 @@ public static class ReleaseEndpoints
     {
         routes.MapGet("/api/releases", ReadAsync).WithTags("Release discovery");
 
+        routes.MapPost(
+            "/api/releases/searches",
+            async (
+                ManualSearchRequest request,
+                ManualSearches searches,
+                CancellationToken cancellationToken) =>
+                TypedResults.Ok(await searches.StartAsync(request.VideoId, request.IndexerId, cancellationToken)))
+            .WithTags("Release discovery");
+
+        routes.MapGet(
+            "/api/releases/searches/latest",
+            async Task<Results<Ok<ManualSearchView>, NoContent>> (
+                Guid video,
+                ManualSearches searches,
+                CancellationToken cancellationToken) =>
+            {
+                var answer = await searches.LatestAsync(video, cancellationToken);
+                return answer is null ? TypedResults.NoContent() : TypedResults.Ok(answer);
+            }).WithTags("Release discovery");
+
+        routes.MapGet(
+            "/api/releases/searches/{searchId:guid}",
+            async Task<Results<Ok<ManualSearchView>, NotFound>> (
+                Guid searchId,
+                ManualSearches searches,
+                CancellationToken cancellationToken) =>
+            {
+                var answer = await searches.ReadAsync(searchId, cancellationToken);
+                return answer is null ? TypedResults.NotFound() : TypedResults.Ok(answer);
+            }).WithTags("Release discovery");
+
+        routes.MapPost(
+            "/api/releases/searches/{searchId:guid}/indexers/{indexerId:guid}/retry",
+            async (
+                Guid searchId,
+                Guid indexerId,
+                ManualSearches searches,
+                CancellationToken cancellationToken) =>
+                TypedResults.Ok(await searches.RetryAsync(searchId, indexerId, cancellationToken)))
+            .WithTags("Release discovery");
+
         routes.MapGet(
             "/api/releases/discovery-routines",
             async (ReleaseDiscoveryControls controls, CancellationToken cancellationToken) =>
@@ -102,3 +143,5 @@ public static class ReleaseEndpoints
 public sealed record DownloadPreviewRequest(Guid VideoId);
 
 public sealed record DownloadRequest(Guid DownloadId, Guid VideoId);
+
+public sealed record ManualSearchRequest(Guid VideoId, Guid? IndexerId);
