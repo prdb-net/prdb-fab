@@ -262,7 +262,6 @@ function ReleaseActionCell({
     return (
       <DownloadAction
         releaseId={release.id}
-        releaseTitle={release.title}
         videoId={page.context.prdbId}
       />
     )
@@ -452,7 +451,6 @@ function AcquisitionSummary({
           {ready && (
             <DownloadAction
               releaseId={ready.id}
-              releaseTitle={ready.title}
               videoId={videoId}
               label="Download best Release"
             />
@@ -484,12 +482,10 @@ function AcquisitionSummary({
 
 function DownloadAction({
   releaseId,
-  releaseTitle,
   videoId,
   label = 'Download',
 }: {
   releaseId: number | string
-  releaseTitle: string
   videoId: string
   label?: string
 }) {
@@ -498,12 +494,6 @@ function DownloadAction({
     mutationFn: async () => {
       const preview = await previewReleaseDownload(releaseId, videoId)
       if (preview.outcome !== 'Ready' || !preview.downloadId) return preview
-
-      const confirmed = window.confirm(
-        `Submit “${releaseTitle}” to SABnzbd?\n\nThis spends bandwidth and consumes one of this Video's ${preview.retryBudget} Download attempts.`,
-      )
-      if (!confirmed) return null
-
       return downloadRelease(releaseId, videoId, preview.downloadId)
     },
     onSuccess: () => {
