@@ -62,6 +62,14 @@ public sealed class GovernorTests
 
         // It comes back when a slot frees up rather than after its cadence.
         Assert.Equal(deferredAt + TimeSpan.FromSeconds(600), routine.DueAt);
+
+        database.Time.Advance(TimeSpan.FromSeconds(600));
+        await TurnAsync(database);
+
+        // The old remaining count expires with the reset it described. The
+        // next request goes out to obtain the changed hourly window rather
+        // than deferring the same stale reading for a whole hour.
+        Assert.Equal(2, prdb.Requests);
     }
 
     /// <summary>

@@ -30,9 +30,9 @@ namespace Prdb.Fab.Infrastructure.Connections;
 public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger)
 {
     /// <summary>
-    /// A reading older than the window it describes says nothing: prdb's hour
-    /// is a sliding window, so an hour after the reading every request in it
-    /// has left.
+    /// The longest a reading can describe anything. Its reported reset is
+    /// normally sooner: once that elapses at least one slot has changed, so a
+    /// request has to obtain a new reading rather than reusing the old count.
     /// </summary>
     private static readonly TimeSpan ReadingKeeps = TimeSpan.FromHours(1);
 
@@ -234,7 +234,17 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
         }
     }
 
-    private bool Fresh() => reading is not null && time.GetUtcNow() - readAt < ReadingKeeps;
+    private bool Fresh()
+    {
+        if (reading is not { } budget) return false;
+
+        var keepsFor = budget.ResetIn <= TimeSpan.Zero
+            ? TimeSpan.Zero
+            : budget.ResetIn < ReadingKeeps
+                ? budget.ResetIn
+                : ReadingKeeps;
+        return time.GetUtcNow() - readAt < keepsFor;
+    }
 
     private static PrdbBudget? ReadHourlyWindow(HttpResponseMessage response)
     {

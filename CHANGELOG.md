@@ -19,6 +19,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-08-30
+
+### Fixed
+
+- Background prdb work held behind a reserved share now asks again when the
+  reported hourly reset elapses. It no longer reuses the same stale remaining
+  count for up to a full hour while newly available request slots go unused.
+
 ## [0.12.0] - 2026-08-30
 
 This release makes recent availability a background guarantee instead of a
