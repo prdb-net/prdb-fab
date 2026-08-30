@@ -10,6 +10,7 @@ public static class ReleaseDiscoveryServiceCollectionExtensions
 {
     public static IServiceCollection AddFabReleaseDiscovery(this IServiceCollection services)
     {
+        services.TryAddSingleton<ReleaseWriteGate>();
         services.AddScoped<IndexerSearch>();
         services.TryAddScoped<CatalogueRows>();
         services.TryAddScoped<VideoDetails>();

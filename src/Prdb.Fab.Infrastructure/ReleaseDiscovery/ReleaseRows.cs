@@ -9,7 +9,10 @@ using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
-public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
+public sealed class ReleaseRows(
+    FabDbContext context,
+    ReleaseEviction eviction,
+    ReleaseWriteGate writes)
 {
     public async Task<ReleaseWrite> UpsertAsync(
         Guid indexerId,
@@ -18,6 +21,7 @@ public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
         ReleaseSource source,
         CancellationToken cancellationToken)
     {
+        await using var held = await writes.EnterAsync(cancellationToken);
         var identities = releases.Select(release => release.DerivedReleaseId).Distinct().ToArray();
         var stored = await context.Releases.AsTracking()
             .Where(row => row.IndexerId == indexerId && identities.Contains(row.DerivedReleaseId))

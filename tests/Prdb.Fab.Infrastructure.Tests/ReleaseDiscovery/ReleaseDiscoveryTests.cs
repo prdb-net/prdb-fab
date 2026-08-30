@@ -151,6 +151,35 @@ public sealed class ReleaseDiscoveryTests
     }
 
     [Fact]
+    public async Task Concurrent_sources_share_one_release_row()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SeedIndexerAsync(database);
+        var release = Item("shared-id", "https://indexer.invalid/get/shared-id");
+
+        async Task<ReleaseWrite> WriteAsync(ReleaseSource source)
+        {
+            await using var scope = database.Scope();
+            return await scope.ServiceProvider.GetRequiredService<ReleaseRows>().UpsertAsync(
+                IndexerId,
+                [release],
+                FirstSeen,
+                source,
+                TestContext.Current.CancellationToken);
+        }
+
+        var writes = await Task.WhenAll(
+            WriteAsync(ReleaseSource.IndexerWalk),
+            WriteAsync(ReleaseSource.ManualSearch));
+
+        await using var check = database.Scope();
+        var rows = check.ServiceProvider.GetRequiredService<FabDbContext>().Releases;
+        Assert.Equal(1, writes.Sum(write => write.Added));
+        Assert.Equal(1, await rows.CountAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("shared-id", (await rows.SingleAsync(TestContext.Current.CancellationToken)).DerivedReleaseId);
+    }
+
+    [Fact]
     public async Task Releases_inside_the_inclusive_recent_window_skip_screening_but_older_walk_rows_do_not()
     {
         await using var database = await TestDatabase.CreateAsync();
