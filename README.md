@@ -31,7 +31,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.11.0
+    image: prdbnet/prdb-fab:0.12.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -52,8 +52,9 @@ credential, and the field to set one is offered only while no password exists.
 Whoever reaches the tool first sets it, so start it on a network you control.
 After that it walks you through your prdb key, SABnzbd, your indexers and your
 library root, checking each one against the real service before it stores it.
-Setting up ends on your wanted list, with the first read of prdb's catalogue
-already running behind it — there is nothing to wait in front of.
+Setting up ends on your wanted list, with the first **90-day Recent Window**
+already filling behind it — there is nothing to wait in front of. Status shows
+when prdb and every enabled Indexer have completed that first proof.
 
 **Over plain `http` the password travels across the network in the clear.** On a
 LAN you control that is the ordinary way to run this; reaching it from anywhere
@@ -72,7 +73,10 @@ prdb through the same governed connection used by the background sync.
 
 Each enabled indexer is also walked continuously. Releases enter a local,
 disposable cache, are screened against the catalogue, and prdb is asked to
-identify the names worth asking about. A shared **Releases** table opens from
+identify their names. The newest **90 days** are a standing local guarantee:
+prdb Catalogue details, every enabled Indexer's Releases and prdb
+Identification are filled and revalidated in the background without a page
+first being opened. A shared **Releases** table opens from
 all four browse surfaces and shows the Indexer, size, first seen time,
 Identification State, Confidence and `matchedBy`. Ambiguous answers remain
 Candidates and a Site-Only Match remains a Site — neither is presented as a
@@ -84,15 +88,17 @@ scheduler queries all enabled Indexers or one selected Indexer while the page
 shows progress. New results pass through prdb Identification before becoming
 downloadable. Every other page search and refresh reads only local state. Each Indexer Cache is
 bounded at **100,000 Releases**; the oldest examined Releases nothing points at
-are evicted first, while unseen or still-wanted rows are never discarded to
-hold the ceiling.
+are evicted first, while Recent Window, unseen or still-wanted rows are never
+discarded to hold the ceiling. The cache may exceed its ceiling when protecting
+those rows requires it.
 
 Each newly added Indexer starts with a **1,000-request Daily Query Budget**.
 When there is searchable Wanted work, half of that budget, capped at 480
 requests, is reserved for the Wanted Sweep; the rest is shared by Manual Search
-and the continuous Indexer Walk. The first walk reads up to 90 days of history and may therefore
-cost hundreds of queries or continue on a later day. It never spends past that
-Indexer's daily budget.
+and the continuous Indexer Walk. A resumable full 90-day pass runs beside the
+head walk and repeats at least daily, so late Indexer visibility and outages do
+not leave permanent holes. Its first pass may cost hundreds of queries or
+continue on a later day. It never spends past that Indexer's daily budget.
 
 **Status** lays the whole unattended loop out as Sync (prdb), Sync (Indexers),
 Match, Decide, Download and File. Its headline counts only **Gaps** that need a

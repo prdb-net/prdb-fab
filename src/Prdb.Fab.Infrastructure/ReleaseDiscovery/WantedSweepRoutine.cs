@@ -94,10 +94,6 @@ public sealed class WantedSweepRoutine(
                 time.GetUtcNow(),
                 ReleaseSource.WantedSweep,
                 cancellationToken);
-            if (write.CacheOverBy > 0)
-            {
-                return RunResult.Failed("The Indexer Cache cannot hold its ceiling without losing an unexamined or pinned Release.");
-            }
             resultsSeen += read.Releases.Count + read.DroppedWithoutIdentity;
             rowsAdded += write.Added;
             searchedCount++;

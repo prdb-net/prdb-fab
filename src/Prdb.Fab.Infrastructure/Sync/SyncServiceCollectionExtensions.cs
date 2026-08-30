@@ -8,8 +8,8 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public static class SyncServiceCollectionExtensions
 {
     /// <summary>
-    /// ADR 0013's sync: the five change feeds, What's New in both directions,
-    /// the site list, the repair pass, the two bootstraps that retire, and what
+    /// The five change feeds, What's New and the Recent Window, the site list,
+    /// repair, the remaining Actor bootstrap, and what
     /// they share — including ADR 0033's pinning, which is a query the repair
     /// pass and eviction both ask rather than a column either of them writes.
     /// </summary>
@@ -23,6 +23,8 @@ public static class SyncServiceCollectionExtensions
     public static IServiceCollection AddFabSync(this IServiceCollection services)
     {
         services.AddScoped<FeedCursors>();
+        services.AddScoped<RecentWindowState>();
+        services.TryAddScoped<RecentWindowCoverage>();
         services.TryAddScoped<CatalogueRows>();
 
         // ADR 0033's pinning, as the query it is. One source today and one
@@ -68,13 +70,22 @@ public static class SyncServiceCollectionExtensions
         Routine<FavouriteSiteFeedRoutine>(services);
         Routine<FavouriteActorFeedRoutine>(services);
         Routine<WhatsNewRoutine>(services);
-        Routine<WhatsNewBackfillRoutine>(services);
+        Routine<RecentCatalogueRoutine>(services);
         Routine<SiteListRoutine>(services);
         Routine<CatalogueRepairRoutine>(services);
         Routine<ArtworkRoutine>(services);
         Routine<AccountPreferenceRoutine>(services);
 
         return services;
+    }
+
+    public static async Task PrepareFabRecentWindowAsync(
+        this IServiceProvider services,
+        CancellationToken cancellationToken = default)
+    {
+        await using var scope = services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<RecentWindowState>()
+            .EnsureFoundationAsync(cancellationToken);
     }
 
     private static void Routine<TRoutine>(IServiceCollection services)

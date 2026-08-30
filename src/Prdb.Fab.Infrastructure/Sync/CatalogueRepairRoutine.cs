@@ -11,9 +11,8 @@ using Prdb.Sdk.Generated.Models;
 namespace Prdb.Fab.Infrastructure.Sync;
 
 /// <summary>
-/// ADR 0013's repair pass: pinned videos read back from
-/// <c>POST /videos/batch</c>, fifty a request, oldest-checked first, in the bulk
-/// lane.
+/// Current and pinned videos read back from <c>POST /videos/batch</c>, fifty a
+/// request, oldest-checked first, in the bulk lane.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,10 +27,9 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// rather than having a writer of its own.
 /// </para>
 /// <para>
-/// <strong>An unpinned row is never repaired.</strong> ADR 0013 accepts that by
-/// name: its artwork URL may be dead before it is evicted, a missing image on a
-/// browse grid is the cost, and a pinned row is never in that state. What is
-/// pinned is <see cref="CataloguePins"/>'s to answer.
+/// ADR 0050 repairs every row in the Recent Window. Outside it, ADR 0013's
+/// original rule remains: only a row <see cref="CataloguePins"/> says is pinned
+/// is a lasting repair obligation.
 /// </para>
 /// <para>
 /// <strong>Steered by a request budget and not by a cadence.</strong> The
@@ -68,9 +66,9 @@ public sealed class CatalogueRepairRoutine(
 
     /// <summary>
     /// ADR 0032's idle tick for the bulk lane, and deliberately not an interval:
-    /// this routine's work set is the pinned part of the catalogue, so what this
-    /// says is how often to take the next turn. How much a turn spends is the
-    /// budget's, which is what ADR 0013 asked for.
+    /// this routine's work set is current or pinned Catalogue rows, so what
+    /// this says is how often to take the next turn. How much a turn spends is
+    /// the budget's, which is what ADR 0013 asked for.
     /// </summary>
     public TimeSpan Cadence => TimeSpan.FromSeconds(30);
 
@@ -89,11 +87,18 @@ public sealed class CatalogueRepairRoutine(
 
         var budget = governor.LastReading;
 
+        var now = time.GetUtcNow();
+        var recentSince = RecentWindow.BeginsAt(now);
+        var staleBefore = now - RecentWindow.RevalidateAfter;
+
         // Oldest-checked first, which is what LastReadAt is on the row for. The
         // id breaks the tie so that a catalogue whose rows were all written in
-        // one backfill is walked in a stable order rather than in whatever
+        // one import is walked in a stable order rather than in whatever
         // order SQLite finds them.
-        var due = await pins.Pinned(context.CatalogueVideos)
+        var pinnedIds = pins.Pinned(context.CatalogueVideos).Select(row => row.Id);
+        var due = await context.CatalogueVideos
+            .Where(row => row.LastReadAt <= staleBefore
+                && (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id)))
             .OrderBy(row => row.LastReadAt)
             .ThenBy(row => row.Id)
             .Select(row => new Due(row.Id, row.PrdbId))
@@ -102,8 +107,8 @@ public sealed class CatalogueRepairRoutine(
 
         if (due.Count == 0)
         {
-            // Nothing is pinned. ADR 0032: an empty work set is not a run, so
-            // this is not recorded and moves no counter.
+            // Nothing current or pinned is due. ADR 0032: an empty work set is
+            // not a run, so this is not recorded and moves no counter.
             return RunResult.NothingToDo;
         }
 
@@ -115,7 +120,7 @@ public sealed class CatalogueRepairRoutine(
         }
 
         logger.LogInformation(
-            "The repair pass re-read {Count} pinned video(s) of the {Due} it asked about.",
+            "The repair pass re-read {Count} current or pinned video(s) of the {Due} it asked about.",
             repaired,
             due.Count);
 

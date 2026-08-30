@@ -54,6 +54,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     /// <summary>One row per feed. See <see cref="FeedCursorRow"/>.</summary>
     public DbSet<FeedCursorRow> FeedCursors => Set<FeedCursorRow>();
 
+    public DbSet<RecentWindowStateRow> RecentWindowState => Set<RecentWindowStateRow>();
+
     /// <summary>The user's half, and the three tables a key change drops.</summary>
     public DbSet<WantedVideoRow> WantedVideos => Set<WantedVideoRow>();
 
@@ -389,6 +391,17 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             cursor.Declares(AccountClass.PerRow);
         });
 
+        builder.Entity<RecentWindowStateRow>(state =>
+        {
+            state.ToTable("recent_window_state", table => table.HasCheckConstraint(
+                "CK_recent_window_state_singleton",
+                $"\"Id\" = {RecentWindowStateRow.TheOnlyRow}"));
+            state.HasKey(row => row.Id);
+            state.Declares(AccountClass.AccountFree);
+            state.Property(row => row.CatalogueResumePage).HasDefaultValue(1);
+            state.HasData(new RecentWindowStateRow());
+        });
+
         // The user's half. Each of these is keyed by what it points at, which
         // is both the shape of the thing — one row per wanted video, per
         // followed site, per followed actor — and the index ADR 0033's pinning
@@ -447,6 +460,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             state.Property(row => row.CapsTree).IsRequired();
             state.Property(row => row.ResolvedCategoryIds).IsRequired();
             state.Property(row => row.MissingCategoryNames).IsRequired();
+            state.Property(row => row.RecentWindowResumePage).HasDefaultValue(0);
             state.HasOne(row => row.Indexer)
                 .WithOne()
                 .HasForeignKey<IndexerWalkStateRow>(row => row.IndexerId)
@@ -489,6 +503,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             release.HasIndex(row => row.IdentificationState);
             release.HasIndex(row => row.VideoId);
             release.HasIndex(row => row.FirstSeenAt);
+            release.HasIndex(row => new { row.PostDate, row.LastIdentifiedAt });
             release.Property(row => row.DerivedReleaseId).IsRequired();
             release.Property(row => row.RawGuid).IsRequired();
             release.Property(row => row.Title).IsRequired();

@@ -8,6 +8,7 @@ using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -504,6 +505,10 @@ public sealed class AcquisitionTests
             context.Releases.AddRange(
                 Release(seeded, "downloaded", 1000, IdentificationConfidence.Exact),
                 Release(seeded, "disposable", 2000, IdentificationConfidence.Exact));
+            foreach (var release in context.ChangeTracker.Entries<ReleaseRow>().Select(entry => entry.Entity))
+            {
+                release.PostDate = database.Time.GetUtcNow().AddDays(-RecentWindow.Days - 1);
+            }
             context.Downloads.Add(Download(database, seeded.VideoId, seeded.IndexerId, "downloaded"));
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 

@@ -69,11 +69,10 @@ export function WantedScreen() {
         </div>
       )}
 
-      {wanted.data?.backfillRunning && (
+      {wanted.data?.recentWindowFilling && (
         <p className={styles.working}>
-          The first read of prdb&rsquo;s catalogue is still running in the
-          background. Nothing is wrong and nothing is waiting on it; what is
-          already here works, and the rest fills in.
+          A complete read of prdb&rsquo;s 90-day Recent Window is running in the
+          background. What is already here works, and the rest fills in.
         </p>
       )}
 

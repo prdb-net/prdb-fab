@@ -173,7 +173,7 @@ public sealed class CatalogueBrowse(
             APage,
             total,
             await cursors.StartedAsync(Feed.WantedVideos, cancellationToken),
-            await BackfillIsRunningAsync(cancellationToken));
+            await RecentWindowIsFillingAsync(cancellationToken));
     }
 
     /// <summary>Searches every locally known Video without causing a remote read.</summary>
@@ -322,18 +322,15 @@ public sealed class CatalogueBrowse(
     }
 
     /// <summary>
-    /// Whether ADR 0013's backfill still has a row.
+    /// Whether the first Recent Window fill is unfinished or a later pass is active.
     /// </summary>
     /// <remarks>
-    /// ADR 0014: bootstrap is not a state of the application, so there is no
-    /// flag to read — a one-shot routine retires by deleting its row, and the
-    /// row being there is the whole of what <em>still running</em> means. Asked
-    /// of the schedule rather than of a column, which is what keeps the two from
-    /// disagreeing.
+    /// The recurring routine never retires, so progress belongs to its durable
+    /// source position rather than the existence of its schedule row.
     /// </remarks>
-    private Task<bool> BackfillIsRunningAsync(CancellationToken cancellationToken) =>
-        context.Routines.AnyAsync(
-            row => row.Name == WhatsNewBackfillRoutine.RoutineName,
+    private Task<bool> RecentWindowIsFillingAsync(CancellationToken cancellationToken) =>
+        context.RecentWindowState.AnyAsync(
+            row => row.CatalogueCompletedAt == null || row.CataloguePassStartedAt != null,
             cancellationToken);
 
     private async Task<VideoPage> VideosAsync(
@@ -499,11 +496,9 @@ public sealed record WhatsNewPage(
 /// the first run and an empty list after it are different sentences: one is a
 /// page that has not arrived, the other is an account with nothing on it.
 /// </param>
-/// <param name="BackfillRunning">
-/// Whether ADR 0013's backfill still has a row to run. It is a fact and
-/// explicitly not a Gap — nothing is broken, the catalogue is merely
-/// unfinished — and it is the whole of what this slice says about the state of
-/// the loop.
+/// <param name="RecentWindowFilling">
+/// Whether the first Recent Window Catalogue proof is incomplete or another
+/// complete pass is in progress.
 /// </param>
 public sealed record WantedList(
     IReadOnlyList<VideoCard> Videos,
@@ -511,7 +506,7 @@ public sealed record WantedList(
     int PageSize,
     int Total,
     bool FeedHasRun,
-    bool BackfillRunning);
+    bool RecentWindowFilling);
 
 public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite);
 

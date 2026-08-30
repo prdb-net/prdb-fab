@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -22,7 +23,7 @@ public sealed class IndexerWalkTests
     private static readonly Guid IndexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000002");
 
     [Fact]
-    public async Task The_bootstrap_commits_each_page_and_resumes_after_a_new_scope()
+    public async Task The_recent_window_commits_each_page_resumes_and_schedules_the_next_full_pass()
     {
         var remote = new PagingIndexer(offset => Feed(offset == 0 ? 100 : 1, offset));
         await using var database = await DatabaseAsync(remote);
@@ -30,29 +31,33 @@ public sealed class IndexerWalkTests
 
         await using (var scope = database.Scope())
         {
-            var result = await scope.ServiceProvider.GetRequiredService<IndexerBootstrapRoutine>()
+            var result = await scope.ServiceProvider.GetRequiredService<IndexerRecentWindowRoutine>()
                 .RunAsync(IndexerId.ToString(), TestContext.Current.CancellationToken);
             Assert.Equal(100, result.ResultsSeen);
             Assert.Equal(100, result.RowsAdded);
+            Assert.Equal(TimeSpan.Zero, result.DueIn);
         }
 
         await using (var scope = database.Scope())
         {
             var state = await scope.ServiceProvider.GetRequiredService<FabDbContext>().IndexerWalkStates.SingleAsync(TestContext.Current.CancellationToken);
-            Assert.Equal(1, state.ResumePage);
-            Assert.Null(state.BootstrapCompletedAt);
+            Assert.Equal(1, state.RecentWindowResumePage);
+            Assert.Null(state.RecentWindowCompletedAt);
 
-            await scope.ServiceProvider.GetRequiredService<IndexerBootstrapRoutine>()
+            var result = await scope.ServiceProvider.GetRequiredService<IndexerRecentWindowRoutine>()
                 .RunAsync(IndexerId.ToString(), TestContext.Current.CancellationToken);
+            Assert.Equal(RecentWindow.CompleteEvery, result.DueIn);
         }
 
         await using (var scope = database.Scope())
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
             Assert.Equal(101, await context.Releases.CountAsync(TestContext.Current.CancellationToken));
-            Assert.NotNull((await context.IndexerWalkStates.SingleAsync(TestContext.Current.CancellationToken)).BootstrapCompletedAt);
-            Assert.False(await context.Routines.AnyAsync(
-                row => row.Name == DiscoveryRoutineNames.Bootstrap,
+            var state = await context.IndexerWalkStates.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.NotNull(state.RecentWindowCompletedAt);
+            Assert.Equal(0, state.RecentWindowResumePage);
+            Assert.True(await context.Routines.AnyAsync(
+                row => row.Name == DiscoveryRoutineNames.RecentWindow,
                 TestContext.Current.CancellationToken));
         }
 
@@ -164,7 +169,7 @@ public sealed class IndexerWalkTests
                 update => update
                     .SetProperty(row => row.WatermarkPostDate, watermark)
                     .SetProperty(row => row.WatermarkReleaseId, "held-before-this-run")
-                    .SetProperty(row => row.BootstrapCompletedAt, now),
+                    .SetProperty(row => row.RecentWindowCompletedAt, now),
                 TestContext.Current.CancellationToken);
         }
     }

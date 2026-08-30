@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -33,6 +34,7 @@ public sealed class ReleaseRows(FabDbContext context, ReleaseEviction eviction)
                     DerivedReleaseId = release.DerivedReleaseId,
                     FirstSeenAt = firstSeen,
                     IdentificationState = source is ReleaseSource.WantedSweep or ReleaseSource.ManualSearch
+                        || RecentWindow.Contains(release.PostDate, firstSeen)
                         ? IdentificationState.Awaiting
                         : IdentificationState.Unexamined,
                     SearchWasReason = source is ReleaseSource.WantedSweep or ReleaseSource.ManualSearch,

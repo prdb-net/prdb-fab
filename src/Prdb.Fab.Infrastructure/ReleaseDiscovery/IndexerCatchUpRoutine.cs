@@ -50,10 +50,6 @@ public sealed class IndexerCatchUpRoutine(
         if (read.Refusal is not null) return RunResult.Failed("The indexer refused the catch-up search.", read.RetryAfter);
 
         var write = await releases.UpsertAsync(indexerId, read.Releases, time.GetUtcNow(), ReleaseSource.IndexerWalk, cancellationToken);
-        if (write.CacheOverBy > 0)
-        {
-            return RunResult.Failed("The Indexer Cache cannot hold its ceiling without losing an unexamined or pinned Release.");
-        }
         state.ResumePage = page + 1;
         var finished = read.Releases.Count + read.DroppedWithoutIdentity < Connections.NewznabGateway.PageSize
             || read.Releases.Any(item => item.PostDate < from);

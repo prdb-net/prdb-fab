@@ -2,14 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
-/// <summary>Holds one Indexer's cache ceiling without discarding an unexamined or pinned Release.</summary>
+/// <summary>
+/// Holds one Indexer's cache ceiling without discarding a recent, unexamined or
+/// pinned Release.
+/// </summary>
 public sealed class ReleaseEviction(
     FabDbContext context,
     ReleasePins pins,
+    TimeProvider time,
     ILogger<ReleaseEviction> logger)
 {
     public async Task<ReleaseEvictionResult> EvictAsync(
@@ -26,8 +31,10 @@ public sealed class ReleaseEviction(
             return new(held, Removed: 0, OverBy: 0);
         }
 
+        var recentSince = RecentWindow.BeginsAt(time.GetUtcNow());
         var disposable = pins.Unpinned(context.Releases.Where(release =>
                 release.IndexerId == indexerId
+                && release.PostDate < recentSince
                 && release.IdentificationState != IdentificationState.Unexamined))
             .OrderBy(release => release.FirstSeenAt)
             .ThenBy(release => release.Id)

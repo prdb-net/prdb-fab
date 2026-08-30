@@ -49,6 +49,27 @@ public sealed class PinningTests
         Assert.DoesNotContain(videos[3], left);
     }
 
+    [Fact]
+    public async Task A_recent_unpinned_video_survives_catalogue_eviction()
+    {
+        await using var database = await CreateAsync();
+        var videos = await FillAsync(database, count: 4);
+
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<FabDbContext>().CatalogueVideos
+                .Where(row => row.Id == videos[0])
+                .ExecuteUpdateAsync(
+                    update => update.SetProperty(row => row.CreatedAtUtc, database.Time.GetUtcNow()),
+                    TestContext.Current.CancellationToken);
+        }
+
+        var eviction = await EvictAsync(database, ceiling: 1);
+
+        Assert.Equal(3, eviction.Removed);
+        Assert.Equal([videos[0]], await IdsAsync(database));
+    }
+
     /// <summary>
     /// The sentence ADR 0033 rested on when it corrected ADR 0013: eviction
     /// walks candidates in first-seen order rather than scanning the table, so

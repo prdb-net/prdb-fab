@@ -6,6 +6,7 @@ using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Sync;
 
 namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
@@ -17,7 +18,8 @@ namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 public sealed class ReleaseBrowse(
     FabDbContext context,
     ReleaseRankings rankings,
-    DownloadBrowse downloads)
+    DownloadBrowse downloads,
+    RecentWindowCoverage recentWindow)
 {
     public const int APage = 50;
 
@@ -244,7 +246,8 @@ public sealed class ReleaseBrowse(
             wanted,
             APage,
             total,
-            acquisition);
+            acquisition,
+            await recentWindow.ReadAsync(cancellationToken));
     }
 }
 
@@ -291,7 +294,8 @@ public sealed record ReleasePage(
     int Page,
     int PageSize,
     int Total,
-    VideoAcquisition? Acquisition);
+    VideoAcquisition? Acquisition,
+    RecentWindowCoverageState RecentWindow);
 
 public sealed record VideoAcquisition(
     int DownloadsSpent,

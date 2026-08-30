@@ -76,6 +76,14 @@ public sealed record RunResult
     public static RunResult Discovered(int resultsSeen, int rowsAdded) =>
         new(RunOutcome.Succeeded, resultsSeen, reason: null, resultsSeen: resultsSeen, rowsAdded: rowsAdded);
 
+    /// <summary>
+    /// A successful bounded discovery pass whose own durable position knows
+    /// whether the next page is due immediately or the next full pass is due
+    /// later.
+    /// </summary>
+    public static RunResult Discovered(int resultsSeen, int rowsAdded, TimeSpan dueIn) =>
+        new(RunOutcome.Succeeded, resultsSeen, reason: null, dueIn, resultsSeen, rowsAdded);
+
     /// <summary>The routine failed, with a sentence for whoever reads the log.</summary>
     /// <param name="waitFor">
     /// What the failure itself said about when to come back — prdb's

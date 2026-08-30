@@ -32,10 +32,16 @@ public sealed class ReleaseIdentificationRoutine(
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
+        var now = time.GetUtcNow();
+        var recentSince = RecentWindow.BeginsAt(now);
+        var identifyAgainBefore = now - RecentWindow.RevalidateAfter;
         var releases = await context.Releases
             .AsTracking()
-            .Where(row => row.IdentificationState == IdentificationState.Awaiting)
-            .OrderByDescending(row => row.SearchWasReason)
+            .Where(row => row.IdentificationState == IdentificationState.Awaiting
+                || row.PostDate >= recentSince
+                    && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore))
+            .OrderBy(row => row.IdentificationState == IdentificationState.Awaiting ? 0 : 1)
+            .ThenByDescending(row => row.SearchWasReason)
             .ThenBy(row => row.FirstSeenAt)
             .ThenBy(row => row.Id)
             .Take(BatchSize)
@@ -106,7 +112,6 @@ public sealed class ReleaseIdentificationRoutine(
             await catalogue.VideoAsync(videoId, title: null, releaseDate: null, cancellationToken);
         }
 
-        var now = time.GetUtcNow();
         await context.IdentificationOutcomes
             .Where(outcome => outcome.At < now - OutcomeWindow)
             .ExecuteDeleteAsync(cancellationToken);
@@ -133,7 +138,7 @@ public sealed class ReleaseIdentificationRoutine(
         IReadOnlyCollection<Guid> ids,
         CancellationToken cancellationToken)
     {
-        foreach (var batch in ids.Chunk(Backfill.ABatch))
+        foreach (var batch in ids.Chunk(CatalogueRead.ABatch))
         {
             var read = await prdb.AskAsync(
                 apiKey,
@@ -161,6 +166,10 @@ public sealed class ReleaseIdentificationRoutine(
         release.MatchedBy = null;
         release.SiteId = null;
         release.SearchWasReason = false;
+        release.LastIdentifiedAt = now;
+        release.AutomationPending = false;
+        release.AutomationDecisionReason = null;
+        release.AutomationDecisionAt = null;
 
         string outcome;
 

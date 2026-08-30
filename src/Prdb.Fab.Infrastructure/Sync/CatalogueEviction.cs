@@ -2,13 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Sync;
 
 /// <summary>
 /// Holding the catalogue to <see cref="CatalogueCeiling"/> by dropping the
-/// oldest rows nothing points at.
+/// oldest rows nothing points at, outside the protected Recent Window.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -42,6 +43,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public sealed class CatalogueEviction(
     FabDbContext context,
     CataloguePins pins,
+    TimeProvider time,
     ILogger<CatalogueEviction> logger)
 {
     /// <summary>
@@ -80,12 +82,14 @@ public sealed class CatalogueEviction(
             return new Eviction(held, Removed: 0, Examined: 0);
         }
 
-        // The rows this pass looks at, and the only rows it looks at. The count
+        // The old rows this pass looks at, and the only rows it looks at. The count
         // is not measured afterwards: it is the LIMIT in the query below, so
         // what is reported is what was asked for.
         var examined = Math.Min(AWindow, held);
 
+        var recentSince = RecentWindow.BeginsAt(time.GetUtcNow());
         var window = context.CatalogueVideos
+            .Where(row => row.CreatedAtUtc < recentSince)
             .OrderBy(row => row.Id)
             .Take(AWindow);
 
@@ -97,13 +101,12 @@ public sealed class CatalogueEviction(
 
         if (evictable.Count == 0)
         {
-            // Everything the window held is pinned. Not a failure: the pinned
-            // part of the catalogue is proportional to what the user has and
-            // wants (ADR 0013), and a ceiling that cannot be held against it is
-            // a fact for ADR 0018's page rather than something to force.
+            // Everything available to this pass is recent or pinned. Not a
+            // failure: the Recent Window and the rows something local points
+            // at are both stronger obligations than the count ceiling.
             logger.LogWarning(
                 "The catalogue holds {Held} video(s), {Over} over its ceiling of {Ceiling}, and the "
-                + "oldest {Examined} are all pinned.",
+                + "oldest {Examined} candidates are protected.",
                 held,
                 over,
                 ceiling,

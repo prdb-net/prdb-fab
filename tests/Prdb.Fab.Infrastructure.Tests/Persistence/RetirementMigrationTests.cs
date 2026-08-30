@@ -12,6 +12,7 @@ namespace Prdb.Fab.Infrastructure.Tests.Migrations;
 public sealed class RetirementMigrationTests
 {
     private const string BeforeRetirement = "EnableLeftoverDeletionByDefault";
+    private const string BeforeRecentWindow = "ManualSearchWorkspace";
 
     [Fact]
     public async Task The_walking_skeleton_table_routine_and_run_are_removed()
@@ -48,6 +49,75 @@ public sealed class RetirementMigrationTests
         await migrated.Database.OpenConnectionAsync(TestContext.Current.CancellationToken);
         await using var command = migrated.Database.GetDbConnection().CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'skeleton_item'";
+        Assert.Equal(0L, (long)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!);
+    }
+
+    [Fact]
+    public async Task An_existing_installation_gains_recent_window_state_without_losing_releases()
+    {
+        await using var database = await TestDatabase.CreateAsync(migratedTo: BeforeRecentWindow);
+        var indexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000901");
+        var at = new DateTimeOffset(2026, 8, 29, 12, 0, 0, TimeSpan.Zero);
+        const string indexerName = "A test indexer";
+        const string indexerUrl = "https://indexer.invalid/api";
+        const string releaseUrl = "https://indexer.invalid/get/kept";
+        const string key = "key";
+        const string adult = "Adult";
+        const string saved = "Saved";
+        const string emptyJson = "[]";
+        const string kept = "kept";
+        const string keptTitle = "Kept";
+        const string unknown = "Unknown";
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO indexer
+                    (Id, Name, Url, ApiKey, Categories, LastVerdict, LastCheckedAt,
+                     Enabled, Rank, DailyQueryBudget)
+                VALUES
+                    ({indexerId}, {indexerName}, {indexerUrl}, {key},
+                     {adult}, {saved}, {at}, {true}, {0}, {1000})
+                """, TestContext.Current.CancellationToken);
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO indexer_walk_state
+                    (IndexerId, CapsTree, ResolvedCategoryIds, MissingCategoryNames,
+                     QueryDay, QueriesSpentToday, SweepQueriesSpentToday, BootstrapCompletedAt)
+                VALUES
+                    ({indexerId}, {emptyJson}, {emptyJson}, {emptyJson}, {at}, {0}, {0}, {at})
+                """, TestContext.Current.CancellationToken);
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO release
+                    (IndexerId, DerivedReleaseId, RawGuid, Title, NormalisedTitle,
+                     Categories, PostDate, PubDate, DownloadUrl, FirstSeenAt,
+                     IdentificationState, SearchWasReason, AutomationPending)
+                VALUES
+                    ({indexerId}, {kept}, {kept}, {keptTitle}, {kept}, {emptyJson},
+                     {at}, {at}, {releaseUrl}, {at},
+                     {unknown}, {false}, {false})
+                """, TestContext.Current.CancellationToken);
+
+            await context.Database.MigrateAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var migrated = reading.ServiceProvider.GetRequiredService<FabDbContext>();
+        Assert.Equal("kept", (await migrated.Releases.SingleAsync(
+            TestContext.Current.CancellationToken)).DerivedReleaseId);
+        Assert.Null((await migrated.Releases.SingleAsync(
+            TestContext.Current.CancellationToken)).LastIdentifiedAt);
+
+        var indexerState = await migrated.IndexerWalkStates.SingleAsync(
+            TestContext.Current.CancellationToken);
+        Assert.Equal(0, indexerState.RecentWindowResumePage);
+        Assert.Null(indexerState.RecentWindowCompletedAt);
+        Assert.Equal(RecentWindowStateRow.TheOnlyRow, (await migrated.RecentWindowState.SingleAsync(
+            TestContext.Current.CancellationToken)).Id);
+
+        await migrated.Database.OpenConnectionAsync(TestContext.Current.CancellationToken);
+        await using var command = migrated.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('indexer_walk_state') WHERE name = 'BootstrapCompletedAt'";
         Assert.Equal(0L, (long)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!);
     }
 }

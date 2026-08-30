@@ -3374,6 +3374,36 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        RecentWindowCoverageState: {
+            /** Format: int32 */
+            days: number | string;
+            complete: boolean;
+            catalogue: components["schemas"]["RecentWindowSource"];
+            indexers: components["schemas"]["RecentWindowIndexer"][];
+            /** Format: int32 */
+            catalogueDetailsDue: number | string;
+            /** Format: int32 */
+            identificationsDue: number | string;
+        };
+        RecentWindowIndexer: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            complete: boolean;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: date-time */
+            oldestProvedAt: null | string;
+            passInProgress: boolean;
+        };
+        RecentWindowSource: {
+            complete: boolean;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: date-time */
+            oldestProvedAt: null | string;
+            passInProgress: boolean;
+        };
         ReleaseCandidate: {
             /** Format: uuid */
             prdbId: string;
@@ -3449,6 +3479,7 @@ export interface components {
             /** Format: int32 */
             total: number | string;
             acquisition: null | components["schemas"]["VideoAcquisition"];
+            recentWindow: components["schemas"]["RecentWindowCoverageState"];
         };
         ReleaseViewRow: {
             /** Format: int64 */
@@ -3799,7 +3830,7 @@ export interface components {
             /** Format: int32 */
             total: number | string;
             feedHasRun: boolean;
-            backfillRunning: boolean;
+            recentWindowFilling: boolean;
         };
         WhatsNewObservation: {
             /** Format: int64 */

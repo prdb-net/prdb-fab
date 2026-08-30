@@ -128,31 +128,29 @@ public sealed class WantedListTests
     }
 
     /// <summary>
-    /// ADR 0013: a running backfill is a fact and explicitly not a Gap. The row
-    /// being there is the whole of what <em>still running</em> means (ADR 0014:
-    /// bootstrap is not a state of the application), so the line goes when the
-    /// routine retires and nothing else has to be told.
+    /// The first Recent Window fill remains visible until its durable source
+    /// state records a complete pass.
     /// </summary>
     [Fact]
-    public async Task The_backfill_line_appears_while_it_has_a_row_and_goes_when_it_retires()
+    public async Task The_recent_window_line_appears_until_the_first_pass_completes()
     {
         await using var database = await CreateAsync(new FakePrdbApi());
 
         await database.Services.PrepareFabScheduleAsync(TestContext.Current.CancellationToken);
 
-        Assert.True((await ReadAsync(database)).BackfillRunning);
+        Assert.True((await ReadAsync(database)).RecentWindowFilling);
 
-        // Retiring is deleting the row, which is what the routine does when it
-        // reaches its page ceiling.
         await using (var scope = database.Scope())
         {
             await scope.ServiceProvider.GetRequiredService<FabDbContext>()
-                .Routines
-                .Where(row => row.Name == WhatsNewBackfillRoutine.RoutineName)
-                .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+                .RecentWindowState
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(row => row.CatalogueCompletedAt, database.Time.GetUtcNow())
+                    .SetProperty(row => row.CataloguePassStartedAt, (DateTimeOffset?)null),
+                    TestContext.Current.CancellationToken);
         }
 
-        Assert.False((await ReadAsync(database)).BackfillRunning);
+        Assert.False((await ReadAsync(database)).RecentWindowFilling);
     }
 
     private static async Task<TestDatabase> CreateAsync(FakePrdbApi prdb)

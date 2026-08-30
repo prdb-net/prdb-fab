@@ -19,11 +19,36 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-30
+
+This release makes recent availability a background guarantee instead of a
+side effect of opening a Release page or starting a Manual Search.
+
+### Added
+
+- **A rolling 90-day Recent Window.** prdb Catalogue details and every enabled
+  Indexer's recent Releases are filled in the background, resumed after a
+  restart and completely proved again at least daily. Late Indexer visibility
+  and temporary outages are therefore repaired by a later pass.
+- **Observable coverage.** Status names incomplete or stale prdb and per-Indexer
+  coverage as Gaps, while Release pages distinguish a prepared result from an
+  initial window that is still filling.
+
 ### Changed
 
+- Every Release inside the Recent Window is submitted to prdb Identification
+  without depending on local Screening, Wanted state, pinning, Manual Search or
+  a page visit. Recent answers and Catalogue details become due for revalidation
+  after about 23 hours; prdb remains the only Identification authority.
+- Recent Catalogue and Release rows are protected from count-based eviction.
+  Older rows retain the existing pin and bounded-cache rules, so a cache may
+  exceed its nominal ceiling when the current source volume requires it.
 - Updated `Prdb.Sdk` to 0.13.0. Local development can now point the composed
   application at an HTTP loopback prdb stand-in through `Prdb:BaseUrl`; the SDK
   continues to require HTTPS for every non-loopback authenticated origin.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.12.0 has started against it.
 
 ## [0.11.0] - 2026-08-30
 

@@ -13,6 +13,7 @@ public static class ReleaseDiscoveryServiceCollectionExtensions
         services.AddScoped<IndexerSearch>();
         services.TryAddScoped<CatalogueRows>();
         services.TryAddScoped<VideoDetails>();
+        services.TryAddScoped<RecentWindowCoverage>();
         services.TryAddScoped<CataloguePins>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, WantedVideoPin>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, ReleaseCandidateVideoPin>());
@@ -26,7 +27,7 @@ public static class ReleaseDiscoveryServiceCollectionExtensions
         services.AddScoped<ManualSearches>();
         Routine<IndexerCapsRoutine>(services);
         Routine<IndexerWalkRoutine>(services);
-        Routine<IndexerBootstrapRoutine>(services);
+        Routine<IndexerRecentWindowRoutine>(services);
         Routine<IndexerCatchUpRoutine>(services);
         Routine<ScreeningRoutine>(services);
         Routine<BackwardsScreeningRoutine>(services);

@@ -43,7 +43,7 @@
 }
 
 /*
-  ADR 0013: a running backfill is a fact and explicitly not a Gap. So it is a
+  A running Recent Window pass is progress rather than an error. So it is a
   quiet line and not a warning — no border in the failure colour, no icon, and
   nothing that would read as something to act on.
 */

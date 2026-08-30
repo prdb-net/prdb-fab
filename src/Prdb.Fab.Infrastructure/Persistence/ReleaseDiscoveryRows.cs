@@ -17,10 +17,13 @@ public sealed class IndexerWalkStateRow
     public int QueriesSpentToday { get; set; }
     public int SweepQueriesSpentToday { get; set; }
     public int? ResumePage { get; set; }
-    public DateTimeOffset? BootstrapCompletedAt { get; set; }
     public DateTimeOffset? CatchUpFrom { get; set; }
     public DateTimeOffset? CatchUpTo { get; set; }
     public string? CatchUpCause { get; set; }
+    public int RecentWindowResumePage { get; set; }
+    public DateTimeOffset? RecentWindowPassStartedAt { get; set; }
+    public DateTimeOffset? RecentWindowCompletedAt { get; set; }
+    public DateTimeOffset? RecentWindowOldestPostDate { get; set; }
 }
 
 public sealed class ReleaseRow
@@ -44,6 +47,7 @@ public sealed class ReleaseRow
     public string? Password { get; set; }
     public DateTimeOffset FirstSeenAt { get; set; }
     public IdentificationState IdentificationState { get; set; }
+    public DateTimeOffset? LastIdentifiedAt { get; set; }
     public long? VideoId { get; set; }
     public CatalogueVideoRow? Video { get; set; }
     public IdentificationConfidence? Confidence { get; set; }

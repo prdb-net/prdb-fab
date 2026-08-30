@@ -34,10 +34,9 @@ public sealed class WantedRouteTests
         Assert.Empty(list.Videos);
         Assert.False(list.FeedHasRun);
 
-        // The backfill has a row from the moment the schedule is prepared, and
-        // ADR 0013 wants that said out loud rather than left to look like
-        // nothing is happening.
-        Assert.True(list.BackfillRunning);
+        // The Recent Window starts without a page visit, and its first pass is
+        // said out loud rather than left to look like nothing is happening.
+        Assert.True(list.RecentWindowFilling);
     }
 
     /// <summary>
@@ -82,5 +81,5 @@ public sealed class WantedRouteTests
         int PageSize,
         int Total,
         bool FeedHasRun,
-        bool BackfillRunning);
+        bool RecentWindowFilling);
 }

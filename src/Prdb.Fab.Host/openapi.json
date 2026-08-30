@@ -4843,6 +4843,126 @@
           }
         }
       },
+      "RecentWindowCoverageState": {
+        "required": [
+          "days",
+          "complete",
+          "catalogue",
+          "indexers",
+          "catalogueDetailsDue",
+          "identificationsDue"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "catalogue": {
+            "$ref": "#/components/schemas/RecentWindowSource"
+          },
+          "indexers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecentWindowIndexer"
+            }
+          },
+          "catalogueDetailsDue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "identificationsDue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RecentWindowIndexer": {
+        "required": [
+          "id",
+          "name",
+          "complete",
+          "completedAt",
+          "oldestProvedAt",
+          "passInProgress"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "oldestProvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "passInProgress": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RecentWindowSource": {
+        "required": [
+          "complete",
+          "completedAt",
+          "oldestProvedAt",
+          "passInProgress"
+        ],
+        "type": "object",
+        "properties": {
+          "complete": {
+            "type": "boolean"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "oldestProvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "passInProgress": {
+            "type": "boolean"
+          }
+        }
+      },
       "ReleaseCandidate": {
         "required": [
           "prdbId",
@@ -5109,7 +5229,8 @@
           "page",
           "pageSize",
           "total",
-          "acquisition"
+          "acquisition",
+          "recentWindow"
         ],
         "type": "object",
         "properties": {
@@ -5161,6 +5282,9 @@
                 "$ref": "#/components/schemas/VideoAcquisition"
               }
             ]
+          },
+          "recentWindow": {
+            "$ref": "#/components/schemas/RecentWindowCoverageState"
           }
         }
       },
@@ -6705,7 +6829,7 @@
           "pageSize",
           "total",
           "feedHasRun",
-          "backfillRunning"
+          "recentWindowFilling"
         ],
         "type": "object",
         "properties": {
@@ -6742,7 +6866,7 @@
           "feedHasRun": {
             "type": "boolean"
           },
-          "backfillRunning": {
+          "recentWindowFilling": {
             "type": "boolean"
           }
         }

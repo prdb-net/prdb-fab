@@ -17,7 +17,7 @@ the way.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.11.0
+    image: prdbnet/prdb-fab:0.12.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -69,6 +69,13 @@ the settings afterwards.
 
 Everything you answered is editable later under **Settings**, without a restart
 and without editing this Compose file.
+
+As soon as the prdb key and an Indexer are configured, background routines fill
+the rolling **90-day Recent Window**. They read prdb Catalogue details, cache
+every enabled Indexer's recent Releases and submit those Releases to prdb for
+Identification without requiring a page visit or Manual Search. The first fill
+is incremental and survives restarts; Status shows it as incomplete until prdb
+and every enabled Indexer have each proved the whole interval.
 
 ## Automation, Downloads and the SABnzbd boundary
 
@@ -167,7 +174,8 @@ in the headline. A **Brake** is a gate, budget or human decision doing exactly
 what it was configured to do; it explains the choice and links to its owner,
 but does not make a healthy installation look broken. The last-useful-act line
 shows whether the loop has recently filed a file, started a Download or added a
-Release to the cache without inventing a timeout for what “recent” should mean.
+Release to the cache. Recent Window gaps name a source whose initial fill has
+not completed or whose last complete proof is more than a day old.
 
 **Run now** only changes a routine's ordinary due time. The same lane executes
 it, so prdb's Governor, an Indexer's Daily Query Budget, permanent refusals and
@@ -196,14 +204,14 @@ corrupt a database, not a way to back one up. Back the directory up by copying
 it; do not run the tool out of a network share.
 
 **What grows on `/data`.** Three things: the database, the log, and the cached
-artwork. The log is capped near a hundred megabytes and rolls. The other two are
-bounded by a number rather than by a duration, because how much disk a duration
-implies is not something anyone can predict.
+artwork. The log is capped near a hundred megabytes and rolls. The database has
+count ceilings with one deliberate floor: rows inside the 90-day Recent Window
+are protected even when outside activity makes the cache exceed a ceiling.
 
 | | Ceiling | What happens at it |
 | --- | --- | --- |
-| The local copy of prdb's catalogue | **50,000 videos** — tens of megabytes with their pre-names, credits and image records | The oldest rows nothing points at are dropped, a few hundred at a time |
-| Each Indexer Cache | **100,000 Releases per Indexer** | The oldest examined Releases nothing points at are dropped; unseen and still-wanted Releases are never evicted merely to hold the ceiling |
+| The local copy of prdb's catalogue | **50,000 videos** — tens of megabytes with their pre-names, credits and image records | The oldest rows outside the Recent Window that nothing points at are dropped, a few hundred at a time |
+| Each Indexer Cache | **100,000 Releases per Indexer** | The oldest examined Releases outside the Recent Window that nothing points at are dropped; unseen and still-wanted Releases are also protected |
 | Cached artwork | **2 GiB**, and only for videos you are merely browsing | The pictures served longest ago are deleted; the next time you scroll past one it is fetched again |
 
 These ceilings are fixed rather than settings. None can reach what you have
@@ -212,7 +220,7 @@ and the artwork of a wanted video is not counted against the 2 GiB at all.
 Reaching a ceiling is ordinary; disposable rows or pictures are read again if
 they are needed again.
 
-### Indexer queries and the first walk
+### Indexer queries and the Recent Window
 
 The browser reads the Indexer Cache. Reloading, changing a filter or opening a
 Release table sends no request to an Indexer; background routines own that
@@ -225,14 +233,15 @@ day** — five titles every fifteen minutes. The Indexer Walk uses the remaining
 share. With no searchable Wanted work, the walk may use the whole budget. One
 Indexer never spends another's allowance.
 
-The first walk is deliberately wider than the recurring one: it pages through
-up to **90 days** of the configured categories, 100 Releases at a time. A busy
-Indexer can therefore cost hundreds of queries on its first day, and a very
-large history can continue on the next. The saved page advances only after its
-batch commits, so a restart resumes rather than beginning again, and the walk
-never exceeds that Indexer's daily budget.
+The fast Indexer Walk extends the cache with newly visible Releases. Beside it,
+a complete pass pages through **90 days** of the configured categories, 100
+Releases at a time, and repeats at least daily. That second pass finds Releases
+which became visible late or were missed during an outage. A busy Indexer can
+cost hundreds of queries on its first day, and a very large history can continue
+on the next. The saved page advances only after its batch commits, so a restart
+resumes rather than beginning again, and neither pass exceeds that Indexer's
+daily budget.
 
-Afterwards, the recurring walk extends the cache with newly visible Releases.
 The Wanted Sweep searches older Wanted Videos directly by title, which is why
 the two routines need separate shares of the same budget. Both write the same
 cache; neither identifies a Release by itself. prdb remains the only authority
@@ -245,7 +254,8 @@ or the Indexer's Daily Query Budget.
 
 **None of it is in a backup**, and it does not need to be — every row and image
 can be read from prdb or the Indexers again. A restored installation shows
-browse surfaces and Release tables that fill in over the following minutes.
+browse surfaces and Release tables that fill in while the Recent Window proof
+runs again.
 
 **Mount your media at the same path your downloader sees it at, if you can.**
 The path mapping is then the identity, and a mapping that does not resolve is
@@ -371,7 +381,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.11.0` | A release. This is what documentation and Compose files should pin. |
+| `0.12.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 

@@ -5,6 +5,7 @@ public static class DiscoveryRoutineNames
     public const string Caps = "indexer.caps";
     public const string Walk = "indexer.walk";
     public const string Bootstrap = "indexer.walk.bootstrap";
+    public const string RecentWindow = "indexer.recent-window";
     public const string CatchUp = "indexer.walk.catch-up";
     public const string WantedSweep = "indexer.wanted-sweep";
     public const string ManualSearch = "indexer.manual-search";

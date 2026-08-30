@@ -56,10 +56,6 @@ public sealed class IndexerWalkRoutine(
                 row => row.IndexerId == indexerId && read.Releases.Select(item => item.DerivedReleaseId).Contains(row.DerivedReleaseId),
                 cancellationToken);
             var write = await releases.UpsertAsync(indexerId, read.Releases, time.GetUtcNow(), ReleaseSource.IndexerWalk, cancellationToken);
-            if (write.CacheOverBy > 0)
-            {
-                return RunResult.Failed("The Indexer Cache cannot hold its ceiling without losing an unexamined or pinned Release.");
-            }
             seen += read.Releases.Count + read.DroppedWithoutIdentity;
             added += write.Added;
             oldest = read.Releases.Count == 0 ? oldest : read.Releases.Min(item => item.PostDate);
@@ -83,7 +79,7 @@ public sealed class IndexerWalkRoutine(
             if (stopped) break;
         }
 
-        if (!stopped && state.BootstrapCompletedAt is not null && oldDate is not null && oldest is not null)
+        if (!stopped && state.RecentWindowCompletedAt is not null && oldDate is not null && oldest is not null)
         {
             await discovery.OpenCatchUpAsync(indexerId, oldDate.Value, time.GetUtcNow(), "missed paging window", cancellationToken);
         }

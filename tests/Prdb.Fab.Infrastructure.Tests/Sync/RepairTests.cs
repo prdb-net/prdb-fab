@@ -17,8 +17,7 @@ using Xunit;
 namespace Prdb.Fab.Infrastructure.Tests.Sync;
 
 /// <summary>
-/// ADR 0013's repair pass: the two holes one read closes, over pinned rows
-/// only, on a budget rather than a cadence.
+/// The catalogue repair pass: current and pinned rows are re-read on a budget.
 /// </summary>
 public sealed class RepairTests
 {
@@ -76,7 +75,7 @@ public sealed class RepairTests
 
         await using var database = await CreateAsync(prdb);
 
-        var video = await HoldAsync(database, First, "The Old Title", lastReadAt: Noon, searched: true);
+        var video = await HoldAsync(database, First, "The Old Title", lastReadAt: Noon.AddDays(-2), searched: true);
         await WantAsync(database, video);
 
         await RepairAsync(database);
@@ -170,9 +169,9 @@ public sealed class RepairTests
 
         // Deliberately not in the order they were written: the walk is by the
         // stamp, and an id tie-break would hide that.
-        await WantAsync(database, await HoldAsync(database, First, "First", lastReadAt: Noon));
-        await WantAsync(database, await HoldAsync(database, Second, "Second", lastReadAt: Noon.AddHours(-2)));
-        await WantAsync(database, await HoldAsync(database, Third, "Third", lastReadAt: Noon.AddHours(-1)));
+        await WantAsync(database, await HoldAsync(database, First, "First", lastReadAt: Noon.AddDays(-2)));
+        await WantAsync(database, await HoldAsync(database, Second, "Second", lastReadAt: Noon.AddDays(-2).AddHours(-2)));
+        await WantAsync(database, await HoldAsync(database, Third, "Third", lastReadAt: Noon.AddDays(-2).AddHours(-1)));
 
         await RepairAsync(database);
 
@@ -186,13 +185,11 @@ public sealed class RepairTests
     }
 
     /// <summary>
-    /// ADR 0013 accepts this by name: an unpinned row's artwork URL may be dead
-    /// before it is evicted, a missing image on a browse grid is the cost, and
-    /// a pinned row is never in that state. Repairing everything would be the
-    /// unbounded obligation the cache exists to avoid.
+    /// Outside the Recent Window, ADR 0013's original pin rule still bounds the
+    /// lasting obligation.
     /// </summary>
     [Fact]
-    public async Task An_unpinned_row_is_never_repaired()
+    public async Task An_old_unpinned_row_is_not_repaired()
     {
         var prdb = new FakePrdbApi().Answers(Batch, "[]");
 
@@ -209,8 +206,32 @@ public sealed class RepairTests
         Assert.DoesNotContain(Second.ToString(), body, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_recent_unpinned_row_is_repaired_once_when_stale()
+    {
+        var prdb = new FakePrdbApi().Answers(Batch, Details([(First, "Corrected", Images: true)]));
+        await using var database = await CreateAsync(prdb);
+        var now = database.Time.GetUtcNow();
+        await HoldAsync(
+            database,
+            First,
+            "Old title",
+            lastReadAt: now - RecentWindow.RevalidateAfter,
+            createdAt: now.AddDays(-1));
+
+        await RepairAsync(database);
+        Assert.Same(RunResult.NothingToDo, await RepairAsync(database));
+
+        Assert.Single(prdb.AskingFor(Batch));
+        await using var scope = database.Scope();
+        var row = await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .CatalogueVideos.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal("Corrected", row.Title);
+        Assert.Equal(database.Time.GetUtcNow(), row.LastReadAt);
+    }
+
     /// <summary>
-    /// A catalogue with nothing pinned in it is a work set that is empty, and
+    /// An old catalogue with nothing pinned in it is a work set that is empty, and
     /// ADR 0032 says an empty tick is not a run — so it spends no request and
     /// records nothing.
     /// </summary>
@@ -402,7 +423,8 @@ public sealed class RepairTests
         Guid prdbId,
         string title,
         DateTimeOffset? lastReadAt = null,
-        bool searched = false)
+        bool searched = false,
+        DateTimeOffset? createdAt = null)
     {
         await using var scope = database.Scope();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
@@ -413,6 +435,7 @@ public sealed class RepairTests
             Title = title,
             NormalisedTitle = title.ToLowerInvariant(),
             LastReadAt = lastReadAt ?? default,
+            CreatedAtUtc = createdAt ?? default,
             TitleSearchedBackwards = searched,
         };
 

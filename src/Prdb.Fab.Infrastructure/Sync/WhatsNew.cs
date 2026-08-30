@@ -10,8 +10,8 @@ using Prdb.Sdk.Generated.Videos;
 namespace Prdb.Fab.Infrastructure.Sync;
 
 /// <summary>
-/// The one prdb entity with no change feed, in the two directions ADR 0013
-/// gives it: forwards from a high-water mark, and backwards by the page.
+/// The one prdb entity with no change feed, read forwards from a high-water
+/// mark and newest-first across the Recent Window.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -42,11 +42,15 @@ public sealed class WhatsNew(FabDbContext context, PrdbGateway prdb, VideoDetail
     /// </param>
     /// <param name="Returned">
     /// How many summaries came back. A page short of what was asked for is the
-    /// end of what prdb has, which is how the backfill knows to stop early.
+    /// end of what prdb has, which is how the Recent Window pass stops early.
     /// </param>
-    public sealed record Page(IReadOnlyList<Guid> Unknown, DateTimeOffset? Newest, int Returned)
+    public sealed record Page(
+        IReadOnlyList<Guid> Unknown,
+        DateTimeOffset? Newest,
+        DateTimeOffset? Oldest,
+        int Returned)
     {
-        public static Page Nothing { get; } = new([], null, 0);
+        public static Page Nothing { get; } = new([], null, null, 0);
     }
 
     /// <summary>
@@ -90,7 +94,7 @@ public sealed class WhatsNew(FabDbContext context, PrdbGateway prdb, VideoDetail
                         : GetSortDirectionQueryParameterType.Asc;
                     request.QueryParameters.CreatedAfter = createdAfter;
                     request.QueryParameters.Page = page;
-                    request.QueryParameters.PageSize = Backfill.APage;
+                    request.QueryParameters.PageSize = CatalogueRead.APage;
                 },
                 token),
             cancellationToken);
@@ -118,9 +122,17 @@ public sealed class WhatsNew(FabDbContext context, PrdbGateway prdb, VideoDetail
             .DefaultIfEmpty()
             .Max();
 
+        var oldest = items
+            .Select(video => video.CreatedAtUtc)
+            .Where(created => created is not null)
+            .Select(created => created!.Value)
+            .DefaultIfEmpty()
+            .Min();
+
         return new Page(
             [.. ids.Where(id => !held.Contains(id))],
             newest == default ? null : newest,
+            oldest == default ? null : oldest,
             items.Count);
     }
 
@@ -140,7 +152,7 @@ public sealed class WhatsNew(FabDbContext context, PrdbGateway prdb, VideoDetail
     {
         var written = 0;
 
-        foreach (var batch in ids.Chunk(Backfill.ABatch))
+        foreach (var batch in ids.Chunk(CatalogueRead.ABatch))
         {
             var read = await prdb.AskAsync(
                 apiKey,

@@ -336,9 +336,16 @@ _Avoid_: Refresh, Poll, Update, Crawl
 
 **Catalogue**:
 The copy of prdb's videos, sites and actors the tool holds locally. A cache of
-what has been looked at rather than a complete copy, and never the library,
-which is what the tool writes to disk.
+the Recent Window plus what has otherwise been looked at or pinned, rather than
+a complete copy, and never the library, which is what the tool writes to disk.
 _Avoid_: Mirror, Corpus, Metadata store, Cache
+
+**Recent Window**:
+The fixed rolling ninety-day interval Sync keeps prepared from prdb and every
+enabled Indexer, including current Catalogue details and Identification, without
+the user opening a page or asking for a search. Older data remains best effort
+unless something local pins it.
+_Avoid_: Backfill window, Lookback, Retention period
 
 **Artwork Cache**:
 The image files the tool holds locally, one per video, so that a grid does not
@@ -358,8 +365,9 @@ _Avoid_: Locked, Retained, Held, Kept
 
 **Repair**:
 The part of the sync that stands in for a change feed that does not exist:
-re-reading pinned videos to learn about corrections prdb published and artwork
-it removed, neither of which is announced anywhere.
+re-reading videos in the Recent Window and pinned older videos to learn about
+corrections prdb published and artwork it removed, neither of which is announced
+anywhere.
 _Avoid_: Reconcile, Backfill, Re-sync, Refresh
 
 **Routine**:

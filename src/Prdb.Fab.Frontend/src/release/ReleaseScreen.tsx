@@ -126,8 +126,10 @@ function ReleaseTable({
       </div>
 
       <div className={styles.boundary}>
-        <strong>Cached results.</strong> Reading or refreshing this table never queries an Indexer.
-        For a Video, use Manual Search below to queue a fresh title search through the scheduler.
+        <strong>{page.recentWindow.complete ? 'Recent Window ready.' : 'Recent Window still filling.'}</strong>{' '}
+        Reading or refreshing this table never queries an Indexer. Background Sync keeps the newest{' '}
+        {page.recentWindow.days} days of Catalogue, Indexer and Identification data prepared.
+        {!page.recentWindow.complete && ' An empty table is not authoritative until every configured source is complete.'}
       </div>
 
       {page.context.kind === 'Video' && <ManualSearchPanel videoId={page.context.prdbId} />}
@@ -342,7 +344,7 @@ function ManualSearchPanel({ videoId }: { videoId: string }) {
       <div className={styles.manualSearchHeading}>
         <div>
           <h2>Search Indexers</h2>
-          <p>Queue one title search per selected Indexer. Results flow through Identification before they can be downloaded.</p>
+          <p>Search explicitly for older material or retry now. Recent Releases arrive and flow through Identification automatically.</p>
         </div>
         <form onSubmit={(event) => {
           event.preventDefault()

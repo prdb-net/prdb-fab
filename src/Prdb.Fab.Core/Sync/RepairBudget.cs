@@ -47,7 +47,7 @@ public static class RepairBudget
     public const int MostPerRun = 10;
 
     /// <summary>How many videos one request reads back.</summary>
-    public const int ABatch = Backfill.ABatch;
+    public const int ABatch = CatalogueRead.ABatch;
 
     /// <summary>
     /// What this run may spend, given what prdb last said — or

@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -144,9 +145,46 @@ public sealed class ReleaseDiscoveryTests
             Assert.Contains("new-key", release.DownloadUrl, StringComparison.Ordinal);
             Assert.Equal("Corrected title", release.Title);
             Assert.Equal("1", release.Password);
-            Assert.Equal(IdentificationState.Unexamined, release.IdentificationState);
+            Assert.Equal(IdentificationState.Awaiting, release.IdentificationState);
             Assert.False(release.SearchWasReason);
         }
+    }
+
+    [Fact]
+    public async Task Releases_inside_the_inclusive_recent_window_skip_screening_but_older_walk_rows_do_not()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await SeedIndexerAsync(database);
+        var now = database.Time.GetUtcNow();
+
+        await using (var scope = database.Scope())
+        {
+            var rows = scope.ServiceProvider.GetRequiredService<ReleaseRows>();
+            var recent = Item("recent", "https://indexer.invalid/get/recent") with
+            {
+                PostDate = RecentWindow.BeginsAt(now),
+                PubDate = RecentWindow.BeginsAt(now),
+            };
+            var older = Item("older", "https://indexer.invalid/get/older") with
+            {
+                PostDate = RecentWindow.BeginsAt(now).AddTicks(-1),
+                PubDate = RecentWindow.BeginsAt(now).AddTicks(-1),
+            };
+
+            await rows.UpsertAsync(
+                IndexerId,
+                [recent, older],
+                now,
+                ReleaseSource.IndexerWalk,
+                TestContext.Current.CancellationToken);
+        }
+
+        await using var check = database.Scope();
+        var states = await check.ServiceProvider.GetRequiredService<FabDbContext>().Releases
+            .ToDictionaryAsync(row => row.DerivedReleaseId, row => row.IdentificationState,
+                TestContext.Current.CancellationToken);
+        Assert.Equal(IdentificationState.Awaiting, states["recent"]);
+        Assert.Equal(IdentificationState.Unexamined, states["older"]);
     }
 
     [Fact]
@@ -162,7 +200,7 @@ public sealed class ReleaseDiscoveryTests
                 [new CapsCategory(5000, "Adult", [new CapsCategory(5010, "Movies")])],
                 TestContext.Current.CancellationToken);
             await scope.ServiceProvider.GetRequiredService<FabDbContext>().IndexerWalkStates.ExecuteUpdateAsync(
-                update => update.SetProperty(row => row.BootstrapCompletedAt, FirstSeen),
+                update => update.SetProperty(row => row.RecentWindowCompletedAt, FirstSeen),
                 TestContext.Current.CancellationToken);
         }
 
@@ -188,8 +226,9 @@ public sealed class ReleaseDiscoveryTests
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
             var state = await context.IndexerWalkStates.SingleAsync(TestContext.Current.CancellationToken);
-            Assert.NotNull(state.CatchUpFrom);
-            Assert.Equal(1, await context.Routines.CountAsync(row => row.Name == DiscoveryRoutineNames.CatchUp, TestContext.Current.CancellationToken));
+            Assert.Null(state.RecentWindowCompletedAt);
+            Assert.Equal(0, state.RecentWindowResumePage);
+            Assert.Equal(1, await context.Routines.CountAsync(row => row.Name == DiscoveryRoutineNames.RecentWindow, TestContext.Current.CancellationToken));
         }
 
         await using (var scope = database.Scope())
@@ -251,7 +290,7 @@ public sealed class ReleaseDiscoveryTests
             {
                 DiscoveryRoutineNames.Caps,
                 DiscoveryRoutineNames.Walk,
-                DiscoveryRoutineNames.Bootstrap,
+                DiscoveryRoutineNames.RecentWindow,
                 DiscoveryRoutineNames.WantedSweep,
                 DiscoveryRoutineNames.BackwardsSearch,
                 DiscoveryRoutineNames.Identification,

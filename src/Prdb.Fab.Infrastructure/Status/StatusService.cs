@@ -5,6 +5,7 @@ using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Automation;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Filing;
@@ -22,6 +23,7 @@ public sealed class StatusService(
     PrdbGovernor governor,
     ReportingSettings reporting,
     CataloguePins cataloguePins,
+    RecentWindowCoverage recentWindow,
     IRoutineStore routineStore,
     TimeProvider time)
 {
@@ -54,6 +56,7 @@ public sealed class StatusService(
             rule.Enabled = false;
         }
         var reportingState = await reporting.ReadAsync(cancellationToken);
+        var recentCoverage = await recentWindow.ReadAsync(cancellationToken);
 
         var workSets = await WorkSetsAsync(routines, reportingState, cancellationToken);
         var routineFacts = routines.Select(row => DescribeRoutine(
@@ -64,6 +67,7 @@ public sealed class StatusService(
 
         var conditions = new List<StatusCondition>();
         AddInstallationGaps(conditions, installation, governor);
+        AddRecentWindowGaps(conditions, installation, recentCoverage);
         AddRoutineGaps(conditions, routines, runs, indexers);
         AddDeferralBrakes(conditions, routines, now);
         AddIndexerBudgetBrakes(conditions, indexers, walkStates, now);
@@ -111,6 +115,7 @@ public sealed class StatusService(
             installation,
             automationRules,
             automaticDecisions,
+            recentCoverage,
             governor,
             now)).ToArray();
 
@@ -214,7 +219,15 @@ public sealed class StatusService(
             await context.CatalogueVideos.CountAsync(row => !row.TitleSearchedBackwards, cancellationToken)
             + await context.CatalogueVideoPreNames.CountAsync(row => !row.SearchedBackwards, cancellationToken));
         await SetAsync(DiscoveryRoutineNames.Identification,
-            () => context.Releases.CountAsync(row => row.IdentificationState == IdentificationState.Awaiting, cancellationToken));
+            () =>
+            {
+                var now = time.GetUtcNow();
+                var recentSince = RecentWindow.BeginsAt(now);
+                var identifyAgainBefore = now - RecentWindow.RevalidateAfter;
+                return context.Releases.CountAsync(row => row.IdentificationState == IdentificationState.Awaiting
+                    || row.PostDate >= recentSince
+                        && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore), cancellationToken);
+            });
         await SetAsync(ArrivalIdentificationRoutine.RoutineName,
             () => context.ArrivingFiles.CountAsync(row => row.State == ArrivingFileState.AwaitingIdentification && row.Reason == null, cancellationToken));
         await SetAsync(FilingRoutine.RoutineName,
@@ -247,7 +260,15 @@ public sealed class StatusService(
                 .ToListAsync(cancellationToken))
             .Count(title => WantedSearchTitle.IsSearchable(WantedSearchTitle.Of(title))));
         await SetAsync(CatalogueRepairRoutine.RoutineName,
-            () => cataloguePins.Pinned(context.CatalogueVideos).CountAsync(cancellationToken));
+            () =>
+            {
+                var now = time.GetUtcNow();
+                var recentSince = RecentWindow.BeginsAt(now);
+                var staleBefore = now - RecentWindow.RevalidateAfter;
+                var pinnedIds = cataloguePins.Pinned(context.CatalogueVideos).Select(row => row.Id);
+                return context.CatalogueVideos.CountAsync(row => row.LastReadAt <= staleBefore
+                    && (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id)), cancellationToken);
+            });
         await SetAsync(ArtworkRoutine.RoutineName, () =>
         {
             var pendingImages = ChosenImages.In(
@@ -303,6 +324,54 @@ public sealed class StatusService(
             conditions.Add(Gap("The prdb plan cannot carry the schedule", $"Lower-priority sync work has been reduced since {since:u}.", "sync-prdb", "/settings/connections/prdb"));
         if (governor.RefusedWith is { } status)
             conditions.Add(Gap("prdb refused the API key", $"prdb returned {status}; unattended requests remain stopped until a key works.", "sync-prdb", "/settings/connections/prdb"));
+    }
+
+    private static void AddRecentWindowGaps(
+        ICollection<StatusCondition> conditions,
+        InstallationRow installation,
+        RecentWindowCoverageState coverage)
+    {
+        if (!string.IsNullOrWhiteSpace(installation.PrdbApiKey) && !coverage.Catalogue.Complete)
+        {
+            conditions.Add(Gap(
+                "The prdb Recent Window is incomplete",
+                coverage.Catalogue.CompletedAt is null
+                    ? "The first ninety-day Catalogue pass is still filling."
+                    : $"The last complete ninety-day Catalogue pass finished at {coverage.Catalogue.CompletedAt:u}.",
+                "sync-prdb",
+                "/status"));
+        }
+
+        foreach (var indexer in coverage.Indexers.Where(indexer => !indexer.Complete))
+        {
+            conditions.Add(Gap(
+                $"{indexer.Name}'s Recent Window is incomplete",
+                indexer.CompletedAt is null
+                    ? "Its first ninety-day Indexer pass is still filling."
+                    : $"Its last complete ninety-day pass finished at {indexer.CompletedAt:u}.",
+                "sync-indexers",
+                $"/settings/connections/indexers/{indexer.Id:D}"));
+        }
+
+        if (coverage.Catalogue.Complete && coverage.CatalogueDetailsDue > 0)
+        {
+            conditions.Add(Gap(
+                "Recent Catalogue details are still being prepared",
+                $"{coverage.CatalogueDetailsDue} recent Catalogue Video(s) are due for detail revalidation.",
+                "sync-prdb",
+                "/status"));
+        }
+
+        if (coverage.Catalogue.Complete
+            && coverage.Indexers.All(indexer => indexer.Complete)
+            && coverage.IdentificationsDue > 0)
+        {
+            conditions.Add(Gap(
+                "Recent Release Identification is still being prepared",
+                $"{coverage.IdentificationsDue} recent Release(s) are due for prdb Identification.",
+                "match",
+                "/status"));
+        }
     }
 
     private static void AddRoutineGaps(
@@ -505,6 +574,7 @@ public sealed class StatusService(
         InstallationRow installation,
         IReadOnlyList<AutomationRuleRow> automationRules,
         IReadOnlyList<StatusAutomaticDecision> automaticDecisions,
+        RecentWindowCoverageState recentWindow,
         PrdbGovernor governor,
         DateTimeOffset now)
     {
@@ -514,6 +584,13 @@ public sealed class StatusService(
             var budget = governor.LastReading;
             facts.Add(new("prdb connection", string.IsNullOrWhiteSpace(installation.PrdbApiKey) ? "Not configured" : governor.RefusedWith is null ? "Configured" : $"Refused with {governor.RefusedWith}", "/settings/connections/prdb"));
             facts.Add(new("Hourly budget", budget is null ? "Not read yet" : $"{budget.Remaining} of {budget.Limit} remaining", null));
+            facts.Add(new(
+                $"Recent Window ({recentWindow.Days} days)",
+                recentWindow.Catalogue.CompletedAt is null
+                    ? "Initial Catalogue fill in progress"
+                    : $"Catalogue last proved complete at {recentWindow.Catalogue.CompletedAt:u}; "
+                        + $"{recentWindow.CatalogueDetailsDue} detail revalidation(s) due",
+                "/status"));
         }
         if (id == "sync-indexers")
         {
@@ -524,12 +601,26 @@ public sealed class StatusService(
                     ? state.QueriesSpentToday
                     : 0;
                 facts.Add(new(indexer.Name, $"{indexer.LastVerdict} at {indexer.LastCheckedAt:u}; {spent} of {indexer.DailyQueryBudget} queries used", $"/settings/connections/indexers/{indexer.Id:D}"));
+                var coverage = recentWindow.Indexers.SingleOrDefault(item => item.Id == indexer.Id);
+                facts.Add(new(
+                    $"{indexer.Name} Recent Window",
+                    coverage?.CompletedAt is null
+                        ? "Initial ninety-day fill in progress"
+                        : $"Last proved complete at {coverage.CompletedAt:u}",
+                    $"/settings/connections/indexers/{indexer.Id:D}"));
             }
         }
         if (id is "decide" or "file")
         {
             var gate = gateTallies.Single(item => item.Gate == (id == "decide" ? BeforeDownloadGate.Name : AfterDownloadGate.Name));
             facts.Add(new($"{gate.Gate} outcomes (7 days)", gate.Total == 0 ? "No named outcomes were observed." : string.Join(", ", gate.Outcomes.Select(item => $"{item.Name}{(item.Admitted ? " ✓" : string.Empty)} {item.Count}")), "/settings/identification"));
+        }
+        if (id == "match")
+        {
+            facts.Add(new(
+                "Recent Window Identification",
+                $"{recentWindow.IdentificationsDue} Release(s) due",
+                "/status"));
         }
         if (id == "decide")
         {
@@ -597,7 +688,7 @@ public sealed class StatusService(
     private static StatusCondition Brake(string title, string detail, string stage, string? route) => new(StatusConditionKind.Brake, title, detail, stage, route, false);
     private static string Key(string name, string? target) => name + "\0" + target;
     private static bool UsesPrdb(string name) => name.StartsWith("prdb.", StringComparison.Ordinal) || name is DiscoveryRoutineNames.Identification or ArrivalIdentificationRoutine.RoutineName or ReportingRoutine.RoutineName;
-    private static bool UsesIndexerQueryBudget(string name) => name is DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.Bootstrap or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep;
+    private static bool UsesIndexerQueryBudget(string name) => name is DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.RecentWindow or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep;
     private static bool EmptyWorkSetRefusesRunNow(string name) => name is
         DiscoveryRoutineNames.Screening
         or DiscoveryRoutineNames.BackwardsSearch
@@ -615,7 +706,7 @@ public sealed class StatusService(
     private static string StageOf(string name) => name switch
     {
         var value when value.StartsWith("prdb.", StringComparison.Ordinal) => "sync-prdb",
-        DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.Bootstrap or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep => "sync-indexers",
+        DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.RecentWindow or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep => "sync-indexers",
         DiscoveryRoutineNames.Screening or DiscoveryRoutineNames.BackwardsSearch or DiscoveryRoutineNames.Identification or ArrivalIdentificationRoutine.RoutineName => "match",
         AutomaticDecisionRoutine.RoutineName => "decide",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName => "download",
@@ -627,7 +718,7 @@ public sealed class StatusService(
     {
         DiscoveryRoutineNames.Caps => "Indexer capabilities",
         DiscoveryRoutineNames.Walk => "Indexer walk",
-        DiscoveryRoutineNames.Bootstrap => "Indexer bootstrap",
+        DiscoveryRoutineNames.RecentWindow => "Indexer Recent Window",
         DiscoveryRoutineNames.CatchUp => "Indexer catch-up",
         DiscoveryRoutineNames.WantedSweep => "Wanted sweep",
         DiscoveryRoutineNames.Screening => "Release screening",
@@ -640,7 +731,7 @@ public sealed class StatusService(
     private static string? OwnerRoute(string name, string? target) => name switch
     {
         var value when UsesPrdb(value) => "/settings/connections/prdb",
-        DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.Bootstrap or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep when target is not null => $"/settings/connections/indexers/{target}",
+        DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.RecentWindow or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep when target is not null => $"/settings/connections/indexers/{target}",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName or CollectingRoutine.RoutineName => "/settings/connections/sabnzbd",
         AutomaticDecisionRoutine.RoutineName => "/settings/automation",
         _ => null,

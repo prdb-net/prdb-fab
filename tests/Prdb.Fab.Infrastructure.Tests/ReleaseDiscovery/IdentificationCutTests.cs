@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.ReleaseDiscovery;
@@ -232,6 +233,50 @@ public sealed class IdentificationCutTests
     }
 
     [Fact]
+    public async Task A_recent_settled_release_is_identified_again_when_due_but_not_before()
+    {
+        var prdb = new FakePrdbApi()
+            .Answers("/videos/identify", $$"""
+                {
+                  "results": [
+                    { "ref": "1", "videoId": "{{MatchedVideo}}", "confidence": 4, "matchedBy": 3, "candidates": [] }
+                  ]
+                }
+                """)
+            .Answers("/videos/batch", VideoDetailsAnswer());
+        await using var database = await TestDatabase.CreateAsync(prdb: prdb);
+        await SeedIndexerAsync(database, IndexerId);
+        await SetPrdbKeyAsync(database);
+        var now = database.Time.GetUtcNow();
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var due = Release("due", "Due.Release.mkv", IdentificationState.Unknown, now.AddDays(-1));
+            due.LastIdentifiedAt = now - RecentWindow.RevalidateAfter;
+            var fresh = Release("fresh", "Fresh.Release.mkv", IdentificationState.Unknown, now.AddDays(-1));
+            fresh.LastIdentifiedAt = now;
+            context.Releases.AddRange(due, fresh);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var scope = database.Scope())
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<ReleaseIdentificationRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+            Assert.Equal(1, result.ItemsHandled);
+        }
+
+        await using var check = database.Scope();
+        var rows = await check.ServiceProvider.GetRequiredService<FabDbContext>().Releases
+            .ToDictionaryAsync(row => row.DerivedReleaseId, TestContext.Current.CancellationToken);
+        Assert.Equal(IdentificationState.Matched, rows["due"].IdentificationState);
+        Assert.Equal(now, rows["due"].LastIdentifiedAt);
+        Assert.Equal(IdentificationState.Unknown, rows["fresh"].IdentificationState);
+        Assert.Equal(now, rows["fresh"].LastIdentifiedAt);
+    }
+
+    [Fact]
     public async Task Eviction_is_oldest_first_and_never_touches_unexamined_or_still_wanted_releases()
     {
         await using var database = await TestDatabase.CreateAsync();
@@ -248,7 +293,15 @@ public sealed class IdentificationCutTests
                 Release("old-disposable", "Three", IdentificationState.Unremarkable, now.AddMinutes(-4)),
                 Release("middle-disposable", "Four", IdentificationState.Unknown, now.AddMinutes(-3)),
                 Release("new-disposable", "Five", IdentificationState.SiteOnly, now.AddMinutes(-2)),
-                Release("newest-disposable", "Six", IdentificationState.Unremarkable, now.AddMinutes(-1)));
+                Release("newest-disposable", "Six", IdentificationState.Unremarkable, now.AddMinutes(-1)),
+                Release("recent-disposable", "Seven", IdentificationState.Unremarkable, now));
+            foreach (var release in context.ChangeTracker.Entries<ReleaseRow>().Select(entry => entry.Entity))
+            {
+                release.PostDate = now.AddDays(-RecentWindow.Days - 1);
+            }
+            context.ChangeTracker.Entries<ReleaseRow>()
+                .Single(entry => entry.Entity.DerivedReleaseId == "recent-disposable")
+                .Entity.PostDate = RecentWindow.BeginsAt(now);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
@@ -256,7 +309,7 @@ public sealed class IdentificationCutTests
         {
             var result = await scope.ServiceProvider.GetRequiredService<ReleaseEviction>()
                 .EvictAsync(IndexerId, ceiling: 3, TestContext.Current.CancellationToken);
-            Assert.Equal(3, result.Removed);
+            Assert.Equal(4, result.Removed);
             Assert.Equal(0, result.OverBy);
         }
 
@@ -265,7 +318,7 @@ public sealed class IdentificationCutTests
             .OrderBy(row => row.FirstSeenAt)
             .Select(row => row.DerivedReleaseId)
             .ToArrayAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(["unexamined", "wanted", "newest-disposable"], left);
+        Assert.Equal(["unexamined", "wanted", "recent-disposable"], left);
     }
 
     [Fact]

@@ -34,7 +34,7 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
 
         await EnsureRoutineAsync(DiscoveryRoutineNames.Caps, Lane.Sync, indexerId, now, cancellationToken);
         await EnsureRoutineAsync(DiscoveryRoutineNames.Walk, Lane.Sync, indexerId, now, cancellationToken);
-        await EnsureRoutineAsync(DiscoveryRoutineNames.Bootstrap, Lane.Bulk, indexerId, now, cancellationToken);
+        await EnsureRoutineAsync(DiscoveryRoutineNames.RecentWindow, Lane.Bulk, indexerId, now, cancellationToken);
         await EnsureRoutineAsync(
             DiscoveryRoutineNames.WantedSweep,
             Lane.Sync,
@@ -72,7 +72,7 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
             {
                 await EnsureRoutineAsync(DiscoveryRoutineNames.Caps, Lane.Sync, indexer.Id, now, cancellationToken);
                 await EnsureRoutineAsync(DiscoveryRoutineNames.Walk, Lane.Sync, indexer.Id, now, cancellationToken);
-                await EnsureRoutineAsync(DiscoveryRoutineNames.Bootstrap, Lane.Bulk, indexer.Id, now, cancellationToken);
+                await EnsureRoutineAsync(DiscoveryRoutineNames.RecentWindow, Lane.Bulk, indexer.Id, now, cancellationToken);
                 await EnsureRoutineAsync(DiscoveryRoutineNames.WantedSweep, Lane.Sync, indexer.Id, now, cancellationToken);
             }
         }
@@ -135,10 +135,16 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
             ? IndexerConnectionOutcome.Saved
             : IndexerConnectionOutcome.NoCategories;
 
-        if (addedIds.Length > 0 && state.BootstrapCompletedAt is not null)
+        if (addedIds.Length > 0)
         {
-            OpenCatchUp(state, now - TimeSpan.FromDays(90), now, "category extension");
-            await EnsureRoutineAsync(DiscoveryRoutineNames.CatchUp, Lane.Bulk, indexerId, now, cancellationToken);
+            state.RecentWindowResumePage = 0;
+            state.RecentWindowPassStartedAt = null;
+            state.RecentWindowCompletedAt = null;
+            await EnsureRoutineAsync(DiscoveryRoutineNames.RecentWindow, Lane.Bulk, indexerId, now, cancellationToken);
+            await context.Routines
+                .Where(row => row.Name == DiscoveryRoutineNames.RecentWindow
+                    && row.Target == indexerId.ToString("D"))
+                .ExecuteUpdateAsync(update => update.SetProperty(row => row.DueAt, now), cancellationToken);
         }
 
         await context.SaveChangesAsync(cancellationToken);

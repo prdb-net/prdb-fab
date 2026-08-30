@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 using Prdb.Fab.Infrastructure.Sync;
@@ -141,48 +142,48 @@ public sealed class WhatsNewTests
     }
 
     /// <summary>
-    /// ADR 0013 bounds the backfill by a page count and not by a date window,
-    /// because a window of days has an unpredictable cost and a window of pages
-    /// has a stated one. It carries its position, resumes there after a restart,
-    /// and retires without leaving a recurring row behind.
+    /// The fixed window carries its page in the database, resumes after a
+    /// restart and remains scheduled after completing a pass.
     /// </summary>
     [Fact]
-    public async Task The_backfill_walks_pages_resumes_after_a_restart_and_retires()
+    public async Task The_recent_window_walks_pages_resumes_after_a_restart_and_stays_recurring()
     {
         var full = FullPage(Noon);
 
-        var prdb = new FakePrdbApi().Answers(Videos, full).Answers(Batch, "[]");
+        var prdb = new FakePrdbApi()
+            .Answers(Videos, full)
+            .Answers(Videos, VideoPage([(First, Noon.AddDays(-1))]))
+            .Answers(Batch, "[]");
 
         await using var database = await CreateAsync(prdb);
 
         await StartAsync(database);
-        Assert.True(await HasRowAsync(database, WhatsNewBackfillRoutine.RoutineName));
+        Assert.True(await HasRowAsync(database, RecentCatalogueRoutine.RoutineName));
 
-        await RunAsync<WhatsNewBackfillRoutine>(database);
+        await RunAsync<RecentCatalogueRoutine>(database);
 
         Assert.Equal("1", Query(prdb.AskedFor(Videos)[0], "Page"));
         Assert.Equal("desc", Query(prdb.AskedFor(Videos)[0], "SortDirection"));
 
         // A restart neither duplicates the row nor moves the position.
         await StartAsync(database);
-        Assert.True(await HasRowAsync(database, WhatsNewBackfillRoutine.RoutineName));
+        Assert.True(await HasRowAsync(database, RecentCatalogueRoutine.RoutineName));
 
-        await RunAsync<WhatsNewBackfillRoutine>(database);
+        await RunAsync<RecentCatalogueRoutine>(database);
         Assert.Equal("2", Query(prdb.AskedFor(Videos)[1], "Page"));
 
-        // The rest of the ceiling, and then it is gone.
-        for (var page = 3; page <= Backfill.LastPage; page++)
+        await using (var scope = database.Scope())
         {
-            await RunAsync<WhatsNewBackfillRoutine>(database);
+            var state = await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+                .RecentWindowState.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.NotNull(state.CatalogueCompletedAt);
+            Assert.Equal(1, state.CatalogueResumePage);
         }
 
-        Assert.Equal(Backfill.LastPage, prdb.AskedFor(Videos).Count);
-        Assert.False(await HasRowAsync(database, WhatsNewBackfillRoutine.RoutineName));
-
-        // And a restart does not bring it back, so a bootstrap happens once.
+        // A restart retains both the completed proof and the recurring row.
         await StartAsync(database);
 
-        Assert.False(await HasRowAsync(database, WhatsNewBackfillRoutine.RoutineName));
+        Assert.True(await HasRowAsync(database, RecentCatalogueRoutine.RoutineName));
         Assert.True(await HasRowAsync(database, WhatsNewRoutine.RoutineName));
     }
 
@@ -192,7 +193,7 @@ public sealed class WhatsNewTests
     /// nothing would be the ceiling doing the work of an answer already given.
     /// </summary>
     [Fact]
-    public async Task The_backfill_retires_at_the_end_of_what_prdb_has()
+    public async Task The_recent_window_completes_at_the_end_of_what_prdb_has()
     {
         var prdb = new FakePrdbApi()
             .Answers(Videos, VideoPage([(First, Noon)]))
@@ -201,10 +202,34 @@ public sealed class WhatsNewTests
         await using var database = await CreateAsync(prdb);
 
         await StartAsync(database);
-        await RunAsync<WhatsNewBackfillRoutine>(database);
+        await RunAsync<RecentCatalogueRoutine>(database);
 
         Assert.Single(prdb.AskedFor(Videos));
-        Assert.False(await HasRowAsync(database, WhatsNewBackfillRoutine.RoutineName));
+        Assert.True(await HasRowAsync(database, RecentCatalogueRoutine.RoutineName));
+        await using var scope = database.Scope();
+        Assert.NotNull((await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .RecentWindowState.SingleAsync(TestContext.Current.CancellationToken)).CatalogueCompletedAt);
+    }
+
+    [Fact]
+    public async Task The_recent_window_includes_the_exact_ninety_day_boundary()
+    {
+        var now = new DateTimeOffset(2026, 8, 27, 9, 0, 0, TimeSpan.Zero);
+        var boundary = RecentWindow.BeginsAt(now);
+        var prdb = new FakePrdbApi()
+            .Answers(Videos, FullPage(boundary))
+            .Answers(Batch, "[]");
+
+        await using var database = await CreateAsync(prdb);
+        await StartAsync(database);
+        await RunAsync<RecentCatalogueRoutine>(database);
+
+        await using var scope = database.Scope();
+        var state = await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .RecentWindowState.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(database.Time.GetUtcNow(), state.CatalogueCompletedAt);
+        Assert.Equal(boundary, state.CatalogueOldestCreatedAt);
+        Assert.Equal(1, state.CatalogueResumePage);
     }
 
     /// <summary>
@@ -213,7 +238,7 @@ public sealed class WhatsNewTests
     /// backwards in the bulk one, and ADR 0033 gives them a cursor each.
     /// </summary>
     [Fact]
-    public async Task The_backfill_and_the_recurring_routine_are_separate_routines()
+    public async Task The_recent_window_and_the_head_reader_are_separate_routines()
     {
         var prdb = new FakePrdbApi()
             .Answers(Videos, VideoPage([(First, Noon)]))
@@ -225,12 +250,12 @@ public sealed class WhatsNewTests
 
         await using var scope = database.Scope();
 
-        var backfill = scope.ServiceProvider.GetRequiredService<WhatsNewBackfillRoutine>();
-        var recurring = scope.ServiceProvider.GetRequiredService<WhatsNewRoutine>();
+        var window = scope.ServiceProvider.GetRequiredService<RecentCatalogueRoutine>();
+        var head = scope.ServiceProvider.GetRequiredService<WhatsNewRoutine>();
 
-        Assert.Equal(Lane.Bulk, backfill.Lane);
-        Assert.Equal(Lane.Sync, recurring.Lane);
-        Assert.NotEqual(backfill.Name, recurring.Name);
+        Assert.Equal(Lane.Bulk, window.Lane);
+        Assert.Equal(Lane.Sync, head.Lane);
+        Assert.NotEqual(window.Name, head.Name);
     }
 
     private static async Task<TestDatabase> CreateAsync(FakePrdbApi prdb)
@@ -308,7 +333,7 @@ public sealed class WhatsNewTests
     /// twice by accident.
     /// </summary>
     private static string FullPage(DateTimeOffset created) =>
-        VideoPage([.. Enumerable.Range(1, Backfill.APage).Select(index =>
+        VideoPage([.. Enumerable.Range(1, CatalogueRead.APage).Select(index =>
             (Guid.Parse($"eeeeeeee-0000-4000-8000-{index:D12}"), created))]);
 
     private static string Details(IReadOnlyList<(Guid Id, string Title)> videos) =>
