@@ -1,15 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 
-import { listWanted, setWanted } from '../api/client.ts'
+import { listWanted } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
-import gridStyles from './Grid.module.css'
-import { prdbVideoUrl } from './prdb.ts'
 import { wantedKey } from './state.ts'
-import { videoReleasePath } from '../release/routes.ts'
 import styles from './Wanted.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
-import { PreferenceButton } from './PreferenceButton.tsx'
+import { WantedCardActions } from './WantedCardActions.tsx'
 
 /**
  * The wanted list, and where setting up ends.
@@ -83,25 +80,10 @@ export function WantedScreen() {
           <Grid
             videos={wanted.data?.videos ?? []}
             action={(video) => (
-              <span className={gridStyles.actions}>
-                <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  {video.downloadReady ? 'Download' : 'Search Indexers'}
-                </Link>
-                <PreferenceButton
-                  active
-                  activeLabel="Remove Wanted"
-                  inactiveLabel="Mark Wanted"
-                  write={(desired) => setWanted(video.prdbId, desired)}
-                />
-                <a
-                  className={gridStyles.action}
-                  href={prdbVideoUrl(String(video.prdbId))}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open in prdb
-                </a>
-              </span>
+              <WantedCardActions
+                video={video}
+                returnTo={location.pathname + location.search}
+              />
             )}
           />
 
