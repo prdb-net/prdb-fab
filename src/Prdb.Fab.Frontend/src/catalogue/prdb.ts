@@ -9,7 +9,7 @@
  * contract, which is exactly why it lives in one function: if the form ever
  * changes, this is the whole of the change.
  */
-export const prdbSite = 'https://prdb.net'
+export const prdbSite = 'https://app.prdb.net'
 
 /** Where a video lives on prdb. */
 export function prdbVideoUrl(prdbId: string): string {

@@ -19,6 +19,10 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Fixed
+
+- `Open in prdb` links now use the application host at `app.prdb.net`.
+
 ### Changed
 
 - Catalogue Search now defaults to Videos that are neither held nor being
