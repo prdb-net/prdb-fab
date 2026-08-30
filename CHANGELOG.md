@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-30
+
+This release makes the Catalogue's everyday decisions faster to reach and
+clearer to scan, from finding a useful Video through starting its Download.
+
 ### Fixed
 
 - `Open in prdb` links now use the application host at `app.prdb.net`.
@@ -31,6 +36,12 @@ before changing the tag — the backup file is deliberately not the whole of it.
   preserved in its URL.
 - Manual Download buttons submit an eligible Release directly after the local
   plan check instead of asking for a second browser confirmation.
+- Wanted cards now prioritize their Release action, expose removal as a compact
+  state control, and collect less frequent external actions in an accessible
+  overflow menu.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.13.0 has started against it.
 
 ## [0.12.1] - 2026-08-30
 

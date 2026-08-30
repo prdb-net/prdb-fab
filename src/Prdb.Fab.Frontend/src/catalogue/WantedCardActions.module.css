@@ -1,0 +1,151 @@
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.actions {
+  align-items: stretch;
+  display: flex;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.primary,
+.iconButton {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 2.35rem;
+}
+
+.primary {
+  background: #182b3d;
+  border-color: #315574;
+  color: #b6d8f4;
+  flex: 1;
+  font-weight: 650;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.38rem 0.65rem;
+  text-decoration: none;
+}
+
+.iconButton {
+  background: var(--surface-raised);
+  color: var(--text-quiet);
+  flex: 0 0 2.35rem;
+  padding: 0;
+  width: 2.35rem;
+}
+
+.wantedButton {
+  color: var(--accent);
+}
+
+.primary:hover,
+.primary:focus-visible {
+  background: #20384f;
+  border-color: #4d83ae;
+  color: #d2e8f8;
+}
+
+.iconButton:hover,
+.iconButton:focus-visible {
+  background: #242933;
+  border-color: #4b5361;
+  color: var(--text);
+}
+
+.primary:focus-visible,
+.iconButton:focus-visible,
+.menu a:focus-visible,
+.error button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.iconButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.icon {
+  display: block;
+  flex: 0 0 auto;
+  height: 1.05rem;
+  width: 1.05rem;
+}
+
+.more {
+  display: inline-flex;
+  position: relative;
+}
+
+.menu {
+  background: #20242b;
+  border: 1px solid #3a414d;
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 0.7rem 1.7rem rgba(0, 0, 0, 0.42);
+  display: block;
+  min-width: 11.5rem;
+  padding: 0.3rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 10;
+}
+
+.menu a {
+  align-items: center;
+  border-radius: var(--radius);
+  color: var(--text);
+  display: flex;
+  gap: 0.6rem;
+  min-height: 2.45rem;
+  padding: 0.45rem 0.6rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.menu a:hover {
+  background: #2a3039;
+}
+
+.error {
+  color: var(--bad);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  gap: 0.25rem;
+}
+
+.error button {
+  align-self: flex-start;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .primary,
+  .iconButton {
+    min-height: 2.75rem;
+  }
+
+  .iconButton {
+    flex-basis: 2.75rem;
+    width: 2.75rem;
+  }
+
+  .primary > span {
+    display: none;
+  }
+}
