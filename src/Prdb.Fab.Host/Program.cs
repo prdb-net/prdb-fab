@@ -55,7 +55,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddFabPersistence(dataDirectory);
 builder.Services.AddFabScheduling();
 builder.Services.AddFabAccess();
-builder.Services.AddFabConnections();
+builder.Services.AddFabConnections(builder.Configuration["Prdb:BaseUrl"]);
 builder.Services.AddFabReleaseDiscovery();
 builder.Services.AddFabAutomation();
 builder.Services.AddFabAcquisition();
