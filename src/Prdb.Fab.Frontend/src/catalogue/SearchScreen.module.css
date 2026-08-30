@@ -22,23 +22,54 @@
   color: var(--text-quiet);
 }
 
-.filter {
-  display: flex;
-  gap: 0.5rem;
-  margin: 1.25rem 0;
-}
-
-.filter input {
+.controls {
+  align-items: end;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(22rem, 1fr) minmax(12rem, auto) minmax(12rem, auto);
+  margin: 1.25rem 0;
+  padding: 0.9rem;
+}
+
+.controls label,
+.search {
+  color: var(--text-quiet);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 0.35rem;
+}
+
+.search span {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.controls input,
+.controls select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   color: var(--text);
-  flex: 1;
-  max-width: 42rem;
+  min-height: 2.6rem;
   padding: 0.65rem 0.8rem;
 }
 
-.filter button,
+.controls input {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.controls select {
+  min-width: 12rem;
+}
+
+.controls button,
+.empty button,
 .pager button {
   background: var(--surface-raised);
   border: 1px solid var(--border);
@@ -48,17 +79,27 @@
   padding: 0.55rem 0.8rem;
 }
 
-.filter button[type='submit'] {
+.controls button[type='submit'] {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--surface);
   font-weight: 700;
 }
 
+.summary {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+  margin: -0.5rem 0 1.25rem;
+}
+
 .empty {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
+}
+
+.empty p {
+  margin-top: 0;
 }
 
 .pager {
@@ -69,7 +110,15 @@
   margin-top: 2rem;
 }
 
+@media (max-width: 850px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+  .search { grid-column: 1 / -1; }
+}
+
 @media (max-width: 620px) {
-  .filter { flex-wrap: wrap; }
-  .filter input { flex-basis: 100%; }
+  .controls { grid-template-columns: 1fr; }
+  .search { grid-column: auto; }
+  .search span { flex-wrap: wrap; }
+  .search input { flex-basis: 100%; }
+  .controls select { width: 100%; }
 }

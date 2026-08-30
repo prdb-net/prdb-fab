@@ -39,6 +39,8 @@ export type RunNowVerdict = Schema['RunNowVerdict']
 
 export type VideoCard = Schema['VideoCard']
 export type VideoPage = Schema['VideoPage']
+export type CatalogueVideoFilter = Schema['CatalogueVideoFilter']
+export type CatalogueVideoSort = Schema['CatalogueVideoSort']
 export type WhatsNewPage = Schema['WhatsNewPage']
 export type AccountPreferenceVerdict = Schema['AccountPreferenceVerdict']
 export type WantedList = Schema['WantedList']
@@ -317,9 +319,14 @@ export async function listWanted(page: number): Promise<WantedList> {
   return json<WantedList>(await fetch(`/api/catalogue/wanted?page=${page}`))
 }
 
-export async function listVideos(search: string, page: number): Promise<VideoPage> {
+export async function listVideos(
+  search: string,
+  page: number,
+  filter: CatalogueVideoFilter,
+  sort: CatalogueVideoSort,
+): Promise<VideoPage> {
   return json<VideoPage>(
-    await fetch(`/api/catalogue/videos?${parameters({ search, page: String(page) })}`),
+    await fetch(`/api/catalogue/videos?${parameters({ search, page: String(page), filter, sort })}`),
   )
 }
 

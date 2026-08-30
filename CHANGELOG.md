@@ -19,6 +19,15 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- Catalogue Search now defaults to Videos that are neither held nor being
+  downloaded, newest Release first. The page exposes local acquisition-state
+  filters and Release date, prdb recency, title and query-relevance sorts, all
+  preserved in its URL.
+- Manual Download buttons submit an eligible Release directly after the local
+  plan check instead of asking for a second browser confirmation.
+
 ## [0.12.1] - 2026-08-30
 
 ### Fixed

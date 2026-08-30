@@ -51,8 +51,10 @@ public static class CatalogueEndpoints
             CatalogueBrowse browse,
             CancellationToken cancellationToken,
             string? search = null,
-            int page = 1) =>
-            TypedResults.Ok(await browse.VideosAsync(search, page, cancellationToken)));
+            int page = 1,
+            CatalogueVideoFilter filter = CatalogueVideoFilter.Available,
+            CatalogueVideoSort sort = CatalogueVideoSort.ReleaseDateDescending) =>
+            TypedResults.Ok(await browse.VideosAsync(search, page, filter, sort, cancellationToken)));
 
         MapPreference(group, "/wanted/{prdbId:guid}", AccountPreferenceKind.WantedVideo);
         MapPreference(group, "/actors/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteActor);

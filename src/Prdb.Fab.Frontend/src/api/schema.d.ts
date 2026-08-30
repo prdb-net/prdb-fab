@@ -1503,6 +1503,8 @@ export interface paths {
                 query?: {
                     search?: string;
                     page?: number | string;
+                    filter?: components["schemas"]["CatalogueVideoFilter"];
+                    sort?: components["schemas"]["CatalogueVideoSort"];
                 };
                 header?: never;
                 path?: never;
@@ -2930,6 +2932,10 @@ export interface components {
         };
         /** @enum {unknown} */
         CatalogueScope: "Favourites" | "All";
+        /** @enum {unknown} */
+        CatalogueVideoFilter: "Available" | "All" | "DownloadReady" | "NeedsSearch" | "Wanted" | "Held" | "Outstanding";
+        /** @enum {unknown} */
+        CatalogueVideoSort: "ReleaseDateDescending" | "ReleaseDateAscending" | "CreatedDescending" | "Relevance" | "TitleAscending" | "TitleDescending";
         /** @enum {unknown} */
         ChangePasswordOutcome: "Changed" | "WrongPassword" | "TooManyAttempts" | "Refused";
         ChangePasswordRequest: {

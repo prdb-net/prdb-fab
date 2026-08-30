@@ -176,9 +176,39 @@ public sealed class CatalogueBrowse(
             await RecentWindowIsFillingAsync(cancellationToken));
     }
 
-    /// <summary>Searches every locally known Video without causing a remote read.</summary>
-    public Task<VideoPage> VideosAsync(string? search, int page, CancellationToken cancellationToken) =>
-        VideosAsync(context.CatalogueVideos.AsNoTracking(), search, page, cancellationToken);
+    /// <summary>Searches and browses locally known Videos without causing a remote read.</summary>
+    public async Task<VideoPage> VideosAsync(
+        string? search,
+        int page,
+        CatalogueVideoFilter filter,
+        CatalogueVideoSort sort,
+        CancellationToken cancellationToken)
+    {
+        var query = context.CatalogueVideos.AsNoTracking();
+        var readyVideoIds = filter is CatalogueVideoFilter.DownloadReady or CatalogueVideoFilter.NeedsSearch
+            ? ReadyVideoIds(await context.Installation
+                .Select(row => row.RetryBudget)
+                .SingleAsync(cancellationToken))
+            : null;
+
+        query = filter switch
+        {
+            CatalogueVideoFilter.All => query,
+            CatalogueVideoFilter.Available => Available(query),
+            CatalogueVideoFilter.DownloadReady => query.Where(row => readyVideoIds!.Contains(row.Id)),
+            CatalogueVideoFilter.NeedsSearch => Available(query).Where(row => !readyVideoIds!.Contains(row.Id)),
+            CatalogueVideoFilter.Wanted => query.Where(row =>
+                context.WantedVideos.Any(wanted => wanted.VideoId == row.Id)),
+            CatalogueVideoFilter.Held => query.Where(row =>
+                context.VideoFiles.Any(file => file.LibraryEntryVideoId == row.PrdbId)),
+            CatalogueVideoFilter.Outstanding => query.Where(row =>
+                context.Downloads.Any(download =>
+                    download.VideoId == row.PrdbId && download.State == DownloadState.Outstanding)),
+            _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, null),
+        };
+
+        return await VideosAsync(query, search, page, sort, cancellationToken);
+    }
 
     /// <summary>Sites kept by the catalogue, alphabetically and searched locally.</summary>
     public async Task<SitePage> SitesAsync(
@@ -289,7 +319,9 @@ public sealed class CatalogueBrowse(
             .AsNoTracking()
             .Where(row => row.Site != null && row.Site.PrdbId == prdbId);
 
-        return new SiteVideos(site, await VideosAsync(videos, search, page, cancellationToken));
+        return new SiteVideos(
+            site,
+            await VideosAsync(videos, search, page, CatalogueVideoSort.TitleAscending, cancellationToken));
     }
 
     /// <summary>One Actor and the catalogue Videos carrying their credit.</summary>
@@ -318,7 +350,9 @@ public sealed class CatalogueBrowse(
             .Where(credit => credit.Actor != null && credit.Actor.PrdbId == prdbId)
             .Select(credit => credit.Video!);
 
-        return new ActorVideos(actor, await VideosAsync(videos, search, page, cancellationToken));
+        return new ActorVideos(
+            actor,
+            await VideosAsync(videos, search, page, CatalogueVideoSort.TitleAscending, cancellationToken));
     }
 
     /// <summary>
@@ -337,6 +371,7 @@ public sealed class CatalogueBrowse(
         IQueryable<CatalogueVideoRow> query,
         string? search,
         int page,
+        CatalogueVideoSort sort,
         CancellationToken cancellationToken)
     {
         var wanted = Paging.Wanted(page);
@@ -348,9 +383,7 @@ public sealed class CatalogueBrowse(
         }
 
         var total = await query.CountAsync(cancellationToken);
-        var videos = await query
-            .OrderBy(row => row.Title)
-            .ThenBy(row => row.Id)
+        var videos = await Ordered(query, search, sort)
             .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new VideoCard(
@@ -367,6 +400,78 @@ public sealed class CatalogueBrowse(
             wanted,
             APage,
             total);
+    }
+
+    private IQueryable<CatalogueVideoRow> Available(IQueryable<CatalogueVideoRow> query) =>
+        query.Where(row =>
+            !context.VideoFiles.Any(file => file.LibraryEntryVideoId == row.PrdbId)
+            && !context.Downloads.Any(download =>
+                download.VideoId == row.PrdbId && download.State == DownloadState.Outstanding));
+
+    /// <summary>
+    /// The SQL-sized counterpart of <see cref="ReleaseRankings.ReadyVideosAsync"/>.
+    /// It identifies the population before paging; the ranking still computes
+    /// each returned card's definitive state.
+    /// </summary>
+    private IQueryable<long> ReadyVideoIds(int retryBudget) =>
+        context.CatalogueVideos
+            .Where(video => context.Downloads.Count(download => download.VideoId == video.PrdbId) < retryBudget)
+            .Where(video => context.Releases.Any(release =>
+                release.VideoId == video.Id
+                && release.IdentificationState == IdentificationState.Matched
+                && (release.Confidence == IdentificationConfidence.Exact
+                    || release.Confidence == IdentificationConfidence.Strong
+                    || release.Confidence == IdentificationConfidence.Probable)
+                && (release.Password == null || release.Password == "0")
+                && release.DownloadUrl.Trim() != string.Empty
+                && !context.Downloads.Any(download =>
+                    download.VideoId == video.PrdbId
+                    && download.IndexerId == release.IndexerId
+                    && download.DerivedReleaseId == release.DerivedReleaseId)))
+            .Select(video => video.Id);
+
+    private static IOrderedQueryable<CatalogueVideoRow> Ordered(
+        IQueryable<CatalogueVideoRow> query,
+        string? search,
+        CatalogueVideoSort sort)
+    {
+        if (sort == CatalogueVideoSort.Relevance && !string.IsNullOrWhiteSpace(search))
+        {
+            return query
+                .OrderBy(row => EF.Functions.Like(
+                    row.Title, SearchPattern.Matching(search), SearchPattern.Escape) ? 0
+                    : EF.Functions.Like(
+                        row.Title, SearchPattern.Starting(search), SearchPattern.Escape) ? 1 : 2)
+                .ThenByDescending(row => row.ReleaseDate.HasValue)
+                .ThenByDescending(row => row.ReleaseDate)
+                .ThenBy(row => row.Title)
+                .ThenBy(row => row.Id);
+        }
+
+        return sort switch
+        {
+            CatalogueVideoSort.ReleaseDateDescending => query
+                .OrderByDescending(row => row.ReleaseDate.HasValue)
+                .ThenByDescending(row => row.ReleaseDate)
+                .ThenByDescending(row => row.CreatedAtUtc)
+                .ThenBy(row => row.Title)
+                .ThenBy(row => row.Id),
+            CatalogueVideoSort.ReleaseDateAscending => query
+                .OrderByDescending(row => row.ReleaseDate.HasValue)
+                .ThenBy(row => row.ReleaseDate)
+                .ThenBy(row => row.Title)
+                .ThenBy(row => row.Id),
+            CatalogueVideoSort.CreatedDescending => query
+                .OrderByDescending(row => row.CreatedAtUtc)
+                .ThenByDescending(row => row.Id),
+            CatalogueVideoSort.TitleDescending => query
+                .OrderByDescending(row => row.Title)
+                .ThenByDescending(row => row.Id),
+            CatalogueVideoSort.Relevance or CatalogueVideoSort.TitleAscending => query
+                .OrderBy(row => row.Title)
+                .ThenBy(row => row.Id),
+            _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null),
+        };
     }
 
     private async Task<IReadOnlyList<VideoCard>> WithAvailabilityAsync(
@@ -473,6 +578,29 @@ public enum VideoAvailability
     Ready,
     ReleasesNeedInspection,
     NoIdentifiedRelease,
+}
+
+/// <summary>The useful local populations exposed by the top-level Search surface.</summary>
+public enum CatalogueVideoFilter
+{
+    Available,
+    All,
+    DownloadReady,
+    NeedsSearch,
+    Wanted,
+    Held,
+    Outstanding,
+}
+
+/// <summary>The stable orders a person can choose for the top-level Search surface.</summary>
+public enum CatalogueVideoSort
+{
+    ReleaseDateDescending,
+    ReleaseDateAscending,
+    CreatedDescending,
+    Relevance,
+    TitleAscending,
+    TitleDescending,
 }
 
 /// <summary>One page of a grid, and where in the whole it sits.</summary>

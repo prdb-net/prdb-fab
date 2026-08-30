@@ -34,13 +34,27 @@ public static class SearchPattern
     /// </summary>
     public static string Containing(string value)
     {
+        var literal = Literal(value);
+        return $"%{literal}%";
+    }
+
+    /// <summary>The pattern matching a value exactly, with wildcards taken literally.</summary>
+    public static string Matching(string value) => Literal(value);
+
+    /// <summary>The pattern matching values that start with the supplied literal.</summary>
+    public static string Starting(string value)
+    {
+        var literal = Literal(value);
+        return $"{literal}%";
+    }
+
+    private static string Literal(string value)
+    {
         // The escape character first: doing it after the wildcards would escape
         // the backslashes this method has just put in.
-        var literal = value.Trim()
+        return value.Trim()
             .Replace(Escape, Escape + Escape, StringComparison.Ordinal)
             .Replace("%", Escape + "%", StringComparison.Ordinal)
             .Replace("_", Escape + "_", StringComparison.Ordinal);
-
-        return $"%{literal}%";
     }
 }

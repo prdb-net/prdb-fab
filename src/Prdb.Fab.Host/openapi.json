@@ -1240,6 +1240,22 @@
               "format": "int32",
               "default": 1
             }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "default": "Available",
+              "$ref": "#/components/schemas/CatalogueVideoFilter"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "default": "ReleaseDateDescending",
+              "$ref": "#/components/schemas/CatalogueVideoSort"
+            }
           }
         ],
         "responses": {
@@ -2938,6 +2954,27 @@
         "enum": [
           "Favourites",
           "All"
+        ]
+      },
+      "CatalogueVideoFilter": {
+        "enum": [
+          "Available",
+          "All",
+          "DownloadReady",
+          "NeedsSearch",
+          "Wanted",
+          "Held",
+          "Outstanding"
+        ]
+      },
+      "CatalogueVideoSort": {
+        "enum": [
+          "ReleaseDateDescending",
+          "ReleaseDateAscending",
+          "CreatedDescending",
+          "Relevance",
+          "TitleAscending",
+          "TitleDescending"
         ]
       },
       "ChangePasswordOutcome": {
