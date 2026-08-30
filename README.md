@@ -31,7 +31,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.10.0
+    image: prdbnet/prdb-fab:0.11.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -66,9 +66,9 @@ lost: **[docs/running-in-docker.md](docs/running-in-docker.md)**.
 
 It reads prdb, on its own, and keeps what it reads: the videos prdb publishes,
 the sites and actors behind them, your wanted list and your favourites, and one
-picture per video. **What's new**, **Sites**, **Actors** and **Wanted** show that
-catalogue. Marking a video as wanted happens in prdb; this reads that list and
-never writes to it.
+picture per video. **What's new**, **Search**, **Sites**, **Actors** and
+**Wanted** show that catalogue. Wanted and Favourite actions are written to
+prdb through the same governed connection used by the background sync.
 
 Each enabled indexer is also walked continuously. Releases enter a local,
 disposable cache, are screened against the catalogue, and prdb is asked to
@@ -78,16 +78,19 @@ Identification State, Confidence and `matchedBy`. Ambiguous answers remain
 Candidates and a Site-Only Match remains a Site — neither is presented as a
 Video.
 
-The browser never turns a page load into an indexer query. It searches and
-filters what the background routines have already cached. Each Indexer Cache is
+The browser never turns a page load into an indexer query. **Search Indexers**
+is an explicit Video action: it records durable work, and the ordinary
+scheduler queries all enabled Indexers or one selected Indexer while the page
+shows progress. New results pass through prdb Identification before becoming
+downloadable. Every other page search and refresh reads only local state. Each Indexer Cache is
 bounded at **100,000 Releases**; the oldest examined Releases nothing points at
 are evicted first, while unseen or still-wanted rows are never discarded to
 hold the ceiling.
 
 Each newly added Indexer starts with a **1,000-request Daily Query Budget**.
 When there is searchable Wanted work, half of that budget, capped at 480
-requests, is reserved for the Wanted Sweep; the rest carries the continuous
-Indexer Walk. The first walk reads up to 90 days of history and may therefore
+requests, is reserved for the Wanted Sweep; the rest is shared by Manual Search
+and the continuous Indexer Walk. The first walk reads up to 90 days of history and may therefore
 cost hundreds of queries or continue on a later day. It never spends past that
 Indexer's daily budget.
 

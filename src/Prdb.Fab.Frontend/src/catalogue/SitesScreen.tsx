@@ -45,7 +45,7 @@ export function SitesScreen() {
         goTo={goTo}
         videoAction={(video) => (
           <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-            Find releases for this Video
+            Search Indexers
           </Link>
         )}
         contextAction={(

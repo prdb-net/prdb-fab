@@ -167,6 +167,171 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases/searches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ManualSearchRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManualSearchStartVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/searches/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query: {
+                    video: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManualSearchView"];
+                    };
+                };
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/searches/{searchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    searchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManualSearchView"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/searches/{searchId}/indexers/{indexerId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    searchId: string;
+                    indexerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManualSearchRetryVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases/discovery-routines": {
         parameters: {
             query?: never;
@@ -1314,6 +1479,44 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["WantedList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    search?: string;
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VideoPage"];
                     };
                 };
             };
@@ -2747,6 +2950,7 @@ export interface components {
             name: string;
             url: string;
             categories: string;
+            enabled: boolean;
             /** Format: int32 */
             rank: number | string;
             lastVerdict: components["schemas"]["IndexerConnectionOutcome"];
@@ -3033,6 +3237,83 @@ export interface components {
         LibrarySettingsState: {
             libraryRoot: null | string;
             deleteLeftovers: boolean;
+        };
+        /** @enum {unknown} */
+        ManualSearchIndexerState: "Queued" | "Searching" | "Deferred" | "Searched" | "Failed";
+        ManualSearchIndexerView: {
+            /** Format: uuid */
+            indexerId: string;
+            indexer: string;
+            state: components["schemas"]["ManualSearchIndexerState"];
+            /** Format: date-time */
+            startedAt: null | string;
+            /** Format: date-time */
+            finishedAt: null | string;
+            /** Format: date-time */
+            deferredUntil: null | string;
+            /** Format: int32 */
+            resultsSeen: number | string;
+            /** Format: int32 */
+            rowsAdded: number | string;
+            detail: null | string;
+            canRetry: boolean;
+        };
+        /** @enum {unknown} */
+        ManualSearchPhase: "Queued" | "Searching" | "Deferred" | "Identifying" | "Complete" | "Failed";
+        ManualSearchRequest: {
+            /** Format: uuid */
+            videoId: string;
+            /** Format: uuid */
+            indexerId: null | string;
+        };
+        ManualSearchResultCounts: {
+            /** Format: int32 */
+            seen: number | string;
+            /** Format: int32 */
+            added: number | string;
+            /** Format: int32 */
+            pending: number | string;
+            /** Format: int32 */
+            awaiting: number | string;
+            /** Format: int32 */
+            matchedVideo: number | string;
+            /** Format: int32 */
+            matchedOtherVideo: number | string;
+            /** Format: int32 */
+            ambiguous: number | string;
+            /** Format: int32 */
+            siteOnly: number | string;
+            /** Format: int32 */
+            unknown: number | string;
+            /** Format: int32 */
+            unremarkable: number | string;
+        };
+        /** @enum {unknown} */
+        ManualSearchRetryOutcome: "Scheduled" | "SearchNotFound" | "IndexerNotSelected" | "NotRetryable";
+        ManualSearchRetryVerdict: {
+            outcome: components["schemas"]["ManualSearchRetryOutcome"];
+        };
+        /** @enum {unknown} */
+        ManualSearchStartOutcome: "Started" | "AlreadyRunning" | "VideoNotFound" | "TitleNotSearchable" | "NoEnabledIndexers" | "IndexerNotEnabled";
+        ManualSearchStartVerdict: {
+            outcome: components["schemas"]["ManualSearchStartOutcome"];
+            /** Format: uuid */
+            searchId: null | string;
+            detail: string;
+        };
+        ManualSearchView: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            videoTitle: string;
+            query: string;
+            /** Format: date-time */
+            requestedAt: string;
+            phase: components["schemas"]["ManualSearchPhase"];
+            active: boolean;
+            indexers: components["schemas"]["ManualSearchIndexerView"][];
+            results: components["schemas"]["ManualSearchResultCounts"];
         };
         /** @enum {unknown} */
         OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";

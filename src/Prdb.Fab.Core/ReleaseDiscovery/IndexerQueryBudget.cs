@@ -25,7 +25,8 @@ public static class IndexerQueryBudget
         return purpose switch
         {
             IndexerQueryPurpose.WantedSweep => spentBySweep < reserve,
-            IndexerQueryPurpose.Walk => spent - spentBySweep < dailyBudget - reserve,
+            IndexerQueryPurpose.Walk or IndexerQueryPurpose.ManualSearch =>
+                spent - spentBySweep < dailyBudget - reserve,
             _ => false,
         };
     }
@@ -35,4 +36,5 @@ public enum IndexerQueryPurpose
 {
     Walk,
     WantedSweep,
+    ManualSearch,
 }

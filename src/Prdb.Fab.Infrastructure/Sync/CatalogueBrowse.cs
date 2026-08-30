@@ -176,6 +176,10 @@ public sealed class CatalogueBrowse(
             await BackfillIsRunningAsync(cancellationToken));
     }
 
+    /// <summary>Searches every locally known Video without causing a remote read.</summary>
+    public Task<VideoPage> VideosAsync(string? search, int page, CancellationToken cancellationToken) =>
+        VideosAsync(context.CatalogueVideos.AsNoTracking(), search, page, cancellationToken);
+
     /// <summary>Sites kept by the catalogue, alphabetically and searched locally.</summary>
     public async Task<SitePage> SitesAsync(
         string? search,

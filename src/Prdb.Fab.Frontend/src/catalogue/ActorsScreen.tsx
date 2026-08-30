@@ -57,7 +57,7 @@ export function ActorsScreen() {
         goTo={(wanted) => write(undefined, wanted)}
         videoAction={(video) => (
           <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-            Find releases for this Video
+            Search Indexers
           </Link>
         )}
         contextAction={(

@@ -31,6 +31,7 @@ public sealed class Indexers(
                 row.Name,
                 row.Url,
                 row.Categories,
+                row.Enabled,
                 row.Rank,
                 row.LastVerdict,
                 row.LastCheckedAt))
@@ -189,6 +190,7 @@ public sealed record ConfiguredIndexer(
     string Name,
     string Url,
     string Categories,
+    bool Enabled,
     int Rank,
     IndexerConnectionOutcome LastVerdict,
     DateTimeOffset LastCheckedAt);
