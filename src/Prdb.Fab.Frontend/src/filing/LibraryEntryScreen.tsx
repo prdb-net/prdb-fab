@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 
-import { readLibraryEntry, type OperationLogPage } from '../api/client.ts'
+import { readLibraryEntry } from '../api/client.ts'
+import { OperationList } from './OperationLogList.tsx'
 import styles from './Filing.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 
@@ -26,16 +27,6 @@ export function LibraryEntryScreen() {
     <h2>Video Files</h2>
     <div className={styles.tableFrame}><table className={styles.table}><thead><tr><th>Quality</th><th>Runtime</th><th>Size</th><th>Probe</th><th>Path</th></tr></thead><tbody>{data.files.map((file) => <tr key={file.id}><td>{file.quality}</td><td>{duration(file.runtimeSeconds)}</td><td>{size(file.sizeBytes)}</td><td>{file.width && file.height ? `${file.width}×${file.height}` : '—'} {file.videoCodec}</td><td><code>{file.filedPath}</code></td></tr>)}</tbody></table></div>
     <h2>Operation Log</h2>
-    <OperationRows entries={data.operations.entries} />
+    <OperationList entries={data.operations.entries} />
   </main>
-}
-
-export function OperationRows({ entries }: { entries: OperationLogPage['entries'] }) {
-  return <div className={styles.tableFrame}><table className={styles.table}><thead><tr><th>When</th><th>Act</th><th>Path</th><th>Origin</th><th>Reason</th></tr></thead><tbody>{entries.map((item) => <tr key={item.id}><td>{new Date(item.at).toLocaleString()}</td><td>{item.act}</td><td><code>{item.pathAfter ?? item.pathBefore ?? '—'}</code></td><td>{item.origin && item.downloadId ? <Link to={`/downloads?download=${item.downloadId}`}>{originLabel(item.origin)}</Link> : '—'}</td><td>{item.reason}</td></tr>)}</tbody></table>{entries.length === 0 && <p className={styles.empty}>No operation has been recorded.</p>}</div>
-}
-
-function originLabel(origin: NonNullable<OperationLogPage['entries'][number]['origin']>): string {
-  if (origin.kind === 'Person') return 'Person'
-  const rules = origin.rules.map((rule) => rule.name).join(', ')
-  return rules ? `Automation — ${rules}` : 'Automation'
 }
