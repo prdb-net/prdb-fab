@@ -19,6 +19,27 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-02
+
+This release makes acquisition choices and Download history easier to scan,
+especially when a Video is already in the Library.
+
+### Changed
+
+- Catalogue cards across What's New, Search and Wanted now use the same compact,
+  context-aware actions. Site and Actor browsing use the same visual language,
+  while Sites show held Video counts and can be filtered to those represented in
+  the Library.
+- Release pages show held qualities before search and Download actions, describe
+  consumed Releases as already used, and distinguish downloading another version
+  from acquiring a Video that is not yet held.
+- Downloads are presented as responsive cards with prominent states, failure
+  messages and essential metadata. SABnzbd job IDs and the formatted stage-log
+  JSON stay collapsed until their details control is opened.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.14.0 has started against it.
+
 ## [0.13.0] - 2026-08-30
 
 This release makes the Catalogue's everyday decisions faster to reach and
