@@ -100,7 +100,7 @@ function DownloadTable({
           <h1>Downloads</h1>
           <p>Local history of what prdb-fab submitted and still follows in SABnzbd.</p>
         </div>
-        <span>{total} Downloads</span>
+        <span className={styles.total}>{total} Downloads</span>
       </div>
 
       <div className={styles.boundary}>
@@ -108,39 +108,41 @@ function DownloadTable({
         only this local record.
       </div>
 
-      <div className={styles.filters}>
-        <label>
-          State
-          <select
-            id="downloads-state"
-            name="state"
-            value={state ?? ''}
-            onChange={(event) => setFilter('state', event.target.value)}
-          >
-            <option value="">All states</option>
-            {states.map((value) => <option value={value} key={value}>{value}</option>)}
-          </select>
-        </label>
-        <label>
-          Indexer
-          <select
-            id="downloads-indexer"
-            name="indexer"
-            value={indexer ?? ''}
-            onChange={(event) => setFilter('indexer', event.target.value)}
-          >
-            <option value="">All Indexers</option>
-            {answer.indexers.map((entry) => <option value={entry.id} key={entry.id}>{entry.name}</option>)}
-          </select>
-        </label>
-      </div>
+      <div className={styles.toolbar}>
+        <div className={styles.filters}>
+          <label>
+            State
+            <select
+              id="downloads-state"
+              name="state"
+              value={state ?? ''}
+              onChange={(event) => setFilter('state', event.target.value)}
+            >
+              <option value="">All states</option>
+              {states.map((value) => <option value={value} key={value}>{value}</option>)}
+            </select>
+          </label>
+          <label>
+            Indexer
+            <select
+              id="downloads-indexer"
+              name="indexer"
+              value={indexer ?? ''}
+              onChange={(event) => setFilter('indexer', event.target.value)}
+            >
+              <option value="">All Indexers</option>
+              {answer.indexers.map((entry) => <option value={entry.id} key={entry.id}>{entry.name}</option>)}
+            </select>
+          </label>
+        </div>
 
-      <div className={styles.selection}>
-        <button type="button" disabled={selected.size === 0 || action.isPending} onClick={() => action.mutate()}>
-          {action.isPending ? 'Checking…' : `Stop following${selected.size ? ` (${selected.size})` : ''}`}
-        </button>
-        {action.data?.detail && <span>{action.data.detail}</span>}
-        {action.isError && <span>The selection could not be checked.</span>}
+        <div className={styles.selection}>
+          <button type="button" disabled={selected.size === 0 || action.isPending} onClick={() => action.mutate()}>
+            {action.isPending ? 'Checking…' : `Stop following${selected.size ? ` (${selected.size})` : ''}`}
+          </button>
+          {action.data?.detail && <span>{action.data.detail}</span>}
+          {action.isError && <span>The selection could not be checked.</span>}
+        </div>
       </div>
 
       {answer.downloads.length === 0 ? (
@@ -156,48 +158,66 @@ function DownloadTable({
           </Link>
         </div>
       ) : (
-        <div className={styles.tableFrame}>
-          <table>
-            <thead><tr>
-              <th>Select</th><th>Video / Release</th><th>State</th><th>SABnzbd</th>
-              <th>Indexer</th><th>Size</th><th>Origin</th><th>Outstanding since</th>
-            </tr></thead>
-            <tbody>{answer.downloads.map((download) => (
-              <tr key={download.id}>
-                <td>
-                  <input
-                    type="checkbox"
-                    name="selected-download"
-                    value={download.id}
-                    aria-label={`Select ${download.submittedName}`}
-                    disabled={download.state !== 'Outstanding'}
-                    checked={selected.has(download.id)}
-                    onChange={(event) => setSelected((held) => {
-                      const next = new Set(held)
-                      if (event.target.checked) next.add(download.id)
-                      else next.delete(download.id)
-                      return next
-                    })}
-                  />
-                </td>
-                <td className={styles.release}>
-                  <Link to={`/releases?video=${download.videoId}`}><strong>{download.videoTitle}</strong></Link>
+        <div className={styles.downloads}>
+          {answer.downloads.map((download) => (
+            <article className={styles.download} key={download.id}>
+              <header className={styles.downloadHeading}>
+                <div className={styles.release}>
+                  <Link to={`/releases?video=${download.videoId}`}>{download.videoTitle}</Link>
                   <span>{download.submittedName}</span>
-                </td>
-                <td><strong>{download.state}</strong><span>{stateDetail(download)}</span></td>
-                <td>
-                  <span>{download.lastSabnzbdStatus ?? 'Not seen yet'}</span>
-                  {download.nzoId && <code>{download.nzoId}</code>}
-                  {download.failMessage && <span>{download.failMessage}</span>}
-                  {download.stageLog && <pre>{download.stageLog}</pre>}
-                </td>
-                <td>{download.indexer.name}</td>
-                <td>{size(download.size)}</td>
-                <td><DownloadOrigin origin={download.origin} /></td>
-                <td>{date(download.outstandingSince)}</td>
-              </tr>
-            ))}</tbody>
-          </table>
+                </div>
+                <span className={`${styles.state} ${stateClass(download.state)}`}>{download.state}</span>
+              </header>
+
+              <p className={styles.stateDetail}>{stateDetail(download)}</p>
+              {download.failMessage && <p className={styles.failure}>{download.failMessage}</p>}
+
+              <dl className={styles.facts}>
+                <div><dt>SABnzbd</dt><dd>{download.lastSabnzbdStatus ?? 'Not seen yet'}</dd></div>
+                <div><dt>Indexer</dt><dd>{download.indexer.name}</dd></div>
+                <div><dt>Size</dt><dd>{size(download.size)}</dd></div>
+                <div><dt>Outstanding since</dt><dd>{date(download.outstandingSince)}</dd></div>
+                <div className={styles.origin}>
+                  <dt>Origin</dt>
+                  <dd><DownloadOrigin origin={download.origin} /></dd>
+                </div>
+              </dl>
+
+              <footer className={styles.downloadFooter}>
+                {download.state === 'Outstanding' ? (
+                  <label className={styles.selectDownload}>
+                    <input
+                      type="checkbox"
+                      name="selected-download"
+                      value={download.id}
+                      checked={selected.has(download.id)}
+                      onChange={(event) => setSelected((held) => {
+                        const next = new Set(held)
+                        if (event.target.checked) next.add(download.id)
+                        else next.delete(download.id)
+                        return next
+                      })}
+                    />
+                    Select to stop following
+                  </label>
+                ) : <span />}
+
+                {(download.nzoId || download.stageLog) && (
+                  <details className={styles.technicalDetails}>
+                    <summary>SABnzbd details</summary>
+                    <div>
+                      {download.nzoId && (
+                        <p><span>Job ID</span><code>{download.nzoId}</code></p>
+                      )}
+                      {download.stageLog && (
+                        <><span>Stage log (JSON)</span><pre>{formatStageLog(download.stageLog)}</pre></>
+                      )}
+                    </div>
+                  </details>
+                )}
+              </footer>
+            </article>
+          ))}
         </div>
       )}
 
@@ -208,6 +228,22 @@ function DownloadTable({
       </nav>}
     </main>
   )
+}
+
+function stateClass(state: DownloadState): string {
+  if (state === 'Collected') return styles.collected
+  if (state === 'Failed') return styles.failed
+  if (state === 'Outstanding') return styles.outstanding
+  if (state === 'Abandoned') return styles.abandoned
+  return styles.completed
+}
+
+function formatStageLog(value: string): string {
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2)
+  } catch {
+    return value
+  }
 }
 
 function stateDetail(download: DownloadPage['downloads'][number]): string {
