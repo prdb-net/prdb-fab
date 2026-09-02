@@ -40,6 +40,13 @@ public sealed class ReleaseBrowse(
 
         var ranking = await rankings.ForVideoAsync(prdbId, observeDecision: false, cancellationToken);
         var history = await downloads.ForVideoAsync(prdbId, cancellationToken);
+        var heldQualities = await context.VideoFiles
+            .AsNoTracking()
+            .Where(row => row.LibraryEntryVideoId == prdbId)
+            .Select(row => row.QualityLabel)
+            .Distinct()
+            .OrderBy(quality => quality)
+            .ToListAsync(cancellationToken);
         return await ReadAsync(
                 new ReleaseContext(ReleaseContextKind.Video, selected.PrdbId, selected.Title),
                 context.Releases.Where(row =>
@@ -56,7 +63,8 @@ public sealed class ReleaseBrowse(
                         ranking.DownloadsSpent,
                         ranking.RetryBudget,
                         ranking.Ranked.FirstOrDefault(),
-                        history),
+                        history,
+                        heldQualities),
                 cancellationToken);
     }
 
@@ -301,4 +309,5 @@ public sealed record VideoAcquisition(
     int DownloadsSpent,
     int RetryBudget,
     ReleaseChoice? NextRelease,
-    IReadOnlyList<DownloadSelectionRow> Downloads);
+    IReadOnlyList<DownloadSelectionRow> Downloads,
+    IReadOnlyList<string> HeldQualities);

@@ -57,13 +57,13 @@ export function WantedScreen() {
       </p>
 
       {total > 0 && (
-        <div className={styles.guide}>
-          <strong>To start a Download</strong>
-          <span>
-            Open a Video below. If discovery has found an eligible Release, the best one and
-            its Download button appear at the top of the Release page.
-          </span>
-        </div>
+        <details className={styles.guide}>
+          <summary>How Wanted works</summary>
+          <p>
+            Videos you already have are marked <strong>In Library</strong>. For the rest,
+            Download opens an eligible Release and Search helps find one.
+          </p>
+        </details>
       )}
 
       {wanted.data?.recentWindowFilling && (

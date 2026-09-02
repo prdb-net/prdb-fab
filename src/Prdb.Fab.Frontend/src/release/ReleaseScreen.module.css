@@ -30,6 +30,43 @@
   font-size: 0.9rem;
 }
 
+.libraryNotice {
+  align-items: center;
+  background: #132f28;
+  border: 1px solid #37816a;
+  border-radius: var(--radius);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 1.25rem 0;
+  padding: 1rem;
+}
+
+.libraryNotice h2,
+.libraryNotice p {
+  margin: 0;
+}
+
+.libraryNotice h2 {
+  color: #a5ecd0;
+  font-size: 1.05rem;
+}
+
+.libraryNotice p {
+  margin-top: 0.3rem;
+}
+
+.libraryNotice > a {
+  background: #1d493d;
+  border: 1px solid #4c9b80;
+  border-radius: var(--radius);
+  color: #c7f5e2;
+  flex: none;
+  font-weight: 700;
+  padding: 0.5rem 0.8rem;
+  text-decoration: none;
+}
+
 .boundary {
   background: var(--surface-raised);
   border: 1px solid var(--border);
@@ -321,6 +358,7 @@
 }
 
 @media (max-width: 700px) {
+  .libraryNotice,
   .acquisitionHeading {
     align-items: stretch;
     flex-direction: column;

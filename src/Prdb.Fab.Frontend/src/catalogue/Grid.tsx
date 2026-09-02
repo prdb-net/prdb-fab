@@ -36,11 +36,19 @@ function Card({
   video: VideoCard
   action?: (video: VideoCard) => ReactNode
 }) {
+  const held = video.heldQualities?.length
+    ? video.heldQualities.join(', ')
+    : null
+
   return (
     <li className={styles.card}>
       <span className={styles.artwork}>
         <Artwork videoId={video.id} title={video.title} />
-        {video.downloadReady && <span className={styles.ready}>Ready to download</span>}
+        {held ? (
+          <span className={styles.held}>In Library · {held}</span>
+        ) : video.downloadReady ? (
+          <span className={styles.ready}>Ready to download</span>
+        ) : null}
       </span>
       <span className={styles.title}>{video.title}</span>
       <span className={styles.detail}>{describe(video)}</span>
@@ -175,7 +183,7 @@ function describe(video: VideoCard): string {
 
 function statusOf(video: VideoCard): string[] {
   const held = video.heldQualities?.length
-    ? `Held: ${video.heldQualities.join(', ')}`
+    ? `In Library: ${video.heldQualities.join(', ')}`
     : null
   const available = video.availability === 'Ready'
     ? 'Best Release ready'

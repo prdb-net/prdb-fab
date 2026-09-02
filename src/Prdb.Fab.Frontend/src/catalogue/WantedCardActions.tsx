@@ -32,10 +32,16 @@ export function WantedCardActions({
   const verdict = remove.data
   const problem = remove.error?.message
     ?? (verdict && verdict.outcome !== 'Updated' ? verdict.detail : null)
-  const releaseLabel = video.downloadReady ? 'Download' : 'Search'
-  const releaseDescription = video.downloadReady
-    ? `Open Releases for ${video.title} to Download`
-    : `Search Indexers for ${video.title}`
+  const held = Boolean(video.heldQualities?.length)
+  const releaseLabel = held ? 'View Library' : video.downloadReady ? 'Download' : 'Search'
+  const releaseDescription = held
+    ? `View ${video.title} in the Library`
+    : video.downloadReady
+      ? `Open Releases for ${video.title} to Download`
+      : `Search Indexers for ${video.title}`
+  const primaryPath = held
+    ? `/library/${video.prdbId}`
+    : videoReleasePath(video.prdbId, returnTo)
 
   return (
     <span className={styles.control}>
@@ -44,9 +50,9 @@ export function WantedCardActions({
           aria-label={releaseDescription}
           className={styles.primary}
           title={releaseDescription}
-          to={videoReleasePath(video.prdbId, returnTo)}
+          to={primaryPath}
         >
-          <Icon name={video.downloadReady ? 'download' : 'search'} />
+          <Icon name={held ? 'library' : video.downloadReady ? 'download' : 'search'} />
           <span>{releaseLabel}</span>
         </Link>
 
@@ -62,7 +68,7 @@ export function WantedCardActions({
           <Icon name="wanted" />
         </button>
 
-        <MoreActions video={video} />
+        <MoreActions video={video} returnTo={returnTo} />
       </span>
 
       {problem && (
@@ -77,7 +83,7 @@ export function WantedCardActions({
   )
 }
 
-function MoreActions({ video }: { video: VideoCard }) {
+function MoreActions({ video, returnTo }: { video: VideoCard; returnTo: string }) {
   const [open, setOpen] = useState(false)
   const menuId = useId()
   const container = useRef<HTMLSpanElement>(null)
@@ -132,6 +138,15 @@ function MoreActions({ video }: { video: VideoCard }) {
 
       {open && (
         <span className={styles.menu} id={menuId}>
+          {video.heldQualities?.length && (
+            <Link
+              to={videoReleasePath(video.prdbId, returnTo)}
+              onClick={() => setOpen(false)}
+            >
+              <Icon name="search" />
+              <span>Find another Release</span>
+            </Link>
+          )}
           <a
             href={prdbVideoUrl(String(video.prdbId))}
             onClick={() => setOpen(false)}
@@ -147,7 +162,7 @@ function MoreActions({ video }: { video: VideoCard }) {
   )
 }
 
-type IconName = 'download' | 'external' | 'more' | 'search' | 'wanted'
+type IconName = 'download' | 'external' | 'library' | 'more' | 'search' | 'wanted'
 
 function Icon({ name }: { name: IconName }) {
   const common = {
@@ -165,6 +180,9 @@ function Icon({ name }: { name: IconName }) {
       )}
       {name === 'download' && (
         <path d="M12 3v12m-4-4 4 4 4-4M4 20h16" {...common} />
+      )}
+      {name === 'library' && (
+        <path d="M4 5h16v15H4V5Zm4 0v15m9-15v15M3 9h18" {...common} />
       )}
       {name === 'wanted' && (
         <path d="M12 20S4 15.6 4 9.5A4.5 4.5 0 0 1 12 6.7a4.5 4.5 0 0 1 8 2.8C20 15.6 12 20 12 20Z" fill="currentColor" />

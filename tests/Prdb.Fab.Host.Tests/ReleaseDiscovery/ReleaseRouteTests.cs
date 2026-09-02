@@ -80,6 +80,33 @@ public sealed class ReleaseRouteTests
     }
 
     [Fact]
+    public async Task A_video_release_page_says_which_qualities_are_already_in_the_library()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        var seeded = await SeedAsync(application);
+
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.LibraryEntries.Add(new LibraryEntryRow
+            {
+                VideoId = seeded.VideoId,
+                EntryDirectory = "/library/first-light",
+                FiledAt = new DateTimeOffset(2026, 8, 28, 13, 0, 0, TimeSpan.Zero),
+            });
+            context.VideoFiles.AddRange(
+                VideoFile(seeded.VideoId, "2160p", "/library/first-light/2160p.mkv"),
+                VideoFile(seeded.VideoId, "1080p", "/library/first-light/1080p.mkv"));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var page = await ReadAsync(client, $"video={seeded.VideoId}");
+
+        Assert.Equal(["1080p", "2160p"], page.Acquisition?.HeldQualities);
+    }
+
+    [Fact]
     public async Task Exactly_one_context_is_required_and_the_table_is_authenticated()
     {
         await using var application = new FabApplication();
@@ -223,6 +250,14 @@ public sealed class ReleaseRouteTests
             IdentificationState = state,
         };
 
+    private static VideoFileRow VideoFile(Guid videoId, string quality, string path) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        LibraryEntryVideoId = videoId,
+        FiledPath = path,
+        QualityLabel = quality,
+    };
+
     private sealed record Seeded(Guid VideoId, Guid SiteId, Guid ActorId, Guid IndexerId);
     private sealed record Context(string Kind, Guid PrdbId, string Title);
     private sealed record IdentifiedVideo(Guid PrdbId, string Title);
@@ -236,7 +271,13 @@ public sealed class ReleaseRouteTests
         SiteOnly? SiteOnlyMatch,
         int? RankingPosition,
         string? RankingExclusion);
-    private sealed record Answer(Context Context, IReadOnlyList<Row> Releases, int Page, int Total);
+    private sealed record Acquisition(IReadOnlyList<string> HeldQualities);
+    private sealed record Answer(
+        Context Context,
+        IReadOnlyList<Row> Releases,
+        int Page,
+        int Total,
+        Acquisition? Acquisition);
 
     private sealed class RefusesEverything : HttpMessageHandler
     {

@@ -36,17 +36,27 @@
   position: relative;
 }
 
-.ready {
-  background: #122d24;
-  border: 1px solid #28634e;
+.ready,
+.held {
   border-radius: 999px;
   bottom: 0.55rem;
-  color: #8fe0bd;
   font-size: 0.72rem;
   font-weight: 700;
   left: 0.55rem;
   padding: 0.18rem 0.5rem;
   position: absolute;
+}
+
+.ready {
+  background: #122d24;
+  border: 1px solid #28634e;
+  color: #8fe0bd;
+}
+
+.held {
+  background: #132f28;
+  border: 1px solid #37816a;
+  color: #a5ecd0;
 }
 
 .image {

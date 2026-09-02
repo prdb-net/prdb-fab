@@ -27,19 +27,60 @@
 }
 
 .guide {
+  margin: 0 0 1.5rem;
+  max-width: 70ch;
+}
+
+.guide summary {
+  align-items: center;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  display: grid;
-  gap: 0.25rem;
-  margin: 0 0 1.5rem;
-  max-width: 70ch;
-  padding: 0.8rem 1rem;
+  color: var(--text-quiet);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.85rem;
+  gap: 0.4rem;
+  padding: 0.35rem 0.6rem;
 }
 
-.guide span {
+.guide summary::before {
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  content: '?';
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 700;
+  height: 1rem;
+  justify-content: center;
+  width: 1rem;
+}
+
+.guide summary::-webkit-details-marker {
+  display: none;
+}
+
+.guide summary:hover,
+.guide summary:focus-visible,
+.guide[open] summary {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.guide summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.guide p {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   color: var(--text-quiet);
   font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+  padding: 0.8rem 1rem;
 }
 
 /*

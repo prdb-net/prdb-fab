@@ -109,6 +109,8 @@ function ReleaseTable({
   const total = Number(page.total)
   const current = Number(page.page)
   const pages = Math.max(1, Math.ceil(total / Number(page.pageSize)))
+  const heldQualities = page.acquisition?.heldQualities ?? []
+  const held = heldQualities.length > 0
 
   return (
     <main className={styles.screen}>
@@ -125,6 +127,19 @@ function ReleaseTable({
         <span className={styles.count}>{total} releases</span>
       </div>
 
+      {held && (
+        <section className={styles.libraryNotice}>
+          <div>
+            <h2>Already in your Library</h2>
+            <p>
+              This Video is stored in {heldQualities.join(', ')}. You do not need to
+              download it again unless you want another version.
+            </p>
+          </div>
+          <Link to={`/library/${page.context.prdbId}`}>View in Library</Link>
+        </section>
+      )}
+
       <div className={styles.boundary}>
         <strong>{page.recentWindow.complete ? 'Recent Window ready.' : 'Recent Window still filling.'}</strong>{' '}
         Reading or refreshing this table never queries an Indexer. Background Sync keeps the newest{' '}
@@ -132,7 +147,9 @@ function ReleaseTable({
         {!page.recentWindow.complete && ' An empty table is not authoritative until every configured source is complete.'}
       </div>
 
-      {page.context.kind === 'Video' && <ManualSearchPanel videoId={page.context.prdbId} />}
+      {page.context.kind === 'Video' && (
+        <ManualSearchPanel videoId={page.context.prdbId} held={held} />
+      )}
 
       {page.acquisition && (
         <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
@@ -202,8 +219,7 @@ function ReleaseTable({
                 <tr key={String(release.id)}>
                   <td className={styles.release}>{release.title}</td>
                   <td>
-                    {release.rankingPosition ??
-                      (release.rankingExclusion ? `Excluded — ${release.rankingExclusion}` : '—')}
+                    {rankingLabel(release)}
                   </td>
                   <td>
                     {release.indexer.name}
@@ -266,6 +282,9 @@ function ReleaseActionCell({
       />
     )
   }
+  if (release.rankingExclusion === 'Consumed') {
+    return 'Already used for this Video'
+  }
   return release.rankingExclusion
     ? `Cannot download — ${release.rankingExclusion}`
     : actionReason(release)
@@ -317,7 +336,7 @@ function returnLabel(path: string): string {
   return 'What’s new'
 }
 
-function ManualSearchPanel({ videoId }: { videoId: string }) {
+function ManualSearchPanel({ videoId, held }: { videoId: string; held: boolean }) {
   const queryClient = useQueryClient()
   const latest = useQuery({
     queryKey: ['manual-search', videoId],
@@ -342,8 +361,12 @@ function ManualSearchPanel({ videoId }: { videoId: string }) {
     <section className={styles.manualSearch}>
       <div className={styles.manualSearchHeading}>
         <div>
-          <h2>Search Indexers</h2>
-          <p>Search explicitly for older material or retry now. Recent Releases arrive and flow through Identification automatically.</p>
+          <h2>{held ? 'Find another Release' : 'Search Indexers'}</h2>
+          <p>
+            {held
+              ? 'Use this only if you want another version. Recent Releases still arrive automatically.'
+              : 'Search explicitly for older material or retry now. Recent Releases arrive and flow through Identification automatically.'}
+          </p>
         </div>
         <form onSubmit={(event) => {
           event.preventDefault()
@@ -431,16 +454,27 @@ function AcquisitionSummary({
   const spent = Number(acquisition.downloadsSpent)
   const budget = Number(acquisition.retryBudget)
   const ready = spent < budget ? acquisition.nextRelease : null
+  const held = acquisition.heldQualities.length > 0
+  const heading = held
+    ? ready ? 'Another Release is available' : 'Download history'
+    : ready ? 'Ready to download' : 'No download-ready Release'
   return (
     <section className={`${styles.acquisition} ${ready ? styles.ready : ''}`}>
       <div className={styles.acquisitionHeading}>
         <div>
-          <h2>{ready ? 'Ready to download' : 'No download-ready Release'}</h2>
-          {spent >= budget ? (
+          <h2>{heading}</h2>
+          {held && !ready ? (
+            <p>
+              {spent === 0
+                ? 'No Download was needed for the copy in your Library.'
+                : `${spent === 1 ? 'One Release has' : `${spent} Releases have`} already been used. Your Library copy does not need another Download.`}
+            </p>
+          ) : spent >= budget ? (
             <p>The retry budget is spent ({spent} of {budget} attempts).</p>
           ) : ready ? (
             <p>
-              Best available Release: <strong>{ready.title}</strong>
+              {held ? 'Best available alternative' : 'Best available Release'}:{' '}
+              <strong>{ready.title}</strong>
               <span className={styles.secondary}>Attempt {spent + 1} of {budget}</span>
             </p>
           ) : (
@@ -452,7 +486,7 @@ function AcquisitionSummary({
             <DownloadAction
               releaseId={ready.id}
               videoId={videoId}
-              label="Download best Release"
+              label={held ? 'Download another Release' : 'Download best Release'}
             />
           )}
           <button type="button" disabled={spent === 0 || reset.isPending} onClick={() => reset.mutate()}>
@@ -466,12 +500,9 @@ function AcquisitionSummary({
         <ul className={styles.attempts}>
           {acquisition.downloads.map((download) => (
             <li key={download.id}>
-              <strong>{download.state}</strong>
+              <strong>{downloadStateLabel(download.state)}</strong>
               {download.cause && ` / ${download.cause}`} — {download.submittedName}
               {' · '}<DownloadOrigin origin={download.origin} />
-              {download.state === 'Completed' && (
-                <span> Waiting for collection.</span>
-              )}
             </li>
           ))}
         </ul>
@@ -621,6 +652,23 @@ function automationExplanation(release: ReleasePage['releases'][number]) {
 
 function stateLabel(state: IdentificationState): string {
   return state === 'SiteOnly' ? 'Site-Only Match' : state
+}
+
+function rankingLabel(release: ReleasePage['releases'][number]): number | string {
+  if (release.rankingPosition !== null) return Number(release.rankingPosition)
+  if (release.rankingExclusion === 'Consumed') return 'Used'
+  return release.rankingExclusion ? `Excluded — ${release.rankingExclusion}` : '—'
+}
+
+function downloadStateLabel(state: NonNullable<ReleasePage['acquisition']>['downloads'][number]['state']): string {
+  const labels: Record<string, string> = {
+    Outstanding: 'Downloading',
+    Completed: 'Downloaded — processing files',
+    Collected: 'Downloaded',
+    Failed: 'Download failed',
+    Abandoned: 'No longer followed',
+  }
+  return labels[state] ?? state
 }
 
 function size(bytes: number | string | null): string {

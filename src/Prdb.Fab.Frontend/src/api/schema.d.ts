@@ -3789,6 +3789,7 @@ export interface components {
             retryBudget: number | string;
             nextRelease: null | components["schemas"]["ReleaseChoice"];
             downloads: components["schemas"]["DownloadSelectionRow"][];
+            heldQualities: string[];
         };
         /**
          * @default NoIdentifiedRelease
