@@ -16,6 +16,90 @@ namespace Prdb.Fab.Infrastructure.Tests.Filing;
 public sealed class ReviewAndTidyTests
 {
     [Fact]
+    public async Task Review_queue_exposes_probe_facts_and_known_video_artwork()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var download = Guid.NewGuid();
+        var videoId = Guid.NewGuid();
+        var arrival = Arrival(Guid.NewGuid(), download, "/downloads/review.mkv", 16L * 1024 * 1024 * 1024);
+        arrival.VideoId = videoId;
+        arrival.RuntimeSeconds = 1_653;
+        arrival.QualityLabel = "2160p";
+        arrival.Width = 3_840;
+        arrival.Height = 2_160;
+        arrival.VideoCodec = "h264";
+        await SeedDownloadAndArrivalsAsync(database, download, arrival);
+
+        long artworkId;
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var video = new CatalogueVideoRow
+            {
+                PrdbId = videoId,
+                Title = "Known Video",
+                DurationMs = 1_650_000,
+                DurationFileCount = 4,
+            };
+            context.CatalogueVideos.Add(video);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            artworkId = video.Id;
+        }
+
+        await using var read = database.Scope();
+        var page = await read.ServiceProvider.GetRequiredService<ReviewQueue>()
+            .ReadAsync(null, null, 1, TestContext.Current.CancellationToken);
+        var entry = Assert.Single(page.Entries);
+        Assert.Equal(1_653, entry.RuntimeSeconds);
+        Assert.Equal("2160p", entry.Quality);
+        Assert.Equal(3_840, entry.Width);
+        Assert.Equal(2_160, entry.Height);
+        Assert.Equal("h264", entry.VideoCodec);
+        Assert.NotNull(entry.Video);
+        Assert.Equal(artworkId, entry.Video.ArtworkId);
+    }
+
+    [Fact]
+    public async Task Live_review_search_links_only_known_catalogue_artwork()
+    {
+        var knownId = Guid.NewGuid();
+        var unknownId = Guid.NewGuid();
+        var prdb = new FakePrdbApi().Answers(
+            "/videos",
+            $$"""
+            {
+              "items": [
+                { "id": "{{knownId:D}}", "title": "Known", "siteTitle": "Site", "releaseDate": "2026-01-02", "durationMs": 123000, "durationFileCount": 3 },
+                { "id": "{{unknownId:D}}", "title": "Unknown", "siteTitle": "Site", "releaseDate": "2026-01-01" }
+              ],
+              "page": 1,
+              "pageSize": 20,
+              "totalCount": 2
+            }
+            """);
+        await using var database = await TestDatabase.CreateAsync(prdb: prdb);
+        long artworkId;
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Installation.ExecuteUpdateAsync(
+                update => update.SetProperty(row => row.PrdbApiKey, "prdb-key"),
+                TestContext.Current.CancellationToken);
+            var known = new CatalogueVideoRow { PrdbId = knownId, Title = "Known" };
+            context.CatalogueVideos.Add(known);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            artworkId = known.Id;
+        }
+
+        await using var search = database.Scope();
+        var page = await search.ServiceProvider.GetRequiredService<ReviewVideoSearch>()
+            .SearchAsync("known", null, 1, TestContext.Current.CancellationToken);
+        Assert.Equal(2, page.Total);
+        Assert.Equal(artworkId, page.Videos.Single(video => video.Id == knownId).ArtworkId);
+        Assert.Null(page.Videos.Single(video => video.Id == unknownId).ArtworkId);
+    }
+
+    [Fact]
     public async Task File_As_records_a_confirmed_assignment_before_returning_to_filing()
     {
         var chosen = Guid.NewGuid();

@@ -184,7 +184,14 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
                 candidate => candidate.PrdbId,
                 (_, candidate) => candidate)
             .OrderBy(row => row.Title)
-            .Select(row => new ReviewVideo(row.PrdbId, row.Title, row.Site == null ? null : row.Site.Title, row.ReleaseDate))
+            .Select(row => new ReviewVideo(
+                row.PrdbId,
+                row.Title,
+                row.Site == null ? null : row.Site.Title,
+                row.ReleaseDate,
+                row.DurationMs,
+                row.DurationFileCount,
+                row.Id))
             .ToListAsync(cancellationToken);
         var filed = await FiledComparisonAsync(arrival, cancellationToken);
 
@@ -225,7 +232,8 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
                 row.Site == null ? null : row.Site.Title,
                 row.ReleaseDate,
                 row.DurationMs,
-                row.DurationFileCount))
+                row.DurationFileCount,
+                row.Id))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -284,7 +292,8 @@ public sealed record ReviewVideo(
     string? Site,
     DateOnly? ReleaseDate,
     long? ConsensusRuntimeMs = null,
-    int? ConsensusRuntimeFileCount = null);
+    int? ConsensusRuntimeFileCount = null,
+    long? ArtworkId = null);
 
 public sealed record ReviewQueueEntry(
     Guid Id,

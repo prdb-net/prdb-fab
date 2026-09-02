@@ -40,16 +40,26 @@ public sealed class ReviewVideoSearch(FabDbContext context, PrdbGateway prdb)
             }, token),
             cancellationToken);
 
+        var videos = (answer?.Items ?? [])
+            .Where(video => video.Id is not null)
+            .Select(video => new ReviewVideo(
+                video.Id!.Value,
+                video.Title ?? string.Empty,
+                video.SiteTitle,
+                video.ReleaseDate is { } released ? DateOnly.FromDateTime(released.DateTime) : null,
+                video.DurationMs,
+                video.DurationFileCount))
+            .ToList();
+        var ids = videos.Select(video => video.Id).ToArray();
+        var artwork = await context.CatalogueVideos
+            .AsNoTracking()
+            .Where(video => ids.Contains(video.PrdbId))
+            .ToDictionaryAsync(video => video.PrdbId, video => video.Id, cancellationToken);
+
         return new ReviewVideoSearchPage(
-            [.. (answer?.Items ?? [])
-                .Where(video => video.Id is not null)
-                .Select(video => new ReviewVideo(
-                    video.Id!.Value,
-                    video.Title ?? string.Empty,
-                    video.SiteTitle,
-                    video.ReleaseDate is { } released ? DateOnly.FromDateTime(released.DateTime) : null,
-                    video.DurationMs,
-                    video.DurationFileCount))],
+            [.. videos.Select(video => artwork.TryGetValue(video.Id, out var artworkId)
+                ? video with { ArtworkId = artworkId }
+                : video)],
             wanted,
             20,
             answer?.TotalCount ?? 0);

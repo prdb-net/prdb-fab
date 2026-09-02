@@ -529,9 +529,10 @@ export async function searchReviewVideos(
   search: string,
   site?: string,
   page = 1,
+  signal?: AbortSignal,
 ): Promise<ReviewVideoSearchPage> {
   return json<ReviewVideoSearchPage>(
-    await fetch(`/api/review-queue/videos?${parameters({ search, site, page: String(page) })}`),
+    await fetch(`/api/review-queue/videos?${parameters({ search, site, page: String(page) })}`, { signal }),
   )
 }
 

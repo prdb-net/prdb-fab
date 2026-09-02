@@ -3620,6 +3620,8 @@ export interface components {
             consensusRuntimeMs?: null | number | string;
             /** Format: int32 */
             consensusRuntimeFileCount?: null | number | string;
+            /** Format: int64 */
+            artworkId?: null | number | string;
         };
         ReviewVideoSearchPage: {
             videos: components["schemas"]["ReviewVideo"][];
