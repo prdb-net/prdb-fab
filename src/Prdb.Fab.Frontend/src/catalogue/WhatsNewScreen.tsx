@@ -1,16 +1,13 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 
-import { listWhatsNew, observeWhatsNew, setWanted } from '../api/client.ts'
+import { listWhatsNew, observeWhatsNew } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
-import gridStyles from './Grid.module.css'
-import { videoReleasePath } from '../release/routes.ts'
 import { whatsNewKey } from './state.ts'
 import styles from './WhatsNew.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
-import { PreferenceButton } from './PreferenceButton.tsx'
-import { DownloadBestButton } from './DownloadBestButton.tsx'
+import { CardActions } from './CardActions.tsx'
 
 /**
  * What's New, and the landing page. ADR 0013 calls it that and it is what the
@@ -86,23 +83,11 @@ export function WhatsNewScreen() {
           <Grid
             videos={videos.data?.videos ?? []}
             action={(video) => (
-              <span className={gridStyles.actions}>
-                <PreferenceButton
-                  active={video.wanted}
-                  activeLabel="Remove Wanted"
-                  inactiveLabel="Mark Wanted"
-                  write={(desired) => setWanted(video.prdbId, desired)}
-                />
-                {video.downloadReady && !video.outstanding && !video.heldQualities?.length && (
-                  <DownloadBestButton prdbId={video.prdbId} />
-                )}
-                <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                  Search Indexers
-                </Link>
-                {video.sitePrdbId && (
-                  <Link to={`/sites/${video.sitePrdbId}`}>{video.site ?? 'View Site'}</Link>
-                )}
-              </span>
+              <CardActions
+                includeSite
+                video={video}
+                returnTo={location.pathname + location.search}
+              />
             )}
           />
 

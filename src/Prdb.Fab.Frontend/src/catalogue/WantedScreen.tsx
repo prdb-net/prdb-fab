@@ -6,7 +6,7 @@ import { Grid } from './Grid.tsx'
 import { wantedKey } from './state.ts'
 import styles from './Wanted.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
-import { WantedCardActions } from './WantedCardActions.tsx'
+import { CardActions } from './CardActions.tsx'
 
 /**
  * The wanted list, and where setting up ends.
@@ -80,7 +80,7 @@ export function WantedScreen() {
           <Grid
             videos={wanted.data?.videos ?? []}
             action={(video) => (
-              <WantedCardActions
+              <CardActions
                 video={video}
                 returnTo={location.pathname + location.search}
               />

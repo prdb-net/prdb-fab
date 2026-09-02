@@ -5,32 +5,34 @@ import { Link } from 'react-router'
 import { setWanted, type VideoCard } from '../api/client.ts'
 import { videoReleasePath } from '../release/routes.ts'
 import { prdbVideoUrl } from './prdb.ts'
-import styles from './WantedCardActions.module.css'
+import styles from './CardActions.module.css'
 
 /**
- * The compact action language is tried on Wanted first: one named primary act,
- * one familiar state toggle, and an overflow for everything less frequent.
- * Keeping it local means the other catalogue surfaces retain their established
- * actions until this shape has proved useful here.
+ * The compact action language shared by catalogue cards: one named primary
+ * act, one familiar state toggle, and an overflow for everything less frequent.
+ * A surface may add its own contextual destination to that overflow without
+ * changing the controls a person learns from the other catalogue grids.
  */
-export function WantedCardActions({
+export function CardActions({
   video,
   returnTo,
+  includeSite = false,
 }: {
   video: VideoCard
   returnTo: string
+  includeSite?: boolean
 }) {
   const cache = useQueryClient()
-  const remove = useMutation({
-    mutationFn: () => setWanted(video.prdbId, false),
+  const preference = useMutation({
+    mutationFn: () => setWanted(video.prdbId, !video.wanted),
     onSuccess: async (verdict) => {
       if (verdict.outcome === 'Updated') {
         await cache.invalidateQueries({ queryKey: ['catalogue'] })
       }
     },
   })
-  const verdict = remove.data
-  const problem = remove.error?.message
+  const verdict = preference.data
+  const problem = preference.error?.message
     ?? (verdict && verdict.outcome !== 'Updated' ? verdict.detail : null)
   const held = Boolean(video.heldQualities?.length)
   const releaseLabel = held ? 'View Library' : video.downloadReady ? 'Download' : 'Search'
@@ -42,6 +44,7 @@ export function WantedCardActions({
   const primaryPath = held
     ? `/library/${video.prdbId}`
     : videoReleasePath(video.prdbId, returnTo)
+  const wantedLabel = video.wanted ? 'Remove from Wanted' : 'Mark Wanted'
 
   return (
     <span className={styles.control}>
@@ -57,24 +60,29 @@ export function WantedCardActions({
         </Link>
 
         <button
-          aria-label="Remove from Wanted"
-          aria-busy={remove.isPending}
-          className={`${styles.iconButton} ${styles.wantedButton}`}
-          disabled={remove.isPending}
-          onClick={() => remove.mutate()}
-          title="Remove from Wanted"
+          aria-label={wantedLabel}
+          aria-busy={preference.isPending}
+          aria-pressed={video.wanted}
+          className={`${styles.iconButton} ${video.wanted ? styles.wantedButton : ''}`}
+          disabled={preference.isPending}
+          onClick={() => preference.mutate()}
+          title={wantedLabel}
           type="button"
         >
-          <Icon name="wanted" />
+          <Icon active={video.wanted} name="wanted" />
         </button>
 
-        <MoreActions video={video} returnTo={returnTo} />
+        <MoreActions includeSite={includeSite} video={video} returnTo={returnTo} />
       </span>
 
       {problem && (
         <span className={styles.error} role="alert">
           <span>{problem}</span>
-          <button type="button" disabled={remove.isPending} onClick={() => remove.mutate()}>
+          <button
+            type="button"
+            disabled={preference.isPending}
+            onClick={() => preference.mutate()}
+          >
             Retry
           </button>
         </span>
@@ -83,7 +91,15 @@ export function WantedCardActions({
   )
 }
 
-function MoreActions({ video, returnTo }: { video: VideoCard; returnTo: string }) {
+function MoreActions({
+  includeSite,
+  video,
+  returnTo,
+}: {
+  includeSite: boolean
+  video: VideoCard
+  returnTo: string
+}) {
   const [open, setOpen] = useState(false)
   const menuId = useId()
   const container = useRef<HTMLSpanElement>(null)
@@ -147,6 +163,12 @@ function MoreActions({ video, returnTo }: { video: VideoCard; returnTo: string }
               <span>Find another Release</span>
             </Link>
           )}
+          {includeSite && video.sitePrdbId && (
+            <Link to={`/sites/${video.sitePrdbId}`} onClick={() => setOpen(false)}>
+              <Icon name="site" />
+              <span>{video.site ?? 'View Site'}</span>
+            </Link>
+          )}
           <a
             href={prdbVideoUrl(String(video.prdbId))}
             onClick={() => setOpen(false)}
@@ -162,9 +184,9 @@ function MoreActions({ video, returnTo }: { video: VideoCard; returnTo: string }
   )
 }
 
-type IconName = 'download' | 'external' | 'library' | 'more' | 'search' | 'wanted'
+type IconName = 'download' | 'external' | 'library' | 'more' | 'search' | 'site' | 'wanted'
 
-function Icon({ name }: { name: IconName }) {
+function Icon({ name, active = false }: { name: IconName; active?: boolean }) {
   const common = {
     fill: 'none',
     stroke: 'currentColor',
@@ -185,13 +207,22 @@ function Icon({ name }: { name: IconName }) {
         <path d="M4 5h16v15H4V5Zm4 0v15m9-15v15M3 9h18" {...common} />
       )}
       {name === 'wanted' && (
-        <path d="M12 20S4 15.6 4 9.5A4.5 4.5 0 0 1 12 6.7a4.5 4.5 0 0 1 8 2.8C20 15.6 12 20 12 20Z" fill="currentColor" />
+        <path
+          d="M12 20S4 15.6 4 9.5A4.5 4.5 0 0 1 12 6.7a4.5 4.5 0 0 1 8 2.8C20 15.6 12 20 12 20Z"
+          fill={active ? 'currentColor' : 'none'}
+          stroke="currentColor"
+          strokeLinejoin="round"
+          strokeWidth="1.8"
+        />
       )}
       {name === 'more' && (
         <path d="M5 12h.01M12 12h.01M19 12h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
       )}
       {name === 'external' && (
         <path d="M14 4h6v6m0-6-9 9M18 13v6H5V6h6" {...common} />
+      )}
+      {name === 'site' && (
+        <path d="M4 20V8l8-4 8 4v12M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M10 20v-2h4v2" {...common} />
       )}
     </svg>
   )
