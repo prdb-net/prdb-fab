@@ -1,18 +1,15 @@
 import type { FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useLocation, useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 
 import {
   listVideos,
-  setWanted,
   type CatalogueVideoFilter,
   type CatalogueVideoSort,
 } from '../api/client.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
-import { videoReleasePath } from '../release/routes.ts'
+import { CardActions } from './CardActions.tsx'
 import { Grid } from './Grid.tsx'
-import gridStyles from './Grid.module.css'
-import { PreferenceButton } from './PreferenceButton.tsx'
 import styles from './SearchScreen.module.css'
 
 const filters: readonly CatalogueVideoFilter[] = [
@@ -139,17 +136,11 @@ export function SearchScreen() {
         <Grid
           videos={videos.data?.videos ?? []}
           action={(video) => (
-            <span className={gridStyles.actions}>
-              <Link to={videoReleasePath(video.prdbId, location.pathname + location.search)}>
-                Search Indexers
-              </Link>
-              <PreferenceButton
-                active={video.wanted}
-                activeLabel="Remove Wanted"
-                inactiveLabel="Mark Wanted"
-                write={(desired) => setWanted(video.prdbId, desired)}
-              />
-            </span>
+            <CardActions
+              includeSite
+              video={video}
+              returnTo={location.pathname + location.search}
+            />
           )}
         />
       )}
