@@ -19,6 +19,20 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-09-02
+
+This patch release makes the Operation Log easier to scan while preserving the
+complete filesystem evidence behind every recorded change.
+
+### Changed
+
+- Operations are grouped by day and shown as responsive, colour-coded events
+  with compact file names, timestamps, actors, reasons, and origins.
+- Expandable details expose act-specific paths, replaced files, and every
+  removed leftover, with controls for copying paths.
+- Act filters cover all five operations and adapt to narrow screens, while
+  pagination reports the displayed range and stays out of the way when unused.
+
 ## [0.14.1] - 2026-09-02
 
 This patch release makes the Review Queue quicker to scan and safer to work
