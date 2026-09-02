@@ -19,6 +19,20 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-09-02
+
+This patch release makes the Review Queue quicker to scan and safer to work
+through, especially when several arriving files need the same decision.
+
+### Changed
+
+- Queue entries explain why they need attention, surface their useful evidence
+  in a responsive layout, and make long source paths easy to copy.
+- Multiple entries can be selected for dismissal or source-file deletion, with
+  an explicit summary and confirmation before a destructive action runs.
+- Video matching uses paged, artwork-backed result cards and keeps the selected
+  match visible while a filing decision is in progress.
+
 ## [0.14.0] - 2026-09-02
 
 This release makes acquisition choices and Download history easier to scan,
