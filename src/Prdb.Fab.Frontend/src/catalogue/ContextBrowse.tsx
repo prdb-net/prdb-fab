@@ -11,10 +11,10 @@ export type DirectoryItem = {
   title: string
   detail?: string | null
   videoCount: number
+  heldVideoCount?: number
   favourite: boolean
   artworkPath?: string | null
   artworkLabel?: string
-  artworkCaption?: string
 }
 
 export function DirectoryView({
@@ -32,6 +32,8 @@ export function DirectoryView({
   toggleFavourite,
   scope,
   setScope,
+  heldOnly,
+  setHeldOnly,
 }: {
   title: string
   noun: string
@@ -47,18 +49,34 @@ export function DirectoryView({
   toggleFavourite: (item: DirectoryItem) => ReactNode
   scope: 'Favourites' | 'All'
   setScope: (scope: 'Favourites' | 'All') => void
+  heldOnly?: boolean
+  setHeldOnly?: (held: boolean) => void
 }) {
   return (
     <main className={styles.screen}>
       <Heading title={title} total={total} noun={noun} />
-      <nav className={styles.scope} aria-label={`${title} scope`}>
-        <button type="button" aria-pressed={scope === 'Favourites'} onClick={() => setScope('Favourites')}>
-          Favourites
-        </button>
-        <button type="button" aria-pressed={scope === 'All'} onClick={() => setScope('All')}>
-          All
-        </button>
-      </nav>
+      <div className={styles.browseFilters}>
+        <nav className={styles.scope} aria-label={`${title} scope`}>
+          <button type="button" aria-pressed={scope === 'Favourites'} onClick={() => setScope('Favourites')}>
+            Favourites
+          </button>
+          <button type="button" aria-pressed={scope === 'All'} onClick={() => setScope('All')}>
+            All
+          </button>
+        </nav>
+        {setHeldOnly && (
+          <button
+            aria-pressed={heldOnly}
+            className={styles.heldFilter}
+            onClick={() => setHeldOnly(!heldOnly)}
+            title="Show only Sites with videos in the Library"
+            type="button"
+          >
+            <DirectoryIcon name="library" />
+            In Library
+          </button>
+        )}
+      </div>
       <Filter value={search} placeholder={`Filter ${title.toLowerCase()}…`} apply={setFilter} />
 
       {items.length === 0 ? (
@@ -90,19 +108,31 @@ export function DirectoryView({
                     <span className={styles.directoryAbsent}>▤</span>
                   </span>
                 )}
-                {item.artworkCaption && <span className={styles.artworkCaption}>{item.artworkCaption}</span>}
               </div>
               <div>
                 <Link className={styles.itemTitle} to={selectPath(item)}>
                   {item.title}
                 </Link>
                 <span className={styles.itemDetail}>
-                  {[item.detail, `${item.videoCount} videos`].filter(Boolean).join(' · ')}
+                  {[
+                    item.detail,
+                    `${item.videoCount} videos`,
+                    item.heldVideoCount === undefined
+                      ? null
+                      : `${item.heldVideoCount} in Library`,
+                  ].filter(Boolean).join(' · ')}
                 </span>
               </div>
               <div className={styles.directoryActions}>
                 {toggleFavourite(item)}
-                <Link to={releasePath(item)}>View cached Releases</Link>
+                <Link
+                  aria-label={`View Releases for ${item.title}`}
+                  className={styles.iconAction}
+                  title="View Releases"
+                  to={releasePath(item)}
+                >
+                  <DirectoryIcon name="releases" />
+                </Link>
               </div>
             </li>
           ))}
@@ -152,7 +182,7 @@ export function VideoContextView({
         <Heading title={title} total={total} noun="video" />
         <div className={styles.directoryActions}>
           {contextAction}
-          <Link to={releaseAction}>View cached Releases for this selection</Link>
+          <Link className={styles.actionButton} to={releaseAction}>View Releases</Link>
         </div>
       </div>
       <Filter value={search} placeholder="Filter video titles…" apply={setFilter} />
@@ -168,6 +198,25 @@ export function VideoContextView({
 
       <Pager page={page} pages={pages} goTo={goTo} />
     </main>
+  )
+}
+
+function DirectoryIcon({ name }: { name: 'library' | 'releases' }) {
+  const common = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    strokeWidth: 1.8,
+  }
+
+  return (
+    <svg aria-hidden="true" className={styles.actionIcon} viewBox="0 0 24 24">
+      {name === 'library' && <path d="M4 5h16v15H4V5Zm4 0v15m9-15v15M3 9h18" {...common} />}
+      {name === 'releases' && (
+        <path d="M5 4h14v16H5V4Zm4 4h6m-6 4h6m-6 4h4" {...common} />
+      )}
+    </svg>
   )
 }
 

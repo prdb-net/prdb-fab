@@ -39,13 +39,19 @@ public sealed class SitesAndActorsRouteTests
             TestContext.Current.CancellationToken);
 
         Assert.NotNull(sites);
-        Assert.Equal("Northline", Assert.Single(sites.Sites).Title);
+        var northline = Assert.Single(sites.Sites);
+        Assert.Equal("Northline", northline.Title);
+        Assert.Equal(1, northline.HeldVideoCount);
         Assert.NotNull(actors);
         Assert.Equal("Mira Vance", Assert.Single(actors.Actors).Name);
         var allSites = await client.GetFromJsonAsync<SitePage>(
             "/api/catalogue/sites?scope=all",
             TestContext.Current.CancellationToken);
         Assert.Equal(["Northline", "Blue Harbour"], allSites!.Sites.Select(item => item.Title));
+        var heldSites = await client.GetFromJsonAsync<SitePage>(
+            "/api/catalogue/sites?scope=all&held=true",
+            TestContext.Current.CancellationToken);
+        Assert.Equal("Northline", Assert.Single(heldSites!.Sites).Title);
 
         Assert.NotNull(site);
         Assert.Equal("Northline", site.Site.Title);
@@ -93,6 +99,19 @@ public sealed class SitesAndActorsRouteTests
             new CatalogueVideoActorRow { VideoId = second.Id, ActorId = actor.Id });
         context.FavouriteSites.Add(new FavouriteSiteRow { SiteId = site.Id });
         context.FavouriteActors.Add(new FavouriteActorRow { ActorId = actor.Id });
+        context.LibraryEntries.Add(new LibraryEntryRow
+        {
+            VideoId = first.PrdbId,
+            EntryDirectory = "/library/Northline/First Light",
+            FiledAt = new DateTimeOffset(2026, 8, 4, 12, 0, 0, TimeSpan.Zero),
+        });
+        context.VideoFiles.Add(new VideoFileRow
+        {
+            Id = Guid.NewGuid(),
+            LibraryEntryVideoId = first.PrdbId,
+            FiledPath = "/library/Northline/First Light/First Light.mkv",
+            QualityLabel = "1080p",
+        });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         return new(site.PrdbId, actor.PrdbId);
@@ -109,7 +128,7 @@ public sealed class SitesAndActorsRouteTests
     };
 
     private sealed record Seeded(Guid SiteId, Guid ActorId);
-    private sealed record SiteCard(Guid PrdbId, string Title, int VideoCount);
+    private sealed record SiteCard(Guid PrdbId, string Title, int VideoCount, int HeldVideoCount);
     private sealed record ActorCard(Guid PrdbId, string Name, int VideoCount);
     private sealed record VideoCard(Guid PrdbId, string Title);
     private sealed record VideoPage(IReadOnlyList<VideoCard> Videos, int Page, int Total);

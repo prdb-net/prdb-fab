@@ -215,6 +215,7 @@ public sealed class CatalogueBrowse(
         string? search,
         int page,
         CatalogueScope scope,
+        bool heldOnly,
         CancellationToken cancellationToken)
     {
         var wanted = Paging.Wanted(page);
@@ -223,6 +224,13 @@ public sealed class CatalogueBrowse(
         if (scope == CatalogueScope.Favourites)
         {
             query = query.Where(row => context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id));
+        }
+
+        if (heldOnly)
+        {
+            query = query.Where(row => context.CatalogueVideos.Any(video =>
+                video.SiteId == row.Id
+                && context.VideoFiles.Any(file => file.LibraryEntryVideoId == video.PrdbId)));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -243,6 +251,9 @@ public sealed class CatalogueBrowse(
                 row.Title,
                 row.Network,
                 context.CatalogueVideos.Count(video => video.SiteId == row.Id),
+                context.CatalogueVideos.Count(video =>
+                    video.SiteId == row.Id
+                    && context.VideoFiles.Any(file => file.LibraryEntryVideoId == video.PrdbId)),
                 context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id),
                 context.CatalogueVideos
                     .Where(video => video.SiteId == row.Id)
@@ -643,6 +654,7 @@ public sealed record SiteCard(
     string Title,
     string? Network,
     int VideoCount,
+    int HeldVideoCount,
     bool Favourite,
     long? RepresentativeVideoId);
 

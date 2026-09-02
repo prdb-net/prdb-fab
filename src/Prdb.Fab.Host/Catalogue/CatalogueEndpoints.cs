@@ -73,8 +73,9 @@ public static class CatalogueEndpoints
             CancellationToken cancellationToken,
             string? search = null,
             int page = 1,
-            string? scope = null) =>
-            TypedResults.Ok(await browse.SitesAsync(search, page, ScopeOf(scope), cancellationToken)));
+            string? scope = null,
+            bool held = false) =>
+            TypedResults.Ok(await browse.SitesAsync(search, page, ScopeOf(scope), held, cancellationToken)));
 
         group.MapGet("/sites/{prdbId:guid}", ReadSiteAsync);
 

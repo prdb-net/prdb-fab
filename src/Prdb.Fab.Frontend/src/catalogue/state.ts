@@ -8,8 +8,13 @@ export const whatsNewKey = (page: number) => ['catalogue', 'whats-new', page] as
 /** ADR 0007's list, read. Its own key, because it is a different question. */
 export const wantedKey = (page: number) => ['catalogue', 'wanted', page] as const
 
-export const sitesKey = (selected: string | undefined, search: string, page: number, scope = 'Favourites') =>
-  ['catalogue', 'sites', selected, search, page, scope] as const
+export const sitesKey = (
+  selected: string | undefined,
+  search: string,
+  page: number,
+  scope = 'Favourites',
+  held = false,
+) => ['catalogue', 'sites', selected, search, page, scope, held] as const
 
 export const actorsKey = (selected: string | undefined, search: string, page: number, scope = 'Favourites') =>
   ['catalogue', 'actors', selected, search, page, scope] as const

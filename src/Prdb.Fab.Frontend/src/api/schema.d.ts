@@ -1762,6 +1762,7 @@ export interface paths {
                     search?: string;
                     page?: number | string;
                     scope?: string;
+                    held?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -3688,6 +3689,8 @@ export interface components {
             network: null | string;
             /** Format: int32 */
             videoCount: number | string;
+            /** Format: int32 */
+            heldVideoCount: number | string;
             favourite: boolean;
             /** Format: int64 */
             representativeVideoId: null | number | string;

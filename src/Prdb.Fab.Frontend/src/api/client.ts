@@ -330,9 +330,19 @@ export async function listVideos(
   )
 }
 
-export async function listSites(search: string, page: number, scope: 'Favourites' | 'All'): Promise<SitePage> {
+export async function listSites(
+  search: string,
+  page: number,
+  scope: 'Favourites' | 'All',
+  held: boolean,
+): Promise<SitePage> {
   return json<SitePage>(
-    await fetch(`/api/catalogue/sites?${parameters({ search, page: String(page), scope: scope.toLowerCase() })}`),
+    await fetch(`/api/catalogue/sites?${parameters({
+      search,
+      page: String(page),
+      scope: scope.toLowerCase(),
+      held: held ? 'true' : '',
+    })}`),
   )
 }
 

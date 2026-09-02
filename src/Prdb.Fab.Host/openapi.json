@@ -1511,6 +1511,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "held",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -6243,6 +6251,7 @@
           "title",
           "network",
           "videoCount",
+          "heldVideoCount",
           "favourite",
           "representativeVideoId"
         ],
@@ -6262,6 +6271,14 @@
             ]
           },
           "videoCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "heldVideoCount": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

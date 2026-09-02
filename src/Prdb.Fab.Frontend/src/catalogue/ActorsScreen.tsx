@@ -106,6 +106,7 @@ export function ActorsScreen() {
           active={actor.favourite}
           activeLabel="Unfavourite"
           inactiveLabel="Favourite"
+          iconOnly
           write={(desired) => setFavouriteActor(actor.prdbId, desired)}
         />
       )}

@@ -15,9 +15,10 @@ export function SitesScreen() {
   const search = parameters.get('search') ?? ''
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
   const scope = parameters.get('scope') === 'all' ? 'All' : 'Favourites'
+  const heldOnly = parameters.get('held') === 'true'
   const answer = useQuery<SitePage | SiteVideos>({
-    queryKey: sitesKey(id, search, page, scope),
-    queryFn: () => (id ? readSite(id, search, page) : listSites(search, page, scope)),
+    queryKey: sitesKey(id, search, page, scope, heldOnly),
+    queryFn: () => (id ? readSite(id, search, page) : listSites(search, page, scope, heldOnly)),
   })
 
   if (answer.isPending) return <PageLoading label="Loading Sites" />
@@ -71,6 +72,7 @@ export function SitesScreen() {
         title: site.title,
         detail: site.network,
         videoCount: Number(site.videoCount),
+        heldVideoCount: Number(site.heldVideoCount),
         favourite: site.favourite,
         artworkPath: site.representativeVideoId
           ? `/api/artwork/${site.representativeVideoId}`
@@ -78,7 +80,6 @@ export function SitesScreen() {
         artworkLabel: site.representativeVideoId
           ? `Representative video artwork for ${site.title}`
           : `No representative video artwork for ${site.title}`,
-        artworkCaption: site.representativeVideoId ? 'Representative Video' : undefined,
       }))}
       search={search}
       page={Number(directory.page)}
@@ -89,6 +90,14 @@ export function SitesScreen() {
       setFilter={setFilter}
       goTo={goTo}
       scope={scope}
+      heldOnly={heldOnly}
+      setHeldOnly={(held) => {
+        const next = new URLSearchParams(parameters)
+        if (held) next.set('held', 'true')
+        else next.delete('held')
+        next.delete('page')
+        setParameters(next)
+      }}
       setScope={(nextScope) => {
         const next = new URLSearchParams(parameters)
         if (nextScope === 'All') next.set('scope', 'all')
@@ -101,6 +110,7 @@ export function SitesScreen() {
           active={site.favourite}
           activeLabel="Unfavourite"
           inactiveLabel="Favourite"
+          iconOnly
           write={(desired) => setFavouriteSite(site.prdbId, desired)}
         />
       )}
