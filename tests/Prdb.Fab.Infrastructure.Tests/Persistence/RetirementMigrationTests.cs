@@ -13,6 +13,7 @@ public sealed class RetirementMigrationTests
 {
     private const string BeforeRetirement = "EnableLeftoverDeletionByDefault";
     private const string BeforeRecentWindow = "ManualSearchWorkspace";
+    private const string BeforeCompleteActorProfiles = "PreferredDownloadQuality";
 
     [Fact]
     public async Task The_walking_skeleton_table_routine_and_run_are_removed()
@@ -119,5 +120,29 @@ public sealed class RetirementMigrationTests
         await using var command = migrated.Database.GetDbConnection().CreateCommand();
         command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('indexer_walk_state') WHERE name = 'BootstrapCompletedAt'";
         Assert.Equal(0L, (long)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!);
+    }
+
+    [Fact]
+    public async Task Existing_actors_are_queued_once_for_their_complete_profile()
+    {
+        await using var database = await TestDatabase.CreateAsync(migratedTo: BeforeCompleteActorProfiles);
+        var actorId = Guid.Parse("0198ec28-1c00-7000-8000-000000000902");
+        var checkedAt = new DateTimeOffset(2026, 8, 29, 12, 0, 0, TimeSpan.Zero);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO catalogue_actor (PrdbId, Name, ProfileCheckedAt)
+                VALUES ({actorId}, {"An existing Actor"}, {checkedAt})
+                """, TestContext.Current.CancellationToken);
+
+            await context.Database.MigrateAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var actor = await reading.ServiceProvider.GetRequiredService<FabDbContext>()
+            .CatalogueActors.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Null(actor.ProfileCheckedAt);
     }
 }

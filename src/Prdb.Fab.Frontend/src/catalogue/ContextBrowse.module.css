@@ -188,6 +188,86 @@
   margin-top: 0.45rem;
 }
 
+.actorProfile {
+  align-items: start;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(9rem, 14rem) 1fr;
+  margin-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+.actorPortrait {
+  align-items: center;
+  aspect-ratio: 2 / 3;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.actorPortraitImage {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.actorProfileBody,
+.actorLoad {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.actorFacts {
+  display: grid;
+  gap: 0.55rem 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin: 0;
+}
+
+.actorFacts div {
+  min-width: 0;
+}
+
+.actorFacts dt {
+  color: var(--text-quiet);
+  font-size: 0.8rem;
+}
+
+.actorFacts dd {
+  margin: 0.1rem 0 0;
+}
+
+.actorBio {
+  line-height: 1.55;
+  margin: 0;
+}
+
+.actorLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actorLoad {
+  align-items: start;
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+  justify-items: start;
+}
+
+.actorLoad button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem 0.8rem;
+}
+
 .empty {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
@@ -231,5 +311,13 @@
   .iconAction {
     min-height: 2.75rem;
     width: 2.75rem;
+  }
+
+  .actorProfile {
+    grid-template-columns: 1fr;
+  }
+
+  .actorPortrait {
+    max-width: 14rem;
   }
 }

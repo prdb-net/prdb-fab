@@ -7,9 +7,9 @@ namespace Prdb.Fab.Core.Catalogue;
 /// <remarks>
 /// <para>
 /// <c>CONTEXT.md</c>'s list of what may point at a catalogue video, written
-/// whole rather than only as far as this slice reaches. One of these tables
-/// exists today; the rest arrive with the features that own them, and each is
-/// then one <c>EXISTS</c> beside the others rather than a rewrite.
+/// whole rather than only as far as this slice reaches. Each source arrives
+/// with the feature that owns it and contributes one <c>EXISTS</c> beside the
+/// others rather than a rewrite.
 /// </para>
 /// <para>
 /// Writing the list out now is the same move <see cref="Sync.PrdbWork"/> made
@@ -18,7 +18,7 @@ namespace Prdb.Fab.Core.Catalogue;
 /// <em>what can pin a row</em> has one answer rather than one per feature.
 /// </para>
 /// <para>
-/// Nothing stores any of these. A stored reason would have six writers and no
+/// Nothing stores any of these. A stored reason would have many writers and no
 /// reader that would notice a mistake, which is the argument ADR 0033 used to
 /// correct ADR 0013 — so this names a clause in a query and never a column.
 /// </para>
@@ -52,4 +52,7 @@ public enum PinReason
 
     /// <summary>A recent person-requested Manual Search names the video.</summary>
     ManualSearch,
+
+    /// <summary>A person-requested Actor Catalogue Fill names the video.</summary>
+    ActorCatalogueFill,
 }

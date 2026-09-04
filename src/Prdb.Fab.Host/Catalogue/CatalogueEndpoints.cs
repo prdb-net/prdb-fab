@@ -88,6 +88,16 @@ public static class CatalogueEndpoints
             TypedResults.Ok(await browse.ActorsAsync(search, page, ScopeOf(scope), cancellationToken)));
 
         group.MapGet("/actors/{prdbId:guid}", ReadActorAsync);
+        group.MapPost("/actors/{prdbId:guid}/latest-videos", async Task<Results<Ok<ActorVideoLoadStart>, NotFound>> (
+            Guid prdbId,
+            ActorVideoLoads loads,
+            CancellationToken cancellationToken) =>
+        {
+            var answer = await loads.StartAsync(prdbId, cancellationToken);
+            return answer.Outcome == ActorVideoLoadStartOutcome.ActorNotFound
+                ? TypedResults.NotFound()
+                : TypedResults.Ok(answer);
+        });
     }
 
     private static CatalogueScope ScopeOf(string? scope) =>

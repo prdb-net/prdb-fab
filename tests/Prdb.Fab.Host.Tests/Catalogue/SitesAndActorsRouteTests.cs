@@ -28,6 +28,9 @@ public sealed class SitesAndActorsRouteTests
         var actors = await client.GetFromJsonAsync<ActorPage>(
             "/api/catalogue/actors?search=Mira&page=1",
             TestContext.Current.CancellationToken);
+        var actorsByAlias = await client.GetFromJsonAsync<ActorPage>(
+            "/api/catalogue/actors?search=Night&page=1",
+            TestContext.Current.CancellationToken);
         var site = await client.GetFromJsonAsync<SiteVideos>(
             $"/api/catalogue/sites/{seeded.SiteId}?search=Second&page=1",
             TestContext.Current.CancellationToken);
@@ -37,6 +40,12 @@ public sealed class SitesAndActorsRouteTests
         var videos = await client.GetFromJsonAsync<VideoPage>(
             "/api/catalogue/videos?search=Second&page=1",
             TestContext.Current.CancellationToken);
+        using var loadResponse = await client.PostAsync(
+            $"/api/catalogue/actors/{seeded.ActorId}/latest-videos",
+            content: null,
+            TestContext.Current.CancellationToken);
+        var load = await loadResponse.Content.ReadFromJsonAsync<ActorVideoLoadStart>(
+            TestContext.Current.CancellationToken);
 
         Assert.NotNull(sites);
         var northline = Assert.Single(sites.Sites);
@@ -44,6 +53,7 @@ public sealed class SitesAndActorsRouteTests
         Assert.Equal(1, northline.HeldVideoCount);
         Assert.NotNull(actors);
         Assert.Equal("Mira Vance", Assert.Single(actors.Actors).Name);
+        Assert.Equal("Mira Vance", Assert.Single(actorsByAlias!.Actors).Name);
         var allSites = await client.GetFromJsonAsync<SitePage>(
             "/api/catalogue/sites?scope=all",
             TestContext.Current.CancellationToken);
@@ -59,8 +69,14 @@ public sealed class SitesAndActorsRouteTests
 
         Assert.NotNull(actor);
         Assert.Equal("Mira Vance", actor.Actor.Title);
-        Assert.Equal(["First Light", "Second Shift"], actor.Videos.Videos.Select(video => video.Title));
+        Assert.Equal("Female", actor.Actor.Gender);
+        Assert.Equal("Mira Night", Assert.Single(actor.Actor.Aliases).Name);
+        Assert.Equal("Actor biography", Assert.Single(actor.Actor.Bios).Text);
+        Assert.Equal("Homepage", Assert.Single(actor.Actor.Links).Site);
+        Assert.Equal(["Second Shift", "First Light"], actor.Videos.Videos.Select(video => video.Title));
         Assert.Equal("Second Shift", Assert.Single(videos!.Videos).Title);
+        Assert.Equal("Started", load!.Outcome);
+        Assert.True(load.Load.Active);
         Assert.Equal(0, prdb.Requests);
     }
 
@@ -73,10 +89,15 @@ public sealed class SitesAndActorsRouteTests
         using var sites = await client.GetAsync("/api/catalogue/sites", TestContext.Current.CancellationToken);
         using var actors = await client.GetAsync("/api/catalogue/actors", TestContext.Current.CancellationToken);
         using var videos = await client.GetAsync("/api/catalogue/videos", TestContext.Current.CancellationToken);
+        using var actorLoad = await client.PostAsync(
+            $"/api/catalogue/actors/{Guid.NewGuid()}/latest-videos",
+            content: null,
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Unauthorized, sites.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, actors.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, videos.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, actorLoad.StatusCode);
     }
 
     private static async Task<Seeded> SeedAsync(FabApplication application)
@@ -85,7 +106,12 @@ public sealed class SitesAndActorsRouteTests
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
         var site = new CatalogueSiteRow { PrdbId = Guid.NewGuid(), Title = "Northline" };
         var otherSite = new CatalogueSiteRow { PrdbId = Guid.NewGuid(), Title = "Blue Harbour" };
-        var actor = new CatalogueActorRow { PrdbId = Guid.NewGuid(), Name = "Mira Vance" };
+        var actor = new CatalogueActorRow
+        {
+            PrdbId = Guid.NewGuid(),
+            Name = "Mira Vance",
+            GenderLabel = "Female",
+        };
         context.AddRange(site, otherSite, actor);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
@@ -97,6 +123,23 @@ public sealed class SitesAndActorsRouteTests
         context.CatalogueVideoActors.AddRange(
             new CatalogueVideoActorRow { VideoId = first.Id, ActorId = actor.Id },
             new CatalogueVideoActorRow { VideoId = second.Id, ActorId = actor.Id });
+        context.CatalogueActorAliases.Add(new CatalogueActorAliasRow
+        {
+            ActorId = actor.Id,
+            Name = "Mira Night",
+        });
+        context.CatalogueActorBios.Add(new CatalogueActorBioRow
+        {
+            ActorId = actor.Id,
+            PrdbId = Guid.NewGuid(),
+            Text = "Actor biography",
+        });
+        context.CatalogueActorLinks.Add(new CatalogueActorLinkRow
+        {
+            ActorId = actor.Id,
+            ExternalSiteLabel = "Homepage",
+            Url = "https://example.invalid/mira",
+        });
         context.FavouriteSites.Add(new FavouriteSiteRow { SiteId = site.Id });
         context.FavouriteActors.Add(new FavouriteActorRow { ActorId = actor.Id });
         context.LibraryEntries.Add(new LibraryEntryRow
@@ -123,6 +166,7 @@ public sealed class SitesAndActorsRouteTests
         Title = title,
         NormalisedTitle = title.ToLowerInvariant(),
         SiteId = siteId,
+        ReleaseDate = new DateOnly(2026, 8, day),
         CreatedAtUtc = new DateTimeOffset(2026, 8, day, 12, 0, 0, TimeSpan.Zero),
         UpdatedAtUtc = new DateTimeOffset(2026, 8, day, 12, 0, 0, TimeSpan.Zero),
     };
@@ -136,7 +180,19 @@ public sealed class SitesAndActorsRouteTests
     private sealed record SitePage(IReadOnlyList<SiteCard> Sites, int Page, int Total);
     private sealed record ActorPage(IReadOnlyList<ActorCard> Actors, int Page, int Total);
     private sealed record SiteVideos(BrowseContext Site, VideoPage Videos);
-    private sealed record ActorVideos(BrowseContext Actor, VideoPage Videos);
+    private sealed record ActorAlias(string Name);
+    private sealed record ActorBio(string Text);
+    private sealed record ActorLink(string Site);
+    private sealed record ActorProfile(
+        Guid PrdbId,
+        string Title,
+        string? Gender,
+        IReadOnlyList<ActorAlias> Aliases,
+        IReadOnlyList<ActorBio> Bios,
+        IReadOnlyList<ActorLink> Links);
+    private sealed record ActorVideos(ActorProfile Actor, VideoPage Videos);
+    private sealed record ActorVideoLoadStart(string Outcome, ActorVideoLoad Load);
+    private sealed record ActorVideoLoad(bool Active);
 
     private sealed class RefusesEverything : HttpMessageHandler
     {

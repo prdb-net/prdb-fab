@@ -60,8 +60,8 @@ public interface ICataloguePin
 /// The wanted list, and the one pinning source this slice has.
 /// </summary>
 /// <remarks>
-/// <c>CONTEXT.md</c> lists six things that may point at a catalogue video and
-/// five of their tables do not exist yet. The column this reads is
+/// <c>CONTEXT.md</c> lists the things that may point at a catalogue video. The
+/// column this source reads is
 /// <c>wanted_video</c>'s primary key, so it is indexed by being what the row is
 /// — which is the index every source is expected to bring with it.
 /// </remarks>
@@ -83,4 +83,18 @@ public sealed class WantedVideoPin(FabDbContext context) : ICataloguePin
         video => context.WantedVideos
             .Where(wanted => wanted.VideoId == video.Id)
             .Max(wanted => (DateTimeOffset?)wanted.SinceAt);
+}
+
+/// <summary>The bounded result of an Actor Catalogue Fill holds the video.</summary>
+public sealed class ActorCatalogueFillVideoPin(FabDbContext context) : ICataloguePin
+{
+    public PinReason Reason => PinReason.ActorCatalogueFill;
+
+    public Expression<Func<CatalogueVideoRow, bool>> PointsAt =>
+        video => context.ActorVideoLoadVideos.Any(loaded => loaded.VideoId == video.Id);
+
+    public Expression<Func<CatalogueVideoRow, DateTimeOffset?>> PointedAtSince =>
+        video => context.ActorVideoLoadVideos
+            .Where(loaded => loaded.VideoId == video.Id)
+            .Max(loaded => (DateTimeOffset?)loaded.LoadedAt);
 }

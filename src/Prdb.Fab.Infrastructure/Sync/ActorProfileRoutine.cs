@@ -12,6 +12,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public sealed class ActorProfileRoutine(
     FabDbContext context,
     PrdbGateway prdb,
+    ActorDetails details,
     TimeProvider time) : IRoutine
 {
     public const string RoutineName = "prdb.actor-profiles";
@@ -43,25 +44,16 @@ public sealed class ActorProfileRoutine(
                 new GetActorsByIdsRequest { Ids = [.. next.Select(row => row.PrdbId)] },
                 cancellationToken: token),
             cancellationToken) ?? [];
-        var returned = actors
-            .Where(actor => actor.Id.HasValue)
-            .ToDictionary(actor => actor.Id!.Value);
-        var rows = await context.CatalogueActors
-            .AsTracking()
-            .Where(row => next.Select(item => item.Id).Contains(row.Id))
-            .ToListAsync(cancellationToken);
+        var returnedIds = actors.Where(actor => actor.Id.HasValue).Select(actor => actor.Id!.Value).ToHashSet();
+        var written = await details.WriteDetailsAsync(actors, cancellationToken);
+
+        // A batch silently omits an id that no longer exists. Mark that lookup
+        // complete so this fallback does not ask for the same tombstone every
+        // ten seconds while the Actor feed catches up and removes it.
         var checkedAt = time.GetUtcNow();
-        foreach (var row in rows)
-        {
-            var url = returned.GetValueOrDefault(row.PrdbId)?.Images?.FirstOrDefault()?.Url;
-            row.ProfileImageUrl = url;
-            row.ArtworkCacheKey = url is null ? null : ActorArtworkKey.Of(row.PrdbId);
-            row.ArtworkCached = false;
-            row.ArtworkFoundDead = false;
-            row.ArtworkLastServedAt = null;
-            row.ProfileCheckedAt = checkedAt;
-        }
-        await context.SaveChangesAsync(cancellationToken);
-        return RunResult.Handled(rows.Count);
+        await context.CatalogueActors
+            .Where(row => next.Select(item => item.Id).Contains(row.Id) && !returnedIds.Contains(row.PrdbId))
+            .ExecuteUpdateAsync(update => update.SetProperty(row => row.ProfileCheckedAt, checkedAt), cancellationToken);
+        return RunResult.Handled(written);
     }
 }

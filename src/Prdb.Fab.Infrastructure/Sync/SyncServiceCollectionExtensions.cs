@@ -27,10 +27,10 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<RecentWindowCoverage>();
         services.TryAddScoped<CatalogueRows>();
 
-        // ADR 0033's pinning, as the query it is. One source today and one
-        // clause each for the five tables that arrive later, which is what
-        // keeps adding one from being a rewrite.
+        // ADR 0033's pinning, as the query it is. Each owner contributes one
+        // clause, which is what keeps adding a source from being a rewrite.
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, WantedVideoPin>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, ActorCatalogueFillVideoPin>());
         services.TryAddScoped<CataloguePins>();
         services.AddScoped<CatalogueEviction>();
 
@@ -47,6 +47,8 @@ public static class SyncServiceCollectionExtensions
         // it holds no state and reaches nothing.
         services.AddScoped<CatalogueBrowse>();
         services.AddScoped<AccountPreferences>();
+        services.AddScoped<ActorDetails>();
+        services.AddScoped<ActorVideoLoads>();
 
         services.AddScoped<ActorFeed>();
         services.AddScoped<VideoImageFeed>();
@@ -65,6 +67,7 @@ public static class SyncServiceCollectionExtensions
         Routine<ActorFeedRoutine>(services);
         Routine<ActorDrainRoutine>(services);
         Routine<ActorProfileRoutine>(services);
+        Routine<ActorVideoLoadRoutine>(services);
         Routine<VideoImageFeedRoutine>(services);
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);
