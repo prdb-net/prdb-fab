@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-04
+
+This release turns the Review Queue into a focused comparison workspace so a
+person can verify an uncertain match from the arriving file itself.
+
 ### Added
 
 - The Review Queue now presents one Arriving File at a time with an on-demand
