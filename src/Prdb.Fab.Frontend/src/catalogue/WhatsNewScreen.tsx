@@ -37,7 +37,7 @@ export function WhatsNewScreen() {
   // defaults accept a number written as one. The document is right and the
   // frontend says so rather than casting the type away.
   const total = Number(videos.data?.total ?? 0)
-  const pageSize = Number(videos.data?.pageSize ?? 48)
+  const pageSize = Number(videos.data?.pageSize ?? 24)
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const checkpointVideoId = videos.data?.checkpointVideoId
   const checkpointCreatedAt = videos.data?.checkpointCreatedAt

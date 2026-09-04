@@ -19,6 +19,22 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-09-04
+
+This patch release makes Catalogue cards easier to scan and keeps an active
+Download visible from the surfaces where it was started.
+
+### Changed
+
+- Catalogue grids use larger artwork and wider cards across What's New, Search,
+  Wanted, Sites and Actors. They show one card per row on phones, preserve the
+  primary action label there, and use up to four columns on larger screens.
+- Catalogue pages contain 24 Videos instead of 48, keeping one-column mobile
+  browsing to a manageable length.
+- Cards with an active Download now show whether it is downloading or being
+  processed and link directly to that Download instead of offering another
+  Search.
+
 ## [0.15.0] - 2026-09-04
 
 This release turns the Catalogue's primary Download action into a one-click

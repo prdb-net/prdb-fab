@@ -37,11 +37,11 @@ public sealed class CatalogueBrowse(
     /// How many videos a page of a grid holds.
     /// </summary>
     /// <remarks>
-    /// Forty-eight, which divides by two, three, four and six — so every column
+    /// Twenty-four, which divides by two, three, four and six — so every column
     /// count the grid falls into at a plausible window width ends on a full row
-    /// rather than a ragged one.
+    /// rather than a ragged one, without making a one-column mobile page too long.
     /// </remarks>
-    public const int APage = 48;
+    public const int APage = 24;
 
     /// <summary>
     /// One page of What's New: the catalogue newest first, as prdb created it.

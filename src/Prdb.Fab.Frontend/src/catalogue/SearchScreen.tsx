@@ -49,7 +49,7 @@ export function SearchScreen() {
     placeholderData: (held) => held,
   })
   const total = Number(videos.data?.total ?? 0)
-  const pages = Math.max(1, Math.ceil(total / Number(videos.data?.pageSize ?? 48)))
+  const pages = Math.max(1, Math.ceil(total / Number(videos.data?.pageSize ?? 24)))
 
   const apply = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

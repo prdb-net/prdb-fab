@@ -150,8 +150,4 @@
     flex-basis: 2.75rem;
     width: 2.75rem;
   }
-
-  .primary > span {
-    display: none;
-  }
 }
