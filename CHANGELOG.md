@@ -19,6 +19,12 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- Library now uses the same responsive artwork grid, page rhythm and card
+  hierarchy as What's New while keeping its title, Site, Actor and Quality
+  filters together above the held collection.
+
 ## [0.15.1] - 2026-09-04
 
 This patch release makes Catalogue cards easier to scan and keeps an active
