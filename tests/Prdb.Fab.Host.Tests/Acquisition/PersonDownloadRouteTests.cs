@@ -22,6 +22,53 @@ namespace Prdb.Fab.Host.Tests.Acquisition;
 public sealed class PersonDownloadRouteTests
 {
     [Fact]
+    public async Task The_catalogue_action_submits_the_preferred_quality_or_the_next_lower_one()
+    {
+        var sabnzbd = new FakeSabnzbd();
+        await using var application = Application(new NzbIndexer(), sabnzbd);
+        using var client = await application.SignedInClientAsync();
+        var seeded = await SeedAsync(application);
+
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var installation = await context.Installation.SingleAsync(TestContext.Current.CancellationToken);
+            installation.PreferredDownloadQuality = PreferredDownloadQuality.P1080;
+
+            var highest = await context.Releases.SingleAsync(TestContext.Current.CancellationToken);
+            highest.Title = "A.Video.2160p";
+            context.Releases.Add(new ReleaseRow
+            {
+                IndexerId = highest.IndexerId,
+                DerivedReleaseId = "outside-id-720",
+                RawGuid = "raw-720",
+                Title = "A.Video.720p",
+                NormalisedTitle = "a video 720p",
+                Size = 1_000_000_000,
+                Categories = highest.Categories,
+                PostDate = highest.PostDate,
+                PubDate = highest.PubDate,
+                DownloadUrl = highest.DownloadUrl,
+                FirstSeenAt = highest.FirstSeenAt,
+                IdentificationState = IdentificationState.Matched,
+                VideoId = highest.VideoId,
+                Confidence = IdentificationConfidence.Exact,
+                MatchedBy = IdentificationRung.ReleaseName,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        using var response = await client.PostAsync(
+            $"/api/catalogue/videos/{seeded.VideoId}/download-best",
+            content: null,
+            TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        Assert.Equal("A.Video.720p", sabnzbd.LastAddFileName);
+        Assert.Equal(1, sabnzbd.Modes.Count(mode => mode == "addfile"));
+    }
+
+    [Fact]
     public async Task A_previewed_person_download_is_reserved_submitted_and_idempotent()
     {
         var indexer = new NzbIndexer();

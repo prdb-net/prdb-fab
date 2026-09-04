@@ -1922,6 +1922,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/downloads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadSettingsState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DownloadSettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DownloadSettingsState"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/automation": {
         parameters: {
             query?: never;
@@ -3075,6 +3133,12 @@ export interface components {
             changed: number | string;
             detail: string;
         };
+        DownloadSettingsRequest: {
+            preferredQuality: components["schemas"]["PreferredDownloadQuality"];
+        };
+        DownloadSettingsState: {
+            preferredQuality: components["schemas"]["PreferredDownloadQuality"];
+        };
         /** @enum {unknown} */
         DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed" | "Abandoned";
         DownloadVerdict: {
@@ -3373,6 +3437,8 @@ export interface components {
             /** Format: int32 */
             retryAfterSeconds: null | number | string;
         };
+        /** @enum {unknown} */
+        PreferredDownloadQuality: "P480" | "P720" | "P1080" | "P2160";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;

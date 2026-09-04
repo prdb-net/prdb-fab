@@ -113,10 +113,16 @@ request to the normal scheduler, not a second execution path: the Governor,
 daily Indexer query budget and empty work set still win, and the accepted,
 deferred or refused answer remains visible beside the routine.
 
-From a Video's Releases table, **Download** fetches that exact NZB and submits
-it to the configured SABnzbd category. The choice is recorded before the remote
-write. prdb-fab then polls SABnzbd, shows its own Outstanding, Completed and
-Failed state under **Downloads**, and automatically tries the next ranked,
+On a Catalogue card, **Download** immediately chooses the preferred highest
+Quality available and submits it to SABnzbd; its overflow menu still opens the
+Video's Releases table for an exact choice. **Settings → Downloads** sets the
+highest Quality and lower-Quality fallback ladder used by that direct action.
+Because Newznab has no dependable Quality field, common Release-name tags are
+used as hints and an unlabelled Release is the final fallback. From the Releases
+table, **Download** fetches that exact NZB and submits it to the configured
+SABnzbd category. The choice is recorded before the remote write. prdb-fab then
+polls SABnzbd, shows its own Outstanding, Completed and Failed state under
+**Downloads**, and automatically tries the next ranked,
 unconsumed Release after a release failure. Each Video has a budget of three
 Download attempts; its Release view shows the spent attempts, the next choice,
 and a confirmed reset of that Video's local history.

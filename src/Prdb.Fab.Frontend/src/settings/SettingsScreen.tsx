@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import styles from './Settings.module.css'
 
 /**
- * ADR 0020's seven groups. Groups whose feature has not arrived yet remain
+ * The installation's setting groups. Groups whose feature has not arrived yet remain
  * named rather than hidden, so the surface cannot quietly drift from what was
  * argued.
  */
@@ -44,6 +44,13 @@ export function SettingsScreen() {
           <br />
           <span className={styles.detail}>
             The library root and the fixed leftover types filing may remove.
+          </span>
+        </li>
+        <li>
+          <Link to="/settings/downloads">Downloads</Link>
+          <br />
+          <span className={styles.detail}>
+            The preferred highest Quality used by Catalogue-card Download buttons.
           </span>
         </li>
         <li>

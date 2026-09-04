@@ -19,6 +19,13 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Added
+
+- Catalogue-card Download buttons now submit directly to SABnzbd using a saved
+  preferred highest Quality with lower-Quality fallback. The new Downloads
+  setting controls that ceiling, while each card's overflow menu retains the
+  complete Release view for inspection and exact selection.
+
 ### Changed
 
 - New installations enable both prdb Reporting channels by default. Existing

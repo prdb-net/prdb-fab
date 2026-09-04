@@ -1689,6 +1689,52 @@
         }
       }
     },
+    "/api/settings/downloads": {
+      "get": {
+        "tags": [
+          "Acquisition"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadSettingsState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Acquisition"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadSettingsState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/automation": {
       "get": {
         "tags": [
@@ -3566,6 +3612,28 @@
           }
         }
       },
+      "DownloadSettingsRequest": {
+        "required": [
+          "preferredQuality"
+        ],
+        "type": "object",
+        "properties": {
+          "preferredQuality": {
+            "$ref": "#/components/schemas/PreferredDownloadQuality"
+          }
+        }
+      },
+      "DownloadSettingsState": {
+        "required": [
+          "preferredQuality"
+        ],
+        "type": "object",
+        "properties": {
+          "preferredQuality": {
+            "$ref": "#/components/schemas/PreferredDownloadQuality"
+          }
+        }
+      },
       "DownloadState": {
         "enum": [
           "Outstanding",
@@ -4849,6 +4917,14 @@
             "format": "int32"
           }
         }
+      },
+      "PreferredDownloadQuality": {
+        "enum": [
+          "P480",
+          "P720",
+          "P1080",
+          "P2160"
+        ]
       },
       "ProblemDetails": {
         "type": "object",

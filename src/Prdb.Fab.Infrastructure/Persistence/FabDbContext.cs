@@ -194,6 +194,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
             installation.Property(row => row.OnboardingStep).HasConversion<string>();
             installation.Property(row => row.RetryBudget).HasDefaultValue(3);
+            installation.Property(row => row.PreferredDownloadQuality)
+                .HasConversion<string>()
+                .HasDefaultValue(PreferredDownloadQuality.P2160);
             installation.Property(row => row.AutomaticDownloadCap).HasDefaultValue(20);
 
             // The row exists from the first migration rather than being created

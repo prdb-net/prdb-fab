@@ -122,6 +122,13 @@ next. It is total and deterministic, so after a failure it names a next release
 rather than only a winner.
 _Avoid_: Candidate list, Shortlist, Score, Priority
 
+**Preferred Download Quality**:
+The highest named Quality a person allows the direct Download action on a
+Catalogue card to choose. It is tried first, followed by each lower named
+Quality. It is a Release-name hint before downloading, never the measured
+Quality of the arriving file and never an Automation condition.
+_Avoid_: Quality Profile, Target Resolution, Automatic Quality
+
 **Consumed**:
 Said of a release that was fetched for a video, whatever became of it. The
 ranking never offers it for that video again.

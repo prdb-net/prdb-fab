@@ -10,6 +10,17 @@ public static class AcquisitionEndpoints
 {
     public static void MapAcquisition(this IEndpointRouteBuilder routes)
     {
+        var settings = routes.MapGroup("/api/settings/downloads").WithTags("Acquisition");
+        settings.MapGet("/", async (
+            DownloadSettings downloads,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await downloads.ReadAsync(cancellationToken)));
+        settings.MapPost("/", async (
+            DownloadSettingsRequest request,
+            DownloadSettings downloads,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await downloads.SaveAsync(request.PreferredQuality, cancellationToken)));
+
         routes.MapGet(
             "/api/downloads",
             async Task<Ok<DownloadPage>> (
@@ -63,3 +74,4 @@ public static class AcquisitionEndpoints
 
 public sealed record DownloadSelectionRequest(IReadOnlyList<Guid> DownloadIds);
 public sealed record DownloadResetRequest(IReadOnlyList<Guid> DownloadIds);
+public sealed record DownloadSettingsRequest(PreferredDownloadQuality PreferredQuality);
