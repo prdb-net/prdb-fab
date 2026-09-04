@@ -50,16 +50,26 @@ export function CardActions({
   const downloadProblem = download.error?.message ?? (downloadFailed ? downloadVerdict.detail : null)
   const problem = downloadProblem ?? preferenceProblem
   const held = Boolean(video.heldQualities?.length)
-  const canDownload = video.downloadReady && !video.outstanding && !held
-  const releaseLabel = held ? 'View Library' : canDownload ? 'Download' : 'Search'
-  const releaseDescription = held
-    ? `View ${video.title} in the Library`
-    : canDownload
+  const activeDownload = Boolean(video.activeDownloadId)
+  const processing = video.activeDownloadState === 'Completed'
+  const canDownload = video.downloadReady && !activeDownload && !held
+  const releaseLabel = activeDownload
+    ? 'View Download'
+    : held
+      ? 'View Library'
+      : canDownload ? 'Download' : 'Search'
+  const releaseDescription = activeDownload
+    ? `View the ${processing ? 'processing' : 'current'} Download of ${video.title}`
+    : held
+      ? `View ${video.title} in the Library`
+      : canDownload
       ? `Download the preferred available Quality of ${video.title}`
       : `Search Indexers for ${video.title}`
-  const primaryPath = held
-    ? `/library/${video.prdbId}`
-    : videoReleasePath(video.prdbId, returnTo)
+  const primaryPath = activeDownload
+    ? `/downloads?download=${video.activeDownloadId}`
+    : held
+      ? `/library/${video.prdbId}`
+      : videoReleasePath(video.prdbId, returnTo)
   const wantedLabel = video.wanted ? 'Remove from Wanted' : 'Mark Wanted'
 
   return (
@@ -85,7 +95,7 @@ export function CardActions({
             title={releaseDescription}
             to={primaryPath}
           >
-            <Icon name={held ? 'library' : 'search'} />
+            <Icon name={activeDownload ? 'download' : held ? 'library' : 'search'} />
             <span>{releaseLabel}</span>
           </Link>
         )}

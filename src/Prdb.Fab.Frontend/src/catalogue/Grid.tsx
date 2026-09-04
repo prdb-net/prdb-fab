@@ -44,7 +44,11 @@ function Card({
     <li className={styles.card}>
       <span className={styles.artwork}>
         <Artwork videoId={video.id} title={video.title} />
-        {held ? (
+        {video.activeDownloadId ? (
+          <span className={styles.downloading}>
+            {video.activeDownloadState === 'Completed' ? 'Processing' : 'Downloading'}
+          </span>
+        ) : held ? (
           <span className={styles.held}>In Library · {held}</span>
         ) : video.downloadReady ? (
           <span className={styles.ready}>Ready to download</span>
@@ -195,6 +199,9 @@ function statusOf(video: VideoCard): string[] {
     : video.wantedSyncPending
       ? 'Wanted sync pending'
       : video.wanted ? 'Wanted' : 'Not wanted'
-  return [wanted, video.outstanding ? 'Download outstanding' : null, held, available]
+  const activeDownload = video.activeDownloadId
+    ? video.activeDownloadState === 'Completed' ? 'Processing download' : 'Downloading'
+    : null
+  return [wanted, activeDownload, held, available]
     .filter((value): value is string => Boolean(value))
 }
