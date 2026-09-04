@@ -223,9 +223,9 @@ function MoreActions({
   )
 }
 
-type IconName = 'download' | 'external' | 'library' | 'more' | 'search' | 'site' | 'wanted'
+export type IconName = 'delete' | 'download' | 'external' | 'library' | 'more' | 'search' | 'site' | 'wanted'
 
-function Icon({ name, active = false }: { name: IconName; active?: boolean }) {
+export function Icon({ name, active = false }: { name: IconName; active?: boolean }) {
   const common = {
     fill: 'none',
     stroke: 'currentColor',
@@ -241,6 +241,9 @@ function Icon({ name, active = false }: { name: IconName; active?: boolean }) {
       )}
       {name === 'download' && (
         <path d="M12 3v12m-4-4 4 4 4-4M4 20h16" {...common} />
+      )}
+      {name === 'delete' && (
+        <path d="M5 7h14M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" {...common} />
       )}
       {name === 'library' && (
         <path d="M4 5h16v15H4V5Zm4 0v15m9-15v15M3 9h18" {...common} />

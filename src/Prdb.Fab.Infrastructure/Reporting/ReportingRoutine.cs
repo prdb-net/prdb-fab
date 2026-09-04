@@ -105,10 +105,10 @@ public sealed class ReportingRoutine(
             Items = [.. pending.Select(item => new FulfillWantedVideoItem
             {
                 VideoId = item.VideoId,
-                IsFulfilled = true,
+                IsFulfilled = item.IsFulfilled,
                 FulfilledAtUtc = item.FulfilledAt,
                 FulfilledInQuality = QualityForApi(item.Quality),
-                FulfillmentByApp = OtherApplication,
+                FulfillmentByApp = item.IsFulfilled ? OtherApplication : null,
                 FulfillmentExternalId = null,
             })],
         };
@@ -158,7 +158,7 @@ public sealed class ReportingRoutine(
                 reported.Add(desired.VideoId, row);
             }
 
-            row.IsFulfilled = true;
+            row.IsFulfilled = desired.IsFulfilled;
             row.Quality = desired.Quality;
             row.FulfilledAt = desired.FulfilledAt;
             row.TerminalOutcome = result.Outcome switch

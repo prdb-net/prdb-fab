@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 
 import { readLibrary } from '../api/client.ts'
 import browseStyles from '../catalogue/BrowseScreen.module.css'
 import { LibraryGrid } from '../catalogue/Grid.tsx'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import { LibraryCardActions } from './LibraryCardActions.tsx'
 import styles from './LibraryScreen.module.css'
 
 export function LibraryScreen() {
+  const location = useLocation()
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
   const [searchInput, setSearchInput] = useState(search)
@@ -99,7 +101,10 @@ export function LibraryScreen() {
       {library.isError && <p className={styles.error}>The Library could not be read.</p>}
       {data?.entries.length === 0
         ? <p className={browseStyles.empty}>No held Library Entries match these filters.</p>
-        : <LibraryGrid entries={data?.entries ?? []} />}
+        : <LibraryGrid
+          entries={data?.entries ?? []}
+          action={(entry) => <LibraryCardActions entry={entry} returnTo={location.pathname + location.search} />}
+        />}
       {pages > 1 && (
         <nav className={browseStyles.pager}>
           <button type="button" disabled={page <= 1} onClick={() => goTo(page - 1)}>Previous</button>
