@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 
@@ -9,6 +9,7 @@ import {
   fileReviewAs,
   previewReviewDelete,
   readReviewQueue,
+  reviewContactSheetUrl,
   replaceFromReview,
   searchReviewVideos,
   type ArrivingFileReason,
@@ -93,11 +94,23 @@ export function ReviewQueueScreen() {
   const selectionBusy = dismiss.isPending || previewDelete.isPending || remove.isPending
   const globalCount = Number(data?.globalCount ?? 0)
   const matchingCount = Number(data?.total ?? 0)
+  const requestedEntry = parameters.get('entry')
+  const activeIndex = data?.entries.findIndex((entry) => entry.id === requestedEntry) ?? -1
+  const activeEntry = activeIndex >= 0 ? data?.entries[activeIndex] : data?.entries[0]
+  const visibleIndex = activeEntry ? data?.entries.findIndex((entry) => entry.id === activeEntry.id) ?? 0 : 0
+  const firstEntryId = data?.entries[0]?.id
+  useEffect(() => {
+    if (!firstEntryId || activeIndex >= 0) return
+    const next = new URLSearchParams(parameters)
+    next.set('entry', firstEntryId)
+    setParameters(next, { replace: true })
+  }, [activeIndex, firstEntryId, parameters, setParameters])
   const setReason = (value: ArrivingFileReason | '') => {
     const next = new URLSearchParams(parameters)
     if (value) next.set('reason', value)
     else next.delete('reason')
     next.delete('page')
+    next.delete('entry')
     setSelected([])
     setFeedback(null)
     setParameters(next)
@@ -106,9 +119,15 @@ export function ReviewQueueScreen() {
     const next = new URLSearchParams(parameters)
     if (wanted <= 1) next.delete('page')
     else next.set('page', String(wanted))
+    next.delete('entry')
     setSelected([])
     setParameters(next)
     window.scrollTo({ top: 0 })
+  }
+  const showEntry = (id: string) => {
+    const next = new URLSearchParams(parameters)
+    next.set('entry', id)
+    setParameters(next)
   }
   const toggleVisible = () => {
     setSelected((held) => allVisibleSelected
@@ -120,7 +139,7 @@ export function ReviewQueueScreen() {
     <header className={styles.heading}>
       <div>
         <h1>Review Queue</h1>
-        <p>Select one or more files to dismiss or delete them. Each reason may offer one additional corrective action.</p>
+        <p>Compare one Arriving File with prdb at a time. Select files in the list for bulk dismissal or deletion.</p>
       </div>
       <span className={styles.quiet}>{reason ? `${matchingCount} matching · ${globalCount} open` : `${globalCount} open`}</span>
     </header>
@@ -158,16 +177,37 @@ export function ReviewQueueScreen() {
     {feedback && <p className={feedback.tone === 'error' ? styles.error : styles.notice} role="status">{feedback.text}</p>}
     {queue.isError && <p className={styles.error} role="alert">The Review Queue could not be read.</p>}
     {data?.entries.length === 0 && <p className={styles.empty}>Nothing needs review.</p>}
-    <div className={styles.reviewList}>
-      {data?.entries.map((entry) => <ReviewRow
-        key={entry.id}
-        entry={entry}
-        checked={selected.includes(entry.id)}
-        onChecked={(checked) => setSelected((held) => checked ? [...new Set([...held, entry.id])] : held.filter((id) => id !== entry.id))}
+    {activeEntry && data && <div className={styles.reviewWorkspace}>
+      <nav className={styles.reviewRail} aria-label="Review Queue entries">
+        {data.entries.map((entry, index) => <div className={`${styles.reviewRailItem} ${entry.id === activeEntry.id ? styles.reviewRailItemActive : ''}`} key={entry.id}>
+          <SelectionCheckbox
+            ariaLabel={`Select ${entry.fileName}`}
+            checked={selected.includes(entry.id)}
+            disabled={selectionBusy}
+            onChange={() => setSelected((held) => held.includes(entry.id) ? held.filter((id) => id !== entry.id) : [...held, entry.id])}
+          />
+          <button type="button" onClick={() => showEntry(entry.id)}>
+            <span className={styles.reviewRailNumber}>{(page - 1) * Number(data.pageSize) + index + 1}</span>
+            <span className={styles.reviewRailBody}>
+              <strong>{entry.video?.title ?? entry.fileName}</strong>
+              <span>{entry.fileName}</span>
+              <small>{reasonLabels[entry.reason]}{entry.runtimeSeconds != null ? ` · ${formatDuration(Number(entry.runtimeSeconds))}` : ''}{entry.quality ? ` · ${entry.quality}` : ''}</small>
+            </span>
+          </button>
+        </div>)}
+      </nav>
+      <ReviewDetail
+        entry={activeEntry}
+        key={activeEntry.id}
+        position={(page - 1) * Number(data.pageSize) + visibleIndex + 1}
+        total={Number(data.total)}
+        busy={selectionBusy}
         onChanged={refresh}
+        onDelete={() => previewDelete.mutate([activeEntry.id])}
+        onDismiss={() => dismiss.mutate([activeEntry.id])}
         onFeedback={setFeedback}
-      />)}
-    </div>
+      />
+    </div>}
 
     {data && Number(data.total) > Number(data.pageSize) && <QueuePager
       page={page}
@@ -193,20 +233,27 @@ export function ReviewQueueScreen() {
   </main>
 }
 
-function ReviewRow({
+function ReviewDetail({
   entry,
-  checked,
-  onChecked,
+  position,
+  total,
+  busy,
   onChanged,
+  onDelete,
+  onDismiss,
   onFeedback,
 }: {
   entry: ReviewQueueEntry
-  checked: boolean
-  onChecked: (value: boolean) => void
+  position: number
+  total: number
+  busy: boolean
   onChanged: () => Promise<void>
+  onDelete: () => void
+  onDismiss: () => void
   onFeedback: (feedback: Feedback) => void
 }) {
   const [confirmation, setConfirmation] = useState<'Replace' | 'FileAsOnlyCopy' | null>(null)
+  const [showPicker, setShowPicker] = useState(entry.video == null)
   const act = useMutation({
     mutationFn: async (video?: ReviewVideo) => {
       if (entry.actingAction === 'FileAs' && video) return fileReviewAs(entry.id, video.id)
@@ -222,42 +269,59 @@ function ReviewRow({
     },
     onError: (error) => onFeedback({ tone: 'error', text: messageOf(error) }),
   })
-  const identification = entry.video
-    ? `${entry.video.title}${entry.confidence ? ` · ${confidenceLabel(entry.confidence)}${entry.matchedBy ? `, matched by ${matchedByLabel(entry.matchedBy)}` : ''}` : ''}`
-    : 'None'
-
-  return <article className={`${styles.panel} ${styles.review} ${checked ? styles.reviewSelected : ''}`}>
-    <header className={styles.reviewHeader}>
-      <SelectionCheckbox ariaLabel={`Select ${entry.fileName}`} checked={checked} onChange={() => onChecked(!checked)} />
-      <div className={styles.reviewTitle}>
-        <h2>{entry.fileName}</h2>
-        <div className={styles.badges}>
-          <span className={`${styles.badge} ${styles.reasonBadge}`}>{reasonLabels[entry.reason]}</span>
-          {entry.runtimeSeconds != null && <span className={styles.badge}>{formatDuration(Number(entry.runtimeSeconds))}</span>}
-          {entry.quality && <span className={styles.badge}>{entry.quality}</span>}
-          {entry.width && entry.height && <span className={styles.badge}>{entry.width}×{entry.height}</span>}
-          {entry.videoCodec && <span className={styles.badge}>{codecLabel(entry.videoCodec)}</span>}
-          <span className={styles.badge}>{formatBytes(entry.sizeBytes)}</span>
-          {!entry.isOnDisk && <span className={`${styles.badge} ${styles.missingBadge}`}>File missing</span>}
-        </div>
-      </div>
+  return <article className={`${styles.panel} ${styles.reviewDetail}`}>
+    <header className={styles.reviewDetailHeader}>
+      <span className={`${styles.badge} ${styles.reasonBadge}`}>{reasonLabels[entry.reason]}</span>
+      <strong>{position} of {total}</strong>
     </header>
 
-    <p className={styles.reasonDescription}>{reasonDescriptions[entry.reason]}</p>
-    <dl className={styles.evidence}>
-      <Evidence label="Download">{entry.download.name}</Evidence>
-      <Evidence label="Release">{entry.release}</Evidence>
-      <Evidence label="Indexer">{entry.indexer}</Evidence>
-      <Evidence label="Identification">{identification}</Evidence>
-      <Evidence label="File path" wide><span className={styles.pathValue}><code>{entry.path}</code><CopyButton value={entry.path} /></span></Evidence>
-      {entry.filedFile && <Evidence label="Filed copy" wide><span className={styles.pathValue}><code>{entry.filedFile.path}</code><span>{entry.filedFile.quality} · {formatBytes(entry.filedFile.sizeBytes)}</span><CopyButton value={entry.filedFile.path} /></span></Evidence>}
-      {entry.probeError && <Evidence label="Probe" wide error>{entry.probeError}</Evidence>}
-    </dl>
+    <section className={styles.reviewVisuals}>
+      <div>
+        <span className={styles.comparisonLabel}>Local file · five moments</span>
+        <ContactSheet entry={entry} />
+      </div>
+      <div>
+        <span className={styles.comparisonLabel}>prdb artwork</span>
+        {entry.video?.artworkId != null
+          ? <Artwork videoId={entry.video.artworkId} title={entry.video.title} frameClassName={styles.reviewArtwork} imageClassName={styles.reviewArtworkImage} absentClassName={styles.reviewArtworkAbsent} />
+          : <span className={`${styles.reviewArtwork} ${styles.reviewArtworkAbsent}`}>No identified Video</span>}
+      </div>
+    </section>
 
-    {entry.actingAction === 'FileAs' && <Picker idPrefix={entry.id} candidates={entry.candidates} disabled={act.isPending} onPick={(video) => act.mutate(video)} />}
-    {entry.actingAction && entry.actingAction !== 'FileAs' && <button className={styles.button} disabled={act.isPending} onClick={() => setConfirmation(entry.actingAction as 'Replace' | 'FileAsOnlyCopy')}>
-      {entry.actingAction === 'Replace' ? 'Replace filed copy…' : 'File as only copy…'}
-    </button>}
+    <section className={styles.identityComparison}>
+      <div>
+        <span className={styles.comparisonLabel}>What arrived</span>
+        <h2>{entry.fileName}</h2>
+        <dl className={styles.comparisonFacts}>
+          <ComparisonFact label="Folder">{parentDirectoryName(entry.path)}</ComparisonFact>
+          <ComparisonFact label="Runtime">{entry.runtimeSeconds != null ? formatDuration(Number(entry.runtimeSeconds)) : 'Unknown'}</ComparisonFact>
+          <ComparisonFact label="File">{[entry.quality, entry.width && entry.height ? `${entry.width}×${entry.height}` : null, entry.videoCodec ? codecLabel(entry.videoCodec) : null, formatBytes(entry.sizeBytes)].filter(Boolean).join(' · ')}</ComparisonFact>
+          <ComparisonFact label="Release">{entry.release}</ComparisonFact>
+          <ComparisonFact label="Download">{entry.download.name}</ComparisonFact>
+          <ComparisonFact label="Indexer">{entry.indexer}</ComparisonFact>
+        </dl>
+      </div>
+      <div>
+        <span className={styles.comparisonLabel}>What prdb proposes</span>
+        <h2>{entry.video?.title ?? 'No Video identified'}</h2>
+        <dl className={styles.comparisonFacts}>
+          <ComparisonFact label="Site">{entry.video?.site ?? 'Unknown'}</ComparisonFact>
+          <ComparisonFact label="Released">{entry.video?.releaseDate ? formatDate(entry.video.releaseDate) : 'Unknown'}</ComparisonFact>
+          <ComparisonFact label="Runtime">{entry.video?.consensusRuntimeMs != null ? `${formatDuration(Math.round(Number(entry.video.consensusRuntimeMs) / 1000))} consensus` : 'Unknown'}</ComparisonFact>
+          <ComparisonFact label="Identification">{entry.confidence ? `${confidenceLabel(entry.confidence)}${entry.matchedBy ? ` · by ${matchedByLabel(entry.matchedBy)}` : ''}` : 'None'}</ComparisonFact>
+        </dl>
+      </div>
+    </section>
+
+    <p className={styles.identificationCallout}>
+      <strong>{entry.confidence ? confidenceLabel(entry.confidence) : reasonLabels[entry.reason]}</strong>
+      <span>{reasonDescriptions[entry.reason]}</span>
+    </p>
+
+    {entry.probeError && <p className={styles.error}>Probe: {entry.probeError}</p>}
+    {entry.filedFile && <div className={styles.filedComparison}><span>Filed copy</span><code>{entry.filedFile.path}</code><small>{entry.filedFile.quality} · {formatBytes(entry.filedFile.sizeBytes)}</small></div>}
+
+    {entry.actingAction === 'FileAs' && showPicker && <Picker idPrefix={entry.id} candidates={entry.candidates} disabled={act.isPending} onPick={(video) => act.mutate(video)} />}
 
     {confirmation === 'Replace' && entry.filedFile && <ConfirmationDialog
       title="Replace the filed copy?"
@@ -283,14 +347,37 @@ function ReviewRow({
       <p>The recorded Library directory is missing. This will correct the record and file the arriving file as the only copy.</p>
       <code className={styles.dialogPath}>{entry.path}</code>
     </ConfirmationDialog>}
+
+    <footer className={styles.reviewDecisionBar}>
+      <details className={styles.reviewPathDetails}>
+        <summary>File path</summary>
+        <span className={styles.pathValue}><code>{entry.path}</code><CopyButton value={entry.path} /></span>
+      </details>
+      <button className={styles.button} disabled={busy || act.isPending} onClick={onDismiss}>Dismiss</button>
+      <button className={`${styles.button} ${styles.dangerButton}`} disabled={busy || act.isPending} onClick={onDelete}>Delete file…</button>
+      {entry.actingAction === 'FileAs' && entry.video && <button className={styles.button} disabled={act.isPending} onClick={() => setShowPicker((shown) => !shown)}>{showPicker ? 'Hide search' : 'Search another Video'}</button>}
+      {entry.actingAction === 'FileAs' && entry.video && <button className={`${styles.button} ${styles.primaryButton}`} disabled={act.isPending} onClick={() => act.mutate(entry.video!)}>{act.isPending ? 'Filing…' : 'File as this Video'}</button>}
+      {entry.actingAction && entry.actingAction !== 'FileAs' && <button className={`${styles.button} ${styles.primaryButton}`} disabled={act.isPending} onClick={() => setConfirmation(entry.actingAction as 'Replace' | 'FileAsOnlyCopy')}>
+        {entry.actingAction === 'Replace' ? 'Replace filed copy…' : 'File as only copy…'}
+      </button>}
+    </footer>
   </article>
 }
 
-function Evidence({ label, wide = false, error = false, children }: { label: string; wide?: boolean; error?: boolean; children: ReactNode }) {
-  return <div className={`${styles.evidenceItem} ${wide ? styles.evidenceWide : ''} ${error ? styles.error : ''}`}>
-    <dt>{label}</dt>
-    <dd>{children}</dd>
-  </div>
+function ContactSheet({ entry }: { entry: ReviewQueueEntry }) {
+  const [failed, setFailed] = useState(false)
+  if (!entry.isOnDisk || entry.runtimeSeconds == null || failed) {
+    return <span className={styles.contactSheetAbsent}>{entry.isOnDisk ? 'Visual preview unavailable' : 'File missing'}</span>
+  }
+
+  return <span className={styles.contactSheet}>
+    <img src={reviewContactSheetUrl(entry.id)} alt={`Five frames sampled from ${entry.fileName}`} onError={() => setFailed(true)} />
+    <span aria-hidden="true"><small>10%</small><small>30%</small><small>50%</small><small>70%</small><small>90%</small></span>
+  </span>
+}
+
+function ComparisonFact({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><dt>{label}</dt><dd>{children}</dd></div>
 }
 
 function Picker({ idPrefix, candidates, disabled, onPick }: { idPrefix: string; candidates: ReviewVideo[]; disabled: boolean; onPick: (video: ReviewVideo) => void }) {
@@ -459,6 +546,11 @@ function confidenceLabel(confidence: string) {
 
 function matchedByLabel(matchedBy: string) {
   return matchedBy.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()
+}
+
+function parentDirectoryName(path: string) {
+  const parts = path.replaceAll('\\', '/').split('/').filter(Boolean)
+  return parts.length > 1 ? parts.at(-2) : 'No directory'
 }
 
 function formatDate(value: string) {

@@ -67,6 +67,8 @@ public static class FilingEndpoints
             Guid? site = null,
             int page = 1) =>
             TypedResults.Ok(await searcher.SearchAsync(search, site, page, cancellationToken)));
+        review.MapGet("/{arrivingFileId:guid}/contact-sheet", ReadReviewContactSheetAsync)
+            .Produces<byte[]>(StatusCodes.Status200OK, "image/jpeg");
         review.MapPost("/delete/preview", async (
             ReviewSelectionRequest request,
             ReviewQueue queue,
@@ -131,6 +133,22 @@ public static class FilingEndpoints
     {
         var entry = await browse.EntryAsync(videoId, cancellationToken);
         return entry is null ? TypedResults.NotFound() : TypedResults.Ok(entry);
+    }
+
+    private static async Task<Results<FileContentHttpResult, NotFound>> ReadReviewContactSheetAsync(
+        Guid arrivingFileId,
+        ReviewFileContactSheet contactSheet,
+        HttpContext http,
+        CancellationToken cancellationToken)
+    {
+        var bytes = await contactSheet.ReadAsync(arrivingFileId, cancellationToken);
+        if (bytes is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        http.Response.Headers.CacheControl = "private, max-age=300";
+        return TypedResults.Bytes(bytes, "image/jpeg");
     }
 
     private static async Task<Results<Ok<LibraryEntryDeletePreview>, NotFound>> PreviewLibraryEntryDeleteAsync(
