@@ -26,6 +26,16 @@ public sealed class FilingRulesTests
         Assert.Equal(expected, VideoQuality.LabelFor(width, height));
 
     [Fact]
+    public void Quality_labels_are_ordered_by_the_ladder_rather_than_as_text()
+    {
+        string[] held = ["720p", "2160p", "180p", "1080p", "240p", "144p"];
+
+        Assert.Equal(
+            ["2160p", "1080p", "720p", "240p", "144p", "180p"],
+            held.Order(VideoQuality.BestFirst));
+    }
+
+    [Fact]
     public void A_path_mapping_is_boundary_aware_case_aware_and_rejects_traversal()
     {
         var local = Path.Combine(Path.GetTempPath(), "mapped-root");

@@ -19,6 +19,15 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Library grid is now ordered case-insensitively. It sorted on the raw
+  title, so a lower case title sorted after every title starting with a capital
+  letter rather than among them.
+- Quality labels are now listed best first everywhere they are shown. They were
+  sorted as text, which put `1080p` above `720p`, buried `2160p` in the middle
+  and, in a Library Entry, listed the weakest file above the strongest.
+
 ## [0.18.0] - 2026-09-04
 
 This release makes every Actor a complete local profile and lets a person
