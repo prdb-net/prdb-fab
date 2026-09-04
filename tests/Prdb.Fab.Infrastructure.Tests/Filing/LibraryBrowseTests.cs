@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
+using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -75,6 +76,42 @@ public sealed class LibraryBrowseTests
     }
 
     [Fact]
+    public async Task Library_orders_titles_by_the_comparison_form_and_qualities_by_the_ladder()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var zebra = Guid.NewGuid();
+        var apple = Guid.NewGuid();
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.CatalogueVideos.AddRange(Video(zebra, "Zebra Crossing"), Video(apple, "apple orchard"));
+            context.LibraryEntries.AddRange(Entry(zebra, database.Time.GetUtcNow()), Entry(apple, database.Time.GetUtcNow()));
+            context.VideoFiles.AddRange(
+                File(zebra, "720p", "/library/Zebra Crossing/Zebra Crossing - [720p].mkv", 1_800),
+                File(zebra, "2160p", "/library/Zebra Crossing/Zebra Crossing - [2160p].mkv", 7_200),
+                File(zebra, "1080p", "/library/Zebra Crossing/Zebra Crossing - [1080p].mkv", 3_600));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var read = database.Scope();
+        var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
+        var page = await browse.ReadAsync(null, null, null, null, 1, TestContext.Current.CancellationToken);
+
+        // Not the title: SQLite's BINARY collation would put "Zebra Crossing"
+        // first, because an upper case Z sorts below a lower case a.
+        Assert.Equal(["apple orchard", "Zebra Crossing"], page.Entries.Select(entry => entry.Title));
+
+        var card = page.Entries[1];
+        Assert.Equal(["2160p", "1080p", "720p"], card.Qualities);
+        Assert.Equal(7_200, card.RuntimeSeconds);
+        Assert.Equal(["2160p", "1080p", "720p"], page.Filters.Qualities);
+
+        var entry = await browse.EntryAsync(zebra, TestContext.Current.CancellationToken);
+        Assert.NotNull(entry);
+        Assert.Equal(["2160p", "1080p", "720p"], entry!.Files.Select(file => file.Quality));
+    }
+
+    [Fact]
     public async Task Operation_log_is_newest_first_and_filters_by_act_and_path()
     {
         await using var database = await TestDatabase.CreateAsync();
@@ -95,14 +132,28 @@ public sealed class LibraryBrowseTests
         Assert.Equal("Filed", Assert.Single(filtered.Entries).Act);
     }
 
-    private static VideoFileRow File(Guid video, string quality, string path) => new()
+    private static CatalogueVideoRow Video(Guid prdbId, string title) => new()
+    {
+        PrdbId = prdbId,
+        Title = title,
+        NormalisedTitle = ComparisonForm.Of(title),
+    };
+
+    private static LibraryEntryRow Entry(Guid video, DateTimeOffset filedAt) => new()
+    {
+        VideoId = video,
+        EntryDirectory = "/library/" + video,
+        FiledAt = filedAt,
+    };
+
+    private static VideoFileRow File(Guid video, string quality, string path, long runtime = 3_600) => new()
     {
         Id = Guid.NewGuid(),
         LibraryEntryVideoId = video,
         FiledPath = path,
         QualityLabel = quality,
         SizeBytes = 100,
-        RuntimeSeconds = 3_600,
+        RuntimeSeconds = runtime,
     };
 
     private static OperationLogEntryRow Operation(string act, string path, DateTimeOffset at) => new()

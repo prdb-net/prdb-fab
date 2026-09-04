@@ -17,6 +17,15 @@ public static class VideoQuality
         (240, 426, "240p"),
     ];
 
+    /// <summary>
+    /// The ladder read as an order, best rung first. Every list of quality
+    /// labels a person is shown is sorted with this, because sorting labels as
+    /// text reads <c>1080p</c> as better than <c>720p</c> and buries
+    /// <c>2160p</c> in the middle. A label the ladder does not name — the
+    /// fallback below its last rung — sorts after every rung it does name.
+    /// </summary>
+    public static readonly IComparer<string> BestFirst = new BestFirstOrder();
+
     public static string LabelFor(int width, int height)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
@@ -41,4 +50,28 @@ public static class VideoQuality
 
     private static int Halfway(int standard, int next) =>
         next == 0 ? standard : (standard + next) / 2;
+
+    /// <summary>Where a label sits on the ladder. Higher is better, and a
+    /// label the ladder does not name is zero.</summary>
+    private static int RankOf(string? label)
+    {
+        for (var index = 0; index < Standards.Length; index++)
+        {
+            if (Standards[index].Label == label) return Standards.Length - index;
+        }
+
+        return 0;
+    }
+
+    private sealed class BestFirstOrder : IComparer<string>
+    {
+        public int Compare(string? left, string? right)
+        {
+            var byRung = RankOf(right).CompareTo(RankOf(left));
+
+            // Two labels off the ladder are ordered by their text, so that a
+            // page of them does not reshuffle between two requests.
+            return byRung != 0 ? byRung : string.CompareOrdinal(left, right);
+        }
+    }
 }

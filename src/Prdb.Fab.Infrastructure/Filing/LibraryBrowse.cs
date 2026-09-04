@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core;
+using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Filing;
@@ -49,8 +50,16 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
 
         var total = await entries.CountAsync(cancellationToken);
         var rows = await entries
-            .OrderBy(row => row.Video.Title)
-            .ThenBy(row => row.Video.PrdbId)
+            // The normalised title, never the title: SQLite's default collation
+            // is BINARY, which reads "Zebra" as coming before "apple". ADR
+            // 0025's comparison form is already on the row, already required,
+            // and is lower cased, so ordering by it is one order on every
+            // provider. It leaves accents alone and so does this — SQLite has
+            // no collation here that would fold them. The id breaks the tie so
+            // that two entries do not swap places between two requests for the
+            // same page.
+            .OrderBy(row => row.Video.NormalisedTitle)
+            .ThenBy(row => row.Video.Id)
             .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new
@@ -72,8 +81,8 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             row.Title,
             row.Site,
             row.ReleaseDate,
-            row.Files.Select(file => file.QualityLabel).Distinct().Order().ToArray(),
-            row.Files.OrderByDescending(file => QualityRank(file.QualityLabel)).Select(file => file.RuntimeSeconds).FirstOrDefault()))
+            row.Files.Select(file => file.QualityLabel).Distinct().Order(VideoQuality.BestFirst).ToArray(),
+            row.Files.OrderBy(file => file.QualityLabel, VideoQuality.BestFirst).Select(file => file.RuntimeSeconds).FirstOrDefault()))
             .ToList();
 
         return new LibraryPage(
@@ -118,10 +127,9 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         var actors = actorRows
             .Select(actor => new LibraryActor(actor.PrdbId, actor.Name))
             .ToList();
-        var files = await context.VideoFiles
+        var files = (await context.VideoFiles
             .AsNoTracking()
             .Where(file => file.LibraryEntryVideoId == videoId)
-            .OrderByDescending(file => file.QualityLabel)
             .Select(file => new LibraryFile(
                 file.Id,
                 file.FiledPath,
@@ -131,7 +139,13 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
                 file.Width,
                 file.Height,
                 file.VideoCodec))
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            // Ordered here rather than in SQL, because the ladder is a rule and
+            // Core holds the rules (ADR 0035). An entry holds a handful of
+            // files, so the sort costs nothing.
+            .OrderBy(file => file.Quality, VideoQuality.BestFirst)
+            .ThenBy(file => file.Id)
+            .ToList();
 
         return new LibraryEntry(
             videoId,
@@ -165,30 +179,18 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             .Distinct()
             .OrderBy(actor => actor.Name)
             .ToListAsync(cancellationToken);
-        var qualities = await context.VideoFiles
+        var qualities = (await context.VideoFiles
             .AsNoTracking()
             .Select(file => file.QualityLabel)
             .Distinct()
-            .OrderBy(label => label)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Order(VideoQuality.BestFirst)
+            .ToList();
         return new LibraryFilters(
             siteRows.Select(site => new LibraryFilter(site.PrdbId, site.Title)).ToList(),
             actorRows.Select(actor => new LibraryFilter(actor.PrdbId, actor.Name)).ToList(),
             qualities);
     }
-
-    private static int QualityRank(string label) => label switch
-    {
-        "2160p" => 8,
-        "1440p" => 7,
-        "1080p" => 6,
-        "720p" => 5,
-        "576p" => 4,
-        "480p" => 3,
-        "360p" => 2,
-        "240p" => 1,
-        _ => 0,
-    };
 }
 
 public sealed record LibraryFilter(Guid Id, string Name);
