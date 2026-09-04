@@ -140,7 +140,7 @@ export function LibraryCardActions({ entry, returnTo }: { entry: LibraryCard; re
             type="button"
           >
             <Icon name="delete" />
-            <span>{preview.isPending ? 'Checking files…' : 'Delete Library Entry…'}</span>
+            <span>{preview.isPending ? 'Checking files…' : 'Delete Video…'}</span>
           </button>
         </span>}
       </span>

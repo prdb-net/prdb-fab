@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- The Library card action is now labelled "Delete Video" so its destructive
+  effect is immediately clear.
+
 ## [0.16.0] - 2026-09-04
 
 This release makes a held Library Entry actionable from its card and gives a
