@@ -1,0 +1,261 @@
+.screen {
+  container-type: inline-size;
+  margin: 0 auto;
+  max-width: 1280px;
+  min-width: 0;
+  padding: 1.5rem 1rem 7rem;
+}
+
+.heading {
+  align-items: baseline;
+  display: flex;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+
+.heading h1 { margin: 0; }
+.count, .lede, .detail, .status { color: var(--text-quiet); }
+.count { font-size: .9rem; }
+.lede { margin: 0 0 1.25rem; max-width: 65ch; }
+
+.filters {
+  align-items: end;
+  background: color-mix(in srgb, var(--surface-raised) 72%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin: 0 0 1.5rem;
+  padding: .75rem;
+}
+
+.filters label, .filterRail label {
+  color: var(--text-quiet);
+  display: grid;
+  font-size: .75rem;
+  font-weight: 650;
+  gap: .35rem;
+}
+
+.field {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  min-height: 2.35rem;
+  min-width: 10rem;
+  padding: .4rem .6rem;
+}
+
+.searchLabel { flex: 1 1 17rem; }
+.searchField { min-width: 0; width: 100%; }
+
+.catalogueGrid, .railGrid, .compactGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.catalogueGrid, .railGrid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.catalogueCard {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 0;
+}
+
+.artworkLink { display: block; position: relative; }
+.artwork {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+.artworkImage { height: 100%; object-fit: cover; width: 100%; }
+.artworkAbsent { color: var(--text-quiet); font-size: 1.6rem; }
+.held {
+  background: #132f28;
+  border: 1px solid #37816a;
+  border-radius: 999px;
+  bottom: .55rem;
+  color: #a5ecd0;
+  font-size: .72rem;
+  font-weight: 700;
+  left: .55rem;
+  padding: .18rem .5rem;
+  position: absolute;
+}
+
+.cardTitle {
+  display: -webkit-box;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.cardTitle a { color: var(--text); text-decoration: none; }
+.cardTitle a:hover, .entryLink:hover { text-decoration: underline; }
+.detail { font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status { font-size: .78rem; line-height: 1.4; }
+.entryLink { font-size: .85rem; min-height: 2.25rem; padding-top: .35rem; }
+
+.railLayout {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+}
+.filterRail {
+  background: color-mix(in srgb, var(--surface-raised) 72%, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  display: grid;
+  gap: 1rem;
+  padding: .9rem;
+  position: sticky;
+  top: 1rem;
+}
+.filterRail .field { min-width: 0; width: 100%; }
+.railFilter { border-top: 1px solid var(--border); padding-top: .85rem; }
+.clearButton {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: .8rem;
+  justify-self: start;
+  padding: 0;
+}
+.railGrid { grid-template-columns: repeat(auto-fill, minmax(225px, 1fr)); }
+
+.compactScreen { max-width: 1120px; }
+.compactHead {
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  margin-bottom: 1.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.compactHead .filters { margin-bottom: 0; }
+.compactGrid { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.compactCard {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  display: grid;
+  gap: .8rem;
+  grid-template-columns: 9rem minmax(0, 1fr) 2rem;
+  min-width: 0;
+  overflow: hidden;
+  padding: .55rem;
+}
+.compactArtworkLink { display: block; }
+.compactArtwork {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+.compactBody { display: grid; gap: .2rem; min-width: 0; }
+.qualityList { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .25rem; }
+.quality {
+  border: 1px solid #37816a;
+  border-radius: 999px;
+  color: #a5ecd0;
+  font-size: .7rem;
+  padding: .08rem .36rem;
+}
+.compactArrow { color: var(--text-quiet); font-size: 1.25rem; text-decoration: none; }
+.compactCard:hover { border-color: #465160; }
+.compactCard:hover .compactArrow { color: var(--accent); }
+
+.empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  padding: 2rem 1.5rem;
+}
+.error { color: var(--bad); }
+.pager {
+  align-items: center;
+  color: var(--text-quiet);
+  display: flex;
+  font-size: .9rem;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+.pager button {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: .4rem .9rem;
+}
+.pager button:disabled { color: var(--text-quiet); cursor: default; }
+
+.prototypeSwitcher {
+  align-items: stretch;
+  background: #f2f5f9;
+  border-radius: 999px;
+  bottom: 1rem;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, .55);
+  color: #0e1116;
+  display: flex;
+  left: 50%;
+  overflow: hidden;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 99;
+}
+.prototypeSwitcher span { font-size: .8rem; font-weight: 750; min-width: 13rem; padding: .6rem .9rem; text-align: center; }
+.prototypeSwitcher button { background: transparent; border: 0; color: inherit; cursor: pointer; font-weight: 750; padding: .6rem .85rem; }
+.prototypeSwitcher button:hover { background: #dde3ec; }
+
+@container (max-width: 54rem) {
+  .compactGrid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@container (max-width: 45rem) {
+  .railLayout { grid-template-columns: minmax(0, 1fr); }
+  .filterRail { grid-template-columns: repeat(2, minmax(0, 1fr)); position: static; }
+  .filterRail .searchLabel { grid-column: 1 / -1; }
+  .railFilter { border-top: 0; padding-top: 0; }
+}
+
+@media (max-width: 600px) {
+  .catalogueGrid, .railGrid { gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
+  .filters { align-items: stretch; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filters .searchLabel { grid-column: 1 / -1; }
+  .filters .field { min-width: 0; width: 100%; }
+  .entryLink { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); min-height: 2.75rem; padding: .55rem; text-align: center; text-decoration: none; }
+  .compactCard { grid-template-columns: 7rem minmax(0, 1fr) 1.25rem; }
+  .prototypeSwitcher { bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 420px) {
+  .filterRail { grid-template-columns: minmax(0, 1fr); }
+  .compactCard { align-items: start; grid-template-columns: 6rem minmax(0, 1fr); }
+  .compactArrow { display: none; }
+  .prototypeSwitcher span { min-width: 10rem; }
+}

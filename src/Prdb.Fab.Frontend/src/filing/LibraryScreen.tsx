@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router'
 
 import { readLibrary } from '../api/client.ts'
 import { Artwork } from '../catalogue/Grid.tsx'
+import { LibraryPrototype, type LibraryPrototypeVariant } from './LibraryPrototype.tsx'
 import styles from './Filing.module.css'
 
 export function LibraryScreen() {
@@ -20,6 +21,7 @@ export function LibraryScreen() {
     placeholderData: (held) => held,
   })
   const data = library.data
+  const prototypeVariant = variantFrom(parameters.get('variant'))
   useEffect(() => setSearchInput(search), [search])
   useEffect(() => {
     if (searchInput === search) return
@@ -48,6 +50,29 @@ export function LibraryScreen() {
     else next.set('page', String(wanted))
     setParameters(next)
     window.scrollTo({ top: 0 })
+  }
+  const clearFilters = () => {
+    const next = new URLSearchParams(parameters)
+    for (const name of ['search', 'site', 'actor', 'quality', 'page']) next.delete(name)
+    setSearchInput('')
+    setParameters(next, { replace: true })
+  }
+
+  if (import.meta.env.DEV) {
+    return <LibraryPrototype
+      variant={prototypeVariant}
+      data={data}
+      isError={library.isError}
+      searchInput={searchInput}
+      site={site}
+      actor={actor}
+      quality={quality}
+      page={page}
+      onSearchChange={setSearchInput}
+      onFilterChange={setFilter}
+      onClearFilters={clearFilters}
+      onPageChange={goTo}
+    />
   }
 
   return (
@@ -104,4 +129,8 @@ export function LibraryScreen() {
       <div className={styles.pager}><button className={styles.button} disabled={page <= 1} onClick={() => goTo(page - 1)}>Previous</button><span>Page {page}</span><button className={styles.button} disabled={!data || page * Number(data.pageSize) >= Number(data.total)} onClick={() => goTo(page + 1)}>Next</button></div>
     </main>
   )
+}
+
+function variantFrom(value: string | null): LibraryPrototypeVariant {
+  return value === 'B' || value === 'C' ? value : 'A'
 }
