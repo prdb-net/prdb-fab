@@ -16,14 +16,14 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                 table: "installation",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<bool>(
                 name: "ReportFulfilments",
                 table: "installation",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.CreateTable(
                 name: "reported_state",
@@ -46,7 +46,7 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                 keyColumn: "Id",
                 keyValue: 1,
                 columns: new[] { "ReportConfirmedAssignments", "ReportFulfilments" },
-                values: new object[] { false, false });
+                values: new object[] { true, true });
         }
 
         /// <inheritdoc />

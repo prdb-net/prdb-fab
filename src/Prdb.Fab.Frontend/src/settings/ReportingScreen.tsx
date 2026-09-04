@@ -11,10 +11,10 @@ export function ReportingScreen() {
   const [fulfilments, setFulfilments] = useState<boolean | null>(null)
   const [assignments, setAssignments] = useState<boolean | null>(null)
   const [saved, setSaved] = useState(false)
-  const reportFulfilments = fulfilments ?? settings.data?.reportFulfilments ?? false
+  const reportFulfilments = fulfilments ?? settings.data?.reportFulfilments ?? true
   const reportConfirmedAssignments = assignments
     ?? settings.data?.reportConfirmedAssignments
-    ?? false
+    ?? true
   const save = useMutation({
     mutationFn: () => saveReportingSettings(reportFulfilments, reportConfirmedAssignments),
     onSuccess: (answer) => {
@@ -28,7 +28,7 @@ export function ReportingScreen() {
   return (
     <SettingsPage
       title="Reporting"
-      lede="Nothing is sent back to prdb unless its own switch is enabled. Both channels are off by default and use the same governed background routine."
+      lede="Both channels are enabled by default, remain independently configurable, and use the same governed background routine."
     >
       <form
         className={formStyles.form}

@@ -11,7 +11,7 @@ public sealed record ReportingSettingsState(
     bool ReportConfirmedAssignments,
     int ConfirmedAssignmentBacklog);
 
-/// <summary>The two independent, opt-in Reporting channels.</summary>
+/// <summary>The two independent Reporting channels.</summary>
 public sealed class ReportingSettings(
     FabDbContext context,
     FulfilmentDifference fulfilments,

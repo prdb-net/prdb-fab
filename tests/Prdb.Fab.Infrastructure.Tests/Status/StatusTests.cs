@@ -219,7 +219,9 @@ public sealed class StatusTests
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
             await context.Installation.ExecuteUpdateAsync(
-                update => update.SetProperty(row => row.PrdbUserHash, "account"),
+                update => update
+                    .SetProperty(row => row.PrdbUserHash, "account")
+                    .SetProperty(row => row.ReportConfirmedAssignments, false),
                 TestContext.Current.CancellationToken);
             context.ConfirmedAssignments.Add(new ConfirmedAssignmentRow
             {

@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- New installations enable both prdb Reporting channels by default. Existing
+  installations keep their saved Fulfilment and Confirmed Assignment choices.
+
 ## [0.14.2] - 2026-09-02
 
 This patch release makes the Operation Log easier to scan while preserving the
