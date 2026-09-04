@@ -33,6 +33,7 @@
   min-width: 0;
   padding: 0.38rem 0.65rem;
   text-decoration: none;
+  font: inherit;
 }
 
 .iconButton {
@@ -72,6 +73,11 @@
 .iconButton:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+.primary:disabled {
+  cursor: progress;
+  opacity: 0.72;
 }
 
 .icon {

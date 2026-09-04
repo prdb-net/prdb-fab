@@ -1,4 +1,5 @@
 using Prdb.Fab.Core.Access;
+using Prdb.Fab.Core.Acquisition;
 
 namespace Prdb.Fab.Infrastructure.Persistence;
 
@@ -115,6 +116,9 @@ public sealed class InstallationRow
 
     /// <summary>ADR 0008's per-Video Download budget.</summary>
     public int RetryBudget { get; set; } = 3;
+
+    /// <summary>The highest named Quality a Catalogue-card Download may choose.</summary>
+    public PreferredDownloadQuality PreferredDownloadQuality { get; set; } = PreferredDownloadQuality.P2160;
 
     /// <summary>ADR 0007's ceiling on unfinished automatic Downloads.</summary>
     public int AutomaticDownloadCap { get; set; } = 20;

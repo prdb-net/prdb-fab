@@ -1,6 +1,6 @@
 # A setting exists where the tool cannot know the answer, and its form is the onboarding step
 
-Everything editable after onboarding lives on seven routes under `/settings`,
+Everything editable after onboarding lives on eight routes under `/settings`,
 and the connection forms among them are literally the onboarding steps, wrapped
 differently. A value earns a place here only where the tool cannot read the
 answer for itself, which is
@@ -29,13 +29,14 @@ observable either, so the retry budget is a field. Applied consistently it
 produces a short surface, and more usefully it settles future arguments about
 adding to it without reopening this decision.
 
-The seven groups:
+The eight groups:
 
 | Route | Holds |
 |---|---|
 | **Connections** | the prdb key with its `userHash`; SABnzbd with URL, key, category and path mapping; the indexers as a list |
 | **Identification** | the two confidence gates of [ADR 0006](0006-acting-alone-needs-a-named-video-and-an-allowed-confidence.md) |
 | **Library** | the library root; the leftover deletion switch of [ADR 0005](0005-the-first-release-files-into-the-jellyfin-layout.md) |
+| **Downloads** | the Preferred Download Quality ceiling of [ADR 0052](0052-catalogue-downloads-use-a-named-quality-ceiling.md) |
 | **Automation** | the rules of [ADR 0007](0007-automation-is-a-set-of-permissions-over-the-wanted-list.md); the cap on unfinished automatic downloads; the retry budget |
 | **Reporting** | the fulfilment switch of [ADR 0019](0019-fulfilment-understates-the-quality-and-is-retracted-only-by-a-person.md), and a named place for the second channel |
 | **Account** | the password change of [ADR 0010](0010-one-password-and-an-onboarding-that-requires-prdb-and-a-library.md) |

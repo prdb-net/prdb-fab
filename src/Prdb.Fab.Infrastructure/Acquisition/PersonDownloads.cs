@@ -82,7 +82,10 @@ public sealed class PersonDownloads(
     {
         var ranking = await rankings.ForVideoAsync(videoId, observeDecision: false, cancellationToken);
         if (ranking is null) return null;
-        if (ranking.Ranked.FirstOrDefault() is not { } best)
+        var preferred = await context.Installation
+            .Select(row => row.PreferredDownloadQuality)
+            .SingleAsync(cancellationToken);
+        if (PreferredReleaseSelection.Best(ranking.Ranked, preferred, release => release.Title) is not { } best)
         {
             await PersistWantedIntentAsync(videoId, cancellationToken);
             var outcome = ranking.DownloadsSpent >= ranking.RetryBudget

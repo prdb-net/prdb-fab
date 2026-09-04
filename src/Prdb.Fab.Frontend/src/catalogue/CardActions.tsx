@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 
-import { setWanted, type VideoCard } from '../api/client.ts'
+import { downloadBest, setWanted, type VideoCard } from '../api/client.ts'
 import { videoReleasePath } from '../release/routes.ts'
 import { prdbVideoUrl } from './prdb.ts'
 import styles from './CardActions.module.css'
@@ -31,15 +31,31 @@ export function CardActions({
       }
     },
   })
-  const verdict = preference.data
-  const problem = preference.error?.message
-    ?? (verdict && verdict.outcome !== 'Updated' ? verdict.detail : null)
+  const download = useMutation({
+    mutationFn: () => downloadBest(video.prdbId),
+    onSuccess: async () => {
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: ['catalogue'] }),
+        cache.invalidateQueries({ queryKey: ['downloads'] }),
+        cache.invalidateQueries({ queryKey: ['releases'] }),
+      ])
+    },
+  })
+  const preferenceVerdict = preference.data
+  const preferenceProblem = preference.error?.message
+    ?? (preferenceVerdict && preferenceVerdict.outcome !== 'Updated' ? preferenceVerdict.detail : null)
+  const downloadVerdict = download.data
+  const downloadFailed = downloadVerdict
+    && !['Submitted', 'Pending', 'SubmissionUnknown'].includes(downloadVerdict.outcome)
+  const downloadProblem = download.error?.message ?? (downloadFailed ? downloadVerdict.detail : null)
+  const problem = downloadProblem ?? preferenceProblem
   const held = Boolean(video.heldQualities?.length)
-  const releaseLabel = held ? 'View Library' : video.downloadReady ? 'Download' : 'Search'
+  const canDownload = video.downloadReady && !video.outstanding && !held
+  const releaseLabel = held ? 'View Library' : canDownload ? 'Download' : 'Search'
   const releaseDescription = held
     ? `View ${video.title} in the Library`
-    : video.downloadReady
-      ? `Open Releases for ${video.title} to Download`
+    : canDownload
+      ? `Download the preferred available Quality of ${video.title}`
       : `Search Indexers for ${video.title}`
   const primaryPath = held
     ? `/library/${video.prdbId}`
@@ -49,15 +65,30 @@ export function CardActions({
   return (
     <span className={styles.control}>
       <span className={styles.actions}>
-        <Link
-          aria-label={releaseDescription}
-          className={styles.primary}
-          title={releaseDescription}
-          to={primaryPath}
-        >
-          <Icon name={held ? 'library' : video.downloadReady ? 'download' : 'search'} />
-          <span>{releaseLabel}</span>
-        </Link>
+        {canDownload ? (
+          <button
+            aria-busy={download.isPending}
+            aria-label={releaseDescription}
+            className={styles.primary}
+            disabled={download.isPending}
+            onClick={() => download.mutate()}
+            title={releaseDescription}
+            type="button"
+          >
+            <Icon name="download" />
+            <span>{download.isPending ? 'Starting…' : releaseLabel}</span>
+          </button>
+        ) : (
+          <Link
+            aria-label={releaseDescription}
+            className={styles.primary}
+            title={releaseDescription}
+            to={primaryPath}
+          >
+            <Icon name={held ? 'library' : 'search'} />
+            <span>{releaseLabel}</span>
+          </Link>
+        )}
 
         <button
           aria-label={wantedLabel}
@@ -80,8 +111,8 @@ export function CardActions({
           <span>{problem}</span>
           <button
             type="button"
-            disabled={preference.isPending}
-            onClick={() => preference.mutate()}
+            disabled={preference.isPending || download.isPending}
+            onClick={() => downloadProblem ? download.mutate() : preference.mutate()}
           >
             Retry
           </button>
@@ -154,15 +185,13 @@ function MoreActions({
 
       {open && (
         <span className={styles.menu} id={menuId}>
-          {video.heldQualities?.length && (
-            <Link
-              to={videoReleasePath(video.prdbId, returnTo)}
-              onClick={() => setOpen(false)}
-            >
-              <Icon name="search" />
-              <span>Find another Release</span>
-            </Link>
-          )}
+          <Link
+            to={videoReleasePath(video.prdbId, returnTo)}
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="search" />
+            <span>{video.heldQualities?.length ? 'Find another Release' : 'View Releases'}</span>
+          </Link>
           {includeSite && video.sitePrdbId && (
             <Link to={`/sites/${video.sitePrdbId}`} onClick={() => setOpen(false)}>
               <Icon name="site" />

@@ -11,6 +11,7 @@ public static class AcquisitionServiceCollectionExtensions
     public static IServiceCollection AddFabAcquisition(this IServiceCollection services)
     {
         services.AddScoped<ReleaseRankings>();
+        services.AddScoped<DownloadSettings>();
         services.AddScoped<AccountPreferences>();
         services.AddScoped<PersonDownloads>();
         services.AddScoped<DownloadSubmissionRoutine>();

@@ -38,6 +38,8 @@ export type StatusState = Schema['StatusState']
 export type RunNowVerdict = Schema['RunNowVerdict']
 
 export type VideoCard = Schema['VideoCard']
+export type PreferredDownloadQuality = Schema['PreferredDownloadQuality']
+export type DownloadSettingsState = Schema['DownloadSettingsState']
 export type VideoPage = Schema['VideoPage']
 export type CatalogueVideoFilter = Schema['CatalogueVideoFilter']
 export type CatalogueVideoSort = Schema['CatalogueVideoSort']
@@ -376,6 +378,16 @@ export async function setFavouriteSite(prdbId: string, desired: boolean): Promis
 
 export async function downloadBest(prdbId: string): Promise<DownloadVerdict> {
   return post<DownloadVerdict>(`/api/catalogue/videos/${segment(prdbId)}/download-best`)
+}
+
+export async function readDownloadSettings(): Promise<DownloadSettingsState> {
+  return json<DownloadSettingsState>(await fetch('/api/settings/downloads'))
+}
+
+export async function saveDownloadSettings(
+  preferredQuality: PreferredDownloadQuality,
+): Promise<DownloadSettingsState> {
+  return post<DownloadSettingsState>('/api/settings/downloads', { preferredQuality })
 }
 
 async function preference(path: string, desired: boolean): Promise<AccountPreferenceVerdict> {
