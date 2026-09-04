@@ -128,7 +128,15 @@ public sealed class WhatsNewRouteTests
     {
         await using var application = new FabApplication();
         using var client = await application.SignedInClientAsync();
-        await FillAsync(application, ("Ready", 1), ("Needs inspection", 2), ("Held", 3));
+        await FillAsync(
+            application,
+            ("Ready", 1),
+            ("Needs inspection", 2),
+            ("Held", 3),
+            ("Processing", 4));
+
+        var outstandingDownloadId = Guid.CreateVersion7();
+        var processingDownloadId = Guid.CreateVersion7();
 
         await using (var scope = application.Services.CreateAsyncScope())
         {
@@ -153,12 +161,24 @@ public sealed class WhatsNewRouteTests
             context.WantedVideos.Add(new WantedVideoRow { VideoId = videos["Held"].Id, SinceAt = Noon });
             context.Downloads.Add(new DownloadRow
             {
-                Id = Guid.CreateVersion7(),
+                Id = outstandingDownloadId,
                 VideoId = videos["Held"].PrdbId,
                 IndexerId = indexer.Id,
                 DerivedReleaseId = "held",
                 SubmittedName = "held",
                 State = DownloadState.Outstanding,
+                OutstandingSince = Noon,
+                OriginIsPerson = true,
+                CreatedAt = Noon,
+            });
+            context.Downloads.Add(new DownloadRow
+            {
+                Id = processingDownloadId,
+                VideoId = videos["Processing"].PrdbId,
+                IndexerId = indexer.Id,
+                DerivedReleaseId = "processing",
+                SubmittedName = "processing",
+                State = DownloadState.Completed,
                 OutstandingSince = Noon,
                 OriginIsPerson = true,
                 CreatedAt = Noon,
@@ -185,7 +205,12 @@ public sealed class WhatsNewRouteTests
         Assert.Equal("ReleasesNeedInspection", cards["Needs inspection"].Availability);
         Assert.True(cards["Held"].Wanted);
         Assert.True(cards["Held"].Outstanding);
+        Assert.Equal(outstandingDownloadId, cards["Held"].ActiveDownloadId);
+        Assert.Equal("Outstanding", cards["Held"].ActiveDownloadState);
         Assert.Equal(["1080p"], cards["Held"].HeldQualities);
+        Assert.False(cards["Processing"].Outstanding);
+        Assert.Equal(processingDownloadId, cards["Processing"].ActiveDownloadId);
+        Assert.Equal("Completed", cards["Processing"].ActiveDownloadState);
     }
 
     /// <summary>
@@ -292,7 +317,9 @@ public sealed class WhatsNewRouteTests
         bool Wanted,
         bool Outstanding,
         IReadOnlyList<string>? HeldQualities,
-        string Availability);
+        string Availability,
+        Guid? ActiveDownloadId,
+        string? ActiveDownloadState);
 
     private sealed record Answer(
         IReadOnlyList<Card> Videos,

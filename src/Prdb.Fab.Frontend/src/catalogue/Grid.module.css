@@ -37,7 +37,8 @@
 }
 
 .ready,
-.held {
+.held,
+.downloading {
   border-radius: 999px;
   bottom: 0.55rem;
   font-size: 0.72rem;
@@ -57,6 +58,12 @@
   background: #132f28;
   border: 1px solid #37816a;
   color: #a5ecd0;
+}
+
+.downloading {
+  background: #182b3d;
+  border: 1px solid #315574;
+  color: #b6d8f4;
 }
 
 .image {

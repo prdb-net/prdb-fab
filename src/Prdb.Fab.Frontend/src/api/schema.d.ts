@@ -3889,6 +3889,9 @@ export interface components {
             outstanding: boolean;
             heldQualities?: null | string[];
             availability?: components["schemas"]["VideoAvailability"];
+            /** Format: uuid */
+            activeDownloadId?: null | string;
+            activeDownloadState?: null | components["schemas"]["DownloadState"];
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];

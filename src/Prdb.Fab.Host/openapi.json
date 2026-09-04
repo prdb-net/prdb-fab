@@ -6924,6 +6924,23 @@
           },
           "availability": {
             "$ref": "#/components/schemas/VideoAvailability"
+          },
+          "activeDownloadId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "activeDownloadState": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DownloadState"
+              }
+            ]
           }
         }
       },

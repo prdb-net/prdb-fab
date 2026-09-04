@@ -498,11 +498,19 @@ public sealed class CatalogueBrowse(
             .Where(row => localIds.Contains(row.VideoId))
             .Select(row => row.Video!.PrdbId)
             .ToListAsync(cancellationToken);
-        var outstanding = await context.Downloads
-            .Where(row => ids.Contains(row.VideoId) && row.State == DownloadState.Outstanding)
-            .Select(row => row.VideoId)
-            .Distinct()
+        var activeDownloadRows = await context.Downloads
+            .Where(row => ids.Contains(row.VideoId)
+                && (row.State == DownloadState.Outstanding || row.State == DownloadState.Completed))
+            .Select(row => new { row.Id, row.VideoId, row.State, row.CreatedAt })
             .ToListAsync(cancellationToken);
+        var activeDownloads = activeDownloadRows
+            .GroupBy(row => row.VideoId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(row => row.CreatedAt)
+                    .ThenByDescending(row => row.Id)
+                    .First());
         var qualityRows = await context.VideoFiles
             .Where(row => ids.Contains(row.LibraryEntryVideoId))
             .Select(row => new { VideoId = row.LibraryEntryVideoId, row.QualityLabel })
@@ -526,7 +534,6 @@ public sealed class CatalogueBrowse(
             .ToDictionaryAsync(row => row.EntityId, cancellationToken);
 
         var wantedSet = wanted.ToHashSet();
-        var outstandingSet = outstanding.ToHashSet();
         var matchedSet = matched.ToHashSet();
         return [.. videos.Select(video => video with
         {
@@ -534,13 +541,15 @@ public sealed class CatalogueBrowse(
             Wanted = wantedSet.Contains(video.PrdbId),
             WantedSyncPending = wantedWrites.TryGetValue(video.PrdbId, out var write) && !write.Blocked,
             WantedSyncFailure = wantedWrites.GetValueOrDefault(video.PrdbId)?.LastFailure,
-            Outstanding = outstandingSet.Contains(video.PrdbId),
+            Outstanding = activeDownloads.GetValueOrDefault(video.PrdbId)?.State == DownloadState.Outstanding,
             HeldQualities = qualities.GetValueOrDefault(video.PrdbId, []),
             Availability = ready.Contains(video.PrdbId)
                 ? VideoAvailability.Ready
                 : matchedSet.Contains(video.Id)
                     ? VideoAvailability.ReleasesNeedInspection
                     : VideoAvailability.NoIdentifiedRelease,
+            ActiveDownloadId = activeDownloads.GetValueOrDefault(video.PrdbId)?.Id,
+            ActiveDownloadState = activeDownloads.GetValueOrDefault(video.PrdbId)?.State,
         })];
     }
 }
@@ -582,7 +591,9 @@ public sealed record VideoCard(
     string? WantedSyncFailure = null,
     bool Outstanding = false,
     IReadOnlyList<string>? HeldQualities = null,
-    VideoAvailability Availability = VideoAvailability.NoIdentifiedRelease);
+    VideoAvailability Availability = VideoAvailability.NoIdentifiedRelease,
+    Guid? ActiveDownloadId = null,
+    DownloadState? ActiveDownloadState = null);
 
 public enum VideoAvailability
 {
