@@ -1391,6 +1391,7 @@ export interface paths {
             parameters: {
                 query?: {
                     page?: number | string;
+                    downloadReady?: boolean;
                 };
                 header?: never;
                 path?: never;

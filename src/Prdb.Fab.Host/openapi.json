@@ -1143,6 +1143,14 @@
               "format": "int32",
               "default": 1
             }
+          },
+          {
+            "name": "downloadReady",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {

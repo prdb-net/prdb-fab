@@ -25,8 +25,9 @@ public static class CatalogueEndpoints
         group.MapGet("/whats-new", async (
             CatalogueBrowse browse,
             CancellationToken cancellationToken,
-            int page = 1) =>
-            TypedResults.Ok(await browse.WhatsNewAsync(page, cancellationToken)));
+            int page = 1,
+            bool downloadReady = false) =>
+            TypedResults.Ok(await browse.WhatsNewAsync(page, downloadReady, cancellationToken)));
         group.MapPost("/whats-new/observed", async (
             WhatsNewObservation observation,
             CatalogueBrowse browse,

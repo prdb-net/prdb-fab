@@ -50,13 +50,27 @@ public sealed class CatalogueBrowse(
     /// Counted from one, because it is in the address bar (ADR 0036) and a
     /// person reads it there.
     /// </param>
-    public async Task<WhatsNewPage> WhatsNewAsync(int page, CancellationToken cancellationToken)
+    public async Task<WhatsNewPage> WhatsNewAsync(
+        int page,
+        bool downloadReady,
+        CancellationToken cancellationToken)
     {
         var wanted = Paging.Wanted(page);
+        var query = context.CatalogueVideos.AsNoTracking();
 
-        var total = await context.CatalogueVideos.CountAsync(cancellationToken);
+        if (downloadReady)
+        {
+            var retryBudget = await context.Installation
+                .Select(row => row.RetryBudget)
+                .SingleAsync(cancellationToken);
+            var readyVideoIds = ReadyVideoIds(retryBudget);
+            query = DirectlyDownloadable(query)
+                .Where(row => readyVideoIds.Contains(row.Id));
+        }
 
-        var videos = await context.CatalogueVideos
+        var total = await query.CountAsync(cancellationToken);
+
+        var videos = await query
             // The order prdb publishes in, with the id breaking the tie so that
             // two requests for one page cannot answer with the same video in two
             // places (ADR 0036: a page has to be linkable, and a page whose
@@ -79,7 +93,7 @@ public sealed class CatalogueBrowse(
             .SingleAsync(cancellationToken);
         var newCount = observed.WhatsNewObservedAt is null
             ? total
-            : await context.CatalogueVideos.CountAsync(row =>
+            : await query.CountAsync(row =>
                 row.CreatedAtUtc > observed.WhatsNewObservedAt
                 || (row.CreatedAtUtc == observed.WhatsNewObservedAt
                     && row.Id > observed.WhatsNewObservedVideoId), cancellationToken);
@@ -195,7 +209,8 @@ public sealed class CatalogueBrowse(
         {
             CatalogueVideoFilter.All => query,
             CatalogueVideoFilter.Available => Available(query),
-            CatalogueVideoFilter.DownloadReady => query.Where(row => readyVideoIds!.Contains(row.Id)),
+            CatalogueVideoFilter.DownloadReady => DirectlyDownloadable(query)
+                .Where(row => readyVideoIds!.Contains(row.Id)),
             CatalogueVideoFilter.NeedsSearch => Available(query).Where(row => !readyVideoIds!.Contains(row.Id)),
             CatalogueVideoFilter.Wanted => query.Where(row =>
                 context.WantedVideos.Any(wanted => wanted.VideoId == row.Id)),
@@ -418,6 +433,18 @@ public sealed class CatalogueBrowse(
             !context.VideoFiles.Any(file => file.LibraryEntryVideoId == row.PrdbId)
             && !context.Downloads.Any(download =>
                 download.VideoId == row.PrdbId && download.State == DownloadState.Outstanding));
+
+    /// <summary>
+    /// Videos whose cards can expose their immediate Download action: nothing
+    /// is held and no Download is still active or waiting to be filed.
+    /// </summary>
+    private IQueryable<CatalogueVideoRow> DirectlyDownloadable(IQueryable<CatalogueVideoRow> query) =>
+        query.Where(row =>
+            !context.VideoFiles.Any(file => file.LibraryEntryVideoId == row.PrdbId)
+            && !context.Downloads.Any(download =>
+                download.VideoId == row.PrdbId
+                && (download.State == DownloadState.Outstanding
+                    || download.State == DownloadState.Completed)));
 
     /// <summary>
     /// The SQL-sized counterpart of <see cref="ReleaseRankings.ReadyVideosAsync"/>.

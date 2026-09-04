@@ -64,6 +64,41 @@ public sealed class CatalogueSearchRouteTests
         Assert.Equal("Ready scene", relevant.Videos[0].Title);
     }
 
+    [Fact]
+    public async Task Download_ready_means_the_card_can_start_a_download_now()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        await SeedAsync(application);
+
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var ready = await context.CatalogueVideos.SingleAsync(
+                row => row.Title == "Ready scene",
+                TestContext.Current.CancellationToken);
+            var release = await context.Releases.SingleAsync(
+                TestContext.Current.CancellationToken);
+            context.Downloads.Add(new DownloadRow
+            {
+                Id = Guid.CreateVersion7(),
+                VideoId = ready.PrdbId,
+                IndexerId = release.IndexerId,
+                DerivedReleaseId = "processing-other-release",
+                SubmittedName = "Ready.Scene.720p",
+                State = DownloadState.Completed,
+                OutstandingSince = Noon,
+                CreatedAt = Noon,
+                OriginIsPerson = true,
+            });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var page = await ReadAsync(client, "filter=DownloadReady");
+
+        Assert.Empty(page.Videos);
+    }
+
     private static async Task<Page> ReadAsync(HttpClient client, string query) =>
         (await client.GetFromJsonAsync<Page>(
             "/api/catalogue/videos" + (query.Length > 0 ? $"?{query}" : string.Empty),

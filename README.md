@@ -70,6 +70,9 @@ the sites and actors behind them, your wanted list and your favourites, and one
 picture per video. **What's new**, **Search**, **Sites**, **Actors** and
 **Wanted** show that catalogue. Wanted and Favourite actions are written to
 prdb through the same governed connection used by the background sync.
+**What's new** and **Search** can be narrowed to Videos whose cards can start a
+Download immediately; held Videos and Videos with an active Download are not
+included in that view.
 
 Each enabled indexer is also walked continuously. Releases enter a local,
 disposable cache, are screened against the catalogue, and prdb is asked to

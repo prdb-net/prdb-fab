@@ -77,6 +77,47 @@ public sealed class WhatsNewRouteTests
             third.Videos.Select(video => video.Title));
     }
 
+    [Fact]
+    public async Task Download_ready_filters_before_counting_and_paging()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        await FillAsync(
+            application,
+            ("Ready", 1),
+            ("Password protected", 2),
+            ("No Release", 3));
+
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var videos = await context.CatalogueVideos.ToDictionaryAsync(
+                row => row.Title,
+                TestContext.Current.CancellationToken);
+            var indexer = new IndexerRow
+            {
+                Id = Guid.NewGuid(),
+                Name = "Fixture",
+                Url = "https://indexer.invalid/api",
+                ApiKey = "fixture",
+                Categories = "Adult",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+                Rank = 1,
+            };
+            context.Indexers.Add(indexer);
+            context.Releases.AddRange(
+                Release(videos["Ready"].Id, indexer.Id, "ready", password: null),
+                Release(videos["Password protected"].Id, indexer.Id, "protected", password: "1"));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var page = await ReadAsync(client, page: 1, downloadReady: true);
+
+        Assert.Equal(1, page.Total);
+        Assert.Equal("Ready", Assert.Single(page.Videos).Title);
+        Assert.True(page.Videos[0].DownloadReady);
+    }
+
     /// <summary>
     /// ADR 0027 has the library grid never read the library; the counterpart
     /// here is that a browse grid never reads prdb. Asserted against a socket
@@ -254,10 +295,13 @@ public sealed class WhatsNewRouteTests
         Assert.Equal(HttpStatusCode.Unauthorized, answer.StatusCode);
     }
 
-    private static async Task<Answer> ReadAsync(HttpClient client, int page)
+    private static async Task<Answer> ReadAsync(
+        HttpClient client,
+        int page,
+        bool downloadReady = false)
     {
         using var answer = await client.GetAsync(
-            $"/api/catalogue/whats-new?page={page}",
+            $"/api/catalogue/whats-new?page={page}&downloadReady={downloadReady}",
             TestContext.Current.CancellationToken);
 
         answer.EnsureSuccessStatusCode();

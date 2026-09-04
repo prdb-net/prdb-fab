@@ -17,6 +17,28 @@
   max-width: 65ch;
 }
 
+.filter {
+  align-items: flex-start;
+  color: var(--text-quiet);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+  width: fit-content;
+}
+
+.filter select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  min-height: 2.6rem;
+  min-width: 13rem;
+  padding: 0.65rem 0.8rem;
+}
+
 .heading h1 {
   margin: 0;
 }

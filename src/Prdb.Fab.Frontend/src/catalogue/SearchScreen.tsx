@@ -164,7 +164,7 @@ function filterLabel(filter: CatalogueVideoFilter): string {
   const labels: Record<CatalogueVideoFilter, string> = {
     Available: 'Available to acquire',
     All: 'All locally known',
-    DownloadReady: 'Best Release ready',
+    DownloadReady: 'Ready to download',
     NeedsSearch: 'Needs an Indexer search',
     Wanted: 'Wanted',
     Held: 'In the Library',

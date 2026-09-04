@@ -306,8 +306,13 @@ export async function saveReportingSettings(
  * the page is a query over what the sync routines have already written, which
  * is why a reload spends no request (ADR 0018).
  */
-export async function listWhatsNew(page: number): Promise<WhatsNewPage> {
-  return json<WhatsNewPage>(await fetch(`/api/catalogue/whats-new?page=${page}`))
+export async function listWhatsNew(page: number, downloadReady: boolean): Promise<WhatsNewPage> {
+  return json<WhatsNewPage>(
+    await fetch(`/api/catalogue/whats-new?${parameters({
+      page: String(page),
+      downloadReady: downloadReady ? 'true' : '',
+    })}`),
+  )
 }
 
 export async function observeWhatsNew(videoId: number | string, createdAt: string): Promise<void> {

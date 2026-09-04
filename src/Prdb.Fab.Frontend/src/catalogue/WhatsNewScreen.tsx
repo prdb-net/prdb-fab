@@ -24,10 +24,11 @@ export function WhatsNewScreen() {
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const downloadReady = parameters.get('downloadReady') === 'true'
 
   const videos = useQuery({
-    queryKey: whatsNewKey(page),
-    queryFn: () => listWhatsNew(page),
+    queryKey: whatsNewKey(page, downloadReady),
+    queryFn: () => listWhatsNew(page, downloadReady),
     // The previous page stays on screen while the next one is read, so paging
     // does not flash the layout away and back.
     placeholderData: (held) => held,
@@ -43,13 +44,24 @@ export function WhatsNewScreen() {
   const checkpointCreatedAt = videos.data?.checkpointCreatedAt
 
   useEffect(() => {
-    if (page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
+    if (!downloadReady && page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
       void observeWhatsNew(checkpointVideoId, checkpointCreatedAt).catch(() => undefined)
     }
-  }, [page, checkpointVideoId, checkpointCreatedAt])
+  }, [downloadReady, page, checkpointVideoId, checkpointCreatedAt])
+
+  const setDownloadReady = (wanted: boolean) => {
+    const next = new URLSearchParams(parameters)
+    if (wanted) next.set('downloadReady', 'true')
+    else next.delete('downloadReady')
+    next.delete('page')
+    setParameters(next)
+  }
 
   const goTo = (wanted: number) => {
-    setParameters(wanted === 1 ? {} : { page: String(wanted) })
+    const next = new URLSearchParams(parameters)
+    if (wanted === 1) next.delete('page')
+    else next.set('page', String(wanted))
+    setParameters(next)
     window.scrollTo({ top: 0 })
   }
 
@@ -72,11 +84,24 @@ export function WhatsNewScreen() {
         discovery. Downloads start from a Video&rsquo;s Release page.
       </p>
 
+      <label className={styles.filter}>
+        Show
+        <select
+          value={downloadReady ? 'ready' : 'all'}
+          onChange={(event) => setDownloadReady(event.target.value === 'ready')}
+        >
+          <option value="all">All videos</option>
+          <option value="ready">Ready to download</option>
+        </select>
+      </label>
+
       {total === 0 ? (
         <p className={styles.empty}>
-          Nothing yet. prdb&rsquo;s catalogue is read in the background from the
-          minute a key is saved, and this fills in as it arrives — there is
-          nothing to press and nothing to wait in front of.
+          {downloadReady
+            ? 'No new Videos have a Release ready to download.'
+            : <>Nothing yet. prdb&rsquo;s catalogue is read in the background from the
+              minute a key is saved, and this fills in as it arrives — there is
+              nothing to press and nothing to wait in front of.</>}
         </p>
       ) : (
         <>
