@@ -19,6 +19,20 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-09-04
+
+This release makes every Actor a complete local profile and lets a person
+prepare a bounded recent slice of that Actor's Videos on demand.
+
+### Added
+
+- Actor pages now show the complete profile data published by prdb, including
+  aliases, biography, personal facts, career details and external links. Actor
+  search also finds aliases.
+- An Actor page can load up to the latest 500 credited Videos by Release Date.
+  The governed background fill shows progress, resumes after a restart and
+  keeps its current bounded result available in the local Catalogue.
+
 ## [0.17.0] - 2026-09-04
 
 This release turns the Review Queue into a focused comparison workspace so a
