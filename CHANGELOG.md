@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-09-04
+
+This patch release makes the Library feel like the held half of the same
+Catalogue browsing experience as What's New.
+
 ### Changed
 
 - Library now uses the same responsive artwork grid, page rhythm and card
