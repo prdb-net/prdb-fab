@@ -17,7 +17,7 @@ the way.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.17.0
+    image: prdbnet/prdb-fab:0.18.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -381,7 +381,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.17.0` | A release. This is what documentation and Compose files should pin. |
+| `0.18.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 
