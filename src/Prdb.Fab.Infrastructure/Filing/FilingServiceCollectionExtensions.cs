@@ -19,6 +19,7 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<ReviewVideoSearch>();
         services.AddScoped<ReviewDecisions>();
         services.AddScoped<LibraryBrowse>();
+        services.AddScoped<LibraryEntryDeletion>();
         services.AddScoped<OperationLogBrowse>();
         services.AddScoped<CollectingRoutine>();
         services.AddScoped<ArrivalIdentificationRoutine>();

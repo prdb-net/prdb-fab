@@ -50,7 +50,7 @@ Five acts, and no sixth:
 | **Filed** | one video file arrived in the library: where from, where to, the video, the quality |
 | **Relabelled** | an already filed file renamed to carry its quality label ([ADR 0017](0017-the-filed-path-is-computed-once-and-then-recorded-rather-than-recomputed.md)) |
 | **Replaced** | the arriving file took the filed file's place; names both, and the displaced file's deletion is part of this entry, not a second one |
-| **Deleted** | a video file the user deleted from the review queue |
+| **Deleted** | a video file the user deleted from the review queue, or by deleting its complete library entry |
 | **Tidied** | one download directory swept; names the leftovers that went |
 
 **Replaced is one entry and not two**, even though a video file was deleted in
@@ -103,8 +103,8 @@ Both, on every entry, because the log's whole value is separating the two cases
 the user cares about.
 
 **Actor** is the named routine that acted, or the person. ADR 0026's four
-routines and ADR 0027's repair pass all have names already, and ADR 0022 puts
-Delete and Replace in a person's hand.
+routines and ADR 0027's repair pass all have names already, and both a review
+queue Delete and a complete library-entry Delete are in a person's hand.
 
 **Reason** is the decision behind the act, at the resolution the act was decided
 at: the identification for a filing, the queue action for a delete or a replace,
@@ -244,11 +244,11 @@ Rejected under *actor and reason*: one fact, two places, two ways to go stale.
   one, the download it came from, the displaced file for a replace, the leftover
   names for a sweep, the actor, the reason, and the time. Indexed by video for
   the entry page. **Exported.**
-- The five writers are named and there are no others: filing and its relabel
-  (ADR 0026's file lane), the replace and the delete (ADR 0022's queue actions),
-  and the tidy-up (ADR 0026's bulk routine). Anything that later wants to write
-  a video file has to appear in that list, which is the check this decision
-  leaves behind.
+- The writers are named and there are no others: filing and its relabel
+  (ADR 0026's file lane), replace and review-queue Delete (ADR 0022's queue
+  actions), complete library-entry Delete, and tidy-up (ADR 0026's bulk
+  routine). Anything that later wants to write a video file has to appear in
+  that list, which is the check this decision leaves behind.
 - **The navigation gains a fourth sibling.** Library, Review queue, Downloads,
   Operation log. The log is the only one of the four with no count in the
   header, because nothing about it is waiting for a person.

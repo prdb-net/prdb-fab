@@ -47,10 +47,11 @@ export function ReportingScreen() {
           Report Fulfilments
         </label>
         <p className={formStyles.hint}>
-          {settings.data?.fulfilmentBacklog ?? 0} held Wanted Video(s) are waiting. Enabling
-          sends the Video, held state, real filing time and the highest prdb Quality the
-          Library Entry truthfully clears. Quality below 720p is left unstated; the
-          application is Other and no external ID is sent.
+          {settings.data?.fulfilmentBacklog ?? 0} local Fulfilment change(s) are waiting.
+          Enabling sends the Video, held state, real filing time and the highest prdb
+          Quality the Library Entry truthfully clears. Deliberately deleting a Library
+          Entry retracts that state. Quality below 720p is left unstated; the application
+          is Other and no external ID is sent.
         </p>
         <p className={formStyles.hint}>
           Turning this off stops future reports. It does not retract anything already at

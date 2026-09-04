@@ -2445,6 +2445,82 @@
         }
       }
     },
+    "/api/library/{videoId}/delete/preview": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryEntryDeletePreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/library/{videoId}/delete": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryEntryDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryEntryDeleteVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/settings/reporting": {
       "get": {
         "tags": [
@@ -4153,6 +4229,116 @@
           },
           "operations": {
             "$ref": "#/components/schemas/OperationLogPage"
+          }
+        }
+      },
+      "LibraryEntryDeleteFile": {
+        "required": [
+          "id",
+          "fileName",
+          "path",
+          "quality",
+          "sizeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "quality": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "LibraryEntryDeleteOutcome": {
+        "enum": [
+          "Ready",
+          "EntryChanged",
+          "Deleted"
+        ]
+      },
+      "LibraryEntryDeletePreview": {
+        "required": [
+          "outcome",
+          "videoId",
+          "entryDirectory",
+          "files",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/LibraryEntryDeleteOutcome"
+          },
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entryDirectory": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LibraryEntryDeleteFile"
+            }
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "LibraryEntryDeleteRequest": {
+        "required": [
+          "videoFileIds"
+        ],
+        "type": "object",
+        "properties": {
+          "videoFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "LibraryEntryDeleteVerdict": {
+        "required": [
+          "outcome",
+          "deletedFiles",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/LibraryEntryDeleteOutcome"
+          },
+          "deletedFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
           }
         }
       },

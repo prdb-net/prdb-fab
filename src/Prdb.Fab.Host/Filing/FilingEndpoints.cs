@@ -111,6 +111,8 @@ public static class FilingEndpoints
             TypedResults.Ok(await browse.ReadAsync(
                 search, site, actor, quality, page, cancellationToken)));
         libraryEntries.MapGet("/{videoId:guid}", ReadLibraryEntryAsync);
+        libraryEntries.MapPost("/{videoId:guid}/delete/preview", PreviewLibraryEntryDeleteAsync);
+        libraryEntries.MapPost("/{videoId:guid}/delete", DeleteLibraryEntryAsync);
 
         routes.MapGet("/api/operation-log", async (
             OperationLogBrowse log,
@@ -130,6 +132,25 @@ public static class FilingEndpoints
         var entry = await browse.EntryAsync(videoId, cancellationToken);
         return entry is null ? TypedResults.NotFound() : TypedResults.Ok(entry);
     }
+
+    private static async Task<Results<Ok<LibraryEntryDeletePreview>, NotFound>> PreviewLibraryEntryDeleteAsync(
+        Guid videoId,
+        LibraryEntryDeletion deletion,
+        CancellationToken cancellationToken)
+    {
+        var preview = await deletion.PreviewAsync(videoId, cancellationToken);
+        return preview is null ? TypedResults.NotFound() : TypedResults.Ok(preview);
+    }
+
+    private static async Task<Results<Ok<LibraryEntryDeleteVerdict>, NotFound>> DeleteLibraryEntryAsync(
+        Guid videoId,
+        LibraryEntryDeleteRequest request,
+        LibraryEntryDeletion deletion,
+        CancellationToken cancellationToken)
+    {
+        var verdict = await deletion.DeleteAsync(videoId, request.VideoFileIds, cancellationToken);
+        return verdict is null ? TypedResults.NotFound() : TypedResults.Ok(verdict);
+    }
 }
 
 public sealed record IdentificationSettingsRequest(
@@ -143,6 +164,7 @@ public sealed record IdentificationSettingsVerdict(
     int ReleasesReconsidered);
 
 public sealed record LibrarySettingsRequest(bool DeleteLeftovers);
+public sealed record LibraryEntryDeleteRequest(IReadOnlyList<Guid> VideoFileIds);
 public sealed record ReviewSelectionRequest(IReadOnlyList<Guid> ArrivingFileIds);
 public sealed record FileAsRequest(Guid VideoId);
 public sealed record ReviewQueueCount(int Open);

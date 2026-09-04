@@ -8,8 +8,9 @@ namespace Prdb.Fab.Infrastructure.Reporting;
 /// <summary>One Fulfilment whose desired and last-reported states differ.</summary>
 public sealed record PendingFulfilment(
     Guid VideoId,
+    bool IsFulfilled,
     FulfilmentQuality? Quality,
-    DateTimeOffset FulfilledAt);
+    DateTimeOffset? FulfilledAt);
 
 /// <summary>
 /// ADR 0019's computed difference. The desired side is always read from the
@@ -30,11 +31,6 @@ public sealed class FulfilmentDifference(FabDbContext context)
             select new { entry.VideoId, entry.FiledAt })
             .ToListAsync(cancellationToken);
 
-        if (heldWanted.Count == 0)
-        {
-            return [];
-        }
-
         // Keep this as joins rather than an IN over the held ids. A mature
         // library can easily exceed SQLite's bound-parameter ceiling, while
         // both source columns are already indexed for this relationship.
@@ -54,12 +50,28 @@ public sealed class FulfilmentDifference(FabDbContext context)
             .Where(row => row.UserHash == userHash)
             .ToDictionaryAsync(row => row.VideoId, cancellationToken);
 
+        var wantedIds = await (
+            from wanted in context.WantedVideos
+            join video in context.CatalogueVideos on wanted.VideoId equals video.Id
+            select video.PrdbId)
+            .ToHashSetAsync(cancellationToken);
+        var heldIds = heldWanted.Select(entry => entry.VideoId).ToHashSet();
+
         IEnumerable<PendingFulfilment> pending = heldWanted
             .Select(entry => new PendingFulfilment(
                 entry.VideoId,
+                true,
                 qualities.GetValueOrDefault(entry.VideoId),
                 entry.FiledAt))
-            .Where(desired => IsPending(desired, reported.GetValueOrDefault(desired.VideoId)));
+            .Where(desired => IsPending(desired, reported.GetValueOrDefault(desired.VideoId)))
+            .Concat(reported.Values
+                .Where(state => state.IsFulfilled
+                    && state.TerminalOutcome is null
+                    && wantedIds.Contains(state.VideoId)
+                    && !heldIds.Contains(state.VideoId))
+                .Select(state => new PendingFulfilment(state.VideoId, false, null, null)))
+            .OrderBy(desired => desired.FulfilledAt ?? DateTimeOffset.MinValue)
+            .ThenBy(desired => desired.VideoId);
 
         if (take is { } count)
         {
@@ -75,7 +87,7 @@ public sealed class FulfilmentDifference(FabDbContext context)
     private static bool IsPending(PendingFulfilment desired, ReportedStateRow? reported) =>
         reported is null
         || (reported.TerminalOutcome is null
-            && (!reported.IsFulfilled
+            && (reported.IsFulfilled != desired.IsFulfilled
                 || reported.Quality != desired.Quality
                 || reported.FulfilledAt != desired.FulfilledAt));
 }

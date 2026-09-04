@@ -19,6 +19,15 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Added
+
+- Library cards now offer the complete Release workspace as their primary
+  action and an overflow menu for opening the Video in prdb or permanently
+  deleting the complete Library Entry. Deletion names and confirms every Video
+  File, verifies it has not changed, and records one Operation Log entry per
+  removed file. A previously reported Fulfilment is then retracted through the
+  ordinary governed Reporting routine.
+
 ## [0.15.2] - 2026-09-04
 
 This patch release makes the Library feel like the held half of the same

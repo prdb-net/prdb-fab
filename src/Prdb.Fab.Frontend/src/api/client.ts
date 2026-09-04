@@ -78,6 +78,8 @@ export type ReviewSelectionVerdict = Schema['ReviewSelectionVerdict']
 export type ReviewDecisionVerdict = Schema['ReviewDecisionVerdict']
 export type LibraryPage = Schema['LibraryPage']
 export type LibraryEntry = Schema['LibraryEntry']
+export type LibraryEntryDeletePreview = Schema['LibraryEntryDeletePreview']
+export type LibraryEntryDeleteVerdict = Schema['LibraryEntryDeleteVerdict']
 export type LibrarySettingsState = Schema['LibrarySettingsState']
 export type OperationLogPage = Schema['OperationLogPage']
 export type ReportingSettingsState = Schema['ReportingSettingsState']
@@ -592,6 +594,17 @@ export async function readLibrary(filters: {
 
 export async function readLibraryEntry(videoId: string): Promise<LibraryEntry> {
   return json<LibraryEntry>(await fetch(`/api/library/${segment(videoId)}`))
+}
+
+export async function previewLibraryEntryDelete(videoId: string): Promise<LibraryEntryDeletePreview> {
+  return post<LibraryEntryDeletePreview>(`/api/library/${segment(videoId)}/delete/preview`)
+}
+
+export async function deleteLibraryEntry(
+  videoId: string,
+  videoFileIds: string[],
+): Promise<LibraryEntryDeleteVerdict> {
+  return post<LibraryEntryDeleteVerdict>(`/api/library/${segment(videoId)}/delete`, { videoFileIds })
 }
 
 export async function readOperationLog(filters: {

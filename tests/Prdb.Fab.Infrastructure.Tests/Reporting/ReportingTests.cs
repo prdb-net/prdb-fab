@@ -157,6 +157,59 @@ public sealed class ReportingTests
     }
 
     [Fact]
+    public async Task Removing_a_library_entry_retracts_its_reported_fulfilment()
+    {
+        var prdb = new FakePrdbApi()
+            .Answers(
+                FulfilmentsPath,
+                $$"""{"results":[{"videoId":"{{VideoId}}","outcome":0}]}""")
+            .Answers(
+                FulfilmentsPath,
+                $$"""{"results":[{"videoId":"{{VideoId}}","outcome":0}]}""");
+        await using var database = await TestDatabase.CreateAsync(prdb: prdb);
+        await ArrangeFulfilmentAsync(database, "1080p", enabled: true);
+
+        await using (var reportHeld = database.Scope())
+        {
+            await reportHeld.ServiceProvider.GetRequiredService<ReportingRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+        }
+        await using (var remove = database.Scope())
+        {
+            var context = remove.ServiceProvider.GetRequiredService<FabDbContext>();
+            var entry = await context.LibraryEntries.SingleAsync(TestContext.Current.CancellationToken);
+            context.LibraryEntries.Remove(entry);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        await using (var retract = database.Scope())
+        {
+            var result = await retract.ServiceProvider.GetRequiredService<ReportingRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+            Assert.Equal(1, result.ItemsHandled);
+        }
+
+        var requests = prdb.AskingFor(FulfilmentsPath);
+        Assert.Equal(2, requests.Count);
+        using var json = JsonDocument.Parse(requests[1].Body);
+        var item = Assert.Single(json.RootElement.GetProperty("items").EnumerateArray());
+        Assert.Equal(VideoId, item.GetProperty("videoId").GetGuid());
+        Assert.False(item.GetProperty("isFulfilled").GetBoolean());
+        Assert.True(
+            !item.TryGetProperty("fulfilledAtUtc", out var at)
+            || at.ValueKind is JsonValueKind.Null);
+        Assert.True(
+            !item.TryGetProperty("fulfilledInQuality", out var quality)
+            || quality.ValueKind is JsonValueKind.Null);
+
+        await using var check = database.Scope();
+        var state = await check.ServiceProvider.GetRequiredService<FabDbContext>()
+            .ReportedStates.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.False(state.IsFulfilled);
+        Assert.Null(state.Quality);
+        Assert.Null(state.FulfilledAt);
+    }
+
+    [Fact]
     public async Task A_response_lost_after_remote_acceptance_converges_on_the_repeated_state()
     {
         var prdb = new FakePrdbApi()

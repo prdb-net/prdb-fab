@@ -33,10 +33,16 @@ export function Grid({
 }
 
 /** The held-only sibling of the Catalogue grids, using the same card grammar. */
-export function LibraryGrid({ entries }: { entries: readonly LibraryCard[] }) {
+export function LibraryGrid({
+  entries,
+  action,
+}: {
+  entries: readonly LibraryCard[]
+  action?: (entry: LibraryCard) => ReactNode
+}) {
   return (
     <ul className={styles.grid}>
-      {entries.map((entry) => <HeldCard entry={entry} key={entry.id} />)}
+      {entries.map((entry) => <HeldCard action={action?.(entry)} entry={entry} key={entry.id} />)}
     </ul>
   )
 }
@@ -72,7 +78,7 @@ function Card({
   />
 }
 
-function HeldCard({ entry }: { entry: LibraryCard }) {
+function HeldCard({ entry, action }: { entry: LibraryCard; action?: ReactNode }) {
   const qualities = compactQualities(entry.qualities)
   return <GridCard
     artworkId={entry.artworkId}
@@ -81,7 +87,7 @@ function HeldCard({ entry }: { entry: LibraryCard }) {
     status={[describeCopies(entry.qualities), describeRuntime(entry.runtimeSeconds)].filter(Boolean).join(' · ')}
     badge={qualities.length > 0 && <span className={styles.held}>In Library · {qualities.join(', ')}</span>}
     to={`/library/${entry.id}`}
-    action={<span className={styles.action}><Link to={`/library/${entry.id}`}>View Library entry</Link></span>}
+    action={action}
   />
 }
 
