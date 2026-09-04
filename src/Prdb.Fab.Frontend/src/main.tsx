@@ -30,6 +30,7 @@ import { DownloadsScreen } from './download/DownloadsScreen.tsx'
 import { LibraryScreen } from './filing/LibraryScreen.tsx'
 import { LibraryEntryScreen } from './filing/LibraryEntryScreen.tsx'
 import { ReviewQueueScreen } from './filing/ReviewQueueScreen.tsx'
+import { ReviewQueueComparisonPrototype } from './filing/ReviewQueueComparisonPrototype.tsx'
 import { OperationLogScreen } from './filing/OperationLogScreen.tsx'
 import { LibrarySettingsScreen } from './settings/LibraryScreen.tsx'
 import { PageLoading } from './shell/LoadingScreen.tsx'
@@ -116,14 +117,23 @@ function NotFoundScreen() {
   )
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queries}>
+const reviewPrototype = import.meta.env.DEV
+  && window.location.pathname === '/review-queue'
+  && new URLSearchParams(window.location.search).has('variant')
+
+createRoot(document.getElementById('root')!).render(reviewPrototype
+  ? <StrictMode>
       <BrowserRouter>
-        <DocumentTitle />
-        <AccessGate>
-          <Chrome>
-            <Routes>
+        <ReviewQueueComparisonPrototype />
+      </BrowserRouter>
+    </StrictMode>
+  : <StrictMode>
+      <QueryClientProvider client={queries}>
+        <BrowserRouter>
+          <DocumentTitle />
+          <AccessGate>
+            <Chrome>
+              <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/onboarding/:step" element={<OnboardingScreen />} />
               {/* ADR 0010's last step lands here, which is what makes onboarding
@@ -159,10 +169,9 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="reporting" element={<ReportingScreen />} />
               </Route>
               <Route path="*" element={<NotFoundScreen />} />
-            </Routes>
-          </Chrome>
-        </AccessGate>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </StrictMode>,
-)
+              </Routes>
+            </Chrome>
+          </AccessGate>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </StrictMode>)

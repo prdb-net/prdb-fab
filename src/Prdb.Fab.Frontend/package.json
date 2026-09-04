@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prototype:review": "vite --open '/review-queue?variant=A'",
     "build": "tsc -b && vite build",
     "generate:api": "dotnet build ../Prdb.Fab.Host -p:SkipFrontendBuild=true && openapi-typescript ../Prdb.Fab.Host/openapi.json --output src/api/schema.d.ts",
     "lint": "oxlint",
