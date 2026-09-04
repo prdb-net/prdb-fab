@@ -158,6 +158,7 @@ export function VideoContextView({
   goTo,
   videoAction,
   contextAction,
+  contextDetail,
 }: {
   title: string
   backTo: string
@@ -172,6 +173,7 @@ export function VideoContextView({
   goTo: (page: number) => void
   videoAction: (video: VideoCard) => ReactNode
   contextAction?: ReactNode
+  contextDetail?: ReactNode
 }) {
   return (
     <main className={styles.screen}>
@@ -185,6 +187,7 @@ export function VideoContextView({
           <Link className={styles.actionButton} to={releaseAction}>View Releases</Link>
         </div>
       </div>
+      {contextDetail}
       <Filter value={search} placeholder="Filter video titles…" apply={setFilter} />
 
       {videos.length === 0 ? (

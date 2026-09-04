@@ -343,9 +343,17 @@ _Avoid_: Refresh, Poll, Update, Crawl
 
 **Catalogue**:
 The copy of prdb's videos, sites and actors the tool holds locally. A cache of
-the Recent Window plus what has otherwise been looked at or pinned, rather than
-a complete copy, and never the library, which is what the tool writes to disk.
+all Actors and Sites, and of Videos in the Recent Window plus those otherwise
+looked at or pinned, rather than a complete Video copy; never the library, which
+is what the tool writes to disk.
 _Avoid_: Mirror, Corpus, Metadata store, Cache
+
+**Actor Catalogue Fill**:
+The person-requested addition of up to the latest 500 Videos credited to one
+Actor, ordered by Release Date and prepared with their current Catalogue
+details. Its current bounded result is pinned and a later request replaces it;
+it is neither a complete filmography nor a global Video mirror.
+_Avoid_: Actor sync, Filmography import, Full backfill
 
 **Recent Window**:
 The fixed rolling ninety-day interval Sync keeps prepared from prdb and every
@@ -366,8 +374,8 @@ _Avoid_: Thumbnail store, Image cache, Media cache
 Said of a row the tool must keep because something local points at it — a
 catalogue video behind a library entry, a wanted video, a download or a review
 queue entry, or a cached release that was downloaded, consumed, or identified as
-a video still wanted. What is not pinned may be dropped to keep the catalogue
-and the indexer cache bounded.
+a video still wanted, or the current result of an Actor Catalogue Fill. What is
+not pinned may be dropped to keep the catalogue and the indexer cache bounded.
 _Avoid_: Locked, Retained, Held, Kept
 
 **Repair**:

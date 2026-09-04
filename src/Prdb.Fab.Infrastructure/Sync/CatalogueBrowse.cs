@@ -284,7 +284,9 @@ public sealed class CatalogueBrowse(
         if (!string.IsNullOrWhiteSpace(search))
         {
             query = query.Where(row => EF.Functions.Like(
-                row.Name, SearchPattern.Containing(search), SearchPattern.Escape));
+                row.Name, SearchPattern.Containing(search), SearchPattern.Escape)
+                || context.CatalogueActorAliases.Any(alias => alias.ActorId == row.Id
+                    && EF.Functions.Like(alias.Name, SearchPattern.Containing(search), SearchPattern.Escape)));
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -345,10 +347,39 @@ public sealed class CatalogueBrowse(
         var actor = await context.CatalogueActors
             .AsNoTracking()
             .Where(row => row.PrdbId == prdbId)
-            .Select(row => new BrowseContext(
+            .Select(row => new ActorProfile(
                 row.PrdbId,
                 row.Name,
-                context.FavouriteActors.Any(favourite => favourite.ActorId == row.Id)))
+                context.FavouriteActors.Any(favourite => favourite.ActorId == row.Id),
+                row.GenderLabel,
+                row.Birthday,
+                row.BirthdayTypeLabel,
+                row.Deathday,
+                row.Birthplace,
+                row.HaircolorLabel,
+                row.EyecolorLabel,
+                row.BreastTypeLabel,
+                row.Height,
+                row.BraSizeLabel,
+                row.WaistSize,
+                row.HipSize,
+                row.NationalityLabel,
+                row.EthnicityLabel,
+                row.CareerStart,
+                row.CareerEnd,
+                row.Tattoos,
+                row.Piercings,
+                row.CreatedAtUtc,
+                row.UpdatedAtUtc,
+                context.ActorVideoLoadStates
+                    .Where(state => state.ActorId == row.Id)
+                    .Select(state => new ActorVideoLoadView(
+                        state.CompletedAt == null,
+                        state.VideosSeen,
+                        ActorVideoLoads.Limit,
+                        state.RequestedAt,
+                        state.CompletedAt))
+                    .SingleOrDefault()))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (actor is null)
@@ -356,14 +387,35 @@ public sealed class CatalogueBrowse(
             return null;
         }
 
+        var localActorId = await context.CatalogueActors
+            .Where(row => row.PrdbId == prdbId)
+            .Select(row => row.Id)
+            .SingleAsync(cancellationToken);
+        var aliases = await context.CatalogueActorAliases
+            .Where(row => row.ActorId == localActorId)
+            .OrderBy(row => row.Name)
+            .Select(row => new ActorAlias(row.Name, row.SitePrdbId))
+            .ToListAsync(cancellationToken);
+        var bios = await context.CatalogueActorBios
+            .Where(row => row.ActorId == localActorId)
+            .OrderBy(row => row.Id)
+            .Select(row => new ActorBio(row.PrdbId, row.Text))
+            .ToListAsync(cancellationToken);
+        var links = await context.CatalogueActorLinks
+            .Where(row => row.ActorId == localActorId)
+            .OrderBy(row => row.ExternalSiteLabel)
+            .ThenBy(row => row.Url)
+            .Select(row => new ActorLink(row.ExternalSiteLabel, row.Url))
+            .ToListAsync(cancellationToken);
+
         var videos = context.CatalogueVideoActors
             .AsNoTracking()
             .Where(credit => credit.Actor != null && credit.Actor.PrdbId == prdbId)
             .Select(credit => credit.Video!);
 
         return new ActorVideos(
-            actor,
-            await VideosAsync(videos, search, page, CatalogueVideoSort.TitleAscending, cancellationToken));
+            actor with { Aliases = aliases, Bios = bios, Links = links },
+            await VideosAsync(videos, search, page, CatalogueVideoSort.ReleaseDateDescending, cancellationToken));
     }
 
     /// <summary>
@@ -693,4 +745,39 @@ public enum CatalogueScope
 
 public sealed record SiteVideos(BrowseContext Site, VideoPage Videos);
 
-public sealed record ActorVideos(BrowseContext Actor, VideoPage Videos);
+public sealed record ActorAlias(string Name, Guid? SitePrdbId);
+
+public sealed record ActorBio(Guid PrdbId, string Text);
+
+public sealed record ActorLink(string Site, string Url);
+
+public sealed record ActorProfile(
+    Guid PrdbId,
+    string Title,
+    bool Favourite,
+    string? Gender,
+    DateOnly? Birthday,
+    string? BirthdayType,
+    DateOnly? Deathday,
+    string? Birthplace,
+    string? Haircolor,
+    string? Eyecolor,
+    string? BreastType,
+    int? HeightCm,
+    string? BraSize,
+    int? WaistSizeCm,
+    int? HipSizeCm,
+    string? Nationality,
+    string? Ethnicity,
+    int? CareerStart,
+    int? CareerEnd,
+    string? Tattoos,
+    string? Piercings,
+    DateTimeOffset? CreatedAt,
+    DateTimeOffset? UpdatedAt,
+    ActorVideoLoadView? VideoLoad,
+    IReadOnlyList<ActorAlias>? Aliases = null,
+    IReadOnlyList<ActorBio>? Bios = null,
+    IReadOnlyList<ActorLink>? Links = null);
+
+public sealed record ActorVideos(ActorProfile Actor, VideoPage Videos);

@@ -50,6 +50,7 @@ export type SitePage = Schema['SitePage']
 export type SiteVideos = Schema['SiteVideos']
 export type ActorPage = Schema['ActorPage']
 export type ActorVideos = Schema['ActorVideos']
+export type ActorVideoLoadStart = Schema['ActorVideoLoadStart']
 export type ReleasePage = Schema['ReleasePage']
 export type IdentificationState = Schema['IdentificationState']
 export type ReleaseDiscoveryRoutine = Schema['ReleaseDiscoveryRoutine']
@@ -404,6 +405,10 @@ export async function readActor(
   return json<ActorVideos>(
     await fetch(`/api/catalogue/actors/${segment(prdbId)}?${parameters({ search, page: String(page) })}`),
   )
+}
+
+export async function loadLatestActorVideos(prdbId: string): Promise<ActorVideoLoadStart> {
+  return post<ActorVideoLoadStart>(`/api/catalogue/actors/${segment(prdbId)}/latest-videos`)
 }
 
 export async function listReleases(filters: {

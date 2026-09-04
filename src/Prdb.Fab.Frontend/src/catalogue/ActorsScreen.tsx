@@ -1,12 +1,21 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 
-import { listActors, readActor, setFavouriteActor, type ActorPage, type ActorVideos } from '../api/client.ts'
+import {
+  listActors,
+  loadLatestActorVideos,
+  readActor,
+  setFavouriteActor,
+  type ActorPage,
+  type ActorVideos,
+} from '../api/client.ts'
 import { releasePath, videoReleasePath } from '../release/routes.ts'
 import { DirectoryView, VideoContextView } from './ContextBrowse.tsx'
 import { actorsKey } from './state.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { PreferenceButton } from './PreferenceButton.tsx'
+import { CachedArtwork } from './Grid.tsx'
+import styles from './ContextBrowse.module.css'
 
 export function ActorsScreen() {
   const { id } = useParams()
@@ -18,6 +27,10 @@ export function ActorsScreen() {
   const answer = useQuery<ActorPage | ActorVideos>({
     queryKey: actorsKey(id, search, page, scope),
     queryFn: () => (id ? readActor(id, search, page) : listActors(search, page, scope)),
+    refetchInterval: (query) => {
+      const data = query.state.data
+      return id && data && 'actor' in data && data.actor.videoLoad?.active ? 1500 : false
+    },
   })
 
   if (answer.isPending) return <PageLoading label="Loading Actors" />
@@ -68,6 +81,7 @@ export function ActorsScreen() {
             write={(desired) => setFavouriteActor(selected.actor.prdbId, desired)}
           />
         )}
+        contextDetail={<ActorProfileDetails actor={selected.actor} />}
       />
     )
   }
@@ -112,4 +126,82 @@ export function ActorsScreen() {
       )}
     />
   )
+}
+
+function ActorProfileDetails({ actor }: { actor: ActorVideos['actor'] }) {
+  const queries = useQueryClient()
+  const load = useMutation({
+    mutationFn: () => loadLatestActorVideos(actor.prdbId),
+    onSuccess: () => queries.invalidateQueries({ queryKey: ['catalogue', 'actors', actor.prdbId] }),
+  })
+  const aliases = actor.aliases?.map((alias) => alias.name).join(', ')
+  const facts = [
+    ['Also known as', aliases],
+    ['Gender', actor.gender],
+    ['Born', describeBirthday(actor.birthday, actor.birthdayType, actor.birthplace)],
+    ['Died', actor.deathday],
+    ['Nationality', actor.nationality],
+    ['Ethnicity', actor.ethnicity],
+    ['Career', describeCareer(actor.careerStart, actor.careerEnd)],
+    ['Hair', actor.haircolor],
+    ['Eyes', actor.eyecolor],
+    ['Height', actor.heightCm == null ? null : `${actor.heightCm} cm`],
+    ['Bra size', actor.braSize],
+    ['Measurements', describeMeasurements(actor.waistSizeCm, actor.hipSizeCm)],
+    ['Breast type', actor.breastType],
+    ['Tattoos', actor.tattoos],
+    ['Piercings', actor.piercings],
+  ].filter((entry): entry is [string, string] => Boolean(entry[1]))
+  const videoLoad = actor.videoLoad
+
+  return (
+    <section className={styles.actorProfile}>
+      <CachedArtwork
+        path={`/api/artwork/actors/${actor.prdbId}`}
+        title={actor.title}
+        frameClassName={styles.actorPortrait}
+        imageClassName={styles.actorPortraitImage}
+        absentClassName={styles.directoryAbsent}
+      />
+      <div className={styles.actorProfileBody}>
+        {facts.length > 0 && (
+          <dl className={styles.actorFacts}>
+            {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+          </dl>
+        )}
+        {actor.bios?.map((bio) => <p className={styles.actorBio} key={bio.prdbId}>{bio.text}</p>)}
+        {actor.links && actor.links.length > 0 && (
+          <nav className={styles.actorLinks} aria-label="Actor links">
+            {actor.links.map((link) => (
+              <a href={link.url} key={`${link.site}:${link.url}`} rel="noreferrer" target="_blank">{link.site}</a>
+            ))}
+          </nav>
+        )}
+        <div className={styles.actorLoad}>
+          <button disabled={load.isPending || videoLoad?.active} onClick={() => load.mutate()} type="button">
+            {videoLoad?.active ? 'Loading latest Videos…' : load.isPending ? 'Starting…' : 'Load latest 500 Videos'}
+          </button>
+          {videoLoad?.active && <span>{Number(videoLoad.videosSeen)} of up to 500 read</span>}
+          {!videoLoad?.active && videoLoad?.completedAt && (
+            <span>Last loaded {new Date(videoLoad.completedAt).toLocaleString()} · {Number(videoLoad.videosSeen)} Videos</span>
+          )}
+          {load.isError && <span role="alert">{load.error.message}</span>}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function describeBirthday(date: string | null, precision: string | null, place: string | null) {
+  return [date && precision ? `${date} (${precision})` : date, place].filter(Boolean).join(' · ') || null
+}
+
+function describeCareer(start: number | string | null, end: number | string | null) {
+  if (start == null && end == null) return null
+  return `${start ?? '?'}–${end ?? 'present'}`
+}
+
+function describeMeasurements(waist: number | string | null, hips: number | string | null) {
+  if (waist == null && hips == null) return null
+  return [`Waist ${waist == null ? '?' : `${waist} cm`}`, `Hips ${hips == null ? '?' : `${hips} cm`}`].join(' · ')
 }

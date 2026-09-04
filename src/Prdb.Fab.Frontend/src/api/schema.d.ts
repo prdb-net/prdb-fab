@@ -1922,6 +1922,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalogue/actors/{prdbId}/latest-videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ActorVideoLoadStart"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/downloads": {
         parameters: {
             query?: never;
@@ -3016,6 +3060,16 @@ export interface components {
             retryAfterSeconds?: null | number | string;
             updated?: boolean;
         };
+        ActorAlias: {
+            name: string;
+            /** Format: uuid */
+            sitePrdbId: null | string;
+        };
+        ActorBio: {
+            /** Format: uuid */
+            prdbId: string;
+            text: string;
+        };
         ActorCard: {
             /** Format: uuid */
             prdbId: string;
@@ -3024,6 +3078,10 @@ export interface components {
             videoCount: number | string;
             favourite: boolean;
             hasArtwork: boolean;
+        };
+        ActorLink: {
+            site: string;
+            url: string;
         };
         ActorPage: {
             actors: components["schemas"]["ActorCard"][];
@@ -3035,8 +3093,64 @@ export interface components {
             total: number | string;
             scope: components["schemas"]["CatalogueScope"];
         };
+        ActorProfile: {
+            /** Format: uuid */
+            prdbId: string;
+            title: string;
+            favourite: boolean;
+            gender: null | string;
+            /** Format: date */
+            birthday: null | string;
+            birthdayType: null | string;
+            /** Format: date */
+            deathday: null | string;
+            birthplace: null | string;
+            haircolor: null | string;
+            eyecolor: null | string;
+            breastType: null | string;
+            /** Format: int32 */
+            heightCm: null | number | string;
+            braSize: null | string;
+            /** Format: int32 */
+            waistSizeCm: null | number | string;
+            /** Format: int32 */
+            hipSizeCm: null | number | string;
+            nationality: null | string;
+            ethnicity: null | string;
+            /** Format: int32 */
+            careerStart: null | number | string;
+            /** Format: int32 */
+            careerEnd: null | number | string;
+            tattoos: null | string;
+            piercings: null | string;
+            /** Format: date-time */
+            createdAt: null | string;
+            /** Format: date-time */
+            updatedAt: null | string;
+            videoLoad: null | components["schemas"]["ActorVideoLoadView"];
+            aliases?: null | components["schemas"]["ActorAlias"][];
+            bios?: null | components["schemas"]["ActorBio"][];
+            links?: null | components["schemas"]["ActorLink"][];
+        };
+        ActorVideoLoadStart: {
+            outcome: components["schemas"]["ActorVideoLoadStartOutcome"];
+            load: null | components["schemas"]["ActorVideoLoadView"];
+        };
+        /** @enum {unknown} */
+        ActorVideoLoadStartOutcome: "Started" | "AlreadyRunning" | "ActorNotFound";
+        ActorVideoLoadView: {
+            active: boolean;
+            /** Format: int32 */
+            videosSeen: number | string;
+            /** Format: int32 */
+            limit: number | string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+        };
         ActorVideos: {
-            actor: components["schemas"]["BrowseContext"];
+            actor: components["schemas"]["ActorProfile"];
             videos: components["schemas"]["VideoPage"];
         };
         /** @enum {unknown} */

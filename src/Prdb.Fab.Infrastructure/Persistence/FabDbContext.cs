@@ -49,6 +49,18 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<CatalogueActorRow> CatalogueActors => Set<CatalogueActorRow>();
 
+    public DbSet<CatalogueActorAliasRow> CatalogueActorAliases => Set<CatalogueActorAliasRow>();
+
+    public DbSet<CatalogueActorBioRow> CatalogueActorBios => Set<CatalogueActorBioRow>();
+
+    public DbSet<CatalogueActorLinkRow> CatalogueActorLinks => Set<CatalogueActorLinkRow>();
+
+    public DbSet<CatalogueActorImageRow> CatalogueActorImages => Set<CatalogueActorImageRow>();
+
+    public DbSet<ActorVideoLoadStateRow> ActorVideoLoadStates => Set<ActorVideoLoadStateRow>();
+
+    public DbSet<ActorVideoLoadVideoRow> ActorVideoLoadVideos => Set<ActorVideoLoadVideoRow>();
+
     public DbSet<CatalogueImageRow> CatalogueImages => Set<CatalogueImageRow>();
 
     /// <summary>One row per feed. See <see cref="FeedCursorRow"/>.</summary>
@@ -338,6 +350,74 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
             actor.Property(row => row.Name).IsRequired();
             actor.HasIndex(row => row.ArtworkCacheKey).IsUnique();
+        });
+
+        builder.Entity<CatalogueActorAliasRow>(alias =>
+        {
+            alias.ToTable("catalogue_actor_alias");
+            alias.HasKey(row => row.Id);
+            alias.Declares(AccountClass.AccountFree);
+            alias.Property(row => row.Name).IsRequired();
+            alias.HasIndex(row => new { row.ActorId, row.Name, row.SitePrdbId }).IsUnique();
+            alias.HasOne(row => row.Actor).WithMany().HasForeignKey(row => row.ActorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CatalogueActorBioRow>(bio =>
+        {
+            bio.ToTable("catalogue_actor_bio");
+            bio.HasKey(row => row.Id);
+            bio.Declares(AccountClass.AccountFree);
+            bio.Property(row => row.Text).IsRequired();
+            bio.HasIndex(row => row.PrdbId).IsUnique();
+            bio.HasOne(row => row.Actor).WithMany().HasForeignKey(row => row.ActorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CatalogueActorLinkRow>(link =>
+        {
+            link.ToTable("catalogue_actor_link");
+            link.HasKey(row => row.Id);
+            link.Declares(AccountClass.AccountFree);
+            link.Property(row => row.ExternalSiteLabel).IsRequired();
+            link.Property(row => row.Url).IsRequired();
+            link.HasIndex(row => new { row.ActorId, row.ExternalSite, row.Url }).IsUnique();
+            link.HasOne(row => row.Actor).WithMany().HasForeignKey(row => row.ActorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<CatalogueActorImageRow>(image =>
+        {
+            image.ToTable("catalogue_actor_image");
+            image.HasKey(row => row.Id);
+            image.Declares(AccountClass.AccountFree);
+            image.Property(row => row.ImageTypeLabel).IsRequired();
+            image.HasIndex(row => row.PrdbId).IsUnique();
+            image.HasIndex(row => new { row.ActorId, row.Position });
+            image.HasOne(row => row.Actor).WithMany().HasForeignKey(row => row.ActorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ActorVideoLoadStateRow>(state =>
+        {
+            state.ToTable("actor_video_load_state");
+            state.HasKey(row => row.ActorId);
+            state.Declares(AccountClass.AccountFree);
+            state.Property(row => row.ResumePage).HasDefaultValue(1);
+            state.HasOne(row => row.Actor).WithMany().HasForeignKey(row => row.ActorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ActorVideoLoadVideoRow>(loaded =>
+        {
+            loaded.ToTable("actor_video_load_video");
+            loaded.HasKey(row => new { row.ActorId, row.VideoId });
+            loaded.Declares(AccountClass.AccountFree);
+            loaded.HasOne(row => row.Load).WithMany().HasForeignKey(row => row.ActorId)
+                .OnDelete(DeleteBehavior.Cascade);
+            loaded.HasOne(row => row.Video).WithMany().HasForeignKey(row => row.VideoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            loaded.HasIndex(row => row.VideoId);
         });
 
         builder.Entity<CatalogueImageRow>(image =>

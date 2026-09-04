@@ -109,6 +109,33 @@ public sealed class ChangeFeedTests
         Assert.Equal("Jane Doe", actor.Name);
     }
 
+    [Fact]
+    public async Task The_actor_feed_projects_the_complete_current_profile()
+    {
+        var prdb = new FakePrdbApi().Answers(Actors, FullActorPage());
+        await using var database = await CreateAsync(prdb);
+
+        await RunAsync<ActorFeedRoutine>(database);
+        await RunAsync<ActorFeedRoutine>(database);
+
+        await using var scope = database.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        var actor = await context.CatalogueActors.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal("Female", actor.GenderLabel);
+        Assert.Equal(new DateOnly(1990, 2, 3), actor.Birthday);
+        Assert.Equal("Canadian", actor.NationalityLabel);
+        Assert.Equal(170, actor.Height);
+        Assert.NotNull(actor.ProfileImageUrl);
+        Assert.Equal("Jane Alias", (await context.CatalogueActorAliases.SingleAsync(
+            TestContext.Current.CancellationToken)).Name);
+        Assert.Equal("Biography", (await context.CatalogueActorBios.SingleAsync(
+            TestContext.Current.CancellationToken)).Text);
+        Assert.Equal("Twitter", (await context.CatalogueActorLinks.SingleAsync(
+            TestContext.Current.CancellationToken)).ExternalSiteLabel);
+        Assert.Equal("Poster", (await context.CatalogueActorImages.SingleAsync(
+            TestContext.Current.CancellationToken)).ImageTypeLabel);
+    }
+
     /// <summary>
     /// The images feed is global and the catalogue is a fraction of it. Keeping
     /// a row for a video nobody here holds would make the image table a
@@ -515,6 +542,36 @@ public sealed class ChangeFeedTests
           "hasMore": {{(hasMore ? "true" : "false")}},
           "serverTimeUtc": "{{Stamp(at)}}",
           "nextCursor": { "updatedAtUtc": "{{Stamp(at)}}", "id": "{{id}}" }
+        }
+        """;
+
+    private static string FullActorPage() =>
+        $$"""
+        {
+          "items": [
+            {
+              "eventType": "updated",
+              "actor": {
+                "id": "{{JaneDoe}}", "name": "Jane Doe", "isDeleted": false,
+                "gender": 1, "genderLabel": "Female",
+                "birthday": "1990-02-03", "birthdayType": 1, "birthdayTypeLabel": "Exact",
+                "haircolor": 1, "haircolorLabel": "Blonde",
+                "eyecolor": 1, "eyecolorLabel": "Blue",
+                "breastType": 1, "breastTypeLabel": "Natural",
+                "height": 170, "nationality": 32, "nationalityLabel": "Canadian",
+                "ethnicity": 1, "ethnicityLabel": "Caucasian",
+                "images": [ { "id": "{{AnImage}}", "imageType": 2, "imageTypeLabel": "Poster", "url": "https://example.invalid/actor.jpg" } ],
+                "aliases": [ { "name": "Jane Alias" } ],
+                "links": [ { "externalSite": 2, "externalSiteLabel": "Twitter", "url": "https://example.invalid/jane" } ],
+                "bios": [ { "id": "{{AVideo}}", "text": "Biography" } ],
+                "createdAtUtc": "{{Stamp(Noon.AddYears(-1))}}", "updatedAtUtc": "{{Stamp(Noon)}}"
+              }
+            }
+          ],
+          "pageSize": 1000,
+          "hasMore": false,
+          "serverTimeUtc": "{{Stamp(Noon)}}",
+          "nextCursor": { "updatedAtUtc": "{{Stamp(Noon)}}", "id": "{{JaneDoe}}" }
         }
         """;
 
