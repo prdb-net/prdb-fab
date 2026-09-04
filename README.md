@@ -154,7 +154,7 @@ decision, tidy-up removes only `.nfo`, `.par2`, `.sfv`, `.srr`, `.url`, `.txt`,
 Unknown files remain, and the parent directory of single-file storage is never
 tidied.
 
-Reporting under **Settings → Reporting** is off by default and has two
+Reporting under **Settings → Reporting** is on by default and has two
 independent switches. Fulfilment reporting sends a wanted Video id, whether it
 is held, when it was filed and the highest truthfully expressible quality.
 Confirmed-assignment reporting sends the exact file metadata a person approved

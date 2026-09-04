@@ -892,8 +892,8 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                             DeleteLeftovers = false,
                             IndexersSkipped = false,
                             OnboardingStep = "Password",
-                            ReportConfirmedAssignments = false,
-                            ReportFulfilments = false,
+                            ReportConfirmedAssignments = true,
+                            ReportFulfilments = true,
                             RetryBudget = 3,
                             SabnzbdSkipped = false
                         });

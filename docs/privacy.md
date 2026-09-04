@@ -8,12 +8,12 @@ does not contact any of them.
 
 ## Reporting to prdb
 
-Reporting is **off by default**. Settings → Reporting has two independent
-switches; enabling one does not enable the other. Turning a switch off stops
-new outbound reports on that channel. Pending differences remain local so the
-page can explain what is not being sent. Turning a channel off does not retract
-or delete a report prdb already accepted, and it does not erase the local record
-of what was sent.
+Both Reporting channels are **on by default**. Settings → Reporting has two
+independent switches; disabling one does not disable the other. Turning a
+switch off stops new outbound reports on that channel. Pending differences
+remain local so the page can explain what is not being sent. Turning a channel
+off does not retract or delete a report prdb already accepted, and it does not
+erase the local record of what was sent.
 
 ### Fulfilments
 

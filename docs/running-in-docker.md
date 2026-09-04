@@ -182,7 +182,7 @@ it, so prdb's Governor, an Indexer's Daily Query Budget, permanent refusals and
 an empty work set still cannot be bypassed. A second click cannot overlap the
 first request, and the accepted, deferred or refused result stays visible.
 
-Reporting is disabled by default under **Settings → Reporting**. Its two
+Reporting is enabled by default under **Settings → Reporting**. Its two
 switches are independent: one reports Fulfilments for locally held Wanted
 Videos, and one reports file-to-Video assignments that a person explicitly
 confirmed in the Review Queue. Switching a channel off stops outbound reports

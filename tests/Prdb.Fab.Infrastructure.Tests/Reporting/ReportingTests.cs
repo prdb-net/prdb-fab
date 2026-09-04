@@ -24,25 +24,47 @@ public sealed class ReportingTests
     private static readonly DateTimeOffset FiledAt = new(2026, 8, 20, 14, 30, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task Both_channels_default_off_and_expose_the_current_account_backlogs()
+    public async Task Both_channels_default_on()
     {
         var prdb = new FakePrdbApi();
         await using var database = await TestDatabase.CreateAsync(prdb: prdb);
-        await ArrangeFulfilmentAsync(database, "1080p", enabled: false);
-        await ArrangeAssignmentAsync(database, UserHash, enabled: false);
 
         await using var scope = database.Scope();
         var settings = await scope.ServiceProvider.GetRequiredService<ReportingSettings>()
             .ReadAsync(TestContext.Current.CancellationToken);
-        var result = await scope.ServiceProvider.GetRequiredService<ReportingRoutine>()
-            .RunAsync(null, TestContext.Current.CancellationToken);
 
-        Assert.False(settings.ReportFulfilments);
-        Assert.False(settings.ReportConfirmedAssignments);
-        Assert.Equal(1, settings.FulfilmentBacklog);
-        Assert.Equal(1, settings.ConfirmedAssignmentBacklog);
-        Assert.Equal(RunResult.NothingToDo, result);
+        Assert.True(settings.ReportFulfilments);
+        Assert.True(settings.ReportConfirmedAssignments);
+        Assert.Equal(0, settings.FulfilmentBacklog);
+        Assert.Equal(0, settings.ConfirmedAssignmentBacklog);
         Assert.Empty(prdb.Requests);
+    }
+
+    [Fact]
+    public async Task Later_migrations_preserve_saved_reporting_choices()
+    {
+        await using var database = await TestDatabase.CreateAsync(migratedTo: "ReportingDelivery");
+
+        await using (var arrange = database.Scope())
+        {
+            var context = arrange.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Database.ExecuteSqlRawAsync(
+                "UPDATE installation SET ReportFulfilments = 0, ReportConfirmedAssignments = 0;",
+                TestContext.Current.CancellationToken);
+        }
+
+        await using (var migrate = database.Scope())
+        {
+            await migrate.ServiceProvider.GetRequiredService<FabDbContext>()
+                .Database.MigrateAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var assertScope = database.Scope();
+        var saved = await assertScope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .Installation.SingleAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(saved.ReportFulfilments);
+        Assert.False(saved.ReportConfirmedAssignments);
     }
 
     [Fact]
@@ -59,6 +81,10 @@ public sealed class ReportingTests
                 Lane = Lane.Sync,
                 DueAt = DateTimeOffset.MaxValue,
             });
+            var installation = await context.Installation.AsTracking()
+                .SingleAsync(TestContext.Current.CancellationToken);
+            installation.ReportFulfilments = false;
+            installation.ReportConfirmedAssignments = false;
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 

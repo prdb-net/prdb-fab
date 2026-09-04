@@ -123,10 +123,10 @@ public sealed class InstallationRow
     public bool DeleteLeftovers { get; set; }
 
     /// <summary>Whether held Wanted Videos may be reported as Fulfilments.</summary>
-    public bool ReportFulfilments { get; set; }
+    public bool ReportFulfilments { get; set; } = true;
 
     /// <summary>Whether a person's Confirmed Assignments may be sent to prdb.</summary>
-    public bool ReportConfirmedAssignments { get; set; }
+    public bool ReportConfirmedAssignments { get; set; } = true;
 
     /// <summary>
     /// The newest What's New row observed by a loaded page, as a stable tuple

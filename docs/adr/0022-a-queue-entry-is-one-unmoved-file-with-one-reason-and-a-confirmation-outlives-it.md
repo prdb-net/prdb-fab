@@ -152,6 +152,10 @@ obligation the API states and cannot enforce: a `UserConfirmed` submission
 **must be strictly opt-in and off by default**, because a person is vouching for
 it.
 
+(*The default in this paragraph is superseded by
+[ADR 0051](0051-both-reporting-channels-ship-on.md): the channel now ships on
+behind its own independently configurable switch.*)
+
 **Eight fields go out and no ninth.** The four the endpoint requires — the
 video, the `osHash`, the file size and `source: UserConfirmed` — plus
 `durationMs`, `width`, `height` and `videoCodec`, which are exactly the four
@@ -182,6 +186,9 @@ confirmation ever made and not yet sent for this account. That is the count
 ADR 0020 requires to be named before the switch is thrown. Turning it off stops
 sending and retracts nothing — the same asymmetry as ADR 0019, for a harder
 reason: this channel has no retraction at all.
+
+(*Amended by ADR 0051: the switch ships on. The backlog, disablement and
+non-retraction behaviour is unchanged.*)
 
 ## Nothing here is reversible
 
