@@ -5,7 +5,7 @@ import { useLocation, useSearchParams } from 'react-router'
 import { listWhatsNew, observeWhatsNew } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
 import { whatsNewKey } from './state.ts'
-import styles from './WhatsNew.module.css'
+import styles from './BrowseScreen.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
 

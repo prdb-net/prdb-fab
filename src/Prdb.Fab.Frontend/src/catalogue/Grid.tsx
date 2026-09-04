@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
 
-import type { VideoCard } from '../api/client.ts'
+import type { LibraryPage, VideoCard } from '../api/client.ts'
 import styles from './Grid.module.css'
+
+type LibraryCard = LibraryPage['entries'][number]
 
 /**
  * The grid, written once and used by every browse surface.
@@ -29,6 +32,15 @@ export function Grid({
   )
 }
 
+/** The held-only sibling of the Catalogue grids, using the same card grammar. */
+export function LibraryGrid({ entries }: { entries: readonly LibraryCard[] }) {
+  return (
+    <ul className={styles.grid}>
+      {entries.map((entry) => <HeldCard entry={entry} key={entry.id} />)}
+    </ul>
+  )
+}
+
 function Card({
   video,
   action,
@@ -40,24 +52,70 @@ function Card({
     ? video.heldQualities.join(', ')
     : null
 
+  const badge = video.activeDownloadId ? (
+    <span className={styles.downloading}>
+      {video.activeDownloadState === 'Completed' ? 'Processing' : 'Downloading'}
+    </span>
+  ) : held ? (
+    <span className={styles.held}>In Library · {held}</span>
+  ) : video.downloadReady ? (
+    <span className={styles.ready}>Ready to download</span>
+  ) : null
+
+  return <GridCard
+    artworkId={video.id}
+    title={video.title}
+    detail={describe(video)}
+    status={statusOf(video).join(' · ')}
+    badge={badge}
+    action={action?.(video)}
+  />
+}
+
+function HeldCard({ entry }: { entry: LibraryCard }) {
+  const qualities = compactQualities(entry.qualities)
+  return <GridCard
+    artworkId={entry.artworkId}
+    title={entry.title}
+    detail={[entry.site, entry.releaseDate].filter(Boolean).join(' · ')}
+    status={[describeCopies(entry.qualities), describeRuntime(entry.runtimeSeconds)].filter(Boolean).join(' · ')}
+    badge={qualities.length > 0 && <span className={styles.held}>In Library · {qualities.join(', ')}</span>}
+    to={`/library/${entry.id}`}
+    action={<span className={styles.action}><Link to={`/library/${entry.id}`}>View Library entry</Link></span>}
+  />
+}
+
+function GridCard({
+  artworkId,
+  title,
+  detail,
+  status,
+  badge,
+  action,
+  to,
+}: {
+  artworkId: VideoCard['id']
+  title: string
+  detail: string
+  status: string
+  badge: ReactNode
+  action?: ReactNode
+  to?: string
+}) {
+  const artwork = <span className={styles.artwork}>
+    <Artwork videoId={artworkId} title={title} />
+    {badge}
+  </span>
+
   return (
     <li className={styles.card}>
-      <span className={styles.artwork}>
-        <Artwork videoId={video.id} title={video.title} />
-        {video.activeDownloadId ? (
-          <span className={styles.downloading}>
-            {video.activeDownloadState === 'Completed' ? 'Processing' : 'Downloading'}
-          </span>
-        ) : held ? (
-          <span className={styles.held}>In Library · {held}</span>
-        ) : video.downloadReady ? (
-          <span className={styles.ready}>Ready to download</span>
-        ) : null}
-      </span>
-      <span className={styles.title}>{video.title}</span>
-      <span className={styles.detail}>{describe(video)}</span>
-      <span className={styles.status}>{statusOf(video).join(' · ')}</span>
-      {action?.(video)}
+      {to ? <Link className={styles.artworkLink} to={to}>{artwork}</Link> : artwork}
+      {to
+        ? <Link className={`${styles.title} ${styles.titleLink}`} to={to}>{title}</Link>
+        : <span className={styles.title}>{title}</span>}
+      <span className={styles.detail}>{detail}</span>
+      <span className={styles.status}>{status}</span>
+      {action}
     </li>
   )
 }
@@ -204,4 +262,20 @@ function statusOf(video: VideoCard): string[] {
     : null
   return [wanted, activeDownload, held, available]
     .filter((value): value is string => Boolean(value))
+}
+
+function compactQualities(qualities: readonly string[]): string[] {
+  return qualities.length <= 2
+    ? [...qualities]
+    : [...qualities.slice(0, 2), `+${qualities.length - 2}`]
+}
+
+function describeCopies(qualities: readonly string[]): string {
+  return qualities.length === 1 ? `${qualities[0]} copy` : `${qualities.length} quality copies`
+}
+
+function describeRuntime(seconds: LibraryCard['runtimeSeconds']): string {
+  if (seconds == null) return ''
+  const minutes = Math.round(Number(seconds) / 60)
+  return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes} min`
 }

@@ -36,6 +36,12 @@
   position: relative;
 }
 
+.artworkLink {
+  color: inherit;
+  display: block;
+  text-decoration: none;
+}
+
 .ready,
 .held,
 .downloading {
@@ -89,6 +95,15 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+}
+
+.titleLink {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.titleLink:hover {
+  text-decoration: underline;
 }
 
 .detail {

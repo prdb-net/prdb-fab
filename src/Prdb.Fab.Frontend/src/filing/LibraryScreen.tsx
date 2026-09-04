@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useSearchParams } from 'react-router'
 
 import { readLibrary } from '../api/client.ts'
-import { Artwork } from '../catalogue/Grid.tsx'
-import styles from './Filing.module.css'
+import browseStyles from '../catalogue/BrowseScreen.module.css'
+import { LibraryGrid } from '../catalogue/Grid.tsx'
+import { PageLoading } from '../shell/LoadingScreen.tsx'
+import styles from './LibraryScreen.module.css'
 
 export function LibraryScreen() {
   const [parameters, setParameters] = useSearchParams()
@@ -20,6 +22,9 @@ export function LibraryScreen() {
     placeholderData: (held) => held,
   })
   const data = library.data
+  const total = Number(data?.total ?? 0)
+  const pageSize = Number(data?.pageSize ?? 48)
+  const pages = Math.max(1, Math.ceil(total / pageSize))
   useEffect(() => setSearchInput(search), [search])
   useEffect(() => {
     if (searchInput === search) return
@@ -50,16 +55,24 @@ export function LibraryScreen() {
     window.scrollTo({ top: 0 })
   }
 
+  if (library.isPending && !data) {
+    return <PageLoading label="Loading Library" />
+  }
+
   return (
-    <main className={styles.screen}>
-      <header className={styles.heading}>
-        <div><h1>Library</h1><p>Video Files currently held by this installation.</p></div>
-        <span className={styles.quiet}>{Number(data?.total ?? 0)} Entries</span>
-      </header>
+    <main className={browseStyles.screen}>
+      <div className={browseStyles.heading}>
+        <h1>Library</h1>
+        {total > 0 && <span className={browseStyles.count}>{total} videos</span>}
+      </div>
+      <p className={browseStyles.lede}>
+        Browse the Videos held by this installation. Open an entry to see its files,
+        qualities and where they are filed.
+      </p>
       <div className={styles.filters}>
-        <label>
+        <label className={styles.searchLabel}>
           Title
-          <input id="library-title" name="search" type="search" autoComplete="off" className={styles.field} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+          <input id="library-title" name="search" type="search" autoComplete="off" className={`${styles.field} ${styles.searchField}`} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
         </label>
         <label>
           Site
@@ -84,24 +97,16 @@ export function LibraryScreen() {
         </label>
       </div>
       {library.isError && <p className={styles.error}>The Library could not be read.</p>}
-      {data?.entries.length === 0 && <p className={styles.empty}>No held Library Entries match these filters.</p>}
-      <ul className={styles.grid}>
-        {data?.entries.map((entry) => <li className={styles.card} key={entry.id}>
-          <Link className={styles.frame} to={`/library/${entry.id}`}>
-            <Artwork
-              videoId={entry.artworkId}
-              title={entry.title}
-              frameClassName={styles.artwork}
-              imageClassName={styles.artworkImage}
-              absentClassName={styles.artworkAbsent}
-            />
-          </Link>
-          <h2><Link to={`/library/${entry.id}`}>{entry.title}</Link></h2>
-          <div className={styles.metadata}>{[entry.site, entry.releaseDate].filter(Boolean).join(' · ')}</div>
-          <div className={styles.badges}>{entry.qualities.map((item) => <span className={styles.badge} key={item}>{item}</span>)}</div>
-        </li>)}
-      </ul>
-      <div className={styles.pager}><button className={styles.button} disabled={page <= 1} onClick={() => goTo(page - 1)}>Previous</button><span>Page {page}</span><button className={styles.button} disabled={!data || page * Number(data.pageSize) >= Number(data.total)} onClick={() => goTo(page + 1)}>Next</button></div>
+      {data?.entries.length === 0
+        ? <p className={browseStyles.empty}>No held Library Entries match these filters.</p>
+        : <LibraryGrid entries={data?.entries ?? []} />}
+      {pages > 1 && (
+        <nav className={browseStyles.pager}>
+          <button type="button" disabled={page <= 1} onClick={() => goTo(page - 1)}>Previous</button>
+          <span className={browseStyles.where}>Page {page} of {pages}</span>
+          <button type="button" disabled={page >= pages} onClick={() => goTo(page + 1)}>Next</button>
+        </nav>
+      )}
     </main>
   )
 }
