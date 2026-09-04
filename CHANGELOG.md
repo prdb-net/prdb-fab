@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-04
+
+This release makes a held Library Entry actionable from its card and gives a
+person a verified, auditable way to remove it.
+
 ### Added
 
 - Library cards now offer the complete Release workspace as their primary

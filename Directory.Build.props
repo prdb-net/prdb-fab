@@ -20,7 +20,7 @@
     number below and an informational suffix saying it was not released.
   -->
   <PropertyGroup>
-    <VersionPrefix>0.15.2</VersionPrefix>
+    <VersionPrefix>0.16.0</VersionPrefix>
     <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(VersionPrefix)+local</InformationalVersion>
   </PropertyGroup>
 
