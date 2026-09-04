@@ -562,6 +562,10 @@ export async function dismissReviewEntries(ids: string[]): Promise<ReviewSelecti
   return post<ReviewSelectionVerdict>('/api/review-queue/dismiss', { arrivingFileIds: ids })
 }
 
+export function reviewContactSheetUrl(id: string): string {
+  return `/api/review-queue/${segment(id)}/contact-sheet`
+}
+
 export async function fileReviewAs(id: string, videoId: string): Promise<ReviewDecisionVerdict> {
   return post<ReviewDecisionVerdict>(`/api/review-queue/${segment(id)}/file-as`, { videoId })
 }

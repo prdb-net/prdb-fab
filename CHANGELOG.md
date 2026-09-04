@@ -19,6 +19,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Added
+
+- The Review Queue now presents one Arriving File at a time with an on-demand
+  five-frame contact sheet beside the proposed prdb Video artwork and facts.
+  File, directory and Release names are kept directly against the proposed
+  title so uncertain identifications can be verified quickly without exposing
+  the local file for playback.
+
 ### Changed
 
 - The Library card action is now labelled "Delete Video" so its destructive

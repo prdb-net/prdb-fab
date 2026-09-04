@@ -11,11 +11,13 @@ public static class FilingServiceCollectionExtensions
     public static IServiceCollection AddFabFiling(this IServiceCollection services)
     {
         services.TryAddScoped<IProbeProcess, FfprobeProcess>();
+        services.TryAddScoped<IContactSheetProcess, FfmpegContactSheetProcess>();
         services.TryAddScoped<ArtworkStore>();
         services.AddScoped<VideoProbe>();
         services.AddScoped<IdentificationSettings>();
         services.AddScoped<LibrarySettings>();
         services.AddScoped<ReviewQueue>();
+        services.AddScoped<ReviewFileContactSheet>();
         services.AddScoped<ReviewVideoSearch>();
         services.AddScoped<ReviewDecisions>();
         services.AddScoped<LibraryBrowse>();

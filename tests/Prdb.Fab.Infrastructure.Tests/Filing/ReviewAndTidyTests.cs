@@ -16,6 +16,68 @@ namespace Prdb.Fab.Infrastructure.Tests.Filing;
 public sealed class ReviewAndTidyTests
 {
     [Fact]
+    public async Task Contact_sheet_reads_only_an_unchanged_open_file()
+    {
+        var directory = TemporaryDirectory();
+        var path = Path.Combine(directory, "review.mp4");
+        await File.WriteAllBytesAsync(path, [1, 2, 3, 4], TestContext.Current.CancellationToken);
+        var rendered = new byte[] { 7, 8, 9 };
+        var process = new RecordedContactSheetProcess(rendered);
+
+        try
+        {
+            await using var database = await TestDatabase.CreateAsync(
+                also: services => services.AddSingleton<IContactSheetProcess>(process));
+            var download = Guid.NewGuid();
+            var arrival = Arrival(Guid.NewGuid(), download, path, 4);
+            arrival.RuntimeSeconds = 1_653;
+            await SeedDownloadAndArrivalsAsync(database, download, arrival);
+
+            await using var scope = database.Scope();
+            var sheet = await scope.ServiceProvider.GetRequiredService<ReviewFileContactSheet>()
+                .ReadAsync(arrival.Id, TestContext.Current.CancellationToken);
+
+            Assert.Equal(rendered, sheet);
+            Assert.Equal(path, process.Path);
+            Assert.Equal(1_653, process.RuntimeSeconds);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Contact_sheet_refuses_a_file_that_changed_after_collecting()
+    {
+        var directory = TemporaryDirectory();
+        var path = Path.Combine(directory, "changed.mp4");
+        await File.WriteAllBytesAsync(path, [1, 2, 3, 4], TestContext.Current.CancellationToken);
+        var process = new RecordedContactSheetProcess([7, 8, 9]);
+
+        try
+        {
+            await using var database = await TestDatabase.CreateAsync(
+                also: services => services.AddSingleton<IContactSheetProcess>(process));
+            var download = Guid.NewGuid();
+            var arrival = Arrival(Guid.NewGuid(), download, path, 3);
+            arrival.RuntimeSeconds = 60;
+            await SeedDownloadAndArrivalsAsync(database, download, arrival);
+
+            await using var scope = database.Scope();
+            var sheet = await scope.ServiceProvider.GetRequiredService<ReviewFileContactSheet>()
+                .ReadAsync(arrival.Id, TestContext.Current.CancellationToken);
+
+            Assert.Null(sheet);
+            Assert.Null(process.Path);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Review_queue_exposes_probe_facts_and_known_video_artwork()
     {
         await using var database = await TestDatabase.CreateAsync();
@@ -405,5 +467,21 @@ public sealed class ReviewAndTidyTests
         var path = Path.Combine(Path.GetTempPath(), "prdb-fab-review", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private sealed class RecordedContactSheetProcess(byte[] bytes) : IContactSheetProcess
+    {
+        public string? Path { get; private set; }
+        public long? RuntimeSeconds { get; private set; }
+
+        public Task<ContactSheetProcessResult> RunAsync(
+            string path,
+            long runtimeSeconds,
+            CancellationToken cancellationToken)
+        {
+            Path = path;
+            RuntimeSeconds = runtimeSeconds;
+            return Task.FromResult(new ContactSheetProcessResult(0, bytes, false));
+        }
     }
 }
