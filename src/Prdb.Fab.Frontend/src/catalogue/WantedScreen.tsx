@@ -33,7 +33,7 @@ export function WantedScreen() {
   })
 
   const total = Number(wanted.data?.total ?? 0)
-  const pageSize = Number(wanted.data?.pageSize ?? 48)
+  const pageSize = Number(wanted.data?.pageSize ?? 24)
   const pages = Math.max(1, Math.ceil(total / pageSize))
 
   const goTo = (to: number) => {

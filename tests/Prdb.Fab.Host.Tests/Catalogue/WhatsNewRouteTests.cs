@@ -63,18 +63,18 @@ public sealed class WhatsNewRouteTests
             application,
             [.. Enumerable.Range(1, 60).Select(number => ($"Video {number}", 61 - number))]);
 
-        var second = await ReadAsync(client, page: 2);
-        var again = await ReadAsync(client, page: 2);
+        var third = await ReadAsync(client, page: 3);
+        var again = await ReadAsync(client, page: 3);
 
-        Assert.Equal(2, second.Page);
-        Assert.Equal(60, second.Total);
+        Assert.Equal(3, third.Page);
+        Assert.Equal(60, third.Total);
 
-        // Forty-eight to a page, so the second holds the remaining twelve.
-        Assert.Equal(12, second.Videos.Count);
+        // Twenty-four to a page, so the third holds the remaining twelve.
+        Assert.Equal(12, third.Videos.Count);
 
         Assert.Equal(
             again.Videos.Select(video => video.Title),
-            second.Videos.Select(video => video.Title));
+            third.Videos.Select(video => video.Title));
     }
 
     /// <summary>
