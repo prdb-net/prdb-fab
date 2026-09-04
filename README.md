@@ -31,7 +31,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.14.2
+    image: prdbnet/prdb-fab:0.15.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:

@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-04
+
+This release turns the Catalogue's primary Download action into a one-click
+choice while keeping exact Release selection available and explicit.
+
 ### Added
 
 - Catalogue-card Download buttons now submit directly to SABnzbd using a saved
@@ -30,6 +35,9 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 - New installations enable both prdb Reporting channels by default. Existing
   installations keep their saved Fulfilment and Confirmed Assignment choices.
+
+**Before updating:** copy `/data`. Migrations only go forward, so an older image
+cannot use a data directory after 0.15.0 has started against it.
 
 ## [0.14.2] - 2026-09-02
 
