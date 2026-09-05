@@ -62,7 +62,8 @@ public sealed class LibraryBrowseTests
 
         await using var read = database.Scope();
         var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
-        var page = await browse.ReadAsync(null, null, null, null, 1, TestContext.Current.CancellationToken);
+        var page = await browse.ReadAsync(
+            null, null, null, null, 1, cancellationToken: TestContext.Current.CancellationToken);
         var card = Assert.Single(page.Entries);
         Assert.Equal(held, card.Id);
         Assert.Equal(artworkId, card.ArtworkId);
@@ -95,7 +96,8 @@ public sealed class LibraryBrowseTests
 
         await using var read = database.Scope();
         var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
-        var page = await browse.ReadAsync(null, null, null, null, 1, TestContext.Current.CancellationToken);
+        var page = await browse.ReadAsync(
+            null, null, null, null, 1, LibraryEntrySort.TitleAscending, TestContext.Current.CancellationToken);
 
         // Not the title: SQLite's BINARY collation would put "Zebra Crossing"
         // first, because an upper case Z sorts below a lower case a.
@@ -109,6 +111,92 @@ public sealed class LibraryBrowseTests
         var entry = await browse.EntryAsync(zebra, TestContext.Current.CancellationToken);
         Assert.NotNull(entry);
         Assert.Equal(["2160p", "1080p", "720p"], entry!.Files.Select(file => file.Quality));
+    }
+
+    [Fact]
+    public async Task Library_defaults_to_what_arrived_and_offers_four_orders()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var arrived = database.Time.GetUtcNow();
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var first = Guid.NewGuid();
+            var second = Guid.NewGuid();
+            var third = Guid.NewGuid();
+            context.CatalogueVideos.AddRange(
+                Video(first, "Bravo"), Video(second, "Alpha"), Video(third, "Charlie"));
+
+            // Filed in an order that no title order could reproduce, so that
+            // each assertion below can only pass for the order it names.
+            context.LibraryEntries.AddRange(
+                Entry(second, arrived),
+                Entry(third, arrived.AddHours(1)),
+                Entry(first, arrived.AddHours(2)));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var read = database.Scope();
+        var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
+
+        async Task<string[]> InThisOrder(LibraryEntrySort? sort)
+        {
+            var page = sort is null
+                ? await browse.ReadAsync(
+                    null, null, null, null, 1, cancellationToken: TestContext.Current.CancellationToken)
+                : await browse.ReadAsync(
+                    null, null, null, null, 1, sort.Value, TestContext.Current.CancellationToken);
+            return page.Entries.Select(entry => entry.Title).ToArray();
+        }
+
+        Assert.Equal(["Bravo", "Charlie", "Alpha"], await InThisOrder(null));
+        Assert.Equal(["Bravo", "Charlie", "Alpha"], await InThisOrder(LibraryEntrySort.FiledAtDescending));
+        Assert.Equal(["Alpha", "Charlie", "Bravo"], await InThisOrder(LibraryEntrySort.FiledAtAscending));
+        Assert.Equal(["Alpha", "Bravo", "Charlie"], await InThisOrder(LibraryEntrySort.TitleAscending));
+        Assert.Equal(["Charlie", "Bravo", "Alpha"], await InThisOrder(LibraryEntrySort.TitleDescending));
+    }
+
+    [Theory]
+    [InlineData(LibraryEntrySort.FiledAtDescending)]
+    [InlineData(LibraryEntrySort.FiledAtAscending)]
+    [InlineData(LibraryEntrySort.TitleAscending)]
+    [InlineData(LibraryEntrySort.TitleDescending)]
+    public async Task Every_order_tiebreaks_across_a_page_boundary(LibraryEntrySort sort)
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var wholesale = database.Time.GetUtcNow();
+        var held = 60;
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            for (var index = 0; index < held; index++)
+            {
+                var video = Guid.NewGuid();
+
+                // One title and one instant for every entry, so that nothing
+                // but the tiebreak decides the order. This is a restore or a
+                // first filing run, not a contrivance.
+                context.CatalogueVideos.Add(Video(video, "The Same Title"));
+                context.LibraryEntries.Add(Entry(video, wholesale));
+            }
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var read = database.Scope();
+        var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
+        var first = await browse.ReadAsync(
+            null, null, null, null, 1, sort, TestContext.Current.CancellationToken);
+        var second = await browse.ReadAsync(
+            null, null, null, null, 2, sort, TestContext.Current.CancellationToken);
+
+        Assert.Equal(LibraryBrowse.APage, first.Entries.Count);
+        Assert.Equal(held - LibraryBrowse.APage, second.Entries.Count);
+
+        // Nothing appears twice and nothing is lost between the two pages,
+        // which is the whole of what a tiebreak is for.
+        var seen = first.Entries.Concat(second.Entries).Select(entry => entry.Id).ToArray();
+        Assert.Equal(held, seen.Distinct().Count());
     }
 
     [Fact]

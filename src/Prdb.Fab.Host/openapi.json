@@ -2463,6 +2463,14 @@
               "format": "int32",
               "default": 1
             }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "default": "FiledAtDescending",
+              "$ref": "#/components/schemas/LibraryEntrySort"
+            }
           }
         ],
         "responses": {
@@ -4746,6 +4754,14 @@
             "type": "string"
           }
         }
+      },
+      "LibraryEntrySort": {
+        "enum": [
+          "FiledAtDescending",
+          "FiledAtAscending",
+          "TitleAscending",
+          "TitleDescending"
+        ]
       },
       "LibraryFile": {
         "required": [

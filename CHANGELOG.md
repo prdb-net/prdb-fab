@@ -19,6 +19,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- **The Library now shows what arrived first, and its order can be changed.**
+  It was sorted by title with no way to change it. The new default is the most
+  recently filed Library Entry, and a `Sort by` control offers the filing date
+  and the title in either direction. The choice is in the address bar, so a
+  sorted Library can be linked to.
+
 ### Fixed
 
 - The Library grid is now ordered case-insensitively. It sorted on the raw

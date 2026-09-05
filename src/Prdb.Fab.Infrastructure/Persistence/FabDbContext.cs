@@ -754,6 +754,15 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             entry.HasKey(row => row.VideoId);
             entry.Declares(AccountClass.AccountFree);
             entry.Property(row => row.EntryDirectory).IsRequired();
+
+            // ADR 0055's default order for the Library grid, which this index
+            // covers: library_entry drives the join, and the sort disappears
+            // from the plan rather than being done over the joined result.
+            // Measured at 20,000 entries over a million Catalogue Videos:
+            // 26.4 ms to 0.4 ms on the first page, for 1.25 MiB and no
+            // measurable write cost — ADR 0026 writes one of these rows per
+            // filing and never again. The Video id breaks the tie.
+            entry.HasIndex(row => new { row.FiledAt, row.VideoId });
         });
 
         builder.Entity<VideoFileRow>(file =>

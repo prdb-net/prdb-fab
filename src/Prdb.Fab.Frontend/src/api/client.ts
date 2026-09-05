@@ -43,6 +43,7 @@ export type DownloadSettingsState = Schema['DownloadSettingsState']
 export type VideoPage = Schema['VideoPage']
 export type CatalogueVideoFilter = Schema['CatalogueVideoFilter']
 export type CatalogueVideoSort = Schema['CatalogueVideoSort']
+export type LibraryEntrySort = Schema['LibraryEntrySort']
 export type WhatsNewPage = Schema['WhatsNewPage']
 export type AccountPreferenceVerdict = Schema['AccountPreferenceVerdict']
 export type WantedList = Schema['WantedList']
@@ -588,6 +589,7 @@ export async function readLibrary(filters: {
   site?: string
   actor?: string
   quality?: string
+  sort?: LibraryEntrySort
   page: number
 }): Promise<LibraryPage> {
   return json<LibraryPage>(
@@ -596,6 +598,7 @@ export async function readLibrary(filters: {
       site: filters.site,
       actor: filters.actor,
       quality: filters.quality,
+      sort: filters.sort,
       page: String(filters.page),
     })}`),
   )

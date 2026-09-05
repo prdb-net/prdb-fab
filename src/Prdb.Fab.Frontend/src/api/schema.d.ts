@@ -2821,6 +2821,7 @@ export interface paths {
                     actor?: string;
                     quality?: string;
                     page?: number | string;
+                    sort?: components["schemas"]["LibraryEntrySort"];
                 };
                 header?: never;
                 path?: never;
@@ -3536,6 +3537,8 @@ export interface components {
             deletedFiles: number | string;
             detail: string;
         };
+        /** @enum {unknown} */
+        LibraryEntrySort: "FiledAtDescending" | "FiledAtAscending" | "TitleAscending" | "TitleDescending";
         LibraryFile: {
             /** Format: uuid */
             id: string;
