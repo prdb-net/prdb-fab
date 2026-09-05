@@ -2,12 +2,20 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 
-import { readLibrary } from '../api/client.ts'
+import { type LibraryEntrySort, readLibrary } from '../api/client.ts'
 import browseStyles from '../catalogue/BrowseScreen.module.css'
 import { LibraryGrid } from '../catalogue/Grid.tsx'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { LibraryCardActions } from './LibraryCardActions.tsx'
 import styles from './LibraryScreen.module.css'
+
+/** ADR 0055's orders, in the order they are offered. */
+const sorts: readonly LibraryEntrySort[] = [
+  'FiledAtDescending',
+  'FiledAtAscending',
+  'TitleAscending',
+  'TitleDescending',
+]
 
 export function LibraryScreen() {
   const location = useLocation()
@@ -17,10 +25,11 @@ export function LibraryScreen() {
   const site = parameters.get('site') ?? ''
   const actor = parameters.get('actor') ?? ''
   const quality = parameters.get('quality') ?? ''
+  const sort = choice(parameters.get('sort'), sorts, 'FiledAtDescending')
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
   const library = useQuery({
-    queryKey: ['library', search, site, actor, quality, page],
-    queryFn: () => readLibrary({ search, site, actor, quality, page }),
+    queryKey: ['library', search, site, actor, quality, sort, page],
+    queryFn: () => readLibrary({ search, site, actor, quality, sort, page }),
     placeholderData: (held) => held,
   })
   const data = library.data
@@ -40,11 +49,14 @@ export function LibraryScreen() {
     return () => window.clearTimeout(timeout)
   }, [parameters, search, searchInput, setParameters])
 
-  const setFilter = (name: 'site' | 'actor' | 'quality', value: string) => {
+  const setFilter = (name: 'site' | 'actor' | 'quality' | 'sort', value: string) => {
     const next = new URLSearchParams(parameters)
     if (searchInput) next.set('search', searchInput)
     else next.delete('search')
-    if (value) next.set(name, value)
+
+    // The default order stays out of the address bar, so that a plain
+    // /library is the same address as the one the Library link produces.
+    if (value && !(name === 'sort' && value === 'FiledAtDescending')) next.set(name, value)
     else next.delete(name)
     next.delete('page')
     setParameters(next, { replace: true })
@@ -97,6 +109,12 @@ export function LibraryScreen() {
             {data?.filters.qualities.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
+        <label>
+          Sort by
+          <select id="library-sort" name="sort" className={styles.field} value={sort} onChange={(event) => setFilter('sort', event.target.value)}>
+            {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
+          </select>
+        </label>
       </div>
       {library.isError && <p className={styles.error}>The Library could not be read.</p>}
       {data?.entries.length === 0
@@ -114,4 +132,18 @@ export function LibraryScreen() {
       )}
     </main>
   )
+}
+
+function choice<T extends string>(supplied: string | null, choices: readonly T[], fallback: T): T {
+  return choices.find((value) => value === supplied) ?? fallback
+}
+
+function sortLabel(sort: LibraryEntrySort): string {
+  const labels: Record<LibraryEntrySort, string> = {
+    FiledAtDescending: 'Recently filed',
+    FiledAtAscending: 'Filed longest ago',
+    TitleAscending: 'Title, A–Z',
+    TitleDescending: 'Title, Z–A',
+  }
+  return labels[sort]
 }

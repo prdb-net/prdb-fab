@@ -17,6 +17,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         Guid? actorId,
         string? quality,
         int page,
+        LibraryEntrySort sort = LibraryEntrySort.FiledAtDescending,
         CancellationToken cancellationToken = default)
     {
         var wanted = Paging.Wanted(page);
@@ -26,7 +27,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
                 context.CatalogueVideos,
                 entry => entry.VideoId,
                 video => video.PrdbId,
-                (entry, video) => new { Entry = entry, Video = video });
+                (entry, video) => new HeldRow { Entry = entry, Video = video });
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -49,17 +50,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         }
 
         var total = await entries.CountAsync(cancellationToken);
-        var rows = await entries
-            // The normalised title, never the title: SQLite's default collation
-            // is BINARY, which reads "Zebra" as coming before "apple". ADR
-            // 0025's comparison form is already on the row, already required,
-            // and is lower cased, so ordering by it is one order on every
-            // provider. It leaves accents alone and so does this — SQLite has
-            // no collation here that would fold them. The id breaks the tie so
-            // that two entries do not swap places between two requests for the
-            // same page.
-            .OrderBy(row => row.Video.NormalisedTitle)
-            .ThenBy(row => row.Video.Id)
+        var rows = await Ordered(entries, sort)
             .Skip(Paging.Skip(wanted, APage))
             .Take(APage)
             .Select(row => new
@@ -162,6 +153,53 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             await operations.ReadAsync(null, null, videoId, 1, cancellationToken));
     }
 
+    /// <summary>
+    /// ADR 0055's four orders. Each one tiebreaks, because two Library Entries
+    /// must not swap places between two requests for the same page.
+    /// </summary>
+    /// <remarks>
+    /// The title orders read <see cref="CatalogueVideoRow.NormalisedTitle"/>
+    /// rather than the title. SQLite's default collation is BINARY, which reads
+    /// "Zebra" as coming before "apple"; ADR 0025's comparison form is already
+    /// on the row, already required, and lower cased, so ordering by it is one
+    /// order on every provider. It leaves accents alone and so does this —
+    /// there is no collation here that would fold them.
+    /// </remarks>
+    private static IQueryable<HeldRow> Ordered(IQueryable<HeldRow> entries, LibraryEntrySort sort) =>
+        sort switch
+    {
+        LibraryEntrySort.FiledAtAscending => entries
+            .OrderBy(row => row.Entry.FiledAt)
+            .ThenBy(row => row.Entry.VideoId),
+        LibraryEntrySort.TitleAscending => entries
+            .OrderBy(row => row.Video.NormalisedTitle)
+            .ThenBy(row => row.Video.Id),
+        LibraryEntrySort.TitleDescending => entries
+            .OrderByDescending(row => row.Video.NormalisedTitle)
+            .ThenByDescending(row => row.Video.Id),
+        LibraryEntrySort.FiledAtDescending => entries
+            .OrderByDescending(row => row.Entry.FiledAt)
+            .ThenByDescending(row => row.Entry.VideoId),
+        _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null),
+    };
+
+    /// <summary>
+    /// One held Video, named rather than anonymous so that <see cref="Ordered"/>
+    /// can take it — the orders differ in which side of the join they read.
+    /// </summary>
+    /// <remarks>
+    /// Initialised member by member rather than through a constructor. The
+    /// provider translates the members of a projection it can see into; a
+    /// constructor call inside an <c>ORDER BY</c> over a join is an expression
+    /// it refuses.
+    /// </remarks>
+    private sealed class HeldRow
+    {
+        public required LibraryEntryRow Entry { get; init; }
+
+        public required CatalogueVideoRow Video { get; init; }
+    }
+
     private async Task<LibraryFilters> FiltersAsync(CancellationToken cancellationToken)
     {
         var held = context.LibraryEntries.Select(entry => entry.VideoId);
@@ -191,6 +229,15 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             actorRows.Select(actor => new LibraryFilter(actor.PrdbId, actor.Name)).ToList(),
             qualities);
     }
+}
+
+/// <summary>ADR 0055's orders for the Library grid.</summary>
+public enum LibraryEntrySort
+{
+    FiledAtDescending,
+    FiledAtAscending,
+    TitleAscending,
+    TitleDescending,
 }
 
 public sealed record LibraryFilter(Guid Id, string Name);
