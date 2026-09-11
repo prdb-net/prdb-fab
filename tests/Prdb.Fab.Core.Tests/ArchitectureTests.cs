@@ -129,6 +129,32 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
+    /// ADR 0056: <c>analysis_limit</c> is never set. It is ten times cheaper
+    /// than a full <c>ANALYZE</c> and it records wrong selectivity for
+    /// low-cardinality columns — at a million rows it wrote 401 where the truth
+    /// was 500,000, on the very column ADR 0032's backwards-search work set
+    /// filters on.
+    /// </summary>
+    /// <remarks>
+    /// A rule rather than a review note because of how it fails: it is a
+    /// per-connection pragma, so the pool hands it on to whoever borrows that
+    /// connection next, and a "full" ANALYZE measured 12 ms once for exactly
+    /// that reason. Nothing about the wrong answer looks wrong. If it is ever
+    /// wanted, it belongs in SqlitePragmas, applied to the connection in hand.
+    /// </remarks>
+    [Fact]
+    public void Nothing_sets_an_analysis_limit()
+    {
+        foreach (var file in SourceFilesUnder("src"))
+        {
+            Assert.False(
+                AnalysisLimit().IsMatch(CodeIn(file)),
+                $"{file.Name} sets analysis_limit, which ADR 0056 rejected: it misinforms the "
+                + "planner about low-cardinality columns, and the pool passes it on.");
+        }
+    }
+
+    /// <summary>
     /// A file with its comments taken out.
     /// </summary>
     /// <remarks>
@@ -153,6 +179,11 @@ public sealed partial class ArchitectureTests
 
     [GeneratedRegex(@"\b(DateTime|DateTimeOffset)\.(Now|UtcNow|Today)\b")]
     private static partial Regex ClockCall();
+
+    // The pragma by name, in code rather than in prose. CodeIn strips the
+    // comments first, so an ADR quoted in one is free to name what it forbids.
+    [GeneratedRegex(@"analysis_limit", RegexOptions.IgnoreCase)]
+    private static partial Regex AnalysisLimit();
 
     // Anything that builds a client for prdb: the SDK's factory, and the client
     // type itself. Matched on the name so that a using directive is not needed
