@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { readConnections } from '../api/client.ts'
+import { readConnections, type ConnectionsState } from '../api/client.ts'
 import { connectionsKey } from '../onboarding/state.ts'
 import { SabnzbdForm } from '../onboarding/SabnzbdForm.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
+import styles from './Settings.module.css'
 
 /**
  * ADR 0020: the same form as the onboarding step, and the same order within it
@@ -40,6 +41,38 @@ export function SabnzbdSettings() {
           keyIsStored: held?.sabnzbdConfigured === true,
         }}
       />
+
+      <Stored connections={held} />
     </SettingsPage>
+  )
+}
+
+/**
+ * What is stored right now, which the form above cannot say for itself: the
+ * category is chosen from a list that is only fetched once the address and the
+ * key have been checked, so until then the page shows two filled fields and
+ * nothing about the two answers behind them.
+ *
+ * It is read from the same query the form writes to, so a save moves it — which
+ * is what tells the difference between a check that passed and a check that was
+ * stored.
+ */
+function Stored({ connections }: { connections: ConnectionsState | undefined }) {
+  if (connections?.sabnzbdConfigured !== true) {
+    return (
+      <p className={styles.note}>
+        {connections?.sabnzbdSkipped === true
+          ? 'Nothing is stored: this step was skipped during setting up, so nothing is downloaded.'
+          : 'Nothing is stored yet, so nothing is downloaded.'}
+      </p>
+    )
+  }
+
+  return (
+    <p className={styles.note}>
+      Stored: {connections.sabnzbdUrl}, category {connections.sabnzbdCategory}. SABnzbd
+      finishes that category in {connections.completedRoot}, which is{' '}
+      {connections.downloadDirectory} here.
+    </p>
   )
 }
