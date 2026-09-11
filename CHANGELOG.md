@@ -49,6 +49,9 @@ before changing the tag — the backup file is deliberately not the whole of it.
 - A Library Entry now says how many operations it is showing. It embeds the 50
   most recent ones and has no pager, so an entry with a longer history lost the
   rest of it without saying so.
+- A Site page now lists its Videos newest first. It was the last Video grid
+  ordered alphabetically, which made the two identical grids on a Site page and
+  an Actor page disagree without either of them saying so.
 
 ## [0.18.0] - 2026-09-04
 

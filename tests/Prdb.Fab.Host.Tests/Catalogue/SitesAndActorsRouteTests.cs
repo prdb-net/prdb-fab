@@ -100,6 +100,29 @@ public sealed class SitesAndActorsRouteTests
         Assert.Equal(HttpStatusCode.Unauthorized, actorLoad.StatusCode);
     }
 
+    [Fact]
+    public async Task Site_detail_and_actor_detail_are_both_newest_first()
+    {
+        await using var application = new FabApplication()
+            .Answering(FabTransports.Prdb, new RefusesEverything());
+        using var client = await application.SignedInClientAsync();
+        var seeded = await SeedAsync(application);
+
+        var site = await client.GetFromJsonAsync<SiteVideos>(
+            $"/api/catalogue/sites/{seeded.SiteId}?page=1",
+            TestContext.Current.CancellationToken);
+        var actor = await client.GetFromJsonAsync<ActorVideos>(
+            $"/api/catalogue/actors/{seeded.ActorId}?page=1",
+            TestContext.Current.CancellationToken);
+
+        // The seed releases "First Light" before "Second Shift" and names them
+        // the other way round, so an alphabetical grid would answer with the
+        // two titles reversed. Both grids render the same component and are
+        // pinned to the same order here, because that is the whole point.
+        Assert.Equal(["Second Shift", "First Light"], site!.Videos.Videos.Select(video => video.Title));
+        Assert.Equal(["Second Shift", "First Light"], actor!.Videos.Videos.Select(video => video.Title));
+    }
+
     private static async Task<Seeded> SeedAsync(FabApplication application)
     {
         await using var scope = application.Services.CreateAsyncScope();

@@ -318,7 +318,18 @@ public sealed class CatalogueBrowse(
         return new ActorPage(actors, wanted, APage, total, scope);
     }
 
-    /// <summary>One Site and the catalogue Videos released by it.</summary>
+    /// <summary>One Site and the catalogue Videos released by it, newest first.</summary>
+    /// <remarks>
+    /// The order is fixed at the release date, descending, which is what every
+    /// other Video grid in the tool does and what <see cref="ActorAsync"/> has
+    /// always done. This grid was the last one ordered alphabetically, for the
+    /// reason ADR 0055 found behind the Library's old order: a grid has to come
+    /// back in some order and the title was there. It gets no control of its
+    /// own, because "every Video from this Site" and "every Video carrying this
+    /// Actor's credit" are one question asked of two directories, and someone
+    /// looking for a title they already know types it into the filter above the
+    /// grid.
+    /// </remarks>
     public async Task<SiteVideos?> SiteAsync(
         Guid prdbId,
         string? search,
@@ -345,10 +356,11 @@ public sealed class CatalogueBrowse(
 
         return new SiteVideos(
             site,
-            await VideosAsync(videos, search, page, CatalogueVideoSort.TitleAscending, cancellationToken));
+            await VideosAsync(videos, search, page, CatalogueVideoSort.ReleaseDateDescending, cancellationToken));
     }
 
-    /// <summary>One Actor and the catalogue Videos carrying their credit.</summary>
+    /// <summary>One Actor and the catalogue Videos carrying their credit, newest first.</summary>
+    /// <remarks>Fixed at the release date, descending, for <see cref="SiteAsync"/>'s reasons.</remarks>
     public async Task<ActorVideos?> ActorAsync(
         Guid prdbId,
         string? search,
