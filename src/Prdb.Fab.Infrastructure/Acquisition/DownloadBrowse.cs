@@ -240,6 +240,7 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
             .AsNoTracking()
             .Where(row => row.VideoId == videoId)
             .OrderByDescending(row => row.CreatedAt)
+            .ThenByDescending(row => row.Id)
             .ToListAsync(cancellationToken);
         var resolvedOrigins = await origins.ForAsync(rows.Select(row => row.Id).ToArray(), cancellationToken);
         return [.. rows.Select(row => new DownloadSelectionRow(
@@ -260,6 +261,7 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
             .AsNoTracking()
             .Where(row => ids.Contains(row.Id))
             .OrderByDescending(row => row.CreatedAt)
+            .ThenByDescending(row => row.Id)
             .ToListAsync(cancellationToken);
         var resolvedOrigins = await origins.ForAsync(rows.Select(row => row.Id).ToArray(), cancellationToken);
         return [.. rows.Select(row => new DownloadSelectionRow(

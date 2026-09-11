@@ -42,6 +42,13 @@ before changing the tag — the backup file is deliberately not the whole of it.
 - Quality labels are now listed best first everywhere they are shown. They were
   sorted as text, which put `1080p` above `720p`, buried `2160p` in the middle
   and, in a Library Entry, listed the weakest file above the strongest.
+- A Download list shown before a confirmation no longer reorders itself. Two
+  Downloads created in the same tick had nothing to separate them, so a Video's
+  Download history and the selection in a stop-following confirmation could
+  come back in a different order every time they were read.
+- A Library Entry now says how many operations it is showing. It embeds the 50
+  most recent ones and has no pager, so an entry with a longer history lost the
+  rest of it without saying so.
 
 ## [0.18.0] - 2026-09-04
 

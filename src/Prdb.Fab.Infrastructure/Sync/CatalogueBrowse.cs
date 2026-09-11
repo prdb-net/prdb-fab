@@ -210,7 +210,13 @@ public sealed class CatalogueBrowse(
         return await VideosAsync(query, search, page, sort, cancellationToken);
     }
 
-    /// <summary>Sites kept by the catalogue, alphabetically and searched locally.</summary>
+    /// <summary>Sites kept by the catalogue, the largest first, and searched locally.</summary>
+    /// <remarks>
+    /// The order is how many catalogue Videos the Site holds, descending, with
+    /// the title and then the id as tiebreaks. A grid opened without a search is
+    /// asked what is here, and a Site holding two hundred Videos answers that
+    /// better than one holding a single Video that happens to start with an A.
+    /// </remarks>
     public async Task<SitePage> SitesAsync(
         string? search,
         int page,
@@ -266,7 +272,12 @@ public sealed class CatalogueBrowse(
         return new SitePage(sites, wanted, APage, total, scope);
     }
 
-    /// <summary>Actors kept by the catalogue, alphabetically and searched locally.</summary>
+    /// <summary>Actors kept by the catalogue, the most credited first, and searched locally.</summary>
+    /// <remarks>
+    /// The order is how many catalogue credits the Actor carries, descending,
+    /// with the name and then the id as tiebreaks — the same argument as
+    /// <see cref="SitesAsync"/>, on the other grid.
+    /// </remarks>
     public async Task<ActorPage> ActorsAsync(
         string? search,
         int page,

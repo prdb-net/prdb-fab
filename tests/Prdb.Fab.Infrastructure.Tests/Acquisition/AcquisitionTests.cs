@@ -525,6 +525,55 @@ public sealed class AcquisitionTests
                 .ToArrayAsync(TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task Downloads_created_in_the_same_tick_keep_one_order()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var seeded = await SeedAsync(database);
+        var sameTick = database.Time.GetUtcNow();
+
+        // One instant for all three, because a submission pass writes its
+        // Downloads within a tick of each other — so nothing but the tiebreak
+        // decides the order. The ids are minted out of order to make sure the
+        // order comes from the id and not from the order they were written in.
+        var ids = new[]
+        {
+            Guid.Parse("0198ec28-1c00-7000-8000-0000000000a2"),
+            Guid.Parse("0198ec28-1c00-7000-8000-0000000000a1"),
+            Guid.Parse("0198ec28-1c00-7000-8000-0000000000a3"),
+        };
+        Guid[] newestFirst =
+        [
+            Guid.Parse("0198ec28-1c00-7000-8000-0000000000a3"),
+            Guid.Parse("0198ec28-1c00-7000-8000-0000000000a2"),
+            Guid.Parse("0198ec28-1c00-7000-8000-0000000000a1"),
+        ];
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            for (var index = 0; index < ids.Length; index++)
+            {
+                var download = Download(database, seeded.VideoId, seeded.IndexerId, $"attempt-{index}");
+                download.Id = ids[index];
+                download.CreatedAt = sameTick;
+                context.Downloads.Add(download);
+            }
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var read = database.Scope();
+        var browse = read.ServiceProvider.GetRequiredService<DownloadBrowse>();
+
+        var history = await browse.ForVideoAsync(seeded.VideoId, TestContext.Current.CancellationToken);
+        Assert.Equal(newestFirst, history.Select(row => row.Id).ToArray());
+
+        var selection = await browse.PreviewStopFollowingAsync(ids, TestContext.Current.CancellationToken);
+        Assert.Equal(DownloadSelectionOutcome.Ready, selection.Outcome);
+        Assert.Equal(newestFirst, selection.Downloads.Select(row => row.Id).ToArray());
+    }
+
     private static async Task<Seeded> SeedAsync(TestDatabase database)
     {
         var indexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000041");

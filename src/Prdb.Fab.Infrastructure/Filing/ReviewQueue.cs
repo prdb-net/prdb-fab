@@ -29,6 +29,13 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
         var globalCount = await context.ArrivingFiles.CountAsync(
             row => row.Reason != null,
             cancellationToken);
+        // Newest first, and the id is the only key that can say so: an
+        // ArrivingFile carries no timestamp. It works because every one of them
+        // is created with Guid.CreateVersion7, whose leading bits are the
+        // creation instant, so the descending id order is the arrival order and
+        // is total — two files arriving in the same tick still cannot swap
+        // places between two reads. Anything that stops minting these ids that
+        // way has to give this query a time column instead.
         var arrivals = await open
             .OrderByDescending(row => row.Id)
             .Skip(Paging.Skip(wanted, APage))

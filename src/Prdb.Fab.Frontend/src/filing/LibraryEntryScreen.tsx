@@ -28,5 +28,8 @@ export function LibraryEntryScreen() {
     <div className={styles.tableFrame}><table className={styles.table}><thead><tr><th>Quality</th><th>Runtime</th><th>Size</th><th>Probe</th><th>Path</th></tr></thead><tbody>{data.files.map((file) => <tr key={file.id}><td>{file.quality}</td><td>{duration(file.runtimeSeconds)}</td><td>{size(file.sizeBytes)}</td><td>{file.width && file.height ? `${file.width}×${file.height}` : '—'} {file.videoCodec}</td><td><code>{file.filedPath}</code></td></tr>)}</tbody></table></div>
     <h2>Operation Log</h2>
     <OperationList entries={data.operations.entries} />
+    {Number(data.operations.total) > data.operations.entries.length && <p className={styles.quiet}>
+      The most recent {data.operations.entries.length} of {Number(data.operations.total)} operations recorded for this Video.
+    </p>}
   </main>
 }

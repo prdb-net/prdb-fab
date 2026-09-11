@@ -150,6 +150,10 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             row.FiledAt,
             actors,
             files,
+            // The first page and no pager: an entry's operations are read as
+            // a history beside the files, not browsed. The page carries its
+            // total, so the surface says how many of them it is showing rather
+            // than dropping the rest in silence.
             await operations.ReadAsync(null, null, videoId, 1, cancellationToken));
     }
 
