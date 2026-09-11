@@ -19,6 +19,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-11
+
+This release settles what order things come back in. The Library leads with what
+arrived most recently and can be sorted by hand, the grids that quietly
+disagreed with one another no longer do, and the database finally tells its
+query planner what is in it. A connection form also stops saying a change was
+saved when it was not.
+
 ### Changed
 
 - **The Library now shows what arrived first, and its order can be changed.**
