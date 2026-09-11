@@ -27,7 +27,22 @@ before changing the tag — the backup file is deliberately not the whole of it.
   and the title in either direction. The choice is in the address bar, so a
   sorted Library can be linked to.
 
+- **The SABnzbd settings now say what is stored.** The category is chosen from
+  a list SABnzbd only answers once the address and the key have been checked,
+  so until then the page showed two filled fields and nothing about the two
+  answers behind them. A line under the form now names the address, the
+  category, and both halves of the path mapping, and it moves when a save
+  lands — which is what tells a check that passed from a check that was stored.
+
 ### Fixed
+
+- **A green "saved" sentence no longer outlives the form it was about.** Every
+  connection form kept its verdict on screen while the fields under it were
+  edited, so changing a SABnzbd category, an indexer's name or the Library root
+  left a sentence saying the previous submission had been stored — and the
+  Library root's button went on reading `Stored` over a path that was not. The
+  verdict is now dropped as soon as anything is typed or chosen, so the only
+  thing on screen saying a connection was saved is one that was.
 
 - **The database now tells its query planner what is in it.** It had never been
   analysed, so SQLite planned every join from its built-in guesses and the

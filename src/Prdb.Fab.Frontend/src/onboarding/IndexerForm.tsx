@@ -34,6 +34,13 @@ export function IndexerForm({
   const [failure, setFailure] = useState<string | null>(null)
   const queries = useQueryClient()
 
+  /**
+   * A verdict is about what was submitted, so editing any field makes it stale.
+   * A green sentence left standing under a form that has been changed since
+   * reads as saved when nothing was.
+   */
+  const forgetVerdict = () => setVerdict(null)
+
   const submit = useMutation({
     mutationFn: () =>
       indexer
@@ -86,7 +93,10 @@ export function IndexerForm({
         autoComplete="off"
         spellCheck={false}
         value={url}
-        onChange={(event) => setUrl(event.target.value)}
+        onChange={(event) => {
+          setUrl(event.target.value)
+          forgetVerdict()
+        }}
       />
       <p className={styles.hint}>
         Usually the site address with <code>/api</code> on the end, but not
@@ -103,7 +113,10 @@ export function IndexerForm({
         autoComplete="off"
         spellCheck={false}
         value={apiKey}
-        onChange={(event) => setApiKey(event.target.value)}
+        onChange={(event) => {
+          setApiKey(event.target.value)
+          forgetVerdict()
+        }}
       />
       <p className={styles.hint}>
         {indexer ? (
@@ -126,7 +139,10 @@ export function IndexerForm({
         placeholder="Its host name"
         autoComplete="off"
         value={name}
-        onChange={(event) => setName(event.target.value)}
+        onChange={(event) => {
+          setName(event.target.value)
+          forgetVerdict()
+        }}
       />
 
       {verdict && (

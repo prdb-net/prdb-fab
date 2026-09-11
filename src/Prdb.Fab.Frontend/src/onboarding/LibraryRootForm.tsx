@@ -66,7 +66,15 @@ export function LibraryRootForm({
         autoComplete="off"
         spellCheck={false}
         value={path}
-        onChange={(event) => setPath(event.target.value)}
+        onChange={(event) => {
+          setPath(event.target.value)
+
+          // A verdict is about the path that was submitted. Editing the field
+          // makes it stale, and this one also spells the button *Stored* — a
+          // changed path under a button saying that reads as saved when
+          // nothing was.
+          setVerdict(null)
+        }}
       />
       <p className={styles.hint}>
         The path inside this container, which is whatever you mounted your

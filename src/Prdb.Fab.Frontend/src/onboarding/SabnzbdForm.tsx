@@ -46,9 +46,20 @@ export function SabnzbdForm({
   const [failure, setFailure] = useState<string | null>(null)
   const queries = useQueryClient()
 
+  /**
+   * A verdict is about what was submitted, so editing any field makes it stale.
+   * Every field drops it, because a green sentence left standing under a form
+   * that has been changed since reads as saved when nothing was.
+   */
+  const forgetVerdict = () => setVerdict(null)
+
+  /**
+   * The list is what one address and one key answered, so those two forget the
+   * list as well — and with it the category, which is chosen from that list.
+   */
   const forget = () => {
+    forgetVerdict()
     setListing(null)
-    setVerdict(null)
     setCategory('')
   }
 
@@ -154,7 +165,10 @@ export function SabnzbdForm({
             id="sabnzbd-category"
             className={styles.field}
             value={category}
-            onChange={(event) => setCategory(event.target.value)}
+            onChange={(event) => {
+              setCategory(event.target.value)
+              forgetVerdict()
+            }}
           >
             {listing.categories.map((candidate) => (
               <option key={candidate.name} value={candidate.name}>
@@ -181,7 +195,10 @@ export function SabnzbdForm({
             autoComplete="off"
             spellCheck={false}
             value={downloadDirectory}
-            onChange={(event) => setDownloadDirectory(event.target.value)}
+            onChange={(event) => {
+              setDownloadDirectory(event.target.value)
+              forgetVerdict()
+            }}
           />
           <p className={styles.hint}>
             The same folder, as this container sees it. They are often different,
