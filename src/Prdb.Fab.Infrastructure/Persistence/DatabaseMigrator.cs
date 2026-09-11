@@ -49,6 +49,58 @@ public sealed class DatabaseMigrator(
         }
 
         await WarnIfNotWriteAheadLoggingAsync(cancellationToken);
+        await AnalyseAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// ADR 0056: one <c>PRAGMA optimize</c> per start, so the query planner
+    /// reads the data rather than its own built-in guesses.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// On a database that has never been analysed this writes
+    /// <c>sqlite_stat1</c> for every table, which was measured at 6 - 27 ms;
+    /// afterwards it proposes nothing and costs 0.0 ms. A fresh connection is
+    /// enough — the pragma analyses everything while the statistics table is
+    /// empty, rather than only what this connection has queried — and a fresh
+    /// installation heals itself, because empty tables record nothing and the
+    /// next start with data in place fills them in.
+    /// </para>
+    /// <para>
+    /// A failure is logged and swallowed. Statistics are an optimisation, and a
+    /// database that cannot be analysed can still be served — which is the one
+    /// way this differs from the migration above it.
+    /// </para>
+    /// <para>
+    /// <c>PRAGMA analysis_limit</c> is deliberately not set here or anywhere
+    /// else. ADR 0056 measured it writing a selectivity wrong by three orders
+    /// of magnitude on the column ADR 0032's backwards-search work set filters
+    /// on, and it is per-connection, so the pool would hand it to whoever asked
+    /// next.
+    /// </para>
+    /// </remarks>
+    private async Task AnalyseAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = new SqliteConnection(location.ConnectionString);
+            await connection.OpenAsync(cancellationToken);
+
+            SqlitePragmas.Apply(connection);
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = "PRAGMA optimize;";
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                exception,
+                "The database at {Database} could not be analysed. It is served anyway; queries "
+                + "may pick worse plans until the maintenance routine succeeds.",
+                location.FilePath);
+        }
     }
 
     /// <summary>

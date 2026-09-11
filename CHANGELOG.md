@@ -29,6 +29,13 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ### Fixed
 
+- **The database now tells its query planner what is in it.** It had never been
+  analysed, so SQLite planned every join from its built-in guesses and the
+  Library grid was five times slower than it needed to be. Statistics are now
+  written at startup, and a monthly routine renews them — an installation that
+  records its statistics while it is nearly empty and then grows into hundreds
+  of thousands of rows was measured costing a Site-filtered grid seven times.
+  There is nothing to configure.
 - The Library grid is now ordered case-insensitively. It sorted on the raw
   title, so a lower case title sorted after every title starting with a capital
   letter rather than among them.

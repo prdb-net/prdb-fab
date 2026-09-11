@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+using Prdb.Fab.Core.Scheduling;
+
 namespace Prdb.Fab.Infrastructure.Persistence;
 
 public static class PersistenceServiceCollectionExtensions
@@ -28,6 +30,14 @@ public static class PersistenceServiceCollectionExtensions
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 
         services.AddScoped<DatabaseMigrator>();
+
+        // ADR 0056: the statistics the startup PRAGMA optimize writes once,
+        // renewed on the schedule. An ordinary routine under ADR 0038 — one
+        // row, one lane, its own due time — and it lives here because what it
+        // maintains is the database rather than anything above it.
+        services.AddScoped<DatabaseAnalysisRoutine>();
+        services.AddScoped<IRoutine>(provider =>
+            provider.GetRequiredService<DatabaseAnalysisRoutine>());
 
         // ADR 0033's account cut, read off the model rather than kept in step
         // by hand. See AccountScopedRows.
