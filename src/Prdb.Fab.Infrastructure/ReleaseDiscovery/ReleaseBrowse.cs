@@ -171,6 +171,16 @@ public sealed class ReleaseBrowse(
 
         var rankById = ranking?.Ranked.ToDictionary(release => release.Id) ?? [];
         var exclusionById = ranking?.Excluded.ToDictionary(release => release.Id) ?? [];
+
+        // ADR 0008's order is not expressible in SQL, so the Video context
+        // orders in memory and materialises the whole set before it keeps 50
+        // rows, where the Site and Actor contexts cut the page in SQL. The
+        // difference is priced in prototypes/release-table-paging: under 30 ms
+        // up to around 500 Releases for one Video, perceptible somewhere
+        // between 2 000 and 5 000, and a third to a half of it is the ranking
+        // read above rather than this. A Video's set grows by how often that
+        // one Video is posted again, which is a handful per Indexer, so the
+        // simpler code stays until a real table comes near those numbers.
         var releases = ranking is null
             ? await query
                 .OrderByDescending(row => row.FirstSeenAt)
