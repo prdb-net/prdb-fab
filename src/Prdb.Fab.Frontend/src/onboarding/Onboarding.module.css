@@ -120,3 +120,32 @@
 .quiet:hover {
   color: var(--text);
 }
+
+/* A row that carries an action beside what it says. ADR 0020's rank is the
+   list position, so reordering happens in the list rather than in a field. */
+.row {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.rowMain {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rowActions {
+  display: flex;
+  flex: none;
+  gap: 0.35rem;
+}
+
+.rowActions button {
+  align-self: auto;
+  line-height: 1;
+  margin: 0;
+  min-height: 2.1rem;
+  min-width: 2.1rem;
+  padding: 0.3rem 0.5rem;
+}

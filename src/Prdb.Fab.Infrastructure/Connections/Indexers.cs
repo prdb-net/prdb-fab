@@ -23,9 +23,20 @@ public sealed class Indexers(
     TimeProvider time,
     ILogger<Indexers> logger)
 {
+    /// <summary>
+    /// Every configured indexer, in ADR 0008's order.
+    /// </summary>
+    /// <remarks>
+    /// By rank rather than by name, because the rank <em>is</em> the list
+    /// position: ADR 0020 chose a position over a typed number, so a list shown
+    /// in any other order would be showing something that is not the setting.
+    /// The name breaks a tie, which two rows can only have while one of them is
+    /// mid-move.
+    /// </remarks>
     public async Task<IReadOnlyList<ConfiguredIndexer>> ListAsync(CancellationToken cancellationToken = default) =>
         await context.Indexers
-            .OrderBy(row => row.Name)
+            .OrderBy(row => row.Rank)
+            .ThenBy(row => row.Name)
             .Select(row => new ConfiguredIndexer(
                 row.Id,
                 row.Name,
@@ -33,6 +44,7 @@ public sealed class Indexers(
                 row.Categories,
                 row.Enabled,
                 row.Rank,
+                row.DailyQueryBudget,
                 row.LastVerdict,
                 row.LastCheckedAt))
             .ToListAsync(cancellationToken);
@@ -177,9 +189,201 @@ public sealed class Indexers(
         return new IndexerSave(IndexerConnectionOutcome.Saved, null, categories);
     }
 
+    /// <summary>
+    /// The three settings that are the row's own rather than the connection's:
+    /// whether it is used at all, and how much of it may be spent in a day.
+    /// </summary>
+    /// <remarks>
+    /// Its own act (ADR 0040) and not a field on the edit request, for the
+    /// reason ADR 0020 gives about spending queries: changing a budget is not a
+    /// reason to run a real search against somebody's indexer, and an edit that
+    /// re-checked would make disabling a broken indexer impossible — the check
+    /// would fail and the change would be refused with it.
+    /// </remarks>
+    public async Task<IndexerSettingsSave?> SetAsync(
+        Guid id,
+        bool enabled,
+        int? dailyQueryBudget,
+        CancellationToken cancellationToken = default)
+    {
+        var stored = await context.Indexers.SingleOrDefaultAsync(row => row.Id == id, cancellationToken);
+
+        if (stored is null) return null;
+
+        if (dailyQueryBudget is { } budget && (budget < 1 || budget > 100_000))
+        {
+            return new IndexerSettingsSave(false, stored.Enabled, stored.DailyQueryBudget);
+        }
+
+        stored.Enabled = enabled;
+
+        // Empty is ADR 0020's unbounded, which the schema spells as a number
+        // large enough that nothing reaches it — the column is not nullable and
+        // making it so would put a second meaning on a value the budget
+        // arithmetic divides.
+        stored.DailyQueryBudget = dailyQueryBudget ?? Unbounded;
+
+        context.Indexers.Update(stored);
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "The indexer at {Host} is now {State}, with a daily query budget of {Budget}.",
+            HostOf(stored.Url),
+            enabled ? "enabled" : "disabled",
+            stored.DailyQueryBudget);
+
+        return new IndexerSettingsSave(true, stored.Enabled, stored.DailyQueryBudget);
+    }
+
+    /// <summary>
+    /// One step up or down the list, which is ADR 0008's order and therefore
+    /// ADR 0020's rank.
+    /// </summary>
+    /// <remarks>
+    /// The whole list is renumbered from zero rather than two rows swapping
+    /// numbers. Ranks that arrived by any other route — a Backup from an
+    /// installation whose rows were deleted, a row added while another was
+    /// mid-move — are then contiguous afterwards, and ADR 0008 only needs the
+    /// order to be total.
+    /// </remarks>
+    public async Task<bool> MoveAsync(Guid id, bool up, CancellationToken cancellationToken = default)
+    {
+        var ordered = await context.Indexers
+            .OrderBy(row => row.Rank)
+            .ThenBy(row => row.Name)
+            .ToListAsync(cancellationToken);
+
+        var at = ordered.FindIndex(row => row.Id == id);
+
+        if (at < 0) return false;
+
+        var to = up ? at - 1 : at + 1;
+
+        if (to < 0 || to >= ordered.Count) return true;
+
+        (ordered[at], ordered[to]) = (ordered[to], ordered[at]);
+
+        for (var position = 0; position < ordered.Count; position++)
+        {
+            ordered[position].Rank = position;
+        }
+
+        context.Indexers.UpdateRange(ordered);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    /// <summary>
+    /// What deleting this indexer costs, before it is deleted.
+    /// </summary>
+    /// <remarks>
+    /// Three different answers, which is why this is a sentence rather than a
+    /// count. The cache goes with it and is disposable by ADR 0015. The
+    /// Downloads stay, because the Download row is the consumed state ADR 0016
+    /// keeps and the thing that answers <em>why is this on my disk</em>. And an
+    /// Automation Rule that references it loses that permission — one left with
+    /// none comes back <strong>disabled</strong> rather than inert, because
+    /// ADR 0020 is explicit and the reason is ADR 0018's: a disabled rule shows
+    /// as a Brake, and an inert one is a silent failure.
+    /// </remarks>
+    public async Task<IndexerDeletePreview?> PreviewDeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var stored = await context.Indexers
+            .AsNoTracking()
+            .SingleOrDefaultAsync(row => row.Id == id, cancellationToken);
+
+        if (stored is null) return null;
+
+        var cached = await context.Releases.CountAsync(row => row.IndexerId == id, cancellationToken);
+        var downloads = await context.Downloads.CountAsync(row => row.IndexerId == id, cancellationToken);
+        var referencing = await context.AutomationRuleIndexers
+            .Where(row => row.IndexerId == id)
+            .Select(row => row.AutomationRuleId)
+            .ToListAsync(cancellationToken);
+        var losingTheirLast = await context.AutomationRules
+            .CountAsync(
+                rule => referencing.Contains(rule.Id)
+                    && !context.AutomationRuleIndexers.Any(
+                        edge => edge.AutomationRuleId == rule.Id && edge.IndexerId != id),
+                cancellationToken);
+
+        return new IndexerDeletePreview(
+            stored.Id,
+            stored.Name,
+            cached,
+            downloads,
+            referencing.Count,
+            losingTheirLast);
+    }
+
+    /// <summary>Deletes it, and applies what the preview said.</summary>
+    public async Task<IndexerDeleteVerdict?> DeleteAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var stored = await context.Indexers.SingleOrDefaultAsync(row => row.Id == id, cancellationToken);
+
+        if (stored is null) return null;
+
+        var preview = await PreviewDeleteAsync(id, cancellationToken);
+
+        context.Indexers.Remove(stored);
+        await context.SaveChangesAsync(cancellationToken);
+
+        // After the delete, because the edges go with the row: a rule with no
+        // permitted indexer left is one that can never act, and ADR 0020 wants
+        // it saying so rather than quietly permitting nothing.
+        var disabled = await context.AutomationRules
+            .Where(rule => rule.Enabled
+                && !context.AutomationRuleIndexers.Any(edge => edge.AutomationRuleId == rule.Id))
+            .ExecuteUpdateAsync(update => update.SetProperty(rule => rule.Enabled, false), cancellationToken);
+
+        logger.LogWarning(
+            "The indexer at {Host} was deleted. Its cache went with it; {Downloads} Download(s) keep "
+            + "its identity, and {Disabled} Automation Rule(s) were disabled for having no Indexer left.",
+            HostOf(stored.Url),
+            preview?.Downloads ?? 0,
+            disabled);
+
+        return new IndexerDeleteVerdict(id, stored.Name, preview?.CachedReleases ?? 0, disabled);
+    }
+
+    /// <summary>
+    /// ADR 0020's unbounded daily budget, as a number. Large enough that no
+    /// indexer answers that many times in a day, and finite so that the budget
+    /// arithmetic has no second case.
+    /// </summary>
+    public const int Unbounded = 100_000;
+
     private static string HostOf(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var address) ? address.Host : url;
 }
+
+/// <param name="Saved">False where the budget was outside what a day can hold.</param>
+public sealed record IndexerSettingsSave(bool Saved, bool Enabled, int DailyQueryBudget);
+
+/// <param name="CachedReleases">Disposable by ADR 0015, and gone with the row.</param>
+/// <param name="Downloads">
+/// Kept: the Download row is what ADR 0016 makes the consumed state, and what
+/// answers "why is this on my disk" after the indexer is gone.
+/// </param>
+/// <param name="RulesReferencing">Automation Rules that permit it today.</param>
+/// <param name="RulesLosingTheirLastIndexer">
+/// Of those, the ones that will have no permitted Indexer left and therefore
+/// come back disabled (ADR 0020).
+/// </param>
+public sealed record IndexerDeletePreview(
+    Guid IndexerId,
+    string Name,
+    int CachedReleases,
+    int Downloads,
+    int RulesReferencing,
+    int RulesLosingTheirLastIndexer);
+
+public sealed record IndexerDeleteVerdict(Guid IndexerId, string Name, int CachedReleases, int RulesDisabled);
 
 /// <summary>
 /// An indexer as the browser side sees it. No key: it is stored in the clear
@@ -192,6 +396,7 @@ public sealed record ConfiguredIndexer(
     string Categories,
     bool Enabled,
     int Rank,
+    int DailyQueryBudget,
     IndexerConnectionOutcome LastVerdict,
     DateTimeOffset LastCheckedAt);
 

@@ -52,7 +52,12 @@ export function ConnectionsScreen() {
             : 'None, so nothing is searched for.'}
       </p>
 
-      <IndexerList under="/settings/connections/indexers" />
+      <IndexerList under="/settings/connections/indexers" reorderable />
+
+      <p className={styles.detail}>
+        The order is the rank: when two Indexers offer the same Release, ADR 0008's
+        ranking prefers the one higher up. Moving a row is a save.
+      </p>
 
       <p className={styles.note}>
         <Link to="/settings/connections/indexers/new">Add an indexer</Link>

@@ -25,6 +25,10 @@ export type SabnzbdCategory = Schema['SabnzbdCategory']
 export type SabnzbdCategoriesVerdict = Schema['SabnzbdCategoriesVerdict']
 export type SabnzbdConnectionVerdict = Schema['SabnzbdConnectionVerdict']
 export type ConfiguredIndexer = Schema['ConfiguredIndexer']
+export type IndexerSettingsVerdict = Schema['IndexerSettingsVerdict']
+export type IndexerMoveVerdict = Schema['IndexerMoveVerdict']
+export type IndexerDeletePreview = Schema['IndexerDeletePreview']
+export type IndexerDeleteVerdict = Schema['IndexerDeleteVerdict']
 export type IndexerConnectionVerdict = Schema['IndexerConnectionVerdict']
 export type LibraryRootVerdict = Schema['LibraryRootVerdict']
 export type BeforeDownloadGateChoice = Schema['BeforeDownloadGateChoice']
@@ -221,6 +225,31 @@ export async function editIndexer(
   indexer: { name: string; url: string; apiKey: string },
 ): Promise<IndexerConnectionVerdict> {
   return post<IndexerConnectionVerdict>(`/api/connections/indexers/${segment(id)}`, indexer)
+}
+
+/**
+ * ADR 0020's three row settings, which are not the connection: changing them
+ * spends no query at the indexer, so they are an act of their own rather than
+ * fields on the check.
+ */
+export async function saveIndexerSettings(
+  id: string,
+  settings: { enabled: boolean; dailyQueryBudget: number | null },
+): Promise<IndexerSettingsVerdict> {
+  return post<IndexerSettingsVerdict>(`/api/connections/indexers/${segment(id)}/settings`, settings)
+}
+
+/** The rank is the list position, so the act is a move (ADR 0020). */
+export async function moveIndexer(id: string, up: boolean): Promise<IndexerMoveVerdict> {
+  return post<IndexerMoveVerdict>(`/api/connections/indexers/${segment(id)}/move`, { up })
+}
+
+export async function previewDeleteIndexer(id: string): Promise<IndexerDeletePreview> {
+  return post<IndexerDeletePreview>(`/api/connections/indexers/${segment(id)}/delete/preview`)
+}
+
+export async function deleteIndexer(id: string): Promise<IndexerDeleteVerdict> {
+  return post<IndexerDeleteVerdict>(`/api/connections/indexers/${segment(id)}/delete`)
 }
 
 export async function saveLibraryRoot(path: string): Promise<LibraryRootVerdict> {

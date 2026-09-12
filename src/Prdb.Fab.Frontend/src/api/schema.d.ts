@@ -1341,6 +1341,190 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/connections/indexers/{id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IndexerSettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IndexerSettingsVerdict"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/indexers/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IndexerMoveRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IndexerMoveVerdict"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/indexers/{id}/delete/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IndexerDeletePreview"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/indexers/{id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IndexerDeleteVerdict"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/connections/library-root": {
         parameters: {
             query?: never;
@@ -3367,6 +3551,8 @@ export interface components {
             enabled: boolean;
             /** Format: int32 */
             rank: number | string;
+            /** Format: int32 */
+            dailyQueryBudget: number | string;
             lastVerdict: components["schemas"]["IndexerConnectionOutcome"];
             /** Format: date-time */
             lastCheckedAt: string;
@@ -3568,6 +3754,48 @@ export interface components {
             outcome: components["schemas"]["IndexerConnectionOutcome"];
             detail: string;
             categories: string[];
+        };
+        IndexerDeletePreview: {
+            /** Format: uuid */
+            indexerId: string;
+            name: string;
+            /** Format: int32 */
+            cachedReleases: number | string;
+            /** Format: int32 */
+            downloads: number | string;
+            /** Format: int32 */
+            rulesReferencing: number | string;
+            /** Format: int32 */
+            rulesLosingTheirLastIndexer: number | string;
+        };
+        IndexerDeleteVerdict: {
+            /** Format: uuid */
+            indexerId: string;
+            name: string;
+            /** Format: int32 */
+            cachedReleases: number | string;
+            /** Format: int32 */
+            rulesDisabled: number | string;
+        };
+        IndexerMoveRequest: {
+            up: boolean;
+        };
+        IndexerMoveVerdict: {
+            /** Format: uuid */
+            indexerId: string;
+            detail: string;
+        };
+        IndexerSettingsRequest: {
+            enabled: boolean;
+            /** Format: int32 */
+            dailyQueryBudget: null | number | string;
+        };
+        IndexerSettingsVerdict: {
+            saved: boolean;
+            enabled: boolean;
+            /** Format: int32 */
+            dailyQueryBudget: number | string;
+            detail: string;
         };
         LibraryActor: {
             /** Format: uuid */
