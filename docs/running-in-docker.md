@@ -17,7 +17,7 @@ the way.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.19.0
+    image: prdbnet/prdb-fab:0.20.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -382,7 +382,7 @@ hardware and the ARM boards and newer Synology models alike.
 
 | Tag | What it points at |
 | --- | --- |
-| `0.19.0` | A release. This is what documentation and Compose files should pin. |
+| `0.20.0` | A release. This is what documentation and Compose files should pin. |
 | `latest` | The tip of the default branch. Fine for trying the tool out, a poor idea for something that runs unattended. |
 | `<commit sha>` | Exactly one commit. Useful for reproducing a report. |
 
@@ -390,6 +390,68 @@ Anonymous pulls from Docker Hub are rate-limited per IP address. A NAS that
 pulls on a schedule, or a household behind one address, can run into that: the
 symptom is a pull that fails with `toomanyrequests`, and the fix is to log in to
 Docker Hub on the host or to pull less often. It is not a broken image.
+
+## Backup, and starting a container from one
+
+`Settings → Backup` writes one file. It holds everything about this installation
+that the tool cannot fetch again — your settings, every indexer with its address
+and key, the SABnzbd connection and its path mapping, your prdb key, your
+automation rules, the review queue, and the local record of what was downloaded,
+what was filed where, which releases are used up and what has already been
+reported to prdb. It does not hold the indexer cache, cached artwork, prdb's
+catalogue or your video files, because all of that is fetched again by itself.
+
+So the file is small, and it is not a copy of `/data`. The two protect against
+different things: the backup protects the part you would otherwise have to type
+in again, and a copy of `/data` protects you from a migration you want to go back
+from. Keep both habits.
+
+**The file is plain JSON and the credentials in it are readable.** Nothing in the
+tool encrypts it, on purpose — whatever you move it with encrypts everything it
+carries under a key you already manage, and a passphrase underneath that would be
+one more thing to lose at the moment you most need the file. So:
+
+- put it where you put things that hold your keys, and no looser than `/data`;
+- let your backup tool do the encrypting, the way it does for everything else;
+- never attach one to a bug report. The log is safe to send; this is not.
+
+### Restoring
+
+A restore runs on a container that has **nothing in it yet**, before a password
+exists. That is not a limitation to work around — the login credential is inside
+the file, so there is nobody to sign in as, and an installation empty enough to
+restore into is one that has nothing to lose. It refuses an installation that
+already holds an indexer, an automation rule or a library entry and says which.
+
+Start a fresh container the ordinary way, open it, and choose **Restore a backup**
+instead of setting a password. It reads the file, shows you what is in it, and
+asks once where your library and your downloads are mounted **in this container** —
+prefilled with wherever they were on the machine that wrote the file. That is the
+question the whole thing exists for: the paths inside the file are recorded
+relative to those two roots, so moving your library to a different mount is
+answering this differently rather than editing anything. A path that would end up
+outside the root you gave stops the restore before a single row is written.
+
+Then sign in with the password from the file. Sessions are not in a backup, so
+the one you had is not either.
+
+Two things happen by themselves afterwards. Downloads that were still running are
+picked up at SABnzbd by their job id where it still knows them; where it does not,
+that download counts as failed and its release stays used up for that video. And a
+background pass checks the library against what is on disk. Until it has, entries
+count as held, so automation will not fetch them again — and **nothing is deleted
+or downloaded again because a file is missing**, since a library mounted somewhere
+else looks exactly like a library that is gone. Whatever it could not confirm is a
+count on Status, with a filter on the Library behind it.
+
+### Moving an installation to another machine
+
+1. Export the backup on the old one and copy it across.
+2. Start the new container with your library and downloads mounted — they do not
+   have to be at the same paths.
+3. Restore, answering the two roots with the paths in the new container.
+4. Sign in with the old password, and check Status once the verification pass has
+   run.
 
 ## Stopping and updating
 

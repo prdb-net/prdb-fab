@@ -476,10 +476,28 @@ Deliberately after that, not before:
 
 ## Open questions
 
-- How far automation should go on its own before the first release, and what the
-  smallest useful rule set looks like.
-- What the review queue holds and how an entry leaves it, given that an
-  undecided file also holds up the cleanup of the directory it sits in.
-- How much indexer history to keep locally, and when to drop it.
-- What the backup file contains exactly, and how restore behaves when the
-  library it describes is no longer there.
+All four of the questions this document opened with have been settled, and they
+are kept here with their answers rather than deleted — what was genuinely open
+at the start is worth being able to see.
+
+- ~~How far automation should go on its own before the first release, and what
+  the smallest useful rule set looks like.~~ **Settled** by ADR 0007: automation
+  is a set of unordered permissions over the wanted list, off until a rule
+  exists, with ADR 0046 recording every rule that permitted a download.
+- ~~What the review queue holds and how an entry leaves it, given that an
+  undecided file also holds up the cleanup of the directory it sits in.~~
+  **Settled** by ADR 0022: one unmoved file with one reason and two exits, plus
+  at most one further action chosen by the reason — and ADR 0005's tidy-up waits
+  until nothing in the directory is still undecided.
+- ~~How much indexer history to keep locally, and when to drop it.~~ **Settled**
+  by ADR 0015 and ADR 0050: a hundred thousand releases per indexer, oldest
+  examined first, and never a row inside the ninety-day recent window.
+- ~~What the backup file contains exactly, and how restore behaves when the
+  library it describes is no longer there.~~ **Settled** by ADR 0009 and
+  ADR 0033 for the first half — the boundary runs between tables and is checked
+  against the schema rather than remembered — and by ADR 0009 again for the
+  second: an entry the background pass cannot confirm counts as **held**,
+  nothing is deleted and nothing is fetched again, because a library mounted
+  somewhere else looks exactly like a library that is gone. ADR 0057 later
+  removed the encryption the first of those specified, and left everything else
+  of it standing.

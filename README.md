@@ -13,7 +13,9 @@ Self-hosted, Docker Compose, single user. A prdb API key is required.
 > identified arrivals into a Jellyfin-compatible library. It exposes that
 > whole loop on Status and can report two separately enabled kinds of local
 > fact back to prdb. Permission rules can run that same Download path unattended
-> for matched Wanted Videos.
+> for matched Wanted Videos. Everything it holds that it cannot fetch again goes
+> into one portable file, and a fresh container can be started from that file
+> instead of from nothing.
 
 ## What you need
 
@@ -31,7 +33,7 @@ access. Either can be skipped during setup and added later.
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.19.0
+    image: prdbnet/prdb-fab:0.20.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
@@ -175,6 +177,46 @@ delete**, and *Stop following* changes only the local record. Removing a Video
 from Wanted abandons its unfinished automatic Download locally, does not retry
 it, and leaves the SABnzbd job and anything already filed untouched.
 
+## Backup and restore
+
+**Settings → Backup** writes one file holding everything about your installation
+that the tool cannot fetch again: your settings, every indexer with its address
+and key, the SABnzbd connection and its path mapping, your prdb key, every
+automation rule, the review queue, and the local record of what was downloaded,
+what was filed where, which releases are used up and what has already been
+reported to prdb.
+
+What is *not* in it is everything that can be fetched again — the indexer cache,
+cached artwork, prdb's catalogue, and the video files themselves. It is a file
+rather than an archive of your library, and small enough to keep several of.
+
+**The file is plain JSON and the credentials in it are readable.** Nothing here
+encrypts it, deliberately: whatever you already back up with — restic, borg, an
+encrypted share — encrypts everything it carries under a key you manage, and a
+second passphrase underneath that is one more thing to lose at the moment you
+need the file most. So treat the file exactly as you treat the data volume, and
+put it somewhere that encrypts it. Being readable is also what makes it useful
+when a restore will not complete: you can open it and see what is in there.
+[ADR 0057](docs/adr/0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md)
+has the whole argument.
+
+Restoring runs on a container that holds nothing yet, before a password exists —
+the login credential is inside the file, so a fresh installation offers *Restore
+a backup* as the second way to begin. It asks once where your library and your
+downloads are mounted **in this container**, prefilled with wherever they were
+on the machine that wrote the file, and re-roots every recorded path to match. It
+refuses an installation that already holds an indexer, an automation rule or a
+library entry, and says which. There is nothing to merge into an installation you
+are already using.
+
+Afterwards, outstanding downloads are picked up at SABnzbd by their job id where
+it still knows them, and a background pass checks that the library is where the
+library says it is. Until it has, entries count as held, so automation will not
+decide to fetch them again — and nothing is deleted or re-fetched over a file
+that is missing, because a library mounted somewhere else looks exactly the same
+from here. What it could not confirm is a count on Status with a filter on the
+Library behind it.
+
 ## Configuration
 
 Six environment variables, two mounts, one port — and that is the whole of it.
@@ -188,5 +230,6 @@ an edit to a YAML file and a restart.
 - What changed between versions: [CHANGELOG.md](CHANGELOG.md).
 - Why it is built the way it is: [docs/adr/](docs/adr/), one decision per file.
 - Working on it: [CONTRIBUTING.md](CONTRIBUTING.md).
+- How a release is proved and cut: [docs/releasing.md](docs/releasing.md).
 
 MIT licensed. See [LICENSE](LICENSE).

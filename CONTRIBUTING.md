@@ -87,6 +87,10 @@ docker buildx build --load --tag prdb-fab:local .
 docker/smoke-test.sh prdb-fab:local
 ```
 
+What that smoke test covers, what has to be checked by hand against real
+services before a release, and how a release is cut:
+**[docs/releasing.md](docs/releasing.md)**.
+
 ## What the tests are for
 
 There is no mocking library and no assertion library here, and that is
