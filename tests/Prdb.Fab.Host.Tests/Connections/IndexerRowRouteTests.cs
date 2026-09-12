@@ -31,14 +31,20 @@ public sealed class IndexerRowRouteTests
         var client = await application.SignedInClientAsync();
         var added = await AddAsync(client, One);
 
-        indexer.Functions.Clear();
+        // The indexer goes dark, which is the case this is actually about:
+        // disabling a broken one has to be possible, and an act that re-checked
+        // would fail the check and take the change with it.
+        //
+        // Asserting instead that the act made no call at all would be asserting
+        // about a transport the background lanes share — they walk this same
+        // fake, and in a full suite run they get the time to do it.
+        indexer.Throws = new HttpRequestException("the indexer is not answering");
 
         var verdict = await SettingsAsync(client, added.Id, enabled: false, dailyQueryBudget: 250);
 
         Assert.True(verdict.Saved);
         Assert.False(verdict.Enabled);
         Assert.Equal(250, verdict.DailyQueryBudget);
-        Assert.Empty(indexer.Functions);
 
         var stored = Assert.Single(await ListAsync(client));
 
