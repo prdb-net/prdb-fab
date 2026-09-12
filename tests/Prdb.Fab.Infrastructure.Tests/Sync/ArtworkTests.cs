@@ -124,12 +124,43 @@ public sealed class ArtworkTests
     }
 
     /// <summary>
-    /// Nothing prefetches an unpinned video's artwork. The four browse surfaces
-    /// range over a catalogue nobody scrolls all of, and ADR 0030 rejected
-    /// filling it ahead of them by name.
+    /// ADR 0059's other half of the click path: the serving stamp drives
+    /// least-recently-served eviction and nothing else, so it is written no more
+    /// often than <see cref="ArtworkCache.ServedAgain"/> rather than once per
+    /// tile per grid.
     /// </summary>
     [Fact]
-    public async Task The_routine_leaves_an_unpinned_video_alone()
+    public async Task A_second_look_inside_the_hour_does_not_write_the_serving_stamp()
+    {
+        var cdn = new FakeCdn().Serves(Url(1));
+
+        await using var database = await CreateAsync(cdn);
+
+        var video = await HoldAsync(database, Video(1));
+        await GiveArtworkAsync(database, video, Image(1), Url(1));
+
+        Assert.NotNull(await ServeAsync(database, video));
+
+        var first = await LastServedAtAsync(database, Image(1));
+
+        database.Time.Advance(TimeSpan.FromMinutes(59));
+        Assert.NotNull(await ServeAsync(database, video));
+        Assert.Equal(first, await LastServedAtAsync(database, Image(1)));
+
+        // And past the window it moves again, because eviction still has to be
+        // able to tell a file nobody has looked at from one somebody has.
+        database.Time.Advance(TimeSpan.FromMinutes(2));
+        Assert.NotNull(await ServeAsync(database, video));
+        Assert.NotEqual(first, await LastServedAtAsync(database, Image(1)));
+    }
+
+    /// <summary>
+    /// ADR 0059 reversed ADR 0030 here: an unpinned Video's artwork is warmed
+    /// too, so that a browse grid is drawn out of the cache rather than out of
+    /// two dozen live CDN fetches.
+    /// </summary>
+    [Fact]
+    public async Task The_routine_warms_an_unpinned_videos_image()
     {
         var cdn = new FakeCdn().Serves(Url(1));
 
@@ -140,8 +171,108 @@ public sealed class ArtworkTests
 
         var run = await RunAsync(database);
 
-        Assert.Null(run.Outcome);
+        Assert.Equal(1, run.ItemsHandled);
+        Assert.Single(cdn.Asked, Url(1));
+        Assert.True(Store(database).Holds(Image(1)));
+        Assert.True(await IsCachedAsync(database, Image(1)));
+    }
+
+    /// <summary>
+    /// Newest release first, because that is the order What's New and Catalogue
+    /// Search's default come back in — so the first page of both is what a warm
+    /// pass reaches first.
+    /// </summary>
+    /// <remarks>
+    /// Asserted on the last URL asked for rather than on the first. A window is
+    /// fetched <see cref="ArtworkRoutine.AtOnce"/> at a time and the four of one
+    /// chunk race each other, so the only position the order fixes is which
+    /// Video falls out of the first chunk — which is the oldest.
+    /// </remarks>
+    [Fact]
+    public async Task The_warm_pass_takes_the_newest_release_first()
+    {
+        var cdn = new FakeCdn();
+
+        for (var number = 1; number <= 5; number++)
+        {
+            cdn.Serves(Url(number));
+        }
+
+        await using var database = await CreateAsync(cdn);
+
+        // The oldest is seeded first, so a pass that took them in the order it
+        // found them would ask for it first rather than last.
+        foreach (var (number, day) in new[] { (1, 1), (2, 20), (3, 21), (4, 22), (5, 23) })
+        {
+            var video = await HoldAsync(database, Video(number), new DateOnly(2026, 8, day));
+
+            await GiveArtworkAsync(database, video, Image(number), Url(number));
+        }
+
+        await RunAsync(database);
+
+        Assert.Equal(5, cdn.Requests);
+        Assert.Equal(Url(1), cdn.Asked[^1]);
+    }
+
+    /// <summary>
+    /// The warm pass stops short of the ceiling, which is what keeps it from
+    /// fighting the sweep: a pass that filled to the ceiling would have its own
+    /// never-served work evicted first and fetch it again next turn.
+    /// </summary>
+    [Fact]
+    public async Task The_warm_pass_stops_at_its_budget()
+    {
+        var cdn = new FakeCdn().Serves(Url(1));
+
+        await using var database = await CreateAsync(cdn);
+
+        var video = await HoldAsync(database, Video(1));
+        await GiveArtworkAsync(database, video, Image(1), Url(1));
+
+        await using var scope = database.Scope();
+
+        var warmed = await scope.ServiceProvider
+            .GetRequiredService<ArtworkRoutine>()
+            .WarmAsync(held: 1024, warmTo: 1024, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, warmed);
         Assert.Equal(0, cdn.Requests);
+    }
+
+    /// <summary>
+    /// The Actors grid draws pictures too, and the front of it is warmed the
+    /// same way. Everything behind <see cref="ArtworkRoutine.AnActorFront"/>
+    /// stays lazy, because a Catalogue holds several times more Actors than the
+    /// whole ceiling would fit.
+    /// </summary>
+    [Fact]
+    public async Task The_routine_warms_the_front_of_the_actors_grid()
+    {
+        var cdn = new FakeCdn().Serves(Url(1));
+
+        await using var database = await CreateAsync(cdn);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+            context.CatalogueActors.Add(new CatalogueActorRow
+            {
+                PrdbId = Guid.NewGuid(),
+                Name = "Actor",
+                ProfileImageUrl = Url(1),
+                ArtworkCacheKey = Image(1),
+            });
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var run = await RunAsync(database);
+
+        Assert.Equal(1, run.ItemsHandled);
+        Assert.Single(cdn.Asked, Url(1));
+        Assert.True(Store(database).Holds(Image(1)));
     }
 
     /// <summary>
@@ -400,11 +531,11 @@ public sealed class ArtworkTests
     {
         await using var scope = database.Scope();
 
-        var served = await scope.ServiceProvider
+        var answer = await scope.ServiceProvider
             .GetRequiredService<ArtworkCache>()
             .ServeAsync(videoId, TestContext.Current.CancellationToken);
 
-        if (served is null)
+        if (answer.Served is not { } served)
         {
             return null;
         }
@@ -417,20 +548,28 @@ public sealed class ArtworkTests
     private static async Task<string?> ServeActorAsync(TestDatabase database, Guid actorId)
     {
         await using var scope = database.Scope();
-        var served = await scope.ServiceProvider
+        var answer = await scope.ServiceProvider
             .GetRequiredService<ActorArtworkCache>()
             .ServeAsync(actorId, TestContext.Current.CancellationToken);
-        if (served is null) return null;
+        if (answer.Served is not { } served) return null;
         await served.Bytes.DisposeAsync();
         return served.MediaType;
     }
 
-    private static async Task<long> HoldAsync(TestDatabase database, Guid prdbId)
+    private static async Task<long> HoldAsync(
+        TestDatabase database,
+        Guid prdbId,
+        DateOnly? released = null)
     {
         await using var scope = database.Scope();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
 
-        var video = new CatalogueVideoRow { PrdbId = prdbId, Title = prdbId.ToString("D") };
+        var video = new CatalogueVideoRow
+        {
+            PrdbId = prdbId,
+            Title = prdbId.ToString("D"),
+            ReleaseDate = released,
+        };
 
         context.CatalogueVideos.Add(video);
 
@@ -478,6 +617,17 @@ public sealed class ArtworkTests
         return await context.CatalogueImages
             .Where(row => row.PrdbId == imageId)
             .Select(row => row.Cached)
+            .SingleAsync(TestContext.Current.CancellationToken);
+    }
+
+    private static async Task<DateTimeOffset?> LastServedAtAsync(TestDatabase database, Guid imageId)
+    {
+        await using var scope = database.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+        return await context.CatalogueImages
+            .Where(row => row.PrdbId == imageId)
+            .Select(row => row.LastServedAt)
             .SingleAsync(TestContext.Current.CancellationToken);
     }
 

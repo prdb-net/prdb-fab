@@ -35,14 +35,35 @@ public static class ArtworkEndpoints
     /// How long a browser may keep an image before asking again.
     /// </summary>
     /// <remarks>
-    /// A day, and it is safe at any length because the answer under one address
-    /// changes only when prdb publishes a different first image — at which point
-    /// the picture is stale rather than wrong. What this actually buys is the
-    /// scroll back up the grid not reaching the server at all.
+    /// A year, and <c>immutable</c> with it. The answer under one address
+    /// changes only when prdb publishes a different first image, which for a CDN
+    /// image already published is vanishingly rare and stale rather than wrong
+    /// when it happens. ADR 0059 measured what the day this replaced was buying,
+    /// which was nothing: it holds a grid for one session and expires before a
+    /// person who logs in every two or three days comes back, so every visit
+    /// re-fetched every tile through the server. A horizon that does not outlive
+    /// the gap between two visits is a horizon nobody is on the near side of.
     /// </remarks>
-    public const int CacheSeconds = 24 * 60 * 60;
+    public const int CacheSeconds = 365 * 24 * 60 * 60;
 
-    /// <summary>How long a browser may remember that no image is available.</summary>
+    /// <summary>
+    /// How long a browser may remember that prdb has no image for a Video.
+    /// </summary>
+    /// <remarks>
+    /// A week. This is the Catalogue's answer rather than this minute's — prdb
+    /// publishes no image, or publishes one whose URL was found dead — and it is
+    /// the answer for thousands of Videos at a time on a Catalogue this size.
+    /// Not forever, because a repair pass may yet read an image onto a row that
+    /// had none; a week is long enough that the tiles stop reaching the server
+    /// and short enough that one eventually shows up.
+    /// </remarks>
+    public const int SettledAbsenceSeconds = 7 * 24 * 60 * 60;
+
+    /// <summary>
+    /// How long a browser may remember an absence that is about this attempt
+    /// rather than about the Video: a CDN that did not answer inside the
+    /// artwork transport's timeout, or bytes that were not on disk after all.
+    /// </summary>
     public const int AbsentCacheSeconds = 5 * 60;
 
     public static void MapArtwork(this IEndpointRouteBuilder routes)
@@ -53,17 +74,18 @@ public static class ArtworkEndpoints
             HttpContext http,
             CancellationToken cancellationToken) =>
         {
-            var served = await cache.ServeAsync(videoId, cancellationToken);
+            var answer = await cache.ServeAsync(videoId, cancellationToken);
 
-            if (served is null)
+            if (answer.Served is not { } served)
             {
-                // No image, a URL found dead, or a CDN that did not answer in
-                // time. All three are the same thing to a grid: draw the tile.
-                http.Response.Headers.CacheControl = $"private, max-age={AbsentCacheSeconds}";
+                // The same thing to a grid — draw the tile — and two different
+                // things to the browser, which is the whole of why the cache
+                // says which of them this is.
+                http.Response.Headers.CacheControl = Absence(answer);
                 return Results.NoContent();
             }
 
-            http.Response.Headers.CacheControl = $"private, max-age={CacheSeconds}";
+            http.Response.Headers.CacheControl = Present;
 
             return Results.Stream(served.Bytes, served.MediaType);
         })
@@ -75,15 +97,22 @@ public static class ArtworkEndpoints
             HttpContext http,
             CancellationToken cancellationToken) =>
         {
-            var served = await cache.ServeAsync(actorId, cancellationToken);
-            if (served is null)
+            var answer = await cache.ServeAsync(actorId, cancellationToken);
+            if (answer.Served is not { } served)
             {
-                http.Response.Headers.CacheControl = $"private, max-age={AbsentCacheSeconds}";
+                http.Response.Headers.CacheControl = Absence(answer);
                 return Results.NoContent();
             }
 
-            http.Response.Headers.CacheControl = $"private, max-age={CacheSeconds}";
+            http.Response.Headers.CacheControl = Present;
             return Results.Stream(served.Bytes, served.MediaType);
         }).WithTags("Artwork");
     }
+
+    /// <summary>What a browser may do with an image it has been given.</summary>
+    private static string Present => $"private, max-age={CacheSeconds}, immutable";
+
+    /// <summary>What a browser may do with a tile it has not been given.</summary>
+    private static string Absence(ArtworkAnswer answer) =>
+        $"private, max-age={(answer.AbsenceStands ? SettledAbsenceSeconds : AbsentCacheSeconds)}";
 }
