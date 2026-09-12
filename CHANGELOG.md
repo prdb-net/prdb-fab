@@ -43,6 +43,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
   out of the rows into a bar that appears once something is selected and says
   how many it covers.
 
+### Fixed
+
+- **Sorting Catalogue Search by title now ignores case.** It put every
+  lower-cased title after every upper-cased one, so `Zebra` came before `apple`
+  and half the alphabet was in the wrong place. Accented letters still sort
+  after the unaccented ones, which the Library has always done too and which
+  SQLite offers nothing better for.
+
 ## [0.20.0] - 2026-09-12
 
 The installation is now something you can carry. One file holds everything the

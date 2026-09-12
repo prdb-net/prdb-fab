@@ -516,6 +516,33 @@ public sealed class CatalogueBrowse(
                     && download.DerivedReleaseId == release.DerivedReleaseId)))
             .Select(video => video.Id);
 
+    /// <summary>
+    /// The orders a Catalogue grid comes back in. Each one tiebreaks, because
+    /// two Videos must not swap places between two requests for the same page.
+    /// </summary>
+    /// <remarks>
+    /// Every title comparison here reads
+    /// <see cref="CatalogueVideoRow.NormalisedTitle"/> rather than the title,
+    /// the way <see cref="Filing.LibraryBrowse"/> does. SQLite's default
+    /// collation is BINARY, which reads "Zebra" as coming before "apple";
+    /// ADR 0025's comparison form is already on the row, already required, and
+    /// lower cased, so ordering by it is one order on every provider. It leaves
+    /// accents alone and so does this — there is no collation here that would
+    /// fold them, and ADR 0055 weighed the `NOCASE` alternative and refused it
+    /// for folding ASCII only.
+    /// <para>
+    /// The tiebreaks inside the release-date and relevance orders move with the
+    /// title orders. A tiebreak only has to be deterministic, so they were not
+    /// wrong before; they change so that one file does not read a title two
+    /// ways.
+    /// </para>
+    /// <para>
+    /// No index comes with this. ADR 0055 measured a
+    /// <c>(NormalisedTitle, Id)</c> index on <c>catalogue_video</c> and rejected
+    /// it, and <c>CatalogueSchemaTests.No_normalised_column_is_indexed</c> holds
+    /// that line. Both columns are unindexed and both stay that way.
+    /// </para>
+    /// </remarks>
     private static IOrderedQueryable<CatalogueVideoRow> Ordered(
         IQueryable<CatalogueVideoRow> query,
         string? search,
@@ -530,7 +557,7 @@ public sealed class CatalogueBrowse(
                         row.Title, SearchPattern.Starting(search), SearchPattern.Escape) ? 1 : 2)
                 .ThenByDescending(row => row.ReleaseDate.HasValue)
                 .ThenByDescending(row => row.ReleaseDate)
-                .ThenBy(row => row.Title)
+                .ThenBy(row => row.NormalisedTitle)
                 .ThenBy(row => row.Id);
         }
 
@@ -540,21 +567,21 @@ public sealed class CatalogueBrowse(
                 .OrderByDescending(row => row.ReleaseDate.HasValue)
                 .ThenByDescending(row => row.ReleaseDate)
                 .ThenByDescending(row => row.CreatedAtUtc)
-                .ThenBy(row => row.Title)
+                .ThenBy(row => row.NormalisedTitle)
                 .ThenBy(row => row.Id),
             CatalogueVideoSort.ReleaseDateAscending => query
                 .OrderByDescending(row => row.ReleaseDate.HasValue)
                 .ThenBy(row => row.ReleaseDate)
-                .ThenBy(row => row.Title)
+                .ThenBy(row => row.NormalisedTitle)
                 .ThenBy(row => row.Id),
             CatalogueVideoSort.CreatedDescending => query
                 .OrderByDescending(row => row.CreatedAtUtc)
                 .ThenByDescending(row => row.Id),
             CatalogueVideoSort.TitleDescending => query
-                .OrderByDescending(row => row.Title)
+                .OrderByDescending(row => row.NormalisedTitle)
                 .ThenByDescending(row => row.Id),
             CatalogueVideoSort.Relevance or CatalogueVideoSort.TitleAscending => query
-                .OrderBy(row => row.Title)
+                .OrderBy(row => row.NormalisedTitle)
                 .ThenBy(row => row.Id),
             _ => throw new ArgumentOutOfRangeException(nameof(sort), sort, null),
         };
