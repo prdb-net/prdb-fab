@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 
 using Prdb.Fab.Core.Backup;
@@ -101,4 +103,84 @@ public sealed class BackupRouteTests
         // beginning with its own version byte.
         Assert.StartsWith("AQAAAA", hash.GetString(), StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The whole loop over HTTP, with nothing outside this process involved:
+    /// one installation writes a file, a second one takes it before it has a
+    /// password, and the credential that comes back is the one that signs in.
+    /// </summary>
+    /// <remarks>
+    /// The public CI has to be able to run exactly this without external
+    /// services, which is why it is at the Host level and deliberately thin on
+    /// data — the rich round trip over all fifteen tables is in the
+    /// Infrastructure suite, where an installation can be populated without
+    /// standing up a prdb and four indexers first.
+    /// </remarks>
+    [Fact]
+    public async Task A_backup_carries_an_installation_from_one_container_to_another()
+    {
+        const string password = "the password from the file";
+
+        byte[] file;
+
+        using (var written = new FabApplication())
+        using (var client = await written.SignedInClientAsync(password))
+        using (var export = await client.PostAsync(
+            "/api/backup/export", content: null, TestContext.Current.CancellationToken))
+        {
+            export.EnsureSuccessStatusCode();
+            file = await export.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+        }
+
+        using var fresh = new FabApplication();
+        using var anonymous = fresh.CreateClient();
+
+        // The first call: read the file and say what it needs. Nothing is
+        // written, so the window is still open afterwards.
+        using (var read = await anonymous.PostAsJsonAsync(
+            "/api/backup/restore",
+            new { document = Encoding.UTF8.GetString(file), roots = (object?)null },
+            TestContext.Current.CancellationToken))
+        {
+            read.EnsureSuccessStatusCode();
+
+            var verdict = await read.Content.ReadFromJsonAsync<Verdict>(TestContext.Current.CancellationToken);
+
+            Assert.Equal("RootsNeeded", verdict?.Outcome);
+        }
+
+        using (var restored = await anonymous.PostAsJsonAsync(
+            "/api/backup/restore",
+            new { document = Encoding.UTF8.GetString(file), roots = new { library = (string?)null, downloads = (string?)null } },
+            TestContext.Current.CancellationToken))
+        {
+            restored.EnsureSuccessStatusCode();
+
+            var verdict = await restored.Content.ReadFromJsonAsync<Verdict>(TestContext.Current.CancellationToken);
+
+            Assert.Equal("Restored", verdict?.Outcome);
+        }
+
+        // ADR 0010: the restored credential closes both unauthenticated writes,
+        // and a restored installation ends on the sign-in screen.
+        using (var state = await anonymous.GetAsync("/api/access/state", TestContext.Current.CancellationToken))
+        {
+            var answer = await state.Content.ReadFromJsonAsync<State>(TestContext.Current.CancellationToken);
+
+            Assert.True(answer?.PasswordSet);
+            Assert.False(answer?.SignedIn);
+        }
+
+        using (var signIn = await anonymous.PostAsJsonAsync(
+            "/api/access/sign-in", new { password }, TestContext.Current.CancellationToken))
+        {
+            var answer = await signIn.Content.ReadFromJsonAsync<Verdict>(TestContext.Current.CancellationToken);
+
+            Assert.Equal("SignedIn", answer?.Outcome);
+        }
+    }
+
+    private sealed record Verdict(string Outcome);
+
+    private sealed record State(bool PasswordSet, bool SignedIn);
 }
