@@ -4193,7 +4193,8 @@
           "indexers",
           "page",
           "pageSize",
-          "total"
+          "total",
+          "counts"
         ],
         "type": "object",
         "properties": {
@@ -4232,6 +4233,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/DownloadStateCounts"
           }
         }
       },
@@ -4537,6 +4541,58 @@
           "Abandoned"
         ]
       },
+      "DownloadStateCounts": {
+        "required": [
+          "outstanding",
+          "completed",
+          "collected",
+          "failed",
+          "abandoned"
+        ],
+        "type": "object",
+        "properties": {
+          "outstanding": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collected": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "abandoned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "DownloadVerdict": {
         "required": [
           "outcome",
@@ -4591,6 +4647,7 @@
           "id",
           "videoId",
           "videoTitle",
+          "site",
           "indexer",
           "derivedReleaseId",
           "submittedName",
@@ -4617,6 +4674,12 @@
           },
           "videoTitle": {
             "type": "string"
+          },
+          "site": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "indexer": {
             "$ref": "#/components/schemas/DownloadIndexer"

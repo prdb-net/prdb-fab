@@ -66,7 +66,7 @@ export function CardActions({
       ? `Download the preferred available Quality of ${video.title}`
       : `Search Indexers for ${video.title}`
   const primaryPath = activeDownload
-    ? `/downloads?download=${video.activeDownloadId}`
+    ? `/downloads/${video.activeDownloadId}`
     : held
       ? `/library/${video.prdbId}`
       : videoReleasePath(video.prdbId, returnTo)

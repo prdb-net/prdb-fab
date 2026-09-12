@@ -29,9 +29,49 @@ public sealed class DownloadRouteTests
         var row = Assert.Single(page.Downloads);
         Assert.Equal("Second Release", row.SubmittedName);
         Assert.Equal("A Video", row.VideoTitle);
+        Assert.Equal("Northline", row.Site);
         Assert.Equal("Failed", row.State);
         Assert.Equal("Vanished", row.Cause);
         Assert.Equal("Fixture", row.Indexer.Name);
+    }
+
+    [Fact]
+    public async Task A_row_names_its_Site_and_a_Video_whose_Site_is_not_cached_yet_names_none()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        await SeedAsync(application);
+
+        var page = await ReadAsync(client, string.Empty);
+
+        Assert.Equal("Northline", RowFor(page, "First Release").Site);
+        Assert.Equal("Northline", RowFor(page, "Second Release").Site);
+        var siteless = RowFor(page, "Third Release");
+        Assert.Equal("A Siteless Video", siteless.VideoTitle);
+        Assert.Null(siteless.Site);
+    }
+
+    [Fact]
+    public async Task The_state_counts_ignore_the_state_filter_and_follow_every_other_one()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        var seeded = await SeedAsync(application);
+
+        var everything = await ReadAsync(client, string.Empty);
+        Assert.Equal(3, everything.Total);
+        Assert.Equal(new Counts(1, 0, 1, 1, 0), everything.Counts);
+
+        // Choosing a state narrows the page and leaves the counts alone: they
+        // are what a person reads to decide whether to choose one.
+        var failed = await ReadAsync(client, "state=Failed");
+        Assert.Equal(1, failed.Total);
+        Assert.Equal(everything.Counts, failed.Counts);
+
+        // Choosing an Indexer narrows both.
+        var indexer = await ReadAsync(client, $"indexer={seeded.IndexerId}");
+        Assert.Equal(2, indexer.Total);
+        Assert.Equal(new Counts(1, 0, 0, 1, 0), indexer.Counts);
     }
 
     [Fact]
@@ -96,32 +136,71 @@ public sealed class DownloadRouteTests
             .CountAsync(download => download.VideoId == seeded.VideoId, TestContext.Current.CancellationToken));
     }
 
+    private static async Task<Page> ReadAsync(HttpClient client, string query)
+    {
+        using var response = await client.GetAsync(
+            $"/api/downloads?{query}",
+            TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<Page>(TestContext.Current.CancellationToken))!;
+    }
+
+    private static Row RowFor(Page page, string submittedName) =>
+        Assert.Single(page.Downloads, row => row.SubmittedName == submittedName);
+
     private static async Task<Seeded> SeedAsync(FabApplication application)
     {
         await using var scope = application.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
         var now = new DateTimeOffset(2026, 8, 28, 12, 0, 0, TimeSpan.Zero);
         var videoId = Guid.NewGuid();
+        var sitelessVideoId = Guid.NewGuid();
         var indexerId = Guid.NewGuid();
-        context.Indexers.Add(new IndexerRow
-        {
-            Id = indexerId,
-            Name = "Fixture",
-            Url = "https://indexer.invalid/api",
-            ApiKey = "fixture",
-            LastVerdict = IndexerConnectionOutcome.Saved,
-        });
-        context.CatalogueVideos.Add(new CatalogueVideoRow
-        {
-            PrdbId = videoId,
-            Title = "A Video",
-            NormalisedTitle = "a video",
-            CreatedAtUtc = now,
-            UpdatedAtUtc = now,
-        });
+        var otherIndexerId = Guid.NewGuid();
+        context.Indexers.AddRange(
+            new IndexerRow
+            {
+                Id = indexerId,
+                Name = "Fixture",
+                Url = "https://indexer.invalid/api",
+                ApiKey = "fixture",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+            },
+            new IndexerRow
+            {
+                Id = otherIndexerId,
+                Name = "Second Fixture",
+                Url = "https://other.invalid/api",
+                ApiKey = "fixture",
+                LastVerdict = IndexerConnectionOutcome.Saved,
+            });
+        var site = new CatalogueSiteRow { PrdbId = Guid.NewGuid(), Title = "Northline" };
+        context.CatalogueSites.Add(site);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.CatalogueVideos.AddRange(
+            new CatalogueVideoRow
+            {
+                PrdbId = videoId,
+                Title = "A Video",
+                NormalisedTitle = "a video",
+                SiteId = site.Id,
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+            },
+            // ADR 0013 fetches the site list in a request of its own, so a video
+            // read before that pass has no Site here and the row says none.
+            new CatalogueVideoRow
+            {
+                PrdbId = sitelessVideoId,
+                Title = "A Siteless Video",
+                NormalisedTitle = "a siteless video",
+                CreatedAtUtc = now,
+                UpdatedAtUtc = now,
+            });
         var outstanding = Download(videoId, indexerId, "First Release", now, DownloadState.Outstanding, null);
         var failed = Download(videoId, indexerId, "Second Release", now.AddMinutes(1), DownloadState.Failed, DownloadCause.Vanished);
-        context.Downloads.AddRange(outstanding, failed);
+        var collected = Download(sitelessVideoId, otherIndexerId, "Third Release", now.AddMinutes(2), DownloadState.Collected, null);
+        context.Downloads.AddRange(outstanding, failed, collected);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return new(videoId, indexerId, outstanding.Id);
     }
@@ -149,8 +228,9 @@ public sealed class DownloadRouteTests
 
     private sealed record Seeded(Guid VideoId, Guid IndexerId, Guid OutstandingId);
     private sealed record Indexer(Guid Id, string Name);
-    private sealed record Row(Guid Id, string SubmittedName, string VideoTitle, string State, string? Cause, Indexer Indexer);
-    private sealed record Page(IReadOnlyList<Row> Downloads);
+    private sealed record Row(Guid Id, string SubmittedName, string VideoTitle, string? Site, string State, string? Cause, Indexer Indexer);
+    private sealed record Counts(int Outstanding, int Completed, int Collected, int Failed, int Abandoned);
+    private sealed record Page(IReadOnlyList<Row> Downloads, int Total, Counts Counts);
     private sealed record Selection(string Outcome);
     private sealed record ResetRow(Guid Id);
     private sealed record ResetPreview(string Outcome, IReadOnlyList<ResetRow> Downloads);

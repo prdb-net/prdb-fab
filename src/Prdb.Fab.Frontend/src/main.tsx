@@ -86,6 +86,7 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith('/actors/')) return 'Actor'
   if (pathname === '/releases') return 'Releases'
   if (pathname === '/downloads') return 'Downloads'
+  if (pathname.startsWith('/downloads/')) return 'Download'
   if (pathname === '/library') return 'Library'
   if (pathname.startsWith('/library/')) return 'Library entry'
   if (pathname === '/review-queue') return 'Review queue'
@@ -138,6 +139,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/actors/:id" element={<ActorsScreen />} />
               <Route path="/releases" element={<ReleaseScreen />} />
               <Route path="/downloads" element={<DownloadsScreen />} />
+              <Route path="/downloads/:downloadId" element={<DownloadsScreen />} />
               <Route path="/library" element={<LibraryScreen />} />
               <Route path="/library/:id" element={<LibraryEntryScreen />} />
               <Route path="/review-queue" element={<ReviewQueueScreen />} />
