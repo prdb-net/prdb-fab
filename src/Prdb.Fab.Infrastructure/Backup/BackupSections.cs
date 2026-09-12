@@ -1,0 +1,204 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+
+using Prdb.Fab.Core.Backup;
+using Prdb.Fab.Infrastructure.Persistence;
+
+namespace Prdb.Fab.Infrastructure.Backup;
+
+/// <summary>
+/// Which section of the Backup document carries which table, checked against the
+/// model rather than trusted.
+/// </summary>
+/// <remarks>
+/// <para>
+/// ADR 0033 makes exportability a property each table declares, and the point of
+/// declaring it on the model is that nothing else has to be kept in step by
+/// hand. This is the other end of that: the pairing below is read together with
+/// the model, so a table that starts crossing the boundary — or stops — is a
+/// failure here rather than a section quietly missing from somebody's Backup.
+/// </para>
+/// <para>
+/// It checks in both directions on purpose. A table with no section would be
+/// data silently left out of the file; a section with no table would be a
+/// section nothing fills, which is the same mistake read from the other side.
+/// </para>
+/// </remarks>
+public static class BackupSections
+{
+    /// <summary>The exported row type, and the section of the document it becomes.</summary>
+    public static IReadOnlyDictionary<Type, string> Carried { get; } = new Dictionary<Type, string>
+    {
+        [typeof(InstallationRow)] = nameof(BackupDocument.Installation),
+        [typeof(GateAdmissionRow)] = nameof(BackupDocument.GateAdmissions),
+        [typeof(IndexerRow)] = nameof(BackupDocument.Indexers),
+        [typeof(AutomationRuleRow)] = nameof(BackupDocument.AutomationRules),
+        [typeof(AutomationRuleIndexerRow)] = nameof(BackupDocument.AutomationRuleIndexers),
+        [typeof(LibraryEntryRow)] = nameof(BackupDocument.LibraryEntries),
+        [typeof(VideoFileRow)] = nameof(BackupDocument.VideoFiles),
+        [typeof(DownloadRow)] = nameof(BackupDocument.Downloads),
+        [typeof(DownloadOriginRuleRow)] = nameof(BackupDocument.DownloadOriginRules),
+        [typeof(ArrivingFileRow)] = nameof(BackupDocument.ArrivingFiles),
+        [typeof(ArrivingFileCandidateRow)] = nameof(BackupDocument.ArrivingFileCandidates),
+        [typeof(ReportedStateRow)] = nameof(BackupDocument.ReportedStates),
+        [typeof(ConfirmedAssignmentRow)] = nameof(BackupDocument.ConfirmedAssignments),
+        [typeof(OperationLogEntryRow)] = nameof(BackupDocument.OperationLog),
+        [typeof(AccountPreferenceWriteRow)] = nameof(BackupDocument.AccountPreferenceWrites),
+    };
+
+    /// <summary>
+    /// The columns the document carries under another name, because ADR 0033
+    /// makes the document say what an outside authority owns where the database
+    /// says what is cheapest to read.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> Renamed { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        // The Catalogue's local surrogate, carried as prdb's own Video id.
+        [$"{nameof(InstallationRow)}.{nameof(InstallationRow.WhatsNewObservedVideoId)}"] =
+            nameof(BackupInstallation.WhatsNewObservedVideo),
+    };
+
+    /// <summary>
+    /// The columns deliberately not in the document, each with the reason it is
+    /// not — so that a column left out is an argument rather than an oversight.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> Omitted { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [$"{nameof(InstallationRow)}.{nameof(InstallationRow.Id)}"] =
+            "the constant key of a table that holds one row, which has no identity to restore (ADR 0033)",
+    };
+
+    /// <summary>
+    /// The envelope's own fields, which answer for the document rather than for
+    /// a table (ADR 0009).
+    /// </summary>
+    public static IReadOnlySet<string> Envelope { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        nameof(BackupDocument.FormatVersion),
+        nameof(BackupDocument.ToolVersion),
+        nameof(BackupDocument.WrittenAt),
+    };
+
+    /// <summary>
+    /// Everything the pairing and <paramref name="model"/> disagree about, as
+    /// sentences, and empty when the boundary is covered.
+    /// </summary>
+    public static IReadOnlyList<string> Unaccounted(IReadOnlyModel model)
+    {
+        var complaints = new List<string>();
+        var exported = model.GetEntityTypes()
+            .Where(entity => Equals(
+                entity.FindAnnotation(ExportClassDeclarations.Annotation)?.Value,
+                ExportClass.Exported))
+            .ToList();
+
+        foreach (var entity in exported.Where(entity => !Carried.ContainsKey(entity.ClrType)))
+        {
+            complaints.Add(
+                $"{entity.GetTableName()} crosses the Backup boundary (ADR 0033) and no section "
+                + "of the document carries it.");
+        }
+
+        foreach (var row in Carried.Keys.Where(row =>
+            !exported.Any(entity => entity.ClrType == row)))
+        {
+            complaints.Add(
+                $"{row.Name} has a section in the Backup document and does not declare itself "
+                + "exported (ADR 0033).");
+        }
+
+        var sections = typeof(BackupDocument).GetProperties()
+            .Select(property => property.Name)
+            .Where(name => !Envelope.Contains(name))
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var section in Carried.Values.Where(section => !sections.Contains(section)))
+        {
+            complaints.Add($"The Backup document has no section named {section}.");
+        }
+
+        foreach (var section in sections.Where(section => !Carried.Values.Contains(section)))
+        {
+            complaints.Add($"The Backup document's {section} section carries no table.");
+        }
+
+        complaints.AddRange(exported
+            .Where(entity => Carried.ContainsKey(entity.ClrType))
+            .SelectMany(UnaccountedColumns));
+
+        return complaints;
+    }
+
+    /// <summary>
+    /// Where one table and its section disagree about what the table holds.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0033 runs the boundary between tables and never through one, so a
+    /// table that is exported is exported whole — which makes a column with
+    /// nowhere to go in the document the same failure as a table with no
+    /// section, one level down. It is checked in both directions for the same
+    /// reason: a field the document still carries after its column has gone is
+    /// a field Restore would write nowhere.
+    /// </remarks>
+    private static IEnumerable<string> UnaccountedColumns(IReadOnlyEntityType entity)
+    {
+        var row = entity.ClrType.Name;
+        var carried = Section(Carried[entity.ClrType])
+            .GetProperties()
+            .Select(property => property.Name)
+            .ToHashSet(StringComparer.Ordinal);
+        var columns = entity.GetProperties()
+            .Where(property => !property.IsShadowProperty())
+            .Select(property => property.Name)
+            .ToList();
+
+        foreach (var column in columns)
+        {
+            if (Omitted.ContainsKey($"{row}.{column}")) continue;
+
+            var name = Renamed.GetValueOrDefault($"{row}.{column}", column);
+
+            if (!carried.Contains(name))
+            {
+                yield return $"{entity.GetTableName()}.{column} crosses the Backup boundary with its "
+                    + "table (ADR 0033) and the document has nowhere to put it.";
+            }
+        }
+
+        var accounted = columns
+            .Select(column => Renamed.GetValueOrDefault($"{row}.{column}", column))
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var field in carried.Where(field => !accounted.Contains(field)))
+        {
+            yield return $"The Backup document carries {Carried[entity.ClrType]}.{field}, "
+                + $"which {entity.GetTableName()} does not hold.";
+        }
+    }
+
+    /// <summary>
+    /// The type one section is made of: the record itself where the section is
+    /// one row, and the element where it is a table.
+    /// </summary>
+    private static Type Section(string name)
+    {
+        var section = typeof(BackupDocument).GetProperty(name)!.PropertyType;
+
+        return section.IsGenericType ? section.GetGenericArguments()[0] : section;
+    }
+
+    /// <summary>
+    /// Throws unless every exported table has its section and every section its
+    /// table. Called before a document is built, so the answer is a refusal to
+    /// write rather than a Backup that is missing something.
+    /// </summary>
+    public static void MustCover(IReadOnlyModel model)
+    {
+        var complaints = Unaccounted(model);
+
+        if (complaints.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(" ", complaints));
+        }
+    }
+}
