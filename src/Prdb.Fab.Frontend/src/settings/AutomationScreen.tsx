@@ -8,6 +8,7 @@ import {
   readAutomationSettings,
   saveAutomaticDownloadCap,
   saveAutomationRule,
+  saveRetryBudget,
   type AutomationRuleDeletePreview,
   type AutomationRuleView,
   type AutomationSettingsState,
@@ -49,17 +50,7 @@ function AutomationOverview() {
             ) : (
               <ul className={styles.rules}>
                 {held.rules.map((rule) => (
-                  <li key={rule.id}>
-                    <div>
-                      <strong>{rule.name}</strong>
-                      <span>{rule.enabled ? 'Enabled' : 'Disabled'} · {ruleSize(rule)}</span>
-                      <span>
-                        {rule.allowedIndexers.map((indexer) => indexer.name).join(', ')
-                          || 'No allowed Indexers'}
-                      </span>
-                    </div>
-                    <Link to={`/settings/automation/rules/${rule.id}`}>Edit</Link>
-                  </li>
+                  <RuleCard key={rule.id} rule={rule} />
                 ))}
               </ul>
             )
@@ -68,9 +59,186 @@ function AutomationOverview() {
       </section>
 
       <Loaded query={settings} of="the Automation limits">
-        {(held) => <CapForm held={held} />}
+        {(held) => <Limits held={held} />}
       </Loaded>
     </SettingsPage>
+  )
+}
+
+/**
+ * One rule, said as a sentence rather than as three grey spans.
+ *
+ * The enable switch is on the card because it is the control that gets used,
+ * and ADR 0007 makes disabling forward-only — it permits nothing new and
+ * changes nothing already submitted — so it is safe to offer without a
+ * confirmation. Everything else about a rule is behind its own route, which is
+ * where ADR 0020 put it.
+ */
+function RuleCard({ rule }: { rule: AutomationRuleView }) {
+  const queries = useQueryClient()
+  const [enabled, setEnabled] = useState(rule.enabled)
+
+  const toggle = useMutation({
+    mutationFn: (next: boolean) =>
+      saveAutomationRule(rule.id, {
+        name: rule.name,
+        enabled: next,
+        minimumSize: rule.minimumSize === null ? null : Number(rule.minimumSize),
+        maximumSize: rule.maximumSize === null ? null : Number(rule.maximumSize),
+        allowedIndexerIds: rule.allowedIndexers.map((indexer) => indexer.id),
+      }),
+    onSuccess: (answer) => {
+      if (!answer.saved) {
+        setEnabled(rule.enabled)
+        return
+      }
+
+      void queries.invalidateQueries({ queryKey: ['automation-settings'] })
+      void queries.invalidateQueries({ queryKey: ['releases'] })
+      void queries.invalidateQueries({ queryKey: ['status'] })
+    },
+  })
+
+  const indexers = rule.allowedIndexers.map((indexer) => indexer.name)
+
+  return (
+    <li>
+      <div className={styles.rule}>
+        <div className={styles.rulePermits}>
+          <strong>{rule.name}</strong>
+          <p>{permits(rule, indexers)}</p>
+          {toggle.data && !toggle.data.saved && (
+            <Verdict tone="refusal">{toggle.data.detail}</Verdict>
+          )}
+          {toggle.isError && (
+            <Verdict tone="refusal">That could not be changed. Nothing was saved.</Verdict>
+          )}
+        </div>
+        <div className={styles.ruleActions}>
+          <Switch
+            checked={enabled}
+            disabled={toggle.isPending}
+            onChange={(next) => { setEnabled(next); toggle.mutate(next) }}
+            label={enabled ? 'Enabled' : 'Disabled'}
+          />
+          <Link to={`/settings/automation/rules/${rule.id}`}>Edit</Link>
+        </div>
+      </div>
+    </li>
+  )
+}
+
+/** What a rule permits, in one sentence. */
+function permits(rule: AutomationRuleView, indexers: readonly string[]): string {
+  if (indexers.length === 0) {
+    return 'It permits nothing: no Indexer is allowed, so no Release can reach it.'
+  }
+
+  const where = indexers.length === 1 ? indexers[0] : `${indexers.slice(0, -1).join(', ')} and ${indexers.at(-1)}`
+  const minimum = rule.minimumSize === null ? null : `${fromBytes(rule.minimumSize)} GiB`
+  const maximum = rule.maximumSize === null ? null : `${fromBytes(rule.maximumSize)} GiB`
+
+  const size = minimum && maximum
+    ? ` between ${minimum} and ${maximum}`
+    : minimum
+      ? ` of at least ${minimum}`
+      : maximum
+        ? ` of at most ${maximum}`
+        : ' of any size'
+
+  return `Matched Wanted Releases from ${where},${size}.`
+}
+
+/**
+ * The two numbers that bound automatic work, together — one across SABnzbd and
+ * one per Video — each with the fact behind it. ADR 0020 puts both in this
+ * group, and the retry budget had no field at all: the Release view read it and
+ * showed a Video's spent attempts against it, and nothing could change the
+ * number.
+ */
+function Limits({ held }: { held: AutomationSettingsState }) {
+  return (
+    <>
+      <h2 className={styles.limitsHeading}>Limits</h2>
+      <CapForm held={held} />
+      <RetryBudgetForm held={held} />
+    </>
+  )
+}
+
+function RetryBudgetForm({ held }: { held: AutomationSettingsState }) {
+  const queryClient = useQueryClient()
+  const [budget, setBudget] = useState(String(held.retryBudget))
+  const [stored, setStored] = useState(String(held.retryBudget))
+  const [saved, setSaved] = useState(false)
+
+  const save = useMutation({
+    mutationFn: () => saveRetryBudget(Number(budget)),
+    onSuccess: (answer) => {
+      setSaved(answer.saved)
+
+      if (answer.saved) {
+        setBudget(String(answer.retryBudget))
+        setStored(String(answer.retryBudget))
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ['automation-settings'] })
+      void queryClient.invalidateQueries({ queryKey: ['releases'] })
+      void queryClient.invalidateQueries({ queryKey: ['status'] })
+    },
+  })
+
+  return (
+    <form
+      className={formStyles.form}
+      onSubmit={(event) => {
+        event.preventDefault()
+        setSaved(false)
+        save.mutate()
+      }}
+    >
+      <Field
+        label="Retry budget, per Video"
+        hint={
+          <>
+            Default 3. It is spent by every Download of that Video whatever became
+            of it, across every Indexer &mdash; so it is a ceiling on how hard the
+            tool tries for one thing rather than on how much it does at once.
+            Five attempts are absurd against a single Indexer and three are thin
+            against four, and the tool cannot see which case it is in, so this is
+            yours to set. Raising it here affects <strong>every</strong> Video;
+            clearing one Video&rsquo;s spent budget is an action on Status, beside
+            the Brake that raised it.
+          </>
+        }
+      >
+        {(id) => (
+          <input
+            id={id}
+            className={formStyles.field}
+            type="number"
+            min="1"
+            max="10"
+            value={budget}
+            onChange={(event) => { setBudget(event.target.value); setSaved(false) }}
+          />
+        )}
+      </Field>
+
+      <SaveBar
+        label="Save retry budget"
+        dirty={budget !== stored}
+        pending={save.isPending}
+        disabled={budget.trim().length === 0}
+        blocked="The retry budget needs a number."
+      >
+        {save.data && !save.data.saved && <Verdict tone="refusal">{save.data.detail}</Verdict>}
+        {save.isError && (
+          <Verdict tone="refusal">The retry budget could not be saved. Nothing was changed.</Verdict>
+        )}
+        {saved && <Verdict tone="done">{save.data?.detail}</Verdict>}
+      </SaveBar>
+    </form>
   )
 }
 
@@ -110,7 +278,14 @@ function CapForm({ held }: { held: AutomationSettingsState }) {
     >
       <Field
         label="Unfinished automatic Download cap"
-        hint="Default 20. Work above this SABnzbd in-flight limit waits in the durable work set."
+        hint={
+          <>
+            Default 20. This is SABnzbd in-flight work: how many automatic
+            Downloads may be unfinished there at once. What exceeds it is not
+            dropped &mdash; it waits in the durable work set and resumes as
+            automatic Downloads finish.
+          </>
+        }
       >
         {(id) => (
           <input
@@ -265,33 +440,44 @@ function AutomationRuleScreen({ id }: { id: string }) {
           ))}
         </Fieldset>
 
-        <Field label="Minimum size (GiB, optional)">
-          {(id_) => (
-            <input
-              id={id_}
-              className={formStyles.field}
-              type="number"
-              min="0"
-              step="0.1"
-              value={selected.minimumGiB}
-              onChange={(event) => update({ minimumGiB: event.target.value })}
-            />
-          )}
-        </Field>
-
-        <Field label="Maximum size (GiB, optional)">
-          {(id_) => (
-            <input
-              id={id_}
-              className={formStyles.field}
-              type="number"
-              min="0"
-              step="0.1"
-              value={selected.maximumGiB}
-              onChange={(event) => update({ maximumGiB: event.target.value })}
-            />
-          )}
-        </Field>
+        {/* One bounded range rather than two unrelated numbers: they are a
+            floor and a ceiling on the same quantity, and two labels are not
+            where that should have to be worked out. */}
+        <Fieldset
+          legend="Release size"
+          hint="Either end may be left empty, which is unbounded at that end. Newznab reports the size of the package, so this is what the Indexer says rather than what arrives."
+        >
+          <div className={styles.range}>
+            <Field label="At least (GiB)">
+              {(id_) => (
+                <input
+                  id={id_}
+                  className={formStyles.field}
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="Any"
+                  value={selected.minimumGiB}
+                  onChange={(event) => update({ minimumGiB: event.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="At most (GiB)">
+              {(id_) => (
+                <input
+                  id={id_}
+                  className={formStyles.field}
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="Any"
+                  value={selected.maximumGiB}
+                  onChange={(event) => update({ maximumGiB: event.target.value })}
+                />
+              )}
+            </Field>
+          </div>
+        </Fieldset>
 
         <Fieldset legend="Whether it acts">
           <Switch
@@ -396,8 +582,3 @@ function toBytes(gib: string): number | null {
   return gib.trim() === '' ? null : Math.round(Number(gib) * 1024 ** 3)
 }
 
-function ruleSize(rule: AutomationRuleView): string {
-  const minimum = rule.minimumSize === null ? 'any' : `${fromBytes(rule.minimumSize)} GiB`
-  const maximum = rule.maximumSize === null ? 'any' : `${fromBytes(rule.maximumSize)} GiB`
-  return `${minimum}–${maximum}`
-}

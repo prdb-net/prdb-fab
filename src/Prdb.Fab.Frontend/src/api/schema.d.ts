@@ -2282,6 +2282,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/automation/retry-budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutomationRetryBudgetRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationRetryBudgetVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/automation/rules/{id}": {
         parameters: {
             query?: never;
@@ -3440,6 +3479,18 @@ export interface components {
             name: string;
             enabled: boolean;
         };
+        AutomationRetryBudgetRequest: {
+            /** Format: int32 */
+            retryBudget: number | string;
+        };
+        AutomationRetryBudgetVerdict: {
+            saved: boolean;
+            /** Format: int32 */
+            retryBudget: number | string;
+            /** Format: int32 */
+            reconsidered: number | string;
+            detail: string;
+        };
         AutomationRuleDeletePreview: {
             /** Format: uuid */
             ruleId: string;
@@ -3486,6 +3537,8 @@ export interface components {
         AutomationSettingsState: {
             /** Format: int32 */
             automaticDownloadCap: number | string;
+            /** Format: int32 */
+            retryBudget: number | string;
             rules: components["schemas"]["AutomationRuleView"][];
             indexers: components["schemas"]["AutomationIndexer"][];
         };

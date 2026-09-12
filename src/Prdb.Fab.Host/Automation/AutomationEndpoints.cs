@@ -21,6 +21,12 @@ public static class AutomationEndpoints
             CancellationToken cancellationToken) =>
             TypedResults.Ok(await settings.SaveCapAsync(request.AutomaticDownloadCap, cancellationToken)));
 
+        group.MapPost("/retry-budget", async (
+            AutomationRetryBudgetRequest request,
+            AutomationRuleSettings settings,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await settings.SaveRetryBudgetAsync(request.RetryBudget, cancellationToken)));
+
         group.MapGet("/rules/{id:guid}", async Task<Results<Ok<AutomationRuleView>, NotFound>> (
             Guid id,
             AutomationRuleSettings settings,
@@ -87,6 +93,13 @@ public static class AutomationEndpoints
 }
 
 public sealed record AutomationCapRequest(int AutomaticDownloadCap);
+
+/// <param name="RetryBudget">
+/// How many Downloads one Video may be given before the tool stops fetching for
+/// it. Spent by every Download whatever became of it, and cleared per Video on
+/// Status rather than here (ADR 0020).
+/// </param>
+public sealed record AutomationRetryBudgetRequest(int RetryBudget);
 public sealed record AutomationRuleRequest(
     string? Name,
     bool Enabled,

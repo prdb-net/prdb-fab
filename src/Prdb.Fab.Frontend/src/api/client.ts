@@ -41,6 +41,7 @@ export type AutomationRuleVerdict = Schema['AutomationRuleVerdict']
 export type AutomationRuleDeletePreview = Schema['AutomationRuleDeletePreview']
 export type AutomationRuleDeleteVerdict = Schema['AutomationRuleDeleteVerdict']
 export type AutomationCapVerdict = Schema['AutomationCapVerdict']
+export type AutomationRetryBudgetVerdict = Schema['AutomationRetryBudgetVerdict']
 export type StatusState = Schema['StatusState']
 export type StatusCondition = Schema['StatusCondition']
 export type RunNowVerdict = Schema['RunNowVerdict']
@@ -284,6 +285,14 @@ export async function saveAutomaticDownloadCap(
   automaticDownloadCap: number,
 ): Promise<AutomationCapVerdict> {
   return post<AutomationCapVerdict>('/api/settings/automation/cap', { automaticDownloadCap })
+}
+
+/**
+ * ADR 0020's third Automation control. Raising it reconsiders, the way the cap
+ * does, so a Video that stopped because its budget was spent has work again.
+ */
+export async function saveRetryBudget(retryBudget: number): Promise<AutomationRetryBudgetVerdict> {
+  return post<AutomationRetryBudgetVerdict>('/api/settings/automation/retry-budget', { retryBudget })
 }
 
 export async function saveAutomationRule(

@@ -1968,6 +1968,35 @@
         }
       }
     },
+    "/api/settings/automation/retry-budget": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationRetryBudgetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRetryBudgetVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/automation/rules/{id}": {
       "get": {
         "tags": [
@@ -3457,6 +3486,55 @@
           }
         }
       },
+      "AutomationRetryBudgetRequest": {
+        "required": [
+          "retryBudget"
+        ],
+        "type": "object",
+        "properties": {
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AutomationRetryBudgetVerdict": {
+        "required": [
+          "saved",
+          "retryBudget",
+          "reconsidered",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          },
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
       "AutomationRuleDeletePreview": {
         "required": [
           "ruleId",
@@ -3639,12 +3717,21 @@
       "AutomationSettingsState": {
         "required": [
           "automaticDownloadCap",
+          "retryBudget",
           "rules",
           "indexers"
         ],
         "type": "object",
         "properties": {
           "automaticDownloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryBudget": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
