@@ -43,8 +43,8 @@ how precisely it separates them:
 
 For any of them, the log is the most useful thing you can attach. Turn
 `Logging__LogLevel__Prdb.Fab` up to `Debug`, reproduce it, and send the newest
-file from `/data/logs/`. It never contains a key, a passphrase or a URL — that
-is enforced by a test — so it is safe to attach as it is. Its first line names
+file from `/data/logs/`. It never contains a key or a URL — that is enforced by
+a test — so it is safe to attach as it is. Its first line names
 the version that produced it; please leave that in.
 
 ## Working on the code

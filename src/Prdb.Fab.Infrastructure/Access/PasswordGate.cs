@@ -12,12 +12,12 @@ namespace Prdb.Fab.Infrastructure.Access;
 /// </summary>
 /// <remarks>
 /// Hashed with ASP.NET Core's <see cref="PasswordHasher{TUser}"/>, which is
-/// versioned and rehashes on sign-in. ADR 0010 deliberately does not reuse the
-/// Argon2id that ADR 0009 needs for a backup passphrase: the hash sits in the
-/// same database as the prdb key and the indexer keys, which ADR 0037 keeps in
-/// the clear, so whoever can read it already holds the secrets worth having.
-/// The file that is designed to travel is the one that gets the memory-hard
-/// derivation.
+/// versioned and rehashes on sign-in. The reason ADR 0010 gave for choosing it
+/// is the one that still stands: the hash sits in the same database as the prdb
+/// key and the indexer keys, which ADR 0037 keeps in the clear, so whoever can
+/// read it already holds the secrets worth having. Its other half — that the
+/// file designed to travel gets a memory-hard derivation instead — is gone with
+/// ADR 0057, which encrypts nothing anywhere.
 /// </remarks>
 public sealed class PasswordGate(
     FabDbContext context,

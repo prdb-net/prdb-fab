@@ -6,6 +6,13 @@ were typed. Nothing in the tool encrypts a column, and
 export stays the only place a secret is encrypted at all — because it is the
 only artefact designed to leave the machine.
 
+**Amended by [ADR 0057](0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md).**
+The export is no longer that place, and there is no longer such a place:
+nothing in this tool encrypts anything. That decision is this one carried one
+step further, by the argument this one already made — there is no part of these
+credentials that cannot be typed again — so the sentence below that calls the
+export the exception simply loses its exception.
+
 [ADR 0010](0010-one-password-and-an-onboarding-that-requires-prdb-and-a-library.md)
 said this in passing while arguing about something else: *the hash sits in the
 same database as the prdb key and the indexer keys, which are not hashed at all,
@@ -114,8 +121,8 @@ checked:
 
 | Exported table | Secret-bearing? |
 |---|---|
-| `Installation` | prdb key, SABnzbd key, password hash — ADR 0009's, encrypted |
-| `Indexer` | API key, encrypted — **and the URL, see below** |
+| `Installation` | prdb key, SABnzbd key, password hash — in the clear under ADR 0057, as the database holds them |
+| `Indexer` | API key, in the clear under ADR 0057 — **and the URL, see below** |
 | `GateAdmission`, `AutomationRule`, `AutomationRuleIndexer` | no |
 | `LibraryEntry`, `VideoFile` | paths, root-relative per ADR 0009 |
 | `Download` | `stage_log` and `fail_message` verbatim — **see below** |
@@ -195,7 +202,8 @@ the worse failure.
   observation.
 - **ADR 0009 remains the only encryption in the tool**, and there are not two
   mechanisms over one set of columns — there is one, over the one artefact that
-  travels.
+  travels. **Under ADR 0057 there are none**, which is this consequence read to
+  its end rather than a departure from it.
 - **ADR 0020 gains one requirement**: the indexer form splits a pasted URL into
   base and key, or refuses it, so that no key reaches a plain exported field.
 - **ADR 0016's `addfile` is load-bearing for the backup's readability**, and a

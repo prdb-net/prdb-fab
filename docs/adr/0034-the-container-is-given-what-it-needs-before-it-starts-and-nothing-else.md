@@ -203,8 +203,12 @@ a document to hold it:
 2. **`FAB_RESET_PASSWORD`** is the only way back in, it is set for one start and
    then removed, and there is no second sign-in path and no trusted proxy header
    (ADR 0010).
-3. **A backup passphrase cannot be recovered**
-   ([ADR 0009](0009-a-backup-is-a-readable-document-with-encrypted-secrets.md)).
+3. **The backup is readable and holds every credential**, so it is as sensitive
+   as the data volume and belongs somewhere that encrypts it
+   ([ADR 0057](0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md),
+   reversing [ADR 0009](0009-a-backup-is-a-readable-document-with-encrypted-secrets.md)'s
+   passphrase, which used to stand here as the thing that could not be
+   recovered).
 4. **The tool owns the sidecar and the entry image and overwrites both**, so a
    hand edit does not survive — by filing, or by the next repair pass that finds
    a difference ([ADR 0027](0027-the-sidecar-and-the-entry-image-are-overwritten-until-they-match-the-catalogue.md)).

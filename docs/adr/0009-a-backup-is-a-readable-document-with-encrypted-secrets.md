@@ -1,5 +1,14 @@
 # A backup is a readable document with encrypted secrets
 
+**Amended by [ADR 0057](0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md),
+which reverses the encryption.** Nothing in the tool encrypts anything: the
+secret fields travel as they are stored, there is no passphrase, and whatever
+the person carries the file with does the encrypting. Every other decision
+below stands — the single readable document, the envelope, the boundary, the
+root-relative paths, the empty-installation restore. The title keeps a word
+that is no longer true, and the file keeps its name, because seven other
+decisions link to it.
+
 The backup is a single JSON document, readable by a person, holding only what
 the tool cannot fetch again. The credentials inside it are encrypted under a
 passphrase the user chooses at export; everything else stays plain. Restore
@@ -53,6 +62,14 @@ the user types at export and again at restore. Argon2id derives the key,
 AES-GCM encrypts the fields. The passphrase is its own secret, not the login
 password.
 
+**Reversed by [ADR 0057](0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md).**
+Those four fields travel as they are stored. The argument that displaced this
+paragraph is the one two decisions below it already made twice: a passphrase is
+a secret that can be lost, it is discovered lost at a restore, and the loss it
+would bound is four credentials ADR 0037 had already decided were cheap enough
+to keep in the clear in the database. What the export owes instead is a sentence
+naming what is in the file, before the file exists.
+
 ## Restore
 
 Restore expects an empty installation: any indexer, rule or library entry
@@ -60,7 +77,9 @@ present and it refuses, naming what it found. It is therefore reachable from
 onboarding **without authentication**, because the login credential is inside
 the file and on a fresh container nobody can be signed in yet. The two states
 coincide — an installation empty enough to restore into is one that has nothing
-to steal — and the passphrase gates the file itself.
+to steal — and the passphrase gates the file itself. (Under ADR 0057 nothing
+gates the file, and the coincidence above carries the whole argument: an empty
+installation has nothing to take, and a restore that finds anything refuses.)
 
 Filed paths are stored relative to their root, and the roots — library,
 download directory — are re-answered once at restore, prefilled from the
@@ -97,6 +116,14 @@ to travel with it or the copy is torn.
 tools do. Rejected because the file's whole purpose is to be carried somewhere
 else — a cloud drive, a USB stick, an email to oneself — and every one of those
 places is outside what the user controls.
+
+> **This is the option [ADR 0057](0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md)
+> takes**, and it is worth saying that it was seen and turned down here rather
+> than missed. What the rejection above does not account for is that the person
+> carrying the file to one of those places carries it with something — and that
+> something encrypts everything it carries, under a key they already manage.
+> The warning is not instead of encryption; it is instead of *this tool's*
+> encryption, underneath the carrier's.
 
 **Encrypt the whole file.** Rejected for the failure it creates: a forgotten
 passphrase costs the entire backup, including the record of what was downloaded
@@ -145,11 +172,14 @@ cache — is not in the file.
 - The sync status page gains a third silent-failure count beside those of ADR
   0006 and 0007: library entries that verification could not confirm.
 - Argon2id is a package dependency, and the first one taken for a
-  non-functional reason.
+  non-functional reason. **Not under ADR 0057**, which takes no cryptographic
+  dependency at all.
 - An entry pending verification counts as held, so duplicate detection and
   automation are deliberately conservative for as long as the pass is running.
 - A restore onto a SABnzbd that does not know the old job ids consumes the
   releases that were in flight, and those videos fetch a different release
   under ADR 0008's retry budget.
 - The passphrase cannot be recovered, and the export screen has to say so
-  before it is typed rather than after.
+  before it is typed rather than after. **Under ADR 0057** there is nothing to
+  recover and nothing to type; what the export screen has to say before the
+  file exists is what is in it.

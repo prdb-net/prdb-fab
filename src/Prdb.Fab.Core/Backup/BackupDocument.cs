@@ -32,9 +32,9 @@ namespace Prdb.Fab.Core.Backup;
 /// boundary is an identifier an outside authority owns — prdb's Video and Site
 /// ids, an Indexer's derived Release identity — never a local surrogate, which
 /// is what lets the caches stay out of the file without anything dangling.
-/// And the secret fields travel as they are stored for now; ADR 0009 encrypts
-/// each of them individually under the Passphrase, which is a change to those
-/// fields and to nothing else.
+/// And the secret fields travel as they are stored, which under ADR 0057 is
+/// where they stay: nothing in this tool encrypts anything, and what carries
+/// the file is what encrypts it.
 /// </para>
 /// </remarks>
 /// <param name="FormatVersion">

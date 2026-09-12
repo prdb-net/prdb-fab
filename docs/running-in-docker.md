@@ -370,9 +370,10 @@ deal of log for a tool that runs for months.
 The first line of every log names the version that produced it. Please leave it
 in when you send one.
 
-**Secrets never appear in the log**, at any level. No key, no passphrase, and no
-URL — what is written is which connection was being used and to which host,
-never the address itself, because an indexer's address carries its key.
+**Secrets never appear in the log**, at any level. No key and no URL — what is
+written is which connection was being used and to which host, never the address
+itself, because an indexer's address carries its key. A backup file is the one
+place they do appear, deliberately and readably; never attach one to a report.
 
 ## Tags and architectures
 
