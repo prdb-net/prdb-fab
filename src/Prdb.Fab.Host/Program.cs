@@ -21,6 +21,7 @@ using Prdb.Fab.Host.Status;
 using Prdb.Fab.Infrastructure.Access;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Automation;
+using Prdb.Fab.Infrastructure.Backup;
 using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
@@ -62,6 +63,7 @@ builder.Services.AddFabAcquisition();
 builder.Services.AddFabFiling();
 builder.Services.AddFabReporting();
 builder.Services.AddFabSync();
+builder.Services.AddFabBackup();
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
 // request gets 401 rather than a redirect.
