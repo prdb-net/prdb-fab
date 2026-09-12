@@ -2641,6 +2641,47 @@
           }
         }
       }
+    },
+    "/api/backup/export": {
+      "post": {
+        "tags": [
+          "Backup"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/backup/restore": {
+      "post": {
+        "tags": [
+          "Backup"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3463,6 +3504,115 @@
             "items": {
               "$ref": "#/components/schemas/AutomationIndexer"
             }
+          }
+        }
+      },
+      "BackupRoot": {
+        "enum": [
+          "None",
+          "Library",
+          "Downloads",
+          null
+        ]
+      },
+      "BackupSummary": {
+        "required": [
+          "formatVersion",
+          "toolVersion",
+          "writtenAt",
+          "needsLibraryRoot",
+          "needsDownloadDirectory",
+          "recordedLibraryRoot",
+          "recordedDownloadDirectory",
+          "indexers",
+          "automationRules",
+          "libraryEntries",
+          "videoFiles",
+          "downloads",
+          "arrivingFiles"
+        ],
+        "type": "object",
+        "properties": {
+          "formatVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "toolVersion": {
+            "type": "string"
+          },
+          "writtenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "needsLibraryRoot": {
+            "type": "boolean"
+          },
+          "needsDownloadDirectory": {
+            "type": "boolean"
+          },
+          "recordedLibraryRoot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "recordedDownloadDirectory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "indexers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "automationRules": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "libraryEntries": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "videoFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "downloads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "arrivingFiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -6197,6 +6347,127 @@
           }
         }
       },
+      "RestoreOutcome": {
+        "enum": [
+          "Restored",
+          "NotOffered",
+          "NotABackup",
+          "FromANewerTool",
+          "RootsNeeded",
+          "NotEmpty",
+          "LibraryRootRefused",
+          "DownloadDirectoryRefused",
+          "PathOutsideItsRoot"
+        ]
+      },
+      "RestoreRequest": {
+        "required": [
+          "document",
+          "roots"
+        ],
+        "type": "object",
+        "properties": {
+          "document": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "roots": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RestoreRootsRequest"
+              }
+            ]
+          }
+        }
+      },
+      "RestoreRootsRequest": {
+        "required": [
+          "library",
+          "downloads"
+        ],
+        "type": "object",
+        "properties": {
+          "library": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "downloads": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RestoreVerdict": {
+        "required": [
+          "outcome",
+          "detail",
+          "summary",
+          "found",
+          "refusal",
+          "refusedRoot",
+          "writtenBy"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/RestoreOutcome"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "summary": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupSummary"
+              }
+            ]
+          },
+          "found": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "refusal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RootRefusal"
+              }
+            ]
+          },
+          "refusedRoot": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupRoot"
+              }
+            ]
+          },
+          "writtenBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ReviewDecisionOutcome": {
         "enum": [
           "SelectionChanged",
@@ -6701,6 +6972,18 @@
             "format": "int32"
           }
         }
+      },
+      "RootRefusal": {
+        "enum": [
+          "Unanswered",
+          "NotAbsolute",
+          "Missing",
+          "NotReadable",
+          "NotWritable",
+          "TheSameAsTheOther",
+          "OverlapsTheOther",
+          null
+        ]
       },
       "RunNowOutcome": {
         "enum": [
@@ -7768,6 +8051,9 @@
     },
     {
       "name": "Reporting"
+    },
+    {
+      "name": "Backup"
     }
   ]
 }

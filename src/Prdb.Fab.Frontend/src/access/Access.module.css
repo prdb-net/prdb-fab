@@ -83,3 +83,61 @@
   border-color: var(--accent);
   color: var(--text);
 }
+
+/*
+ * ADR 0010's first step is a fork rather than a question — set up fresh, or
+ * restore a backup — so the way to the other side of it is offered as a
+ * sentence with a link in it, not as a second primary button competing with
+ * the one thing this screen is for.
+ */
+.fork {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  color: var(--text-quiet);
+}
+
+.forkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.forkButton:hover {
+  text-decoration: none;
+}
+
+/* What the file says about itself, while the roots are being answered. */
+.summary {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.summary dt {
+  display: inline;
+  color: var(--text-quiet);
+}
+
+.summary dd {
+  display: inline;
+  margin: 0 0 0 0.35rem;
+}
+
+.summary dd::after {
+  content: '';
+  display: block;
+}
+
+.found {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}

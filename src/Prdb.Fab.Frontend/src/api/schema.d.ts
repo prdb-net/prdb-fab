@@ -3042,6 +3042,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/backup/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/backup/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RestoreVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3231,6 +3303,31 @@ export interface components {
             automaticDownloadCap: number | string;
             rules: components["schemas"]["AutomationRuleView"][];
             indexers: components["schemas"]["AutomationIndexer"][];
+        };
+        /** @enum {unknown} */
+        BackupRoot: "None" | "Library" | "Downloads" | null;
+        BackupSummary: {
+            /** Format: int32 */
+            formatVersion: number | string;
+            toolVersion: string;
+            /** Format: date-time */
+            writtenAt: string;
+            needsLibraryRoot: boolean;
+            needsDownloadDirectory: boolean;
+            recordedLibraryRoot: null | string;
+            recordedDownloadDirectory: null | string;
+            /** Format: int32 */
+            indexers: number | string;
+            /** Format: int32 */
+            automationRules: number | string;
+            /** Format: int32 */
+            libraryEntries: number | string;
+            /** Format: int32 */
+            videoFiles: number | string;
+            /** Format: int32 */
+            downloads: number | string;
+            /** Format: int32 */
+            arrivingFiles: number | string;
         };
         /** @enum {unknown} */
         BeforeDownloadGateChoice: "ExactOnly" | "ExactAndStrong" | "ThroughProbable";
@@ -3869,6 +3966,25 @@ export interface components {
             confirmedAssignmentBacklog: number | string;
         };
         /** @enum {unknown} */
+        RestoreOutcome: "Restored" | "NotOffered" | "NotABackup" | "FromANewerTool" | "RootsNeeded" | "NotEmpty" | "LibraryRootRefused" | "DownloadDirectoryRefused" | "PathOutsideItsRoot";
+        RestoreRequest: {
+            document: null | string;
+            roots: null | components["schemas"]["RestoreRootsRequest"];
+        };
+        RestoreRootsRequest: {
+            library: null | string;
+            downloads: null | string;
+        };
+        RestoreVerdict: {
+            outcome: components["schemas"]["RestoreOutcome"];
+            detail: string;
+            summary: null | components["schemas"]["BackupSummary"];
+            found: string[];
+            refusal: null | components["schemas"]["RootRefusal"];
+            refusedRoot: null | components["schemas"]["BackupRoot"];
+            writtenBy: null | string;
+        };
+        /** @enum {unknown} */
         ReviewDecisionOutcome: "SelectionChanged" | "CannotAct" | "VideoNotFound" | "QueuedForFiling" | "QueuedForReplacement";
         ReviewDecisionVerdict: {
             outcome: components["schemas"]["ReviewDecisionOutcome"];
@@ -3979,6 +4095,8 @@ export interface components {
             /** Format: int32 */
             total: number | string;
         };
+        /** @enum {unknown} */
+        RootRefusal: "Unanswered" | "NotAbsolute" | "Missing" | "NotReadable" | "NotWritable" | "TheSameAsTheOther" | "OverlapsTheOther" | null;
         /** @enum {unknown} */
         RunNowOutcome: "Accepted" | "Deferred" | "Refused" | null;
         RunNowVerdict: {

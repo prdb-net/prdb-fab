@@ -14,6 +14,7 @@ import { SearchScreen } from './catalogue/SearchScreen.tsx'
 import { accessStateKey, createQueryClient } from './access/state.ts'
 import { OnboardingScreen, routeFor } from './onboarding/OnboardingScreen.tsx'
 import { AccountScreen } from './settings/AccountScreen.tsx'
+import { BackupScreen } from './settings/BackupScreen.tsx'
 import { ConnectionsScreen } from './settings/ConnectionsScreen.tsx'
 import { IndexerSettings } from './settings/IndexerSettings.tsx'
 import { IdentificationScreen } from './settings/IdentificationScreen.tsx'
@@ -102,6 +103,7 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith('/settings/automation/rules/')) return 'Automation rule'
   if (pathname === '/settings/library') return 'Library settings'
   if (pathname === '/settings/reporting') return 'Reporting settings'
+  if (pathname === '/settings/backup') return 'Backup'
   if (pathname.startsWith('/onboarding/')) return 'Setup'
   return 'Page not found'
 }
@@ -157,6 +159,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="automation/rules/:id" element={<AutomationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
                 <Route path="reporting" element={<ReportingScreen />} />
+                <Route path="backup" element={<BackupScreen />} />
               </Route>
               <Route path="*" element={<NotFoundScreen />} />
             </Routes>
