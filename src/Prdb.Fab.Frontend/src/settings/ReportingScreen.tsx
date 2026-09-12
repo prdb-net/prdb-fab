@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -11,6 +11,7 @@ import { Loaded } from '../ui/Loaded.tsx'
 import { SaveBar } from '../ui/SaveBar.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
+import styles from './Settings.module.css'
 
 export function ReportingScreen() {
   const settings = useQuery({ queryKey: ['reporting-settings'], queryFn: readReportingSettings })
@@ -18,7 +19,7 @@ export function ReportingScreen() {
   return (
     <SettingsPage
       title="Reporting"
-      lede="Both channels are enabled by default, remain independently configurable, and use the same governed background routine."
+      lede="What may leave this installation. Two independent channels, both on by default, sharing one governed background routine — opting into one is not opting into the other."
     >
       <Loaded query={settings} of="the Reporting settings">
         {(held) => <ReportingForm held={held} />}
@@ -60,39 +61,73 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         save.mutate()
       }}
     >
-      <Fieldset legend="What may be sent back to prdb">
+      <Fieldset legend="Fulfilments">
+        {/*
+          ADR 0019 requires the count be shown *before* the switch is thrown —
+          VISION.md's "stated plainly" can only change a decision beforehand —
+          and it used to be the first clause of a five-line grey hint. It is not
+          rendered at all until it is read: this form is mounted after that, so
+          a confident zero is not a state it can be in.
+        */}
+        <Backlog
+          count={Number(held.fulfilmentBacklog)}
+          one="local Fulfilment change is waiting to be sent."
+          many="local Fulfilment changes are waiting to be sent."
+          none="Nothing is waiting to be sent."
+        />
+
         <Switch
           checked={fulfilments}
           onChange={(checked) => { setFulfilments(checked); setSaved(false) }}
-          label="Report Fulfilments"
+          label="Report which wanted Videos are held"
           hint={
             <>
-              {held.fulfilmentBacklog} local Fulfilment change(s) are waiting.
-              Enabling sends the Video, held state, real filing time and the highest
-              prdb Quality the Library Entry truthfully clears. Deliberately deleting
-              a Library Entry retracts that state. Quality below 720p is left
-              unstated; the application is Other and no external ID is sent. Turning
-              this off stops future reports. It does not retract anything already at
-              prdb; a missing file or mount never retracts a Fulfilment either.
+              Turning this off stops future reports. It does not retract anything
+              already at prdb: only a person retracts a Fulfilment, and a missing
+              file or an unmounted library never does.
             </>
           }
+        />
+
+        <Sends summary="What a Fulfilment report contains">
+          <li>The prdb Video id.</li>
+          <li>Whether it is held.</li>
+          <li>When it was really filed.</li>
+          <li>
+            The highest prdb Quality the Library Entry truthfully clears. Below
+            720p is left unstated rather than guessed at.
+          </li>
+          <li>The application, as Other. No external identifier is sent.</li>
+        </Sends>
+      </Fieldset>
+
+      <Fieldset legend="Confirmed Assignments">
+        <Backlog
+          count={Number(held.confirmedAssignmentBacklog)}
+          one="assignment confirmed in the Review Queue is waiting to be sent."
+          many="assignments confirmed in the Review Queue are waiting to be sent."
+          none="Nothing is waiting to be sent."
         />
 
         <Switch
           checked={assignments}
           onChange={(checked) => { setAssignments(checked); setSaved(false) }}
-          label="Report Confirmed Assignments"
+          label="Report the hash-to-Video answers you confirm by hand"
           hint={
             <>
-              {held.confirmedAssignmentBacklog} assignment(s) confirmed in the Review
-              Queue are waiting. Enabling sends the Video, osHash, file size, recorded
-              runtime, width, height and video codec, the arrival file name and
-              Release name, marked UserConfirmed. Files are not probed again. Turning
-              this off stops future submissions. prdb has no retraction for an
-              assignment already sent.
+              Turning this off stops future submissions. <strong>prdb has no
+              retraction for an assignment already sent</strong> &mdash; unlike a
+              Fulfilment, there is nothing to undo it with.
             </>
           }
         />
+
+        <Sends summary="What an assignment report contains">
+          <li>The prdb Video id and the file&rsquo;s osHash.</li>
+          <li>Its size, and its recorded runtime, width, height and video codec.</li>
+          <li>The name it arrived under, and the Release name.</li>
+          <li>The marker UserConfirmed. The file is not probed again to send it.</li>
+        </Sends>
       </Fieldset>
 
       <SaveBar
@@ -108,5 +143,40 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         {saved && <Verdict tone="done">Reporting settings saved.</Verdict>}
       </SaveBar>
     </form>
+  )
+}
+
+/** The count, as a fact beside the decision rather than inside a paragraph. */
+function Backlog({
+  count,
+  one,
+  many,
+  none,
+}: {
+  count: number
+  one: string
+  many: string
+  none: string
+}) {
+  return (
+    <p className={styles.backlog}>
+      {count === 0 ? none : <><strong>{count}</strong> {count === 1 ? one : many}</>}
+    </p>
+  )
+}
+
+/**
+ * What a channel sends: available, and out of the way.
+ *
+ * It was a wall of prose at exactly the moment somebody is deciding, which is
+ * the moment they will not read it. Folded, the sentence that matters is the
+ * one at the switch.
+ */
+function Sends({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className={styles.sends}>
+      <summary>{summary}</summary>
+      <ul>{children}</ul>
+    </details>
   )
 }

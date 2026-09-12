@@ -263,3 +263,35 @@
   border-radius: var(--radius);
   padding: 0.15rem 0.45rem;
 }
+
+/* The backlog, beside the decision rather than inside a paragraph: ADR 0019
+   wants it read before the switch is thrown. */
+.backlog {
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--surface-raised);
+  margin: 0 0 0.6rem;
+  padding: 0.45rem 0.7rem;
+}
+
+/* What a channel sends: available without being in the way. */
+.sends {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+}
+
+.sends summary {
+  cursor: pointer;
+  min-height: 1.9rem;
+  padding: 0.25rem 0;
+}
+
+.sends ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.sends li {
+  margin-bottom: 0.25rem;
+}
