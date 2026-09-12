@@ -41,165 +41,331 @@
 }
 
 .toolbar {
-  align-items: end;
+  align-items: center;
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
   justify-content: space-between;
   margin-bottom: 1rem;
 }
 
-.filters {
+/* The state filters. Each carries its count, so the overview is legible before
+   any of them is chosen. */
+.states {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.35rem;
 }
 
-.filters label {
+.segment {
+  align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-quiet);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.82rem;
+  gap: 0.35rem;
+  padding: 0.32rem 0.7rem 0.32rem 0.55rem;
+}
+
+.segment:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.segmentActive {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  color: var(--text);
+  font-weight: 650;
+}
+
+.segmentCount {
+  background: var(--surface);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  padding: 0.05rem 0.4rem;
+}
+
+.indexer {
+  align-items: center;
   color: var(--text-quiet);
   display: flex;
-  flex-direction: column;
   font-size: 0.75rem;
   font-weight: 650;
-  gap: 0.25rem;
+  gap: 0.45rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
-.filters select {
+.indexer select {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
   font-weight: 400;
-  min-width: 12rem;
-  padding: 0.5rem 2rem 0.5rem 0.65rem;
+  min-width: 11rem;
+  padding: 0.4rem 2rem 0.4rem 0.6rem;
   text-transform: none;
 }
 
-.selection {
+/* Nothing is offered until something is selected; the bar then says how many
+   Stop following covers. */
+.selectionBar {
   align-items: center;
+  background: var(--surface-raised);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+  border-radius: var(--radius);
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.85rem;
 }
 
-.selection button,
+.selectionBar > span:first-child {
+  font-weight: 650;
+}
+
+.selectionBar button,
+.detailActions button,
 .pager button {
-  background: var(--surface-raised);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
   cursor: pointer;
-  padding: 0.5rem 0.8rem;
+  padding: 0.4rem 0.8rem;
 }
 
-.selection button:not(:disabled):hover,
+.selectionBar button:not(:disabled):hover,
+.detailActions button:not(:disabled):hover,
 .pager button:not(:disabled):hover {
   border-color: var(--accent);
 }
 
-.selection button:disabled,
+.selectionBar button:disabled,
+.detailActions button:disabled,
 .pager button:disabled {
   color: var(--text-quiet);
   cursor: default;
   opacity: 0.65;
 }
 
-.selection span {
+.quietButton {
+  color: var(--text-quiet);
+}
+
+.selectionNote {
   color: var(--text-quiet);
   font-size: 0.8rem;
-  max-width: 24rem;
+  max-width: 28rem;
 }
 
-.downloads {
+.workspace {
+  align-items: start;
   display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.download {
+.hasSelection .workspace {
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem);
+}
+
+.list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.row {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0.25rem;
+  min-width: 0;
+  padding-left: 0.5rem;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row:hover {
+  background: var(--surface-raised);
+}
+
+.rowSelected {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.rowCheckbox {
+  accent-color: var(--accent);
+  flex: none;
+  height: 1rem;
+  margin: 0;
+  width: 1rem;
+}
+
+.rowLink {
+  align-items: center;
+  color: inherit;
+  display: flex;
+  flex: 1;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+}
+
+.rowName {
+  display: flex;
+  flex: 1;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+/* The Site first, because a catalogue title alone does not name a Video. Where
+   there is none the title stands on its own rather than under a placeholder. */
+.rowSite {
+  color: var(--text-quiet);
+  flex: none;
+  font-size: 0.86rem;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowSeparator {
+  color: var(--text-quiet);
+  flex: none;
+}
+
+.rowTitle {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowLink:hover .rowTitle {
+  text-decoration: underline;
+}
+
+.rowSize {
+  color: var(--text-quiet);
+  flex: none;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  width: 5.5rem;
+}
+
+.rowWhen {
+  color: var(--text-quiet);
+  flex: none;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Shape as well as colour: the five states are told apart by their outline
+   before any hue is read. */
+.symbol {
+  flex: none;
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.collected {
+  color: #9ddd9f;
+}
+
+.completed {
+  color: #9bc9ee;
+}
+
+.outstanding {
+  color: #e8c66f;
+}
+
+.failed {
+  color: #efaaa4;
+}
+
+.abandoned {
+  color: var(--text-quiet);
+}
+
+.detail {
   background: color-mix(in srgb, var(--surface-raised) 68%, var(--surface));
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) + 2px);
   min-width: 0;
   padding: 1rem;
+  position: sticky;
+  top: 1rem;
 }
 
-.download:hover {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+/* Where the panes are side by side this clears the selection; where the detail
+   is the page it is the way back — and either way it keeps the filters the
+   Download was reached under. */
+.back {
+  display: inline-block;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
 }
 
-.downloadHeading {
+.detailHeading {
   align-items: start;
   display: flex;
-  gap: 1rem;
-  justify-content: space-between;
+  gap: 0.6rem;
 }
 
-.release {
+.detailHeading .symbol {
+  height: 1.3rem;
+  margin-top: 0.1rem;
+  width: 1.3rem;
+}
+
+.detailName {
+  flex: 1;
   min-width: 0;
 }
 
-.release a {
-  display: block;
-  font-size: 1rem;
-  font-weight: 700;
+.detailName h2 {
+  font-size: 1.05rem;
   line-height: 1.3;
-  text-decoration: none;
-}
-
-.release a:hover {
-  text-decoration: underline;
-}
-
-.release > span {
-  color: var(--text-quiet);
-  display: block;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 0.75rem;
-  line-height: 1.4;
-  margin-top: 0.3rem;
+  margin: 0.1rem 0 0;
   overflow-wrap: anywhere;
 }
 
+.detailSite {
+  color: var(--text-quiet);
+  font-size: 0.86rem;
+}
+
 .state {
-  border: 1px solid;
+  border: 1px solid currentColor;
   border-radius: 999px;
   flex: none;
   font-size: 0.72rem;
   font-weight: 750;
   letter-spacing: 0.02em;
   padding: 0.2rem 0.55rem;
-}
-
-.collected {
-  background: color-mix(in srgb, var(--ok) 12%, var(--surface));
-  border-color: color-mix(in srgb, var(--ok) 48%, var(--border));
-  color: #9ddd9f;
-}
-
-.completed {
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
-  color: #9bc9ee;
-}
-
-.outstanding {
-  background: #302815;
-  border-color: #665423;
-  color: #e8c66f;
-}
-
-.failed {
-  background: color-mix(in srgb, var(--bad) 12%, var(--surface));
-  border-color: color-mix(in srgb, var(--bad) 55%, var(--border));
-  color: #efaaa4;
-}
-
-.abandoned {
-  background: var(--surface-raised);
-  border-color: var(--border);
-  color: var(--text-quiet);
 }
 
 .stateDetail {
@@ -219,12 +385,23 @@
   padding: 0.5rem 0.65rem;
 }
 
+/* What was submitted is detail rather than identity, so it sits here and not
+   on the row. */
+.submitted {
+  color: var(--text-quiet);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin: 0.65rem 0 0;
+  overflow-wrap: anywhere;
+}
+
 .facts {
   border-bottom: 1px solid var(--border);
   border-top: 1px solid var(--border);
   display: grid;
   gap: 0.7rem 1rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0.85rem 0 0;
   padding: 0.7rem 0;
 }
@@ -261,34 +438,16 @@
   margin-top: 0.12rem;
 }
 
-.downloadFooter {
+.detailActions {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: space-between;
-  min-height: 2.25rem;
-  padding-top: 0.65rem;
-}
-
-.selectDownload {
-  align-items: center;
-  color: var(--text-quiet);
-  cursor: pointer;
-  display: flex;
-  font-size: 0.8rem;
-  gap: 0.45rem;
-}
-
-.selectDownload input {
-  accent-color: var(--accent);
-  height: 1rem;
-  margin: 0;
-  width: 1rem;
+  gap: 0.75rem;
+  padding: 0.75rem 0 0;
 }
 
 .technicalDetails {
-  margin-left: auto;
+  margin-top: 0.5rem;
   min-width: 0;
 }
 
@@ -297,7 +456,7 @@
   cursor: pointer;
   font-size: 0.8rem;
   list-style: none;
-  padding: 0.35rem 1.2rem 0.35rem 0.35rem;
+  padding: 0.35rem 1.2rem 0.35rem 0;
   position: relative;
   user-select: none;
 }
@@ -317,12 +476,6 @@
   transform: rotate(45deg);
   transition: transform 120ms ease;
   width: 0.4rem;
-}
-
-.technicalDetails[open] {
-  flex: 1 1 100%;
-  margin-left: 0;
-  width: 100%;
 }
 
 .technicalDetails[open] summary::after {
@@ -385,9 +538,25 @@
   margin-top: 2rem;
 }
 
-@media (max-width: 70rem) {
-  .downloads {
-    grid-template-columns: 1fr;
+/* Where there is no room for two columns the detail *is* the page, and the way
+   back keeps the filters the Download was reached under. */
+@media (max-width: 64rem) {
+  .hasSelection .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hasSelection .total,
+  .hasSelection .boundary,
+  .hasSelection .toolbar,
+  .hasSelection .selectionBar,
+  .hasSelection .list,
+  .hasSelection .empty,
+  .hasSelection .pager {
+    display: none;
+  }
+
+  .hasSelection .detail {
+    position: static;
   }
 }
 
@@ -406,40 +575,17 @@
     align-self: start;
   }
 
-  .filters {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .filters select {
+  .indexer select {
     min-width: 0;
     width: 100%;
   }
 
-  .selection {
-    align-items: stretch;
+  .rowSize {
+    display: none;
   }
 
-  .downloadHeading {
-    gap: 0.65rem;
-  }
-
-  .facts {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .origin {
-    grid-column: auto;
-  }
-
-  .downloadFooter {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .technicalDetails {
-    margin-left: 0;
+  .rowSite {
+    max-width: 7rem;
   }
 }
 

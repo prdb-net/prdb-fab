@@ -19,6 +19,30 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- **Downloads reads as a list.** Fifty cards that had to be read one at a time
+  are one line each: the state as a symbol whose shape says as much as its
+  colour, the Site in front of the title — a catalogue title on its own does not
+  name a video, and they repeat across sites — the size, and when it was
+  submitted.
+
+  Everything a card carried is still there, beside the list rather than inside
+  every row: the sentence about the state, the failure message, the release that
+  was submitted, SABnzbd's last word on it, the indexer, the origin with its
+  rule links, the job id and the stage log. A selected Download has its own
+  address, `/downloads/<id>`, so it can be linked and the back button does what
+  it looks like it does; where the window is too narrow for two columns that
+  address is a page of its own, with a way back that keeps the filters it was
+  reached with. Older `/downloads?download=<id>` links still arrive.
+
+  The state filter is a strip that carries a count per state, so *is anything
+  stuck?* is answered by looking rather than by filtering, requesting and
+  reading a total. Choosing an indexer narrows those counts; choosing a state
+  does not, since they are what the choice is made from. Stop following moved
+  out of the rows into a bar that appears once something is selected and says
+  how many it covers.
+
 ## [0.20.0] - 2026-09-12
 
 The installation is now something you can carry. One file holds everything the

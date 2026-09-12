@@ -154,7 +154,7 @@ function OriginLink({ compact = false, entry }: { compact?: boolean; entry: Oper
   if (!entry.origin) return null
   const label = compact ? entry.origin.kind : originLabel(entry.origin)
   return entry.downloadId
-    ? <Link className={styles.operationOrigin} title={compact ? originLabel(entry.origin) : undefined} to={`/downloads?download=${entry.downloadId}`}>{label}</Link>
+    ? <Link className={styles.operationOrigin} title={compact ? originLabel(entry.origin) : undefined} to={`/downloads/${entry.downloadId}`}>{label}</Link>
     : <span className={styles.operationOrigin}>{label}</span>
 }
 
