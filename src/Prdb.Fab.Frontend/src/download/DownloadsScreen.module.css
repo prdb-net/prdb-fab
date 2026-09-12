@@ -442,3 +442,20 @@
     margin-left: 0;
   }
 }
+
+/* What a confirmation names, one Download per line (ADR 0040: the act takes the
+   identifiers that were shown, so the list is the act's own). */
+.confirmationList {
+  display: grid;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+}
+
+.confirmationList li {
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+  padding: 0.4rem 0.55rem;
+}

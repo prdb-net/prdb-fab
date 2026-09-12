@@ -8,8 +8,10 @@ import {
   stopFollowing,
   type DownloadPage,
   type DownloadOriginView,
+  type DownloadSelectionPreview,
   type DownloadState,
 } from '../api/client.ts'
+import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
 import styles from './DownloadsScreen.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 
@@ -70,19 +72,22 @@ function DownloadTable({
   goTo: (page: number) => void
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [confirming, setConfirming] = useState<DownloadSelectionPreview | null>(null)
   const queryClient = useQueryClient()
+
+  // ADR 0058: a destructive act is confirmed in the application. ADR 0040 has
+  // the backend compute what the act covers and the act take the identifiers
+  // that were shown, so the preview is fetched first and its own list is what
+  // the dialog names.
+  const ask = useMutation({
+    mutationFn: () => previewStopFollowing([...selected]),
+    onSuccess: (preview) => setConfirming(preview),
+  })
   const action = useMutation({
-    mutationFn: async () => {
-      const ids = [...selected]
-      const preview = await previewStopFollowing(ids)
-      if (preview.outcome !== 'Ready') return preview
-      const names = preview.downloads.map((download) => `• ${download.submittedName}`).join('\n')
-      if (!window.confirm(
-        `Stop following ${preview.downloads.length} Download(s)?\n\n${names}\n\nSABnzbd will be left untouched. Failed Downloads still spend this Video's retry budget, and the next ranked Release may be submitted automatically.`,
-      )) return null
-      return stopFollowing(preview.downloads.map((download) => download.id))
-    },
+    mutationFn: (preview: DownloadSelectionPreview) =>
+      stopFollowing(preview.downloads.map((download) => download.id)),
     onSuccess: () => {
+      setConfirming(null)
       setSelected(new Set())
       void queryClient.invalidateQueries({ queryKey: ['downloads'] })
       void queryClient.invalidateQueries({ queryKey: ['releases'] })
@@ -137,13 +142,35 @@ function DownloadTable({
         </div>
 
         <div className={styles.selection}>
-          <button type="button" disabled={selected.size === 0 || action.isPending} onClick={() => action.mutate()}>
-            {action.isPending ? 'Checking…' : `Stop following${selected.size ? ` (${selected.size})` : ''}`}
+          <button type="button" disabled={selected.size === 0 || ask.isPending || action.isPending} onClick={() => ask.mutate()}>
+            {ask.isPending ? 'Checking…' : `Stop following${selected.size ? ` (${selected.size})` : ''}`}
           </button>
-          {action.data?.detail && <span>{action.data.detail}</span>}
-          {action.isError && <span>The selection could not be checked.</span>}
+          {ask.data && ask.data.outcome !== 'Ready' && <span>{ask.data.detail}</span>}
+          {(ask.isError || action.isError) && <span>The selection could not be checked.</span>}
         </div>
       </div>
+
+      {confirming && confirming.outcome === 'Ready' && (
+        <ConfirmationDialog
+          title={`Stop following ${confirming.downloads.length} Download(s)?`}
+          confirmLabel="Stop following"
+          danger
+          busy={action.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => action.mutate(confirming)}
+        >
+          <p>
+            SABnzbd is left untouched — prdb-fab never retries or deletes a job
+            there. Failed Downloads still spend this Video's retry budget, and the
+            next ranked Release may be submitted automatically.
+          </p>
+          <ul className={styles.confirmationList}>
+            {confirming.downloads.map((download) => (
+              <li key={download.id}>{download.submittedName}</li>
+            ))}
+          </ul>
+        </ConfirmationDialog>
+      )}
 
       {answer.downloads.length === 0 ? (
         <div className={styles.empty}>

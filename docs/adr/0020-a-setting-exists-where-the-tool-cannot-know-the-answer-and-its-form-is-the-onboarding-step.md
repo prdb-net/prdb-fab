@@ -10,6 +10,12 @@ read fresh at each use and takes effect from the next one — with a single
 exception, the library root, which is history rather than present because filed
 paths are stored relative to it.
 
+**How this surface is drawn is [ADR 0058](0058-the-settings-surface-and-the-onboarding-forms-are-drawn-from-one-kit.md)'s**,
+which does not amend anything decided here: what the settings hold and which
+routes hold them are untouched. It settles the form language the routes are
+drawn in, and it is the reason *one form, two entry points* now covers the kit
+those forms are built from as well as the forms themselves.
+
 ## What is allowed to be a setting
 
 `VISION.md` fixes one end — the container is given only where its data lives,

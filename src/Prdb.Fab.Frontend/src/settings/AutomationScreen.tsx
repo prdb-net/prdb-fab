@@ -8,9 +8,15 @@ import {
   readAutomationSettings,
   saveAutomaticDownloadCap,
   saveAutomationRule,
+  type AutomationRuleDeletePreview,
   type AutomationRuleView,
+  type AutomationSettingsState,
 } from '../api/client.ts'
-import formStyles from '../onboarding/Onboarding.module.css'
+import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
+import { Field, Fieldset, Switch, formStyles } from '../ui/Form.tsx'
+import { Loaded } from '../ui/Loaded.tsx'
+import { SaveBar } from '../ui/SaveBar.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import styles from './AutomationScreen.module.css'
 import { SettingsPage } from './SettingsPage.tsx'
 
@@ -20,20 +26,7 @@ export function AutomationScreen() {
 }
 
 function AutomationOverview() {
-  const queryClient = useQueryClient()
   const settings = useQuery({ queryKey: ['automation-settings'], queryFn: readAutomationSettings })
-  const [cap, setCap] = useState('')
-  const [saved, setSaved] = useState(false)
-  const currentCap = cap || String(settings.data?.automaticDownloadCap ?? 20)
-  const saveCap = useMutation({
-    mutationFn: () => saveAutomaticDownloadCap(Number(currentCap)),
-    onSuccess: (answer) => {
-      setSaved(answer.saved)
-      if (answer.saved) setCap(String(answer.automaticDownloadCap))
-      void queryClient.invalidateQueries({ queryKey: ['automation-settings'] })
-      void queryClient.invalidateQueries({ queryKey: ['status'] })
-    },
-  })
 
   return (
     <SettingsPage
@@ -48,60 +41,104 @@ function AutomationOverview() {
           </div>
           <Link to="/settings/automation/rules/new">Add rule</Link>
         </div>
-        {settings.isPending && <p>Loading Automation Rules…</p>}
-        {settings.isError && <p className={formStyles.refusal}>Automation settings could not be read.</p>}
-        {settings.data && settings.data.rules.length === 0 && (
-          <p className={styles.empty}>No rules yet. Automatic Downloads are off.</p>
-        )}
-        {settings.data && settings.data.rules.length > 0 && (
-          <ul className={styles.rules}>
-            {settings.data.rules.map((rule) => (
-              <li key={rule.id}>
-                <div>
-                  <strong>{rule.name}</strong>
-                  <span>{rule.enabled ? 'Enabled' : 'Disabled'} · {ruleSize(rule)}</span>
-                  <span>{rule.allowedIndexers.map((indexer) => indexer.name).join(', ') || 'No allowed Indexers'}</span>
-                </div>
-                <Link to={`/settings/automation/rules/${rule.id}`}>Edit</Link>
-              </li>
-            ))}
-          </ul>
-        )}
+
+        <Loaded query={settings} of="the Automation settings">
+          {(held) =>
+            held.rules.length === 0 ? (
+              <p className={styles.empty}>No rules yet. Automatic Downloads are off.</p>
+            ) : (
+              <ul className={styles.rules}>
+                {held.rules.map((rule) => (
+                  <li key={rule.id}>
+                    <div>
+                      <strong>{rule.name}</strong>
+                      <span>{rule.enabled ? 'Enabled' : 'Disabled'} · {ruleSize(rule)}</span>
+                      <span>
+                        {rule.allowedIndexers.map((indexer) => indexer.name).join(', ')
+                          || 'No allowed Indexers'}
+                      </span>
+                    </div>
+                    <Link to={`/settings/automation/rules/${rule.id}`}>Edit</Link>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </Loaded>
       </section>
 
-      <form
-        className={formStyles.form}
-        onSubmit={(event) => {
-          event.preventDefault()
-          setSaved(false)
-          saveCap.mutate()
-        }}
-      >
-        <label className={formStyles.label} htmlFor="automatic-download-cap">
-          Unfinished automatic Download cap
-        </label>
-        <input
-          className={formStyles.field}
-          id="automatic-download-cap"
-          name="automatic-download-cap"
-          type="number"
-          min="1"
-          max="1000"
-          required
-          value={currentCap}
-          onChange={(event) => { setCap(event.target.value); setSaved(false) }}
-        />
-        <p className={formStyles.hint}>
-          Default 20. Work above this SABnzbd in-flight limit waits in the durable work set.
-        </p>
-        {saveCap.data && !saveCap.data.saved && <p className={formStyles.refusal}>{saveCap.data.detail}</p>}
-        {saveCap.isError && <p className={formStyles.refusal}>The cap could not be saved.</p>}
-        {saved && <p className={formStyles.done}>{saveCap.data?.detail}</p>}
-        <button className={formStyles.button} type="submit" disabled={settings.isPending || saveCap.isPending}>
-          Save cap
-        </button>
-      </form>
+      <Loaded query={settings} of="the Automation limits">
+        {(held) => <CapForm held={held} />}
+      </Loaded>
     </SettingsPage>
+  )
+}
+
+function CapForm({ held }: { held: AutomationSettingsState }) {
+  const queryClient = useQueryClient()
+
+  // A string, and only a string. The old `cap || String(stored)` put the stored
+  // value straight back the moment the field was cleared, so the cap could be
+  // prefixed and never replaced.
+  const [cap, setCap] = useState(String(held.automaticDownloadCap))
+  const [stored, setStored] = useState(String(held.automaticDownloadCap))
+  const [saved, setSaved] = useState(false)
+
+  const save = useMutation({
+    mutationFn: () => saveAutomaticDownloadCap(Number(cap)),
+    onSuccess: (answer) => {
+      setSaved(answer.saved)
+
+      if (answer.saved) {
+        setCap(String(answer.automaticDownloadCap))
+        setStored(String(answer.automaticDownloadCap))
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ['automation-settings'] })
+      void queryClient.invalidateQueries({ queryKey: ['status'] })
+    },
+  })
+
+  return (
+    <form
+      className={formStyles.form}
+      onSubmit={(event) => {
+        event.preventDefault()
+        setSaved(false)
+        save.mutate()
+      }}
+    >
+      <Field
+        label="Unfinished automatic Download cap"
+        hint="Default 20. Work above this SABnzbd in-flight limit waits in the durable work set."
+      >
+        {(id) => (
+          <input
+            id={id}
+            className={formStyles.field}
+            type="number"
+            min="1"
+            max="1000"
+            value={cap}
+            onChange={(event) => { setCap(event.target.value); setSaved(false) }}
+          />
+        )}
+      </Field>
+
+      <SaveBar
+        label="Save cap"
+        dirty={cap !== stored}
+        pending={save.isPending}
+        disabled={cap.trim().length === 0}
+        blocked="The cap needs a number."
+      >
+        {save.data && !save.data.saved && <Verdict tone="refusal">{save.data.detail}</Verdict>}
+        {save.isError && (
+          <Verdict tone="refusal">The cap could not be saved. Nothing was changed.</Verdict>
+        )}
+        {saved && <Verdict tone="done">{save.data?.detail}</Verdict>}
+      </SaveBar>
+    </form>
   )
 }
 
@@ -112,6 +149,7 @@ function AutomationRuleScreen({ id }: { id: string }) {
   const settings = useQuery({ queryKey: ['automation-settings'], queryFn: readAutomationSettings })
   const existing = creating ? null : settings.data?.rules.find((rule) => rule.id === id)
   const [draft, setDraft] = useState<RuleDraft | null>(null)
+  const [confirming, setConfirming] = useState<AutomationRuleDeletePreview | null>(null)
   const selected = draft ?? (existing ? fromRule(existing) : emptyRule())
 
   useEffect(() => {
@@ -134,17 +172,20 @@ function AutomationRuleScreen({ id }: { id: string }) {
       void navigate('/settings/automation')
     },
   })
+
+  // ADR 0058: a destructive act is confirmed in the application. The preview is
+  // fetched first because it is what the dialog has to say — window.confirm
+  // could not carry it, and the old `\n\n`-joined string is what that looked
+  // like.
+  const ask = useMutation({
+    mutationFn: () => previewDeleteAutomationRule(id),
+    onSuccess: (preview) => setConfirming(preview),
+  })
+
   const remove = useMutation({
-    mutationFn: async () => {
-      const preview = await previewDeleteAutomationRule(id)
-      const suffix = preview.existingOrigins
-        ? `\n\n${preview.existingOrigins} existing Download Origin member(s) keep the copied rule name.`
-        : ''
-      if (!window.confirm(`Delete Automation Rule “${preview.name}”?${suffix}`)) return null
-      return deleteAutomationRule(id)
-    },
-    onSuccess: (answer) => {
-      if (!answer) return
+    mutationFn: () => deleteAutomationRule(id),
+    onSuccess: () => {
+      setConfirming(null)
       void queryClient.invalidateQueries({ queryKey: ['automation-settings'] })
       void queryClient.invalidateQueries({ queryKey: ['releases'] })
       void queryClient.invalidateQueries({ queryKey: ['downloads'] })
@@ -155,12 +196,32 @@ function AutomationRuleScreen({ id }: { id: string }) {
 
   const indexers = settings.data?.indexers ?? []
   const noEnabledIndexers = useMemo(() => indexers.every((indexer) => !indexer.enabled), [indexers])
-  if (settings.isPending) return <SettingsPage title="Automation Rule"><p>Loading rule…</p></SettingsPage>
+
+  if (settings.isPending) {
+    return (
+      <SettingsPage title="Automation Rule">
+        <p className={formStyles.reading}>Reading the Automation Rule…</p>
+      </SettingsPage>
+    )
+  }
+
   if (settings.isError || (!creating && !existing)) {
-    return <SettingsPage title="That Automation Rule is not here" back="/settings/automation" backLabel="Automation"><p>The rule could not be read.</p></SettingsPage>
+    return (
+      <SettingsPage
+        title="That Automation Rule is not here"
+        back="/settings/automation"
+        backLabel="Automation"
+      >
+        <Verdict tone="refusal">
+          There is no Automation Rule with that address in this installation.
+        </Verdict>
+      </SettingsPage>
+    )
   }
 
   const update = (change: Partial<RuleDraft>) => setDraft({ ...selected, ...change })
+  const unchanged = existing != null && same(selected, fromRule(existing))
+
   return (
     <SettingsPage
       title={creating ? 'Add Automation Rule' : existing!.name}
@@ -172,47 +233,126 @@ function AutomationRuleScreen({ id }: { id: string }) {
         className={formStyles.form}
         onSubmit={(event) => { event.preventDefault(); save.mutate() }}
       >
-        <label className={formStyles.label} htmlFor="automation-rule-name">Name</label>
-        <input className={formStyles.field} id="automation-rule-name" required value={selected.name} onChange={(event) => update({ name: event.target.value })} />
-
-        <label className={formStyles.label}>Allowed Indexers</label>
-        {indexers.map((indexer) => (
-          <label key={indexer.id}>
+        <Field label="Name">
+          {(id_) => (
             <input
-              type="checkbox"
+              id={id_}
+              className={formStyles.field}
+              required
+              value={selected.name}
+              onChange={(event) => update({ name: event.target.value })}
+            />
+          )}
+        </Field>
+
+        <Fieldset
+          legend="Allowed Indexers"
+          hint={noEnabledIndexers ? 'Configure and enable an Indexer before enabling a rule.' : undefined}
+        >
+          {indexers.map((indexer) => (
+            <Switch
+              key={indexer.id}
               checked={selected.allowedIndexerIds.has(indexer.id)}
               disabled={!indexer.enabled && !selected.allowedIndexerIds.has(indexer.id)}
-              onChange={(event) => {
+              onChange={(checked) => {
                 const next = new Set(selected.allowedIndexerIds)
-                if (event.target.checked) next.add(indexer.id)
+                if (checked) next.add(indexer.id)
                 else next.delete(indexer.id)
                 update({ allowedIndexerIds: next })
               }}
-            />{' '}
-            {indexer.name}{!indexer.enabled && ' (disabled)'}
-          </label>
-        ))}
-        {noEnabledIndexers && <p className={formStyles.hint}>Configure and enable an Indexer before enabling a rule.</p>}
+              label={`${indexer.name}${indexer.enabled ? '' : ' (disabled)'}`}
+            />
+          ))}
+        </Fieldset>
 
-        <label className={formStyles.label} htmlFor="automation-minimum-size">Minimum size (GiB, optional)</label>
-        <input className={formStyles.field} id="automation-minimum-size" type="number" min="0" step="0.1" value={selected.minimumGiB} onChange={(event) => update({ minimumGiB: event.target.value })} />
-        <label className={formStyles.label} htmlFor="automation-maximum-size">Maximum size (GiB, optional)</label>
-        <input className={formStyles.field} id="automation-maximum-size" type="number" min="0" step="0.1" value={selected.maximumGiB} onChange={(event) => update({ maximumGiB: event.target.value })} />
+        <Field label="Minimum size (GiB, optional)">
+          {(id_) => (
+            <input
+              id={id_}
+              className={formStyles.field}
+              type="number"
+              min="0"
+              step="0.1"
+              value={selected.minimumGiB}
+              onChange={(event) => update({ minimumGiB: event.target.value })}
+            />
+          )}
+        </Field>
 
-        <label className={styles.enabled}>
-          <input type="checkbox" checked={selected.enabled} onChange={(event) => update({ enabled: event.target.checked })} />{' '}
-          Enabled
-        </label>
-        <p className={formStyles.hint}>Disabling is forward-only and does not change existing Downloads.</p>
+        <Field label="Maximum size (GiB, optional)">
+          {(id_) => (
+            <input
+              id={id_}
+              className={formStyles.field}
+              type="number"
+              min="0"
+              step="0.1"
+              value={selected.maximumGiB}
+              onChange={(event) => update({ maximumGiB: event.target.value })}
+            />
+          )}
+        </Field>
 
-        {save.data && !save.data.saved && <p className={formStyles.refusal}>{save.data.detail}</p>}
-        {save.isError && <p className={formStyles.refusal}>The Automation Rule could not be saved.</p>}
-        <div className={styles.actions}>
-          <button className={formStyles.button} type="submit" disabled={save.isPending || remove.isPending}>Save rule</button>
-          {!creating && <button className={styles.danger} type="button" disabled={save.isPending || remove.isPending} onClick={() => remove.mutate()}>Delete rule</button>}
-        </div>
-        {remove.isError && <p className={formStyles.refusal}>The Automation Rule could not be deleted.</p>}
+        <Fieldset legend="Whether it acts">
+          <Switch
+            checked={selected.enabled}
+            onChange={(checked) => update({ enabled: checked })}
+            label="Enabled"
+            hint="Disabling is forward-only and does not change existing Downloads."
+          />
+        </Fieldset>
+
+        <SaveBar
+          label="Save rule"
+          dirty={!unchanged}
+          pending={save.isPending}
+          disabled={selected.name.trim().length === 0 || remove.isPending}
+          blocked={remove.isPending ? 'The rule is being deleted.' : 'A rule needs a name.'}
+        >
+          {save.data && !save.data.saved && <Verdict tone="refusal">{save.data.detail}</Verdict>}
+          {save.isError && (
+            <Verdict tone="refusal">The Automation Rule could not be saved.</Verdict>
+          )}
+          {(ask.isError || remove.isError) && (
+            <Verdict tone="refusal">The Automation Rule could not be deleted.</Verdict>
+          )}
+        </SaveBar>
+
+        {!creating && (
+          <div className={styles.actions}>
+            <button
+              className={`${formStyles.button} ${formStyles.dangerButton}`}
+              type="button"
+              disabled={save.isPending || ask.isPending || remove.isPending}
+              onClick={() => ask.mutate()}
+            >
+              {ask.isPending ? 'Reading what it holds…' : 'Delete rule…'}
+            </button>
+          </div>
+        )}
       </form>
+
+      {confirming && (
+        <ConfirmationDialog
+          title={`Delete “${confirming.name}”?`}
+          confirmLabel="Delete the rule"
+          danger
+          busy={remove.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => remove.mutate()}
+        >
+          <p>
+            The rule stops permitting anything from now on. Downloads it already
+            permitted are untouched.
+          </p>
+          <p>
+            {Number(confirming.existingOrigins) > 0
+              ? `${confirming.existingOrigins} existing Download Origin member(s) keep the copied rule
+                 name, so "why is this on my disk" still has an answer after the rule is gone.`
+              : 'No Download has been permitted by it yet, so nothing carries its name.'}
+          </p>
+        </ConfirmationDialog>
+      )}
     </SettingsPage>
   )
 }
@@ -237,6 +377,15 @@ function fromRule(rule: AutomationRuleView): RuleDraft {
     maximumGiB: fromBytes(rule.maximumSize),
     allowedIndexerIds: new Set(rule.allowedIndexers.map((indexer) => indexer.id)),
   }
+}
+
+function same(one: RuleDraft, other: RuleDraft): boolean {
+  return one.name === other.name
+    && one.enabled === other.enabled
+    && one.minimumGiB === other.minimumGiB
+    && one.maximumGiB === other.maximumGiB
+    && one.allowedIndexerIds.size === other.allowedIndexerIds.size
+    && [...one.allowedIndexerIds].every((id) => other.allowedIndexerIds.has(id))
 }
 
 function fromBytes(bytes: number | string | null): string {

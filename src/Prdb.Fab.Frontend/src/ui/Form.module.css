@@ -1,0 +1,255 @@
+/*
+  The form language of the settings surface and of the onboarding forms shared
+  with it (ADR 0058). These classes were `Onboarding.module.css`'s, imported by
+  every settings screen; they live here now because the wizard is one of two
+  callers rather than the owner.
+
+  What stayed behind is what is genuinely the wizard's: the step path, the skip
+  control and its pending block.
+*/
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-top: var(--gap);
+}
+
+.hint {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin: 0.15rem 0 0;
+}
+
+.field {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.field:disabled {
+  color: var(--text-quiet);
+}
+
+.button {
+  align-self: flex-start;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.button:disabled {
+  color: var(--text-quiet);
+  cursor: default;
+}
+
+.dangerButton {
+  border-color: #6f3935;
+  color: #f1a29c;
+}
+
+.dangerButton:not(:disabled):hover {
+  background: #402321;
+  border-color: #6f3935;
+}
+
+/*
+  A real group. Every radio set and every switch group on this surface is one of
+  these, because a heading that is a bare <label> belongs to no control and a
+  screen reader announces the members as unrelated.
+*/
+.fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: var(--gap) 0 0;
+  min-width: 0;
+  padding: 0.75rem 0.9rem 0.9rem;
+}
+
+.legend {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  letter-spacing: 0.03em;
+  padding: 0 0.35rem;
+  text-transform: uppercase;
+}
+
+/* One member of a group: its control, its own label, and its own hint. */
+.member {
+  display: grid;
+  gap: 0 0.55rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin-top: 0.45rem;
+}
+
+.member:first-of-type {
+  margin-top: 0;
+}
+
+.member > input {
+  margin: 0.3rem 0 0;
+}
+
+.memberHint {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  grid-column: 2;
+  margin: 0.1rem 0 0;
+}
+
+/* A verdict the tool checked and can answer, in the four shapes it comes in. */
+.refusal,
+.warning,
+.confirmed,
+.done {
+  border-left: 3px solid;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: var(--gap) 0 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface-raised);
+}
+
+.refusal {
+  border-color: var(--bad);
+}
+
+.warning,
+.confirmed {
+  border-color: var(--accent);
+}
+
+.done {
+  border-color: var(--ok);
+}
+
+/*
+  A path or a value the tool is quoting back, as a block. This used to share a
+  name with the wizard's step list in one stylesheet, where the later rule won
+  and rendered every quoted path as a flex row with a counter in front of it.
+*/
+.path {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  display: block;
+  overflow-x: auto;
+  padding: 0.5rem 0.75rem;
+  white-space: pre;
+}
+
+/* While a read is in flight. Never a default standing in for an answer. */
+.reading {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  margin: var(--gap) 0 0;
+  padding: 0.75rem 0.9rem;
+}
+
+/*
+  The submit control, its verdict, and why it is disabled when it is. Sticky,
+  because it is the only thing saying there is something unsaved: ADR 0036 put
+  this application in library mode, so there is no router-level guard against
+  leaving a dirty form.
+*/
+.saveBar {
+  background: linear-gradient(to top, var(--surface) 70%, transparent);
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem var(--gap);
+  margin-top: 1.25rem;
+  padding: 1rem 0 0.25rem;
+  position: sticky;
+}
+
+.saveState {
+  align-self: center;
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.saveVerdict {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* The modal every destructive act goes through, instead of window.confirm. */
+.dialog {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  color: var(--text);
+  max-height: min(80vh, 48rem);
+  max-width: min(42rem, calc(100vw - 2rem));
+  padding: 1.1rem;
+  width: 100%;
+}
+
+.dialog::backdrop {
+  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.dialog h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.dialogBody {
+  margin: 0.75rem 0 1rem;
+  max-height: 55vh;
+  min-width: 0;
+  overflow: hidden auto;
+}
+
+.dialogBody > :first-child {
+  margin-top: 0;
+}
+
+.dialogBody > :last-child {
+  margin-bottom: 0;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.dialogActions .button {
+  align-self: auto;
+  padding: 0.45rem 0.65rem;
+}
+
+.primaryButton {
+  border-color: #376b96;
+  color: #b6d8f4;
+}
+
+.primaryButton:not(:disabled):hover {
+  background: #182b3d;
+  border-color: #376b96;
+}

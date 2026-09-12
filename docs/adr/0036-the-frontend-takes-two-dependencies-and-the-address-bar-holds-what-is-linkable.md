@@ -6,6 +6,12 @@ argued from a decision already made here. And one rule that costs nothing now
 and cannot be retrofitted: **anything worth linking to lives in the address, not
 in component state.**
 
+**The form language on top of this is [ADR 0058](0058-the-settings-surface-and-the-onboarding-forms-are-drawn-from-one-kit.md)'s.**
+It takes no dependency, which is this decision's own rule applied one level up:
+six components in `src/ui/` rather than a component library. It also inherits
+one consequence of library mode — there is no `useBlocker`, so a form that has
+been edited is guarded by a sticky save bar rather than by the router.
+
 ```
 react, react-dom          as prdb-ordeno has them
 react-router              library mode only

@@ -1,3 +1,12 @@
+/*
+  What is the wizard's own. ADR 0058 moved the field, button, hint and verdict
+  classes into `src/ui/Form.module.css`, because the settings screens were all
+  importing this file for them — a stylesheet named after one of two callers.
+
+  What is left is the path through the steps, the skip control, and the two
+  shapes the wizard puts around the forms it shares.
+*/
+
 .screen {
   margin: 0 auto;
   max-width: 34rem;
@@ -23,96 +32,6 @@
   padding: var(--gap);
 }
 
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.label {
-  color: var(--text-quiet);
-  font-size: 0.85rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  margin-top: var(--gap);
-}
-
-.hint {
-  color: var(--text-quiet);
-  font-size: 0.85rem;
-  margin: 0.15rem 0 0;
-}
-
-.field {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font: inherit;
-  padding: 0.5rem 0.75rem;
-}
-
-.field:disabled {
-  color: var(--text-quiet);
-}
-
-.button {
-  align-self: flex-start;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  cursor: pointer;
-  margin-top: 1.25rem;
-  padding: 0.5rem 0.75rem;
-}
-
-.button:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-.button:disabled {
-  color: var(--text-quiet);
-  cursor: default;
-}
-
-/* A verdict the tool checked and can answer, in the three shapes it comes in. */
-.refusal,
-.warning,
-.confirmed,
-.done {
-  border-left: 3px solid;
-  border-radius: 0 var(--radius) var(--radius) 0;
-  margin: var(--gap) 0 0;
-  padding: 0.5rem 0.75rem;
-  background: var(--surface-raised);
-}
-
-.refusal {
-  border-color: var(--bad);
-}
-
-.warning,
-.confirmed {
-  border-color: var(--accent);
-}
-
-.done {
-  border-color: var(--ok);
-}
-
-.path {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-quiet);
-  display: block;
-  overflow-x: auto;
-  padding: 0.5rem 0.75rem;
-  white-space: pre;
-}
-
 .rows {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -135,8 +54,15 @@
   font-size: 0.85rem;
 }
 
-/* The path itself: every step, and where this installation has got to. */
-.path {
+/*
+  The path itself: every step, and where this installation has got to.
+
+  This was `.path` and shared the name with the block a quoted filesystem path
+  is rendered in, one stylesheet apart. The later rule won, so every quoted path
+  on the SABnzbd step came out as a flex row with a counter in front of it. The
+  quoted-path block is the kit's now, and this one says what it is.
+*/
+.steps {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   counter-reset: step;
@@ -148,21 +74,21 @@
   padding: 0.6rem 0.75rem;
 }
 
-.path li {
+.steps li {
   color: var(--text-quiet);
   counter-increment: step;
   font-size: 0.85rem;
 }
 
-.path li::before {
+.steps li::before {
   content: counter(step) '. ';
 }
 
-.path .behind {
+.steps .behind {
   opacity: 0.7;
 }
 
-.path .now {
+.steps .now {
   color: var(--text);
   font-weight: 600;
 }
