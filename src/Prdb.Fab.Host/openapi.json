@@ -1096,6 +1096,158 @@
         }
       }
     },
+    "/api/connections/indexers/{id}/settings": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexerSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexerSettingsVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/connections/indexers/{id}/move": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndexerMoveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexerMoveVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/connections/indexers/{id}/delete/preview": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexerDeletePreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/connections/indexers/{id}/delete": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexerDeleteVerdict"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/connections/library-root": {
       "post": {
         "tags": [
@@ -1809,6 +1961,35 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AutomationCapVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/retry-budget": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutomationRetryBudgetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationRetryBudgetVerdict"
                 }
               }
             }
@@ -3305,6 +3486,55 @@
           }
         }
       },
+      "AutomationRetryBudgetRequest": {
+        "required": [
+          "retryBudget"
+        ],
+        "type": "object",
+        "properties": {
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AutomationRetryBudgetVerdict": {
+        "required": [
+          "saved",
+          "retryBudget",
+          "reconsidered",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          },
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reconsidered": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
       "AutomationRuleDeletePreview": {
         "required": [
           "ruleId",
@@ -3487,12 +3717,21 @@
       "AutomationSettingsState": {
         "required": [
           "automaticDownloadCap",
+          "retryBudget",
           "rules",
           "indexers"
         ],
         "type": "object",
         "properties": {
           "automaticDownloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryBudget": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -3751,6 +3990,7 @@
           "categories",
           "enabled",
           "rank",
+          "dailyQueryBudget",
           "lastVerdict",
           "lastCheckedAt"
         ],
@@ -3773,6 +4013,14 @@
             "type": "boolean"
           },
           "rank": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dailyQueryBudget": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -4638,6 +4886,168 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "IndexerDeletePreview": {
+        "required": [
+          "indexerId",
+          "name",
+          "cachedReleases",
+          "downloads",
+          "rulesReferencing",
+          "rulesLosingTheirLastIndexer"
+        ],
+        "type": "object",
+        "properties": {
+          "indexerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "cachedReleases": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "downloads": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rulesReferencing": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rulesLosingTheirLastIndexer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "IndexerDeleteVerdict": {
+        "required": [
+          "indexerId",
+          "name",
+          "cachedReleases",
+          "rulesDisabled"
+        ],
+        "type": "object",
+        "properties": {
+          "indexerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "cachedReleases": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rulesDisabled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "IndexerMoveRequest": {
+        "required": [
+          "up"
+        ],
+        "type": "object",
+        "properties": {
+          "up": {
+            "type": "boolean"
+          }
+        }
+      },
+      "IndexerMoveVerdict": {
+        "required": [
+          "indexerId",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "indexerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "IndexerSettingsRequest": {
+        "required": [
+          "enabled",
+          "dailyQueryBudget"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "dailyQueryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "IndexerSettingsVerdict": {
+        "required": [
+          "saved",
+          "enabled",
+          "dailyQueryBudget",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "dailyQueryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": "string"
           }
         }
       },
@@ -7364,8 +7774,8 @@
           "title",
           "detail",
           "stage",
-          "route",
-          "cleared"
+          "cleared",
+          "route"
         ],
         "type": "object",
         "properties": {
@@ -7381,14 +7791,14 @@
           "stage": {
             "type": "string"
           },
+          "cleared": {
+            "type": "boolean"
+          },
           "route": {
             "type": [
               "null",
               "string"
             ]
-          },
-          "cleared": {
-            "type": "boolean"
           }
         }
       },

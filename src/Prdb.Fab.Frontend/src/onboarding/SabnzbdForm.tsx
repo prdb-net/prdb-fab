@@ -7,8 +7,10 @@ import {
   type SabnzbdCategoriesVerdict,
   type SabnzbdConnectionVerdict,
 } from '../api/client.ts'
+import { Field, formStyles } from '../ui/Form.tsx'
+import { SaveBar } from '../ui/SaveBar.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import { connectionsKey } from './state.ts'
-import styles from './Onboarding.module.css'
 
 /**
  * ADR 0010's downloader step, in the order that ADR insists on: the address and
@@ -75,7 +77,7 @@ export function SabnzbdForm({
 
       setCategory(held?.name ?? answer.categories[0]?.name ?? '')
     },
-    onError: (error) => setFailure(String(error)),
+    onError: () => setFailure('SABnzbd could not be reached from here. The log says what happened.'),
   })
 
   const save = useMutation({
@@ -88,16 +90,30 @@ export function SabnzbdForm({
         onSaved?.()
       }
     },
-    onError: (error) => setFailure(String(error)),
+    onError: () => setFailure('The connection could not be sent. The tool may have stopped; the log says.'),
   })
 
   const chosen = listing?.categories.find((candidate) => candidate.name === category)
   const answered = listing?.outcome === 'Saved'
   const busy = ask.isPending || save.isPending
 
+  /**
+   * This form's submit is never idempotent: before the list is in it asks
+   * SABnzbd for its categories, and afterwards it stores a mapping that is
+   * verified against the filesystem. Neither is a write that can be skipped
+   * because the fields look unchanged, so the dirty gate is not what guards it
+   * here — the completeness of the fields is.
+   */
+  const alwaysSomethingToDo = true
+
+  const incomplete =
+    url.trim().length === 0
+    || (apiKey.trim().length === 0 && stored?.keyIsStored !== true)
+    || (answered && (category.length === 0 || downloadDirectory.trim().length === 0))
+
   return (
     <form
-      className={styles.form}
+      className={formStyles.form}
       onSubmit={(event) => {
         event.preventDefault()
         setFailure(null)
@@ -109,123 +125,145 @@ export function SabnzbdForm({
         }
       }}
     >
-      <label className={styles.label} htmlFor="sabnzbd-url">
-        Where SABnzbd is
-      </label>
-      <input
-        id="sabnzbd-url"
-        className={styles.field}
-        type="url"
-        placeholder="http://sabnzbd:8080"
-        autoComplete="off"
-        spellCheck={false}
-        value={url}
-        onChange={(event) => {
-          setUrl(event.target.value)
-          forget()
-        }}
-      />
-      <p className={styles.hint}>The address you open SABnzbd at, without /api on the end.</p>
+      <Field
+        label="Where SABnzbd is"
+        hint="The address you open SABnzbd at, without /api on the end."
+      >
+        {(id) => (
+          <input
+            id={id}
+            className={formStyles.field}
+            type="url"
+            placeholder="http://sabnzbd:8080"
+            autoComplete="off"
+            spellCheck={false}
+            value={url}
+            onChange={(event) => {
+              setUrl(event.target.value)
+              forget()
+            }}
+          />
+        )}
+      </Field>
 
-      <label className={styles.label} htmlFor="sabnzbd-key">
-        Its API key
-      </label>
-      <input
-        id="sabnzbd-key"
-        className={styles.field}
-        type="text"
-        autoComplete="off"
-        spellCheck={false}
-        value={apiKey}
-        onChange={(event) => {
-          setApiKey(event.target.value)
-          forget()
-        }}
-      />
-      <p className={styles.hint}>
-        {stored?.keyIsStored ? (
+      <Field
+        label="Its API key"
+        hint={
           <>
-            A key is stored. Leave this empty to keep it &mdash; it is kept even
-            when the address changes, since SABnzbd moving to another port is
-            not a new key.{' '}
+            {stored?.keyIsStored ? (
+              <>
+                A key is stored. Leave this empty to keep it &mdash; it is kept even
+                when the address changes, since SABnzbd moving to another port is
+                not a new key.{' '}
+              </>
+            ) : null}
+            The full API key from Config &rarr; General, not the NZB key. The NZB key
+            can submit a download and cannot follow one.
           </>
-        ) : null}
-        The full API key from Config &rarr; General, not the NZB key. The NZB key
-        can submit a download and cannot follow one.
-      </p>
+        }
+      >
+        {(id) => (
+          <input
+            id={id}
+            className={formStyles.field}
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            value={apiKey}
+            onChange={(event) => {
+              setApiKey(event.target.value)
+              forget()
+            }}
+          />
+        )}
+      </Field>
 
-      {listing && listing.outcome !== 'Saved' && <p className={styles.refusal}>{listing.detail}</p>}
+      {listing && listing.outcome !== 'Saved' && (
+        <Verdict tone="refusal">{listing.detail}</Verdict>
+      )}
 
       {answered && (
         <>
-          <label className={styles.label} htmlFor="sabnzbd-category">
-            The category it downloads into
-          </label>
-          <select
-            id="sabnzbd-category"
-            className={styles.field}
-            value={category}
-            onChange={(event) => {
-              setCategory(event.target.value)
-              forgetVerdict()
-            }}
+          <Field
+            label="The category it downloads into"
+            hint={
+              <>
+                SABnzbd's own list. A category it does not know is not an error
+                there &mdash; it quietly becomes Default, and the downloads land
+                somewhere nothing is looking.
+              </>
+            }
           >
-            {listing.categories.map((candidate) => (
-              <option key={candidate.name} value={candidate.name}>
-                {candidate.name}
-              </option>
-            ))}
-          </select>
-          <p className={styles.hint}>
-            SABnzbd's own list. A category it does not know is not an error there
-            &mdash; it quietly becomes Default, and the downloads land somewhere
-            nothing is looking.
-          </p>
+            {(id) => (
+              <select
+                id={id}
+                className={formStyles.field}
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value)
+                  forgetVerdict()
+                }}
+              >
+                {listing.categories.map((candidate) => (
+                  <option key={candidate.name} value={candidate.name}>
+                    {candidate.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
 
-          <label className={styles.label} htmlFor="sabnzbd-mapping">
-            Where that folder is in this container
-          </label>
-          <p className={styles.hint}>SABnzbd finishes downloads for that category in:</p>
-          <code className={styles.path}>{chosen?.completedRoot}</code>
-          <input
-            id="sabnzbd-mapping"
-            className={styles.field}
-            type="text"
-            placeholder="/downloads/complete"
-            autoComplete="off"
-            spellCheck={false}
-            value={downloadDirectory}
-            onChange={(event) => {
-              setDownloadDirectory(event.target.value)
-              forgetVerdict()
-            }}
-          />
-          <p className={styles.hint}>
-            The same folder, as this container sees it. They are often different,
-            and this one is checked before it is stored &mdash; a wrong answer is
-            otherwise found at the first finished download, where it looks like a
-            download that hangs.
-          </p>
+          <p className={formStyles.hint}>SABnzbd finishes downloads for that category in:</p>
+          <code className={formStyles.path}>{chosen?.completedRoot}</code>
+
+          <Field
+            label="Where that folder is in this container"
+            hint={
+              <>
+                The same folder, as this container sees it. They are often
+                different, and this one is checked before it is stored &mdash; a
+                wrong answer is otherwise found at the first finished download,
+                where it looks like a download that hangs.
+              </>
+            }
+          >
+            {(id) => (
+              <input
+                id={id}
+                className={formStyles.field}
+                type="text"
+                placeholder="/downloads/complete"
+                autoComplete="off"
+                spellCheck={false}
+                value={downloadDirectory}
+                onChange={(event) => {
+                  setDownloadDirectory(event.target.value)
+                  forgetVerdict()
+                }}
+              />
+            )}
+          </Field>
         </>
       )}
 
-      {verdict && (
-        <p className={verdict.outcome === 'Saved' ? styles.done : styles.refusal}>{verdict.detail}</p>
-      )}
-      {failure && <p className={styles.refusal}>{failure}</p>}
-
-      <button
-        className={styles.button}
-        type="submit"
-        disabled={
-          busy ||
-          url.trim().length === 0 ||
-          (apiKey.trim().length === 0 && stored?.keyIsStored !== true) ||
-          (answered && (category.length === 0 || downloadDirectory.trim().length === 0))
+      <SaveBar
+        label={answered ? submitLabel : 'Ask SABnzbd for its categories'}
+        dirty={alwaysSomethingToDo}
+        pending={busy}
+        disabled={incomplete}
+        blocked={
+          url.trim().length === 0
+            ? 'The address is needed before SABnzbd can be asked anything.'
+            : answered
+              ? 'The category and the folder it lands in are both needed.'
+              : 'A key is needed: the address alone answers to anybody.'
         }
       >
-        {answered ? submitLabel : 'Ask SABnzbd for its categories'}
-      </button>
+        {verdict && (
+          <Verdict tone={verdict.outcome === 'Saved' ? 'done' : 'refusal'}>{verdict.detail}</Verdict>
+        )}
+        {failure && <Verdict tone="refusal">{failure}</Verdict>}
+      </SaveBar>
     </form>
   )
 }

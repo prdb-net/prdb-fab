@@ -1,39 +1,143 @@
-.screen {
+/*
+  ADR 0058: two panes. A persistent rail of ADR 0020's groups on the left, the
+  mask on the right — still routes rather than anchors, because ADR 0020 refused
+  one long page for the reason that every Gap and Brake has to land on a form
+  rather than scroll it into view.
+
+  The surface used to be a 34rem column beside a 15.5rem sidebar, where Status
+  uses 74rem and Downloads 1500px. The two panes together now use the width the
+  rest of the application uses; the mask keeps a readable measure inside it.
+*/
+.surface {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr);
   margin: 0 auto;
-  max-width: 34rem;
-  padding: 3rem 1rem 4rem;
+  max-width: 74rem;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.railPane,
+.railPaneAside {
+  min-width: 0;
+}
+
+.maskPane,
+.maskPaneOnlyWide {
+  min-width: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  position: sticky;
+  top: 1.5rem;
+}
+
+/*
+  `Chrome.module.css` gives its own links a 2.45rem minimum, and these rows used
+  to be 0.6rem of padding and nothing else — a smaller tap target inside the
+  same application.
+*/
+.railRow {
+  align-items: center;
+  border-radius: var(--radius);
+  color: var(--text);
+  column-gap: 0.65rem;
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  min-height: 2.45rem;
+  padding: 0.4rem 0.6rem;
+  text-decoration: none;
+}
+
+.railRow:hover {
+  background: var(--surface-raised);
+}
+
+.railHere {
+  background: var(--surface-raised);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.railNested {
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  margin-left: 1.1rem;
+}
+
+.railIcon {
+  align-items: center;
+  color: var(--text-quiet);
+  display: inline-flex;
+  justify-content: center;
+}
+
+.railHere .railIcon {
+  color: var(--accent);
+}
+
+.railLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.railHolds {
+  color: var(--text-quiet);
+  font-size: 0.8rem;
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Where Status is pointing, said before anything is opened. */
+.railMark {
+  background: var(--bad);
+  border-radius: 999px;
+  color: #1a0f0e;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 700;
+  height: 1.05rem;
+  justify-content: center;
+  margin-left: 0.4rem;
+  vertical-align: text-bottom;
+  width: 1.05rem;
+}
+
+.icon {
+  height: 1.2rem;
+  width: 1.2rem;
+}
+
+.screen {
+  max-width: 38rem;
+  min-width: 0;
+}
+
+/*
+  ADR 0058: every mask has a header of its own. There used to be one small text
+  link and no heading below the breakpoint, so a mask arrived at from a Status
+  Brake did not say which group it belonged to.
+*/
+.maskHeader {
+  margin-bottom: 1.5rem;
+}
+
+.maskHeader h1 {
+  margin: 0.35rem 0 0;
 }
 
 .back {
   color: var(--text-quiet);
   display: inline-block;
   font-size: 0.85rem;
-  margin-bottom: 1.5rem;
+  min-height: 1.6rem;
 }
 
 .lede {
   color: var(--text-quiet);
-  margin-bottom: 2rem;
-}
-
-/* The groups, and the ones that are not built yet. ADR 0020 names seven; two
-   of them hold anything so far, and saying which is better than a page that
-   quietly has five fewer links than the decision does. */
-.groups {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.groups li {
-  border-bottom: 1px solid var(--border);
-  padding: 0.6rem 0.75rem;
-}
-
-.groups li:last-child {
-  border-bottom: none;
+  margin: 0.6rem 0 0;
 }
 
 .detail {
@@ -57,4 +161,172 @@
   color: var(--text-quiet);
   font-size: 0.9rem;
   margin-top: 2.5rem;
+}
+
+/* What the summary pane says, which the corridor of links never did. */
+.summary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 0.5rem 1rem;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+  padding: 0.9rem 1rem;
+}
+
+.summary dt {
+  color: var(--text-quiet);
+}
+
+.summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pointing {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pointing li {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.75rem;
+}
+
+.pointing li:last-child {
+  border-bottom: none;
+}
+
+/*
+  Below this the rail is the `/settings` page and a mask replaces it, which is
+  what keeps a phone from carrying two panes at 400px — and what gives the mask
+  its own header something to be the top of.
+*/
+@media (max-width: 52rem) {
+  .surface {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .rail {
+    position: static;
+  }
+
+  .railPaneAside,
+  .maskPaneOnlyWide {
+    display: none;
+  }
+
+  .screen {
+    max-width: none;
+  }
+}
+
+/* The Connections mask's own two rows, which are routes rather than a corridor:
+   ADR 0018 needs a Gap about SABnzbd to land on that form. */
+.groups {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.groups li {
+  border-bottom: 1px solid var(--border);
+  min-height: 2.45rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.groups li:last-child {
+  border-bottom: none;
+}
+
+/* ADR 0005's fixed list of what filing may remove, in the open rather than in a
+   hint: the fixedness is the reassuring half of the sentence. */
+.extensions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.extensions li {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.15rem 0.45rem;
+}
+
+/* The backlog, beside the decision rather than inside a paragraph: ADR 0019
+   wants it read before the switch is thrown. */
+.backlog {
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--surface-raised);
+  margin: 0 0 0.6rem;
+  padding: 0.45rem 0.7rem;
+}
+
+/* What a channel sends: available without being in the way. */
+.sends {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+}
+
+.sends summary {
+  cursor: pointer;
+  min-height: 1.9rem;
+  padding: 0.25rem 0;
+}
+
+.sends ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.sends li {
+  margin-bottom: 0.25rem;
+}
+
+/*
+  ADR 0058: Account reads as three parts. Separated rather than stacked, so the
+  sign-out control cannot be pressed in place of the password change — the two
+  used to be adjacent buttons, one of which ends a session and one of which
+  changes the password.
+*/
+.part {
+  border-top: 1px solid var(--border);
+  margin-top: 2.5rem;
+  padding-top: 0.5rem;
+}
+
+.part:first-of-type {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.part .heading {
+  margin-top: 1.5rem;
+}
+
+.part:first-of-type .heading {
+  margin-top: 0;
+}
+
+.recovery {
+  margin: var(--gap) 0 0;
+  padding-left: 1.3rem;
+}
+
+.recovery li {
+  margin-bottom: 0.5rem;
 }

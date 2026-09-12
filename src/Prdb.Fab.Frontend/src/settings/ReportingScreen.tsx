@@ -1,94 +1,182 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { readReportingSettings, saveReportingSettings } from '../api/client.ts'
+import {
+  readReportingSettings,
+  saveReportingSettings,
+  type ReportingSettingsState,
+} from '../api/client.ts'
+import { Fieldset, Switch, formStyles } from '../ui/Form.tsx'
+import { Loaded } from '../ui/Loaded.tsx'
+import { SaveBar } from '../ui/SaveBar.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
-import formStyles from '../onboarding/Onboarding.module.css'
+import styles from './Settings.module.css'
 
 export function ReportingScreen() {
-  const queries = useQueryClient()
   const settings = useQuery({ queryKey: ['reporting-settings'], queryFn: readReportingSettings })
-  const [fulfilments, setFulfilments] = useState<boolean | null>(null)
-  const [assignments, setAssignments] = useState<boolean | null>(null)
+
+  return (
+    <SettingsPage
+      title="Reporting"
+      lede="What may leave this installation. Two independent channels, both on by default, sharing one governed background routine — opting into one is not opting into the other."
+    >
+      <Loaded query={settings} of="the Reporting settings">
+        {(held) => <ReportingForm held={held} />}
+      </Loaded>
+    </SettingsPage>
+  )
+}
+
+function ReportingForm({ held }: { held: ReportingSettingsState }) {
+  const queries = useQueryClient()
+  const [fulfilments, setFulfilments] = useState(held.reportFulfilments)
+  const [assignments, setAssignments] = useState(held.reportConfirmedAssignments)
+  const [stored, setStored] = useState({
+    fulfilments: held.reportFulfilments,
+    assignments: held.reportConfirmedAssignments,
+  })
   const [saved, setSaved] = useState(false)
-  const reportFulfilments = fulfilments ?? settings.data?.reportFulfilments ?? true
-  const reportConfirmedAssignments = assignments
-    ?? settings.data?.reportConfirmedAssignments
-    ?? true
+
   const save = useMutation({
-    mutationFn: () => saveReportingSettings(reportFulfilments, reportConfirmedAssignments),
+    mutationFn: () => saveReportingSettings(fulfilments, assignments),
     onSuccess: (answer) => {
       setFulfilments(answer.reportFulfilments)
       setAssignments(answer.reportConfirmedAssignments)
+      setStored({
+        fulfilments: answer.reportFulfilments,
+        assignments: answer.reportConfirmedAssignments,
+      })
       setSaved(true)
       void queries.invalidateQueries({ queryKey: ['reporting-settings'] })
     },
   })
 
   return (
-    <SettingsPage
-      title="Reporting"
-      lede="Both channels are enabled by default, remain independently configurable, and use the same governed background routine."
+    <form
+      className={formStyles.form}
+      onSubmit={(event) => {
+        event.preventDefault()
+        setSaved(false)
+        save.mutate()
+      }}
     >
-      <form
-        className={formStyles.form}
-        onSubmit={(event) => {
-          event.preventDefault()
-          setSaved(false)
-          save.mutate()
-        }}
+      <Fieldset legend="Fulfilments">
+        {/*
+          ADR 0019 requires the count be shown *before* the switch is thrown —
+          VISION.md's "stated plainly" can only change a decision beforehand —
+          and it used to be the first clause of a five-line grey hint. It is not
+          rendered at all until it is read: this form is mounted after that, so
+          a confident zero is not a state it can be in.
+        */}
+        <Backlog
+          count={Number(held.fulfilmentBacklog)}
+          one="local Fulfilment change is waiting to be sent."
+          many="local Fulfilment changes are waiting to be sent."
+          none="Nothing is waiting to be sent."
+        />
+
+        <Switch
+          checked={fulfilments}
+          onChange={(checked) => { setFulfilments(checked); setSaved(false) }}
+          label="Report which wanted Videos are held"
+          hint={
+            <>
+              Turning this off stops future reports. It does not retract anything
+              already at prdb: only a person retracts a Fulfilment, and a missing
+              file or an unmounted library never does.
+            </>
+          }
+        />
+
+        <Sends summary="What a Fulfilment report contains">
+          <li>The prdb Video id.</li>
+          <li>Whether it is held.</li>
+          <li>When it was really filed.</li>
+          <li>
+            The highest prdb Quality the Library Entry truthfully clears. Below
+            720p is left unstated rather than guessed at.
+          </li>
+          <li>The application, as Other. No external identifier is sent.</li>
+        </Sends>
+      </Fieldset>
+
+      <Fieldset legend="Confirmed Assignments">
+        <Backlog
+          count={Number(held.confirmedAssignmentBacklog)}
+          one="assignment confirmed in the Review Queue is waiting to be sent."
+          many="assignments confirmed in the Review Queue are waiting to be sent."
+          none="Nothing is waiting to be sent."
+        />
+
+        <Switch
+          checked={assignments}
+          onChange={(checked) => { setAssignments(checked); setSaved(false) }}
+          label="Report the hash-to-Video answers you confirm by hand"
+          hint={
+            <>
+              Turning this off stops future submissions. <strong>prdb has no
+              retraction for an assignment already sent</strong> &mdash; unlike a
+              Fulfilment, there is nothing to undo it with.
+            </>
+          }
+        />
+
+        <Sends summary="What an assignment report contains">
+          <li>The prdb Video id and the file&rsquo;s osHash.</li>
+          <li>Its size, and its recorded runtime, width, height and video codec.</li>
+          <li>The name it arrived under, and the Release name.</li>
+          <li>The marker UserConfirmed. The file is not probed again to send it.</li>
+        </Sends>
+      </Fieldset>
+
+      <SaveBar
+        label="Save Reporting settings"
+        dirty={fulfilments !== stored.fulfilments || assignments !== stored.assignments}
+        pending={save.isPending}
       >
-        <label>
-          <input
-            type="checkbox"
-            checked={reportFulfilments}
-            onChange={(event) => { setFulfilments(event.target.checked); setSaved(false) }}
-          />{' '}
-          Report Fulfilments
-        </label>
-        <p className={formStyles.hint}>
-          {settings.data?.fulfilmentBacklog ?? 0} local Fulfilment change(s) are waiting.
-          Enabling sends the Video, held state, real filing time and the highest prdb
-          Quality the Library Entry truthfully clears. Deliberately deleting a Library
-          Entry retracts that state. Quality below 720p is left unstated; the application
-          is Other and no external ID is sent.
-        </p>
-        <p className={formStyles.hint}>
-          Turning this off stops future reports. It does not retract anything already at
-          prdb; a missing file or mount never retracts a Fulfilment either.
-        </p>
+        {save.isError && (
+          <Verdict tone="refusal">
+            The Reporting settings could not be saved. Neither channel was changed.
+          </Verdict>
+        )}
+        {saved && <Verdict tone="done">Reporting settings saved.</Verdict>}
+      </SaveBar>
+    </form>
+  )
+}
 
-        <label>
-          <input
-            type="checkbox"
-            checked={reportConfirmedAssignments}
-            onChange={(event) => { setAssignments(event.target.checked); setSaved(false) }}
-          />{' '}
-          Report Confirmed Assignments
-        </label>
-        <p className={formStyles.hint}>
-          {settings.data?.confirmedAssignmentBacklog ?? 0} assignment(s) confirmed in the
-          Review Queue are waiting. Enabling sends the Video, osHash, file size, recorded
-          runtime, width, height and video codec, the arrival file name and Release name,
-          marked UserConfirmed. Files are not probed again.
-        </p>
-        <p className={formStyles.hint}>
-          Turning this off stops future submissions. prdb has no retraction for an
-          assignment already sent.
-        </p>
+/** The count, as a fact beside the decision rather than inside a paragraph. */
+function Backlog({
+  count,
+  one,
+  many,
+  none,
+}: {
+  count: number
+  one: string
+  many: string
+  none: string
+}) {
+  return (
+    <p className={styles.backlog}>
+      {count === 0 ? none : <><strong>{count}</strong> {count === 1 ? one : many}</>}
+    </p>
+  )
+}
 
-        {settings.isError && <p className={formStyles.refusal}>{String(settings.error)}</p>}
-        {save.isError && <p className={formStyles.refusal}>{String(save.error)}</p>}
-        {saved && <p className={formStyles.done}>Reporting settings saved.</p>}
-
-        <button
-          className={formStyles.button}
-          type="submit"
-          disabled={settings.isPending || save.isPending}
-        >
-          Save Reporting settings
-        </button>
-      </form>
-    </SettingsPage>
+/**
+ * What a channel sends: available, and out of the way.
+ *
+ * It was a wall of prose at exactly the moment somebody is deciding, which is
+ * the moment they will not read it. Folded, the sentence that matters is the
+ * one at the switch.
+ */
+function Sends({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className={styles.sends}>
+      <summary>{summary}</summary>
+      <ul>{children}</ul>
+    </details>
   )
 }

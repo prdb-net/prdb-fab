@@ -18,7 +18,7 @@ import {
   type ReviewVideo,
 } from '../api/client.ts'
 import { Artwork } from '../catalogue/Grid.tsx'
-import { ConfirmationDialog } from './ConfirmationDialog.tsx'
+import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
 import styles from './Filing.module.css'
 
 const reasons: ArrivingFileReason[] = ['IdenticalFile', 'UnreadableQuality', 'Unidentified', 'Duplicate', 'EntryMissing']

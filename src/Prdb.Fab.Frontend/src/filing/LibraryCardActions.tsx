@@ -12,7 +12,7 @@ import { Icon } from '../catalogue/CardActions.tsx'
 import actions from '../catalogue/CardActions.module.css'
 import { prdbVideoUrl } from '../catalogue/prdb.ts'
 import { videoReleasePath } from '../release/routes.ts'
-import { ConfirmationDialog } from './ConfirmationDialog.tsx'
+import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
 import filing from './Filing.module.css'
 
 type LibraryCard = LibraryPage['entries'][number]

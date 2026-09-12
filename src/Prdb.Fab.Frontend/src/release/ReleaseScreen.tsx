@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 
 import {
@@ -11,10 +12,12 @@ import {
   resetDownloads,
   retryManualSearchIndexer,
   startManualSearch,
+  type DownloadResetPreview,
   type IdentificationState,
   type ManualSearchView,
   type ReleasePage,
 } from '../api/client.ts'
+import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
 import styles from './ReleaseScreen.module.css'
 import type { ReleaseAddress } from './routes.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
@@ -433,19 +436,20 @@ function AcquisitionSummary({
   acquisition: NonNullable<ReleasePage['acquisition']>
 }) {
   const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState<DownloadResetPreview | null>(null)
+
+  // ADR 0058: confirmed in the application. ADR 0040 has the backend compute
+  // what the act covers, so the preview's own list is what the dialog names and
+  // what the act is then given.
+  const ask = useMutation({
+    mutationFn: () => previewResetDownloads(videoId),
+    onSuccess: (preview) => setConfirming(preview),
+  })
   const reset = useMutation({
-    mutationFn: async () => {
-      const preview = await previewResetDownloads(videoId)
-      if (preview.outcome !== 'Ready') return preview
-      const history = preview.downloads
-        .map((download) => `• ${download.submittedName} — ${download.state}${download.cause ? ` / ${download.cause}` : ''}`)
-        .join('\n')
-      if (!window.confirm(
-        `Reset this Video's ${preview.downloads.length} Download attempt(s)?\n\n${history}\n\nThis deletes only local Download history, restores the full retry budget, and allows these Releases again. Any SABnzbd jobs are left untouched and will no longer be followed.`,
-      )) return null
-      return resetDownloads(videoId, preview.downloads.map((download) => download.id))
-    },
+    mutationFn: (preview: DownloadResetPreview) =>
+      resetDownloads(videoId, preview.downloads.map((download) => download.id)),
     onSuccess: () => {
+      setConfirming(null)
       void queryClient.invalidateQueries({ queryKey: ['releases'] })
       void queryClient.invalidateQueries({ queryKey: ['downloads'] })
     },
@@ -489,13 +493,46 @@ function AcquisitionSummary({
               label={held ? 'Download another Release' : 'Download best Release'}
             />
           )}
-          <button type="button" disabled={spent === 0 || reset.isPending} onClick={() => reset.mutate()}>
-            {reset.isPending ? 'Checking…' : 'Reset Download history'}
+          <button
+            type="button"
+            disabled={spent === 0 || ask.isPending || reset.isPending}
+            onClick={() => ask.mutate()}
+          >
+            {ask.isPending ? 'Checking…' : 'Reset Download history'}
           </button>
         </div>
       </div>
-      {reset.data?.detail && <p className={styles.secondary}>{reset.data.detail}</p>}
-      {reset.isError && <p className={styles.secondary}>The Download history could not be checked.</p>}
+      {ask.data && ask.data.outcome !== 'Ready' && (
+        <p className={styles.secondary}>{ask.data.detail}</p>
+      )}
+      {(ask.isError || reset.isError) && (
+        <p className={styles.secondary}>The Download history could not be checked.</p>
+      )}
+
+      {confirming && confirming.outcome === 'Ready' && (
+        <ConfirmationDialog
+          title={`Reset this Video's ${confirming.downloads.length} Download attempt(s)?`}
+          confirmLabel="Reset the history"
+          danger
+          busy={reset.isPending}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => reset.mutate(confirming)}
+        >
+          <p>
+            This deletes only the local Download history, restores the full retry
+            budget, and allows these Releases to be chosen again. Any SABnzbd jobs
+            are left untouched and will no longer be followed.
+          </p>
+          <ul className={styles.attempts}>
+            {confirming.downloads.map((download) => (
+              <li key={download.id}>
+                <strong>{downloadStateLabel(download.state)}</strong>
+                {download.cause && ` / ${download.cause}`} — {download.submittedName}
+              </li>
+            ))}
+          </ul>
+        </ConfirmationDialog>
+      )}
       {acquisition.downloads.length > 0 && (
         <ul className={styles.attempts}>
           {acquisition.downloads.map((download) => (

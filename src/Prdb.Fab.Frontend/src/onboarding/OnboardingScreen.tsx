@@ -18,6 +18,8 @@ import { IndexerList } from './IndexerList.tsx'
 import { LibraryRootForm } from './LibraryRootForm.tsx'
 import { PrdbForm } from './PrdbForm.tsx'
 import { SabnzbdForm } from './SabnzbdForm.tsx'
+import { formStyles } from '../ui/Form.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import styles from './Onboarding.module.css'
 
 /**
@@ -55,7 +57,7 @@ export function OnboardingScreen() {
 
       await queries.invalidateQueries({ queryKey: accessStateKey })
     },
-    onError: (error) => setFailure(String(error)),
+    onError: () => setFailure('The step could not be sent. The tool may have stopped; the log says.'),
   })
 
   const here = state.data?.nextStep
@@ -92,7 +94,7 @@ export function OnboardingScreen() {
           that may take several, and a library root stored with a warning that
           has to stay on screen long enough to be read. */}
       {answered && (
-        <button className={styles.button} type="button" disabled={move.isPending} onClick={taken}>
+        <button className={formStyles.button} type="button" disabled={move.isPending} onClick={taken}>
           Continue
         </button>
       )}
@@ -101,9 +103,9 @@ export function OnboardingScreen() {
         <div className={styles.skip}>
           {asking ? (
             <>
-              <p className={styles.warning}>{showing.consequence}</p>
+              <Verdict tone="warning">{showing.consequence}</Verdict>
               <button
-                className={styles.button}
+                className={formStyles.button}
                 type="button"
                 disabled={move.isPending}
                 onClick={() => move.mutate({ act: 'skip', step: showing.step })}
@@ -123,9 +125,9 @@ export function OnboardingScreen() {
       )}
 
       {verdict && verdict.outcome !== 'Taken' && verdict.outcome !== 'Skipped' && (
-        <p className={styles.refusal}>{verdict.detail}</p>
+        <Verdict tone="refusal">{verdict.detail}</Verdict>
       )}
-      {failure && <p className={styles.refusal}>{failure}</p>}
+      {failure && <Verdict tone="refusal">{failure}</Verdict>}
     </main>
   )
 }
@@ -151,7 +153,7 @@ function Path({ here, skipped }: { here: OnboardingStep; skipped: ConnectionsSta
   const position = steps.findIndex((candidate) => candidate.step === here)
 
   return (
-    <ol className={styles.path}>
+    <ol className={styles.steps}>
       {steps.map((candidate, index) => {
         const passed =
           candidate.step === 'Sabnzbd'

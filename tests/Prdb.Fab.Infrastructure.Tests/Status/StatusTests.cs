@@ -206,7 +206,12 @@ public sealed class StatusTests
 
         Assert.Equal(1, status.GapCount);
         var gap = Assert.Single(status.Stages.Single(stage => stage.Id == "sync-indexers").Gaps);
-        Assert.Equal("/settings/connections/indexers/0198ec28-1c00-7000-8000-000000000711", gap.Route);
+        // ADR 0058's return journey: a settings route carries where it was
+        // followed from, so the mask's back control lands on Status rather than
+        // on the settings index.
+        Assert.Equal(
+            "/settings/connections/indexers/0198ec28-1c00-7000-8000-000000000711?from=/status",
+            gap.Route);
         Assert.Contains("Indexer walk", gap.Detail);
         Assert.Contains("Wanted sweep", gap.Detail);
     }
@@ -242,7 +247,7 @@ public sealed class StatusTests
         var brake = Assert.Single(
             status.Stages.Single(stage => stage.Id == "file").Brakes,
             item => item.Title == "Confirmed-assignment reporting is off");
-        Assert.Equal("/settings/reporting", brake.Route);
+        Assert.Equal("/settings/reporting?from=/status", brake.Route);
     }
 
     [Fact]

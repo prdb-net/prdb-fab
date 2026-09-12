@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { savePrdbKey, type PrdbConnectionVerdict } from '../api/client.ts'
+import { Field, formStyles } from '../ui/Form.tsx'
+import { SaveBar } from '../ui/SaveBar.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import { connectionsKey } from './state.ts'
-import styles from './Onboarding.module.css'
 
 /**
  * ADR 0010's mandatory step. Written once here: onboarding puts *continue*
@@ -44,14 +46,18 @@ export function PrdbForm({
         onSaved?.()
       }
     },
-    onError: (error) => setFailure(String(error)),
+    onError: () => setFailure('The key could not be sent. The tool may have stopped; the log says.'),
   })
 
   const asking = verdict?.outcome === 'AnotherAccount'
 
+  // A stored key with an empty field is a submit that re-checks what is there,
+  // which is a real act — so it counts as something to do even untouched.
+  const dirty = apiKey.trim().length > 0 || keyIsStored
+
   return (
     <form
-      className={styles.form}
+      className={formStyles.form}
       onSubmit={(event) => {
         event.preventDefault()
         setFailure(null)
@@ -60,64 +66,69 @@ export function PrdbForm({
         submit.mutate({ confirm: asking })
       }}
     >
-      <label className={styles.label} htmlFor="prdb-key">
-        Your prdb API key
-      </label>
-      <input
-        id="prdb-key"
-        className={styles.field}
-        type="text"
-        autoComplete="off"
-        spellCheck={false}
-        value={apiKey}
-        onChange={(event) => {
-          setApiKey(event.target.value)
-          setVerdict(null)
-        }}
-      />
-      <p className={styles.hint}>
-        {keyIsStored ? (
+      <Field
+        label="Your prdb API key"
+        hint={
           <>
-            A key is stored. Leave this empty to keep it &mdash; saving re-checks
-            it against prdb either way.{' '}
+            {keyIsStored ? (
+              <>
+                A key is stored. Leave this empty to keep it &mdash; saving re-checks
+                it against prdb either way.{' '}
+              </>
+            ) : null}
+            It is on your prdb account page. This installation checks it against prdb
+            before storing it, so a key that is wrong is a wrong key now rather than
+            a library that quietly never fills.
           </>
-        ) : null}
-        It is on your prdb account page. This installation checks it against prdb
-        before storing it, so a key that is wrong is a wrong key now rather than
-        a library that quietly never fills.
-      </p>
-
-      <Verdict verdict={verdict} />
-      {failure && <p className={styles.refusal}>{failure}</p>}
-
-      <button
-        className={styles.button}
-        type="submit"
-        disabled={submit.isPending || (apiKey.trim().length === 0 && !keyIsStored)}
+        }
       >
-        {asking ? 'Yes, use this account' : submitLabel}
-      </button>
+        {(id) => (
+          <input
+            id={id}
+            className={formStyles.field}
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            value={apiKey}
+            onChange={(event) => {
+              setApiKey(event.target.value)
+              setVerdict(null)
+            }}
+          />
+        )}
+      </Field>
+
+      <SaveBar
+        label={asking ? 'Yes, use this account' : submitLabel}
+        dirty={dirty}
+        pending={submit.isPending}
+        disabled={!dirty}
+        blocked="Type the key, or leave it empty to re-check the one that is stored."
+      >
+        <PrdbVerdict verdict={verdict} />
+        {failure && <Verdict tone="refusal">{failure}</Verdict>}
+      </SaveBar>
     </form>
   )
 }
 
-function Verdict({ verdict }: { verdict: PrdbConnectionVerdict | null }) {
+function PrdbVerdict({ verdict }: { verdict: PrdbConnectionVerdict | null }) {
   if (!verdict) {
     return null
   }
 
   if (verdict.outcome === 'Saved') {
-    return <p className={styles.done}>{verdict.detail}</p>
+    return <Verdict tone="done">{verdict.detail}</Verdict>
   }
 
   if (verdict.outcome === 'AnotherAccount') {
-    return <p className={styles.confirmed}>{verdict.detail}</p>
+    return <Verdict tone="confirmed">{verdict.detail}</Verdict>
   }
 
   return (
-    <p className={styles.refusal}>
+    <Verdict tone="refusal">
       {verdict.detail}
       {verdict.retryAfterSeconds != null && ` prdb asks for ${verdict.retryAfterSeconds} seconds.`}
-    </p>
+    </Verdict>
   )
 }

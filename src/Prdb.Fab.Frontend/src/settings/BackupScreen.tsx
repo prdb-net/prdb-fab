@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
 import { exportBackup } from '../api/client.ts'
+import { Switch, formStyles } from '../ui/Form.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
-import formStyles from '../onboarding/Onboarding.module.css'
+import styles from './Settings.module.css'
 
 /**
  * ADR 0009's export, and ADR 0057's sentence in front of it.
@@ -27,7 +29,7 @@ export function BackupScreen() {
       title="Backup"
       lede="One file holding everything about this installation that cannot be fetched again — and nothing that can be."
     >
-      <h2 className={formStyles.heading}>What is in the file</h2>
+      <h2 className={styles.heading}>What is in the file</h2>
       <p className={formStyles.hint}>
         Your settings, every indexer with its address and key, the SABnzbd
         connection and its path mapping, the prdb key, every automation rule
@@ -41,8 +43,8 @@ export function BackupScreen() {
         themselves. The backup is a file, not an archive of your library.
       </p>
 
-      <h2 className={formStyles.heading}>It is readable, and that is deliberate</h2>
-      <p className={formStyles.warning}>
+      <h2 className={styles.heading}>It is readable, and that is deliberate</h2>
+      <Verdict tone="warning">
         <strong>
           The file is plain JSON and the credentials in it are readable. Anyone
           who has the file has your prdb key, your SABnzbd key and every indexer
@@ -53,7 +55,7 @@ export function BackupScreen() {
         up with already does — restic, borg, an encrypted share — and doing it
         there means one key you manage rather than one more passphrase to lose at
         the moment you need the file most.
-      </p>
+      </Verdict>
       <p className={formStyles.hint}>
         Being readable is what makes it useful when a restore will not complete:
         you can open it and see what is actually in there.
@@ -67,21 +69,22 @@ export function BackupScreen() {
           write.mutate()
         }}
       >
-        <label>
-          <input
-            type="checkbox"
-            checked={understood}
-            onChange={(event) => { setUnderstood(event.target.checked); setSaved(null) }}
-          />{' '}
-          I understand the file holds my keys in readable form
-        </label>
+        <Switch
+          checked={understood}
+          onChange={(checked) => { setUnderstood(checked); setSaved(null) }}
+          label="I understand the file holds my keys in readable form"
+        />
 
-        {write.isError && <p className={formStyles.refusal}>{String(write.error)}</p>}
+        {write.isError && (
+          <Verdict tone="refusal">
+            The Backup could not be written. Nothing has left this installation.
+          </Verdict>
+        )}
         {saved && (
-          <p className={formStyles.done}>
+          <Verdict tone="done">
             Exported as <code>{saved}</code>. Your browser has saved it wherever it
             puts downloads &mdash; move it somewhere that encrypts it.
-          </p>
+          </Verdict>
         )}
 
         <button
@@ -93,7 +96,7 @@ export function BackupScreen() {
         </button>
       </form>
 
-      <h2 className={formStyles.heading}>Restoring it</h2>
+      <h2 className={styles.heading}>Restoring it</h2>
       <p className={formStyles.hint}>
         A restore runs on an installation that holds nothing yet, before a
         password exists &mdash; the login credential is inside the file, so a

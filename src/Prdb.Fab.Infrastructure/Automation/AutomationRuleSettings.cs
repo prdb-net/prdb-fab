@@ -14,13 +14,16 @@ public sealed class AutomationRuleSettings(FabDbContext context, TimeProvider ti
         var cap = await context.Installation
             .Select(row => row.AutomaticDownloadCap)
             .SingleAsync(cancellationToken);
+        var retryBudget = await context.Installation
+            .Select(row => row.RetryBudget)
+            .SingleAsync(cancellationToken);
         var indexers = await context.Indexers
             .OrderBy(row => row.Name)
             .ThenBy(row => row.Id)
             .Select(row => new AutomationIndexer(row.Id, row.Name, row.Enabled))
             .ToListAsync(cancellationToken);
         var rules = await RulesAsync(cancellationToken);
-        return new(cap, rules, indexers);
+        return new(cap, retryBudget, rules, indexers);
     }
 
     public async Task<AutomationRuleView?> ReadRuleAsync(
@@ -40,6 +43,57 @@ public sealed class AutomationRuleSettings(FabDbContext context, TimeProvider ti
             cancellationToken);
         var reconsidered = await QueueCatchUpAsync(cancellationToken);
         return new(true, cap, reconsidered, "The automatic Download cap has been saved.");
+    }
+
+    /// <summary>
+    /// ADR 0020's third Automation control: how many Downloads one Video may be
+    /// given before the tool stops fetching for it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Here rather than on a route of its own because ADR 0020 puts the value in
+    /// this group, and because it and the cap are the two numbers that bound
+    /// automatic work — one across SABnzbd, one per Video.
+    /// </para>
+    /// <para>
+    /// Between one and ten. ADR 0020's own reasoning is the bound: five attempts
+    /// are absurd against a single Indexer and three are thin against four, and
+    /// the tool cannot see which case it is in — so the range has to admit both
+    /// and refuse the numbers that are neither.
+    /// </para>
+    /// <para>
+    /// Raising it reconsiders, the way the cap does: a Video that stopped
+    /// because its budget was spent has work to do again the moment there is
+    /// more budget, and leaving that until something else happens to queue it
+    /// would make the setting look like it did nothing.
+    /// </para>
+    /// </remarks>
+    public async Task<AutomationRetryBudgetVerdict> SaveRetryBudgetAsync(
+        int budget,
+        CancellationToken cancellationToken = default)
+    {
+        if (budget is < 1 or > 10)
+        {
+            return new(false, budget, 0, "The retry budget is between 1 and 10 Downloads per Video.");
+        }
+
+        var before = await context.Installation
+            .Select(row => row.RetryBudget)
+            .SingleAsync(cancellationToken);
+
+        await context.Installation.ExecuteUpdateAsync(
+            update => update.SetProperty(row => row.RetryBudget, budget),
+            cancellationToken);
+
+        var reconsidered = budget > before ? await QueueCatchUpAsync(cancellationToken) : 0;
+
+        return new(
+            true,
+            budget,
+            reconsidered,
+            budget > before
+                ? "The retry budget has been raised. Videos that had spent the old one are being reconsidered."
+                : "The retry budget has been saved. Nothing already downloaded is affected.");
     }
 
     public async Task<AutomationRuleVerdict> SaveRuleAsync(
@@ -172,6 +226,7 @@ public sealed class AutomationRuleNotFoundException(Guid id)
 
 public sealed record AutomationSettingsState(
     int AutomaticDownloadCap,
+    int RetryBudget,
     IReadOnlyList<AutomationRuleView> Rules,
     IReadOnlyList<AutomationIndexer> Indexers);
 public sealed record AutomationIndexer(Guid Id, string Name, bool Enabled);
@@ -183,6 +238,7 @@ public sealed record AutomationRuleView(
     long? MaximumSize,
     IReadOnlyList<AutomationIndexer> AllowedIndexers);
 public sealed record AutomationCapVerdict(bool Saved, int AutomaticDownloadCap, int Reconsidered, string Detail);
+public sealed record AutomationRetryBudgetVerdict(bool Saved, int RetryBudget, int Reconsidered, string Detail);
 public sealed record AutomationRuleVerdict(bool Saved, Guid? RuleId, int Reconsidered, string Detail)
 {
     public static AutomationRuleVerdict Invalid(Guid? id, string detail) => new(false, id, 0, detail);

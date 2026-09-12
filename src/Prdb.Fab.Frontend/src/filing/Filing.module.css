@@ -194,22 +194,6 @@
 .dangerButton:not(:disabled):hover { background: #402321; }
 .primaryButton { border-color: #376b96; color: #b6d8f4; }
 .primaryButton:not(:disabled):hover { background: #182b3d; }
-.dialog {
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 2px);
-  color: var(--text);
-  max-height: min(80vh, 48rem);
-  max-width: min(42rem, calc(100vw - 2rem));
-  padding: 1.1rem;
-  width: 100%;
-}
-.dialog::backdrop { backdrop-filter: blur(3px); background: rgba(0, 0, 0, .68); }
-.dialog h2 { font-size: 1.15rem; margin: 0; }
-.dialogBody { margin: .75rem 0 1rem; max-height: 55vh; min-width: 0; overflow: hidden auto; }
-.dialogBody > :first-child { margin-top: 0; }
-.dialogBody > :last-child { margin-bottom: 0; }
-.dialogActions { display: flex; gap: .65rem; justify-content: flex-end; }
 .dialogSummary { color: var(--text-quiet); }
 .confirmationList { display: grid; gap: .55rem; list-style: none; margin: .85rem 0 0; padding: 0; }
 .confirmationList li { background: var(--surface); border-radius: var(--radius); display: grid; gap: .15rem .75rem; grid-template-columns: minmax(0, 1fr) auto; min-width: 0; padding: .55rem .65rem; }

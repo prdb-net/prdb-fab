@@ -10,3 +10,9 @@
 .actions { align-items: center; display: flex; gap: .75rem; }
 .danger { background: transparent; border: 1px solid var(--bad); border-radius: var(--radius); color: var(--bad); cursor: pointer; margin-top: 1.25rem; padding: .5rem .75rem; }
 .danger:disabled { cursor: default; opacity: .6; }
+.rule { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
+.rulePermits { min-width: 0; }
+.rulePermits p { color: var(--text-quiet); font-size: .85rem; margin: .2rem 0 0; }
+.ruleActions { align-items: flex-end; display: flex; flex: none; flex-direction: column; gap: .35rem; }
+.limitsHeading { color: var(--text-quiet); font-size: 1rem; letter-spacing: .04em; margin: 2.5rem 0 var(--gap); text-transform: uppercase; }
+.range { display: grid; gap: 0 1rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }

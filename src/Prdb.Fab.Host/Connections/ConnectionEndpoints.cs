@@ -147,6 +147,74 @@ public static class ConnectionEndpoints
                     save.Categories));
         });
 
+        // ADR 0020's three row settings, as an act of their own. Not fields on
+        // the edit request: changing a rank or a budget is not a reason to run
+        // a real search against somebody's indexer, and an edit that re-checked
+        // would make disabling a broken indexer impossible — the check would
+        // fail and the change would be refused with it.
+        group.MapPost("/indexers/{id:guid}/settings", async Task<Results<Ok<IndexerSettingsVerdict>, NotFound>> (
+            Guid id,
+            IndexerSettingsRequest request,
+            Indexers indexers,
+            CancellationToken cancellationToken) =>
+        {
+            var save = await indexers.SetAsync(
+                id,
+                request.Enabled,
+                request.DailyQueryBudget,
+                cancellationToken);
+
+            return save is null
+                ? TypedResults.NotFound()
+                : TypedResults.Ok(new IndexerSettingsVerdict(
+                    save.Saved,
+                    save.Enabled,
+                    save.DailyQueryBudget,
+                    save.Saved
+                        ? "Stored. It takes effect from the next time the schedule reaches this indexer."
+                        : "A daily query budget is between 1 and 100,000 requests, or empty for unbounded."));
+        });
+
+        // ADR 0020 made the rank a list position rather than a typed number, so
+        // the act is a move rather than a value.
+        group.MapPost("/indexers/{id:guid}/move", async Task<Results<Ok<IndexerMoveVerdict>, NotFound>> (
+            Guid id,
+            IndexerMoveRequest request,
+            Indexers indexers,
+            CancellationToken cancellationToken) =>
+        {
+            var moved = await indexers.MoveAsync(id, request.Up, cancellationToken);
+
+            return moved
+                ? TypedResults.Ok(new IndexerMoveVerdict(id, "The order has been stored."))
+                : TypedResults.NotFound();
+        });
+
+        // The shape ADR 0040 already set for a destructive act with something
+        // to say: a preview that names what goes and what stays, and the act
+        // afterwards. A named POST rather than DELETE, because ADR 0040 gives
+        // every act that is not a field update an endpoint of its own and the
+        // log has to know which one happened.
+        group.MapPost("/indexers/{id:guid}/delete/preview", async Task<Results<Ok<IndexerDeletePreview>, NotFound>> (
+            Guid id,
+            Indexers indexers,
+            CancellationToken cancellationToken) =>
+        {
+            var preview = await indexers.PreviewDeleteAsync(id, cancellationToken);
+
+            return preview is null ? TypedResults.NotFound() : TypedResults.Ok(preview);
+        });
+
+        group.MapPost("/indexers/{id:guid}/delete", async Task<Results<Ok<IndexerDeleteVerdict>, NotFound>> (
+            Guid id,
+            Indexers indexers,
+            CancellationToken cancellationToken) =>
+        {
+            var verdict = await indexers.DeleteAsync(id, cancellationToken);
+
+            return verdict is null ? TypedResults.NotFound() : TypedResults.Ok(verdict);
+        });
+
         group.MapPost("/library-root", async (
             LibraryRootRequest request,
             LibraryRoots roots,
@@ -212,6 +280,25 @@ public sealed record SabnzbdConnectionVerdict(
     string? CompletedRoot);
 
 public sealed record IndexerConnectionRequest(string? Name, string? Url, string? ApiKey);
+
+/// <param name="DailyQueryBudget">
+/// Null is ADR 0020's unbounded. The window is UTC midnight, and half of it —
+/// up to <c>IndexerQueryBudget.SweepRequestsPerDay</c> — is reserved for the
+/// Wanted Sweep, which is the only route by which an older wanted Video is ever
+/// found.
+/// </param>
+public sealed record IndexerSettingsRequest(bool Enabled, int? DailyQueryBudget);
+
+/// <summary>ADR 0040: a verdict is a success with a typed body saying what happened.</summary>
+public sealed record IndexerSettingsVerdict(
+    bool Saved,
+    bool Enabled,
+    int DailyQueryBudget,
+    string Detail);
+
+public sealed record IndexerMoveRequest(bool Up);
+
+public sealed record IndexerMoveVerdict(Guid IndexerId, string Detail);
 
 public sealed record IndexerConnectionVerdict(
     IndexerConnectionOutcome Outcome,
