@@ -38,6 +38,7 @@ export type AutomationRuleDeletePreview = Schema['AutomationRuleDeletePreview']
 export type AutomationRuleDeleteVerdict = Schema['AutomationRuleDeleteVerdict']
 export type AutomationCapVerdict = Schema['AutomationCapVerdict']
 export type StatusState = Schema['StatusState']
+export type StatusCondition = Schema['StatusCondition']
 export type RunNowVerdict = Schema['RunNowVerdict']
 
 export type VideoCard = Schema['VideoCard']

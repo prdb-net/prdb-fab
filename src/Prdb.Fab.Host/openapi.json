@@ -7364,8 +7364,8 @@
           "title",
           "detail",
           "stage",
-          "route",
-          "cleared"
+          "cleared",
+          "route"
         ],
         "type": "object",
         "properties": {
@@ -7381,14 +7381,14 @@
           "stage": {
             "type": "string"
           },
+          "cleared": {
+            "type": "boolean"
+          },
           "route": {
             "type": [
               "null",
               "string"
             ]
-          },
-          "cleared": {
-            "type": "boolean"
           }
         }
       },

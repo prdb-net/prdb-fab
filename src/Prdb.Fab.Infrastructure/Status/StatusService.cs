@@ -786,10 +786,43 @@ public sealed class StatusService(
 public enum StatusConditionKind { Gap, Brake }
 public sealed record StatusState(int GapCount, StatusUsefulAct? LastUsefulAct, IReadOnlyList<StatusStage> Stages, IReadOnlyList<StatusLink> Related);
 public sealed record StatusUsefulAct(string Act, DateTimeOffset? At);
-public sealed record StatusLink(string Label, string Route);
+public sealed record StatusLink(string Label, string Route)
+{
+    public string Route { get; init; } = StatusRoutes.Pointing(Route)!;
+}
 public sealed record StatusStage(string Id, string Title, IReadOnlyList<StatusRoutine> Routines, IReadOnlyList<StatusFact> Facts, IReadOnlyList<StatusCondition> Gaps, IReadOnlyList<StatusCondition> Brakes);
-public sealed record StatusFact(string Label, string Value, string? Route);
-public sealed record StatusCondition(StatusConditionKind Kind, string Title, string Detail, string Stage, string? Route, bool Cleared);
+public sealed record StatusFact(string Label, string Value, string? Route)
+{
+    public string? Route { get; init; } = StatusRoutes.Pointing(Route);
+}
+/// <summary>
+/// Where a Gap or a Brake sends somebody, and where they come back to.
+/// </summary>
+/// <remarks>
+/// ADR 0018 routes a condition to the setting behind it. What it did not say is
+/// where the return journey ends, and the answer used to be "the settings
+/// index", whatever the visit began at. A settings route carries where it was
+/// followed from, and the mask's back control reads it — the convention the
+/// Release route already uses for its Catalogue context.
+/// </remarks>
+internal static class StatusRoutes
+{
+    public static string? Pointing(string? route) =>
+        route is not null
+        && route.StartsWith("/settings", StringComparison.Ordinal)
+        && !route.Contains('?', StringComparison.Ordinal)
+            ? route + "?from=/status"
+            : route;
+}
+
+public sealed record StatusCondition(StatusConditionKind Kind, string Title, string Detail, string Stage, string? Route, bool Cleared)
+{
+    /// <summary>
+    /// Normalised once here rather than at eighteen call sites, so a condition
+    /// added later cannot forget it.
+    /// </summary>
+    public string? Route { get; init; } = StatusRoutes.Pointing(Route);
+}
 public sealed record StatusRoutine(string Name, string? Target, string Label, string Stage, DateTimeOffset DueAt, DateTimeOffset? LastSuccessAt, DateTimeOffset? LastFailureAt, int ConsecutiveFailures, bool BackingOff, int? WorkSetSize, DateTimeOffset? LastCompletedAt, int? ResultsSeen, int? RowsAdded, DateTimeOffset? LastRunNowAt, RunNowOutcome? LastRunNowOutcome, string? LastRunNowDetail, bool RunNowPending);
 public sealed record StatusGateTally(string Gate, int Total, IReadOnlyList<StatusNamedCount> Outcomes);
 public sealed record StatusNamedCount(string Name, int Count, bool Admitted = false);

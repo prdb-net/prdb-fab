@@ -1,82 +1,91 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 
+import { readConnections, readStatus, type StatusCondition } from '../api/client.ts'
+import { connectionsKey } from '../onboarding/state.ts'
 import styles from './Settings.module.css'
 
 /**
- * The installation's setting groups. Groups whose feature has not arrived yet remain
- * named rather than hidden, so the surface cannot quietly drift from what was
- * argued.
+ * `/settings` itself, which used to be a corridor: a `<ul>` of links with a
+ * `<br>` between each one and a sentence about what the group was *for*.
+ *
+ * The links are the rail's now, and they are beside every mask rather than in
+ * front of them. What is left is the thing the corridor never did — say what
+ * this installation is like, and where the loop is currently bleeding.
+ *
+ * Below the breakpoint this page is not rendered at all: there the rail is the
+ * page, because a summary above a list of links is a screen somebody scrolls
+ * past.
  */
 export function SettingsScreen() {
+  const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
+  const status = useQuery({ queryKey: ['status'], queryFn: readStatus })
+
+  const pointing = (status.data?.stages ?? [])
+    .flatMap((stage) => [...stage.gaps, ...stage.brakes])
+    .filter((condition) => !condition.cleared && condition.route?.startsWith('/settings'))
+
+  const held = connections.data
+
   return (
     <main className={styles.screen}>
-      <h1>Settings</h1>
-      <p className={styles.lede}>
-        Everything here takes effect from the next time it is used. Nothing needs
-        a restart.
-      </p>
+      <header className={styles.maskHeader}>
+        <h1>Settings</h1>
+        <p className={styles.lede}>
+          Everything here takes effect from the next time it is used. Nothing needs
+          a restart.
+        </p>
+      </header>
 
-      <ul className={styles.groups}>
-        <li>
-          <Link to="/settings/connections">Connections</Link>
-          <br />
-          <span className={styles.detail}>
-            prdb, SABnzbd and the indexers &mdash; each checked against the
-            service it names before anything is stored.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/account">Account</Link>
-          <br />
-          <span className={styles.detail}>
-            The password, and signing out.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/identification">Identification</Link>
-          <br />
-          <span className={styles.detail}>
-            Which named confidence lets an identified arrival proceed to filing.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/library">Library</Link>
-          <br />
-          <span className={styles.detail}>
-            The library root and the fixed leftover types filing may remove.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/downloads">Downloads</Link>
-          <br />
-          <span className={styles.detail}>
-            The preferred highest Quality used by Catalogue-card Download buttons.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/automation">Automation</Link>
-          <br />
-          <span className={styles.detail}>
-            Permission rules and the cap on unfinished automatic Downloads.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/reporting">Reporting</Link>
-          <br />
-          <span className={styles.detail}>
-            Two independent opt-in channels for what may be sent back to prdb.
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/backup">Backup</Link>
-          <br />
-          <span className={styles.detail}>
-            One readable file holding everything this installation cannot fetch
-            again &mdash; credentials included, which is why it says so before it
-            writes one.
-          </span>
-        </li>
-      </ul>
+      {pointing.length > 0 && (
+        <section>
+          <h2 className={styles.heading}>Status is pointing here</h2>
+          <ul className={styles.pointing}>
+            {pointing.map((condition) => (
+              <li key={`${condition.kind}-${condition.title}`}>
+                <Link to={condition.route!}>{condition.title}</Link>
+                <span className={styles.detail}>
+                  {' '}
+                  &mdash; {kindOf(condition)}. {condition.detail}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <h2 className={styles.heading}>What is set up</h2>
+      <dl className={styles.summary}>
+        <dt>prdb</dt>
+        <dd>{held?.prdbConfigured ? 'A key is stored.' : 'Not configured, so nothing syncs.'}</dd>
+
+        <dt>SABnzbd</dt>
+        <dd>
+          {held?.sabnzbdConfigured
+            ? `${held.sabnzbdUrl}, category ${held.sabnzbdCategory}.`
+            : held?.sabnzbdSkipped
+              ? 'Skipped during setting up, so nothing is downloaded.'
+              : 'Not configured, so nothing is downloaded.'}
+        </dd>
+
+        <dt>Indexers</dt>
+        <dd>
+          {Number(held?.indexerCount ?? 0) > 0
+            ? `${held?.indexerCount} configured.`
+            : held?.indexersSkipped
+              ? 'None. This step was skipped, so nothing is searched for.'
+              : 'None, so nothing is searched for.'}
+        </dd>
+
+        <dt>Library</dt>
+        <dd>{held?.libraryRoot ?? 'No root answered yet.'}</dd>
+      </dl>
     </main>
   )
+}
+
+function kindOf(condition: StatusCondition): string {
+  return condition.kind === 'Gap'
+    ? 'a Gap, which needs a repair'
+    : 'a Brake, which is the tool doing what it was told'
 }

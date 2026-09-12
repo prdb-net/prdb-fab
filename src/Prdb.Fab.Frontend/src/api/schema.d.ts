@@ -4187,8 +4187,8 @@ export interface components {
             title: string;
             detail: string;
             stage: string;
-            route: null | string;
             cleared: boolean;
+            route: null | string;
         };
         /** @enum {unknown} */
         StatusConditionKind: "Gap" | "Brake";
