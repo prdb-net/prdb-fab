@@ -245,3 +245,21 @@
 .groups li:last-child {
   border-bottom: none;
 }
+
+/* ADR 0005's fixed list of what filing may remove, in the open rather than in a
+   hint: the fixedness is the reassuring half of the sentence. */
+.extensions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+
+.extensions li {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.15rem 0.45rem;
+}
