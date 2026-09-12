@@ -110,9 +110,10 @@ public static class FilingEndpoints
             Guid? actor = null,
             string? quality = null,
             int page = 1,
-            LibraryEntrySort sort = LibraryEntrySort.FiledAtDescending) =>
+            LibraryEntrySort sort = LibraryEntrySort.FiledAtDescending,
+            bool? confirmed = null) =>
             TypedResults.Ok(await browse.ReadAsync(
-                search, site, actor, quality, page, sort, cancellationToken)));
+                search, site, actor, quality, page, sort, confirmed, cancellationToken)));
         libraryEntries.MapGet("/{videoId:guid}", ReadLibraryEntryAsync);
         libraryEntries.MapPost("/{videoId:guid}/delete/preview", PreviewLibraryEntryDeleteAsync);
         libraryEntries.MapPost("/{videoId:guid}/delete", DeleteLibraryEntryAsync);

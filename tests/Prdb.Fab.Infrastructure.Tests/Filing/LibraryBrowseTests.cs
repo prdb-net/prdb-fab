@@ -97,7 +97,7 @@ public sealed class LibraryBrowseTests
         await using var read = database.Scope();
         var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
         var page = await browse.ReadAsync(
-            null, null, null, null, 1, LibraryEntrySort.TitleAscending, TestContext.Current.CancellationToken);
+            null, null, null, null, 1, LibraryEntrySort.TitleAscending, cancellationToken: TestContext.Current.CancellationToken);
 
         // Not the title: SQLite's BINARY collation would put "Zebra Crossing"
         // first, because an upper case Z sorts below a lower case a.
@@ -145,7 +145,7 @@ public sealed class LibraryBrowseTests
                 ? await browse.ReadAsync(
                     null, null, null, null, 1, cancellationToken: TestContext.Current.CancellationToken)
                 : await browse.ReadAsync(
-                    null, null, null, null, 1, sort.Value, TestContext.Current.CancellationToken);
+                    null, null, null, null, 1, sort.Value, cancellationToken: TestContext.Current.CancellationToken);
             return page.Entries.Select(entry => entry.Title).ToArray();
         }
 
@@ -186,9 +186,9 @@ public sealed class LibraryBrowseTests
         await using var read = database.Scope();
         var browse = read.ServiceProvider.GetRequiredService<LibraryBrowse>();
         var first = await browse.ReadAsync(
-            null, null, null, null, 1, sort, TestContext.Current.CancellationToken);
+            null, null, null, null, 1, sort, cancellationToken: TestContext.Current.CancellationToken);
         var second = await browse.ReadAsync(
-            null, null, null, null, 2, sort, TestContext.Current.CancellationToken);
+            null, null, null, null, 2, sort, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(LibraryBrowse.APage, first.Entries.Count);
         Assert.Equal(held - LibraryBrowse.APage, second.Entries.Count);

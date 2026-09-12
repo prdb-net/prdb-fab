@@ -10,6 +10,14 @@ import { LibraryCardActions } from './LibraryCardActions.tsx'
 import styles from './LibraryScreen.module.css'
 
 /** ADR 0055's orders, in the order they are offered. */
+/**
+ * ADR 0009's background pass, as a filter. "Not confirmed" is both halves of
+ * held — a file the pass could not account for, and one it has not reached yet
+ * — because to somebody looking for what is missing those are the same
+ * sentence. The status page's Gap links straight in here.
+ */
+const confirmations = ['', 'no', 'yes'] as const
+
 const sorts: readonly LibraryEntrySort[] = [
   'FiledAtDescending',
   'FiledAtAscending',
@@ -25,11 +33,12 @@ export function LibraryScreen() {
   const site = parameters.get('site') ?? ''
   const actor = parameters.get('actor') ?? ''
   const quality = parameters.get('quality') ?? ''
+  const confirmed = choice(parameters.get('confirmed'), confirmations, '')
   const sort = choice(parameters.get('sort'), sorts, 'FiledAtDescending')
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
   const library = useQuery({
-    queryKey: ['library', search, site, actor, quality, sort, page],
-    queryFn: () => readLibrary({ search, site, actor, quality, sort, page }),
+    queryKey: ['library', search, site, actor, quality, confirmed, sort, page],
+    queryFn: () => readLibrary({ search, site, actor, quality, confirmed, sort, page }),
     placeholderData: (held) => held,
   })
   const data = library.data
@@ -49,7 +58,7 @@ export function LibraryScreen() {
     return () => window.clearTimeout(timeout)
   }, [parameters, search, searchInput, setParameters])
 
-  const setFilter = (name: 'site' | 'actor' | 'quality' | 'sort', value: string) => {
+  const setFilter = (name: 'site' | 'actor' | 'quality' | 'confirmed' | 'sort', value: string) => {
     const next = new URLSearchParams(parameters)
     if (searchInput) next.set('search', searchInput)
     else next.delete('search')
@@ -111,6 +120,13 @@ export function LibraryScreen() {
         </label>
         <label>
           Sort by
+          <label className={styles.label} htmlFor="library-confirmed">Verification</label>
+          <select id="library-confirmed" name="confirmed" className={styles.field} value={confirmed} onChange={(event) => setFilter('confirmed', event.target.value)}>
+            <option value="">Everything held</option>
+            <option value="no">Not confirmed</option>
+            <option value="yes">Confirmed</option>
+          </select>
+
           <select id="library-sort" name="sort" className={styles.field} value={sort} onChange={(event) => setFilter('sort', event.target.value)}>
             {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
           </select>

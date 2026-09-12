@@ -18,6 +18,7 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         string? quality,
         int page,
         LibraryEntrySort sort = LibraryEntrySort.FiledAtDescending,
+        bool? confirmed = null,
         CancellationToken cancellationToken = default)
     {
         var wanted = Paging.Wanted(page);
@@ -47,6 +48,27 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
         {
             entries = entries.Where(row => context.VideoFiles.Any(file =>
                 file.LibraryEntryVideoId == row.Entry.VideoId && file.QualityLabel == quality));
+        }
+
+        // ADR 0009's unconfirmed set, and the route the status page's Gap
+        // points at. Not confirmed covers both halves of held: a file the pass
+        // could not account for, and one it has not reached yet. An Entry that
+        // is waiting to be checked is as much "not known to be there" as one
+        // that was checked and was not — it is the same sentence to a person
+        // looking for what is missing.
+        if (confirmed is not null)
+        {
+            entries = confirmed is true
+                ? entries.Where(row => context.VideoFiles
+                    .Where(file => file.LibraryEntryVideoId == row.Entry.VideoId)
+                    .All(file => context.LibraryVerifications.Any(answer =>
+                        answer.VideoFileId == file.Id
+                        && answer.Outcome == LibraryVerification.Confirmed)))
+                : entries.Where(row => context.VideoFiles
+                    .Where(file => file.LibraryEntryVideoId == row.Entry.VideoId)
+                    .Any(file => !context.LibraryVerifications.Any(answer =>
+                        answer.VideoFileId == file.Id
+                        && answer.Outcome == LibraryVerification.Confirmed)));
         }
 
         var total = await entries.CountAsync(cancellationToken);

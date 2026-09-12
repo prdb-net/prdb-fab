@@ -2471,6 +2471,13 @@
               "default": "FiledAtDescending",
               "$ref": "#/components/schemas/LibraryEntrySort"
             }
+          },
+          {
+            "name": "confirmed",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

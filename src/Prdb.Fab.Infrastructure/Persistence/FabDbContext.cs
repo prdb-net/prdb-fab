@@ -107,6 +107,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<VideoFileRow> VideoFiles => Set<VideoFileRow>();
 
+    /// <summary>What the background pass last found about each Video File (ADR 0009).</summary>
+    public DbSet<LibraryVerificationRow> LibraryVerifications => Set<LibraryVerificationRow>();
+
     public DbSet<ArrivingFileRow> ArrivingFiles => Set<ArrivingFileRow>();
 
     public DbSet<ArrivingFileCandidateRow> ArrivingFileCandidates => Set<ArrivingFileCandidateRow>();
@@ -777,6 +780,22 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             file.HasOne<LibraryEntryRow>()
                 .WithMany()
                 .HasForeignKey(row => row.LibraryEntryVideoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<LibraryVerificationRow>(verification =>
+        {
+            verification.ToTable("library_verification");
+            verification.HasKey(row => row.VideoFileId);
+            verification.Declares(AccountClass.AccountFree);
+            verification.Property(row => row.Outcome).HasConversion<string>();
+
+            // What the status page counts and the Library filters by, so the
+            // one query either of them makes does not walk the table.
+            verification.HasIndex(row => row.Outcome);
+            verification.HasOne<VideoFileRow>()
+                .WithMany()
+                .HasForeignKey(row => row.VideoFileId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

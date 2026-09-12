@@ -103,3 +103,28 @@ public sealed class GateAdmissionRow
     public string Gate { get; set; } = string.Empty;
     public IdentificationConfidence Confidence { get; set; }
 }
+
+/// <summary>
+/// What the background pass last found about one Video File.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A table of its own, and deliberately <em>not</em> exported. ADR 0033 runs
+/// the boundary between tables, so a column on <c>video_file</c> would travel
+/// in the Backup — and a restored installation would then claim its files had
+/// been confirmed on a machine it is no longer running on. This is local,
+/// derived, disposable knowledge in exactly the sense ADR 0009 means by a
+/// cache: throw it away and the pass fills it in again.
+/// </para>
+/// <para>
+/// That is also what makes the work set self-emptying. A Restore writes no
+/// rows here, so every Video File it brought is unverified, the routine is due
+/// while any remain, and it stops being due when none do.
+/// </para>
+/// </remarks>
+public sealed class LibraryVerificationRow
+{
+    public Guid VideoFileId { get; set; }
+    public LibraryVerification Outcome { get; set; }
+    public DateTimeOffset At { get; set; }
+}

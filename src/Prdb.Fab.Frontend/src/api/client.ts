@@ -594,6 +594,7 @@ export async function readLibrary(filters: {
   quality?: string
   sort?: LibraryEntrySort
   page: number
+  confirmed?: string
 }): Promise<LibraryPage> {
   return json<LibraryPage>(
     await fetch(`/api/library?${parameters({
@@ -603,6 +604,9 @@ export async function readLibrary(filters: {
       quality: filters.quality,
       sort: filters.sort,
       page: String(filters.page),
+      // The status page's Gap links here with confirmed=no, so the address bar
+      // carries the words rather than "true"/"false" (ADR 0036).
+      confirmed: filters.confirmed === 'no' ? 'false' : filters.confirmed === 'yes' ? 'true' : undefined,
     })}`),
   )
 }

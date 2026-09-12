@@ -2822,6 +2822,7 @@ export interface paths {
                     quality?: string;
                     page?: number | string;
                     sort?: components["schemas"]["LibraryEntrySort"];
+                    confirmed?: boolean;
                 };
                 header?: never;
                 path?: never;
