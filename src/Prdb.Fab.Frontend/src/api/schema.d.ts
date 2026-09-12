@@ -3652,6 +3652,7 @@ export interface components {
             pageSize: number | string;
             /** Format: int32 */
             total: number | string;
+            counts: components["schemas"]["DownloadStateCounts"];
         };
         /** @enum {unknown} */
         DownloadPlanOutcome: "Ready" | "ReleaseNotEligible" | "NoReleasesLeft" | "RetryBudgetSpent";
@@ -3729,6 +3730,18 @@ export interface components {
         };
         /** @enum {unknown} */
         DownloadState: "Outstanding" | "Completed" | "Collected" | "Failed" | "Abandoned";
+        DownloadStateCounts: {
+            /** Format: int32 */
+            outstanding: number | string;
+            /** Format: int32 */
+            completed: number | string;
+            /** Format: int32 */
+            collected: number | string;
+            /** Format: int32 */
+            failed: number | string;
+            /** Format: int32 */
+            abandoned: number | string;
+        };
         DownloadVerdict: {
             outcome: components["schemas"]["DownloadOutcome"];
             /** Format: uuid */
@@ -3744,6 +3757,7 @@ export interface components {
             /** Format: uuid */
             videoId: string;
             videoTitle: string;
+            site: null | string;
             indexer: components["schemas"]["DownloadIndexer"];
             derivedReleaseId: string;
             submittedName: string;

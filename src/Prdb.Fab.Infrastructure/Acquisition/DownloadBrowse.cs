@@ -26,7 +26,6 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
         CancellationToken cancellationToken = default)
     {
         var wanted = Paging.Wanted(page);
-        var relevant = context.Downloads.AsNoTracking();
         var indexers = await context.Downloads
             .AsNoTracking()
             .Join(context.Indexers, download => download.IndexerId, indexer => indexer.Id, (_, indexer) => indexer)
@@ -36,10 +35,20 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
             .Select(indexer => new DownloadIndexer(indexer.Id, indexer.Name))
             .ToListAsync(cancellationToken);
 
-        if (state is not null) relevant = relevant.Where(row => row.State == state);
-        if (indexerId is not null) relevant = relevant.Where(row => row.IndexerId == indexerId);
-        if (downloadId is not null) relevant = relevant.Where(row => row.Id == downloadId);
+        // Every filter but the state one. The counts are read from this set and
+        // the page from the same set narrowed by the state, so choosing an
+        // Indexer narrows both while choosing a state narrows only the page —
+        // the counts are what a person reads to decide whether to choose one.
+        var counted = context.Downloads.AsNoTracking();
+        if (indexerId is not null) counted = counted.Where(row => row.IndexerId == indexerId);
+        if (downloadId is not null) counted = counted.Where(row => row.Id == downloadId);
 
+        var relevant = state is null ? counted : counted.Where(row => row.State == state);
+
+        var counts = await counted
+            .GroupBy(row => row.State)
+            .Select(group => new { State = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(entry => entry.State, entry => entry.Count, cancellationToken);
         var total = await relevant.CountAsync(cancellationToken);
         var rows = await relevant
             .OrderByDescending(row => row.CreatedAt)
@@ -53,6 +62,10 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
                 VideoTitle = context.CatalogueVideos
                     .Where(video => video.PrdbId == row.VideoId)
                     .Select(video => video.Title)
+                    .SingleOrDefault(),
+                Site = context.CatalogueVideos
+                    .Where(video => video.PrdbId == row.VideoId)
+                    .Select(video => video.Site == null ? null : video.Site.Title)
                     .SingleOrDefault(),
                 row.IndexerId,
                 IndexerName = context.Indexers
@@ -84,6 +97,7 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
                 row.Id,
                 row.VideoId,
                 row.VideoTitle ?? "Unknown Video",
+                row.Site,
                 new DownloadIndexer(row.IndexerId, row.IndexerName ?? "Unknown Indexer"),
                 row.DerivedReleaseId,
                 row.SubmittedName,
@@ -100,7 +114,13 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
             indexers,
             wanted,
             APage,
-            total);
+            total,
+            new DownloadStateCounts(
+                counts.GetValueOrDefault(DownloadState.Outstanding),
+                counts.GetValueOrDefault(DownloadState.Completed),
+                counts.GetValueOrDefault(DownloadState.Collected),
+                counts.GetValueOrDefault(DownloadState.Failed),
+                counts.GetValueOrDefault(DownloadState.Abandoned)));
     }
 
     public async Task<DownloadSelectionPreview> PreviewStopFollowingAsync(
@@ -289,6 +309,13 @@ public sealed record DownloadViewRow(
     Guid Id,
     Guid VideoId,
     string VideoTitle,
+    /// <summary>
+    /// The Site the Video was released under, because catalogue titles repeat
+    /// across Sites and a title alone does not name a Video. Null for the
+    /// reason the column is (ADR 0013): a Video whose Site row has not been
+    /// fetched yet has no Site here, and a Download does not invent one.
+    /// </summary>
+    string? Site,
     DownloadIndexer Indexer,
     string DerivedReleaseId,
     string SubmittedName,
@@ -307,7 +334,25 @@ public sealed record DownloadPage(
     IReadOnlyList<DownloadIndexer> Indexers,
     int Page,
     int PageSize,
-    int Total);
+    int Total,
+    DownloadStateCounts Counts);
+
+/// <summary>
+/// How many Downloads sit in each state under every filter but the state one,
+/// so the strip of state filters is legible before one of them is chosen.
+/// </summary>
+/// <remarks>
+/// A record rather than a dictionary keyed by <see cref="DownloadState"/>: a
+/// dictionary reaches <c>schema.d.ts</c> as a partial map and every reader then
+/// writes <c>?? 0</c> for a state that is simply empty. This makes zero a value
+/// the API states.
+/// </remarks>
+public sealed record DownloadStateCounts(
+    int Outstanding,
+    int Completed,
+    int Collected,
+    int Failed,
+    int Abandoned);
 public sealed record DownloadSelectionRow(
     Guid Id,
     Guid VideoId,
