@@ -452,7 +452,6 @@ re-rooting from a bulk update into an invisible global behaviour change.
 - **Nothing in the schema is a condition, a Gap, a Brake or a pin.** All four are
   computed at read time from rows that exist for other reasons, which is what
   ADR 0018 required and what this decision extends to pinning.
-- [Ticket 33](../../.scratch/first-release-spec/issues/33-how-the-tool-is-run-and-documented.md)
-  inherits one fact from here: what grows on the data volume is the exported
-  acquisition record above, the artwork cache under its ceiling, and the indexer
-  cache under ADR 0015's hundred thousand rows per indexer.
+- Ticket 33 inherits one fact from here: what grows on the data volume is the
+  exported acquisition record above, the artwork cache under its ceiling, and
+  the indexer cache under ADR 0015's hundred thousand rows per indexer.

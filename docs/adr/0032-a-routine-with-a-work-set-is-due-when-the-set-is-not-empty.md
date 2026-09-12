@@ -295,10 +295,9 @@ and the tool does not claim it.
   `Filing` row it already writes, and a failed arriving file sorts to the back
   of the work set.
 - **The data model gains one column** — when a work-set item was last attempted
-  — and a flag beside each normalised needle, which
-  [ticket 32](../../.scratch/first-release-spec/issues/32-what-the-data-model-is.md)
-  now inherits. It **removes** the resumable position from three routines that
-  the fog patch had been carrying as ones that keep one.
+  — and a flag beside each normalised needle, which ticket 32 now inherits. It
+  **removes** the resumable position from three routines that the fog patch had
+  been carrying as ones that keep one.
 - **The idle cost of the whole family is six indexed counts per tick.** Stated
   as a number rather than as a reassurance, because it is the price of refusing
   the signal.

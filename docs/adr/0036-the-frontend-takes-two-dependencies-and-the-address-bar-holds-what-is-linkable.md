@@ -30,11 +30,9 @@ part that matters — the runtime image carries no Node, so this is a build-time
 tree and nothing else.
 
 API types are generated rather than hand-written, which is its ADR 0014.
-*From what, and by what*, is
-[ticket 06](../../.scratch/build-foundation/issues/06-the-contract-between-the-frontend-and-the-backend.md)'s
-to settle; this decision only refuses the alternative, which is a second
-description of the API maintained in TypeScript beside the one the backend
-already publishes.
+*From what, and by what*, is ticket 06's to settle; this decision only refuses
+the alternative, which is a second description of the API maintained in
+TypeScript beside the one the backend already publishes.
 
 ## A router, because this tool crossed the line `prdb-ordeno` drew
 

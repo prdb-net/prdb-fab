@@ -23,7 +23,7 @@ tests/Prdb.Fab.Host.Tests
 
 `Core` ← `Infrastructure` ← `Host`. Nothing under `src/` references `Host`; a
 test project may. The solution is `Prdb.Fab.slnx`, and what the frontend is
-built with is [ticket 02](../../.scratch/build-foundation/issues/02-what-the-frontend-is-built-with.md).
+built with is ticket 02.
 
 ## Why the boundary is worth having before there is code to constrain
 
@@ -86,12 +86,11 @@ decision — defer or send, given the last rate limit read and the request's
 scarcity class — is `Core`; reading the limit off the response and holding the
 connection is `Infrastructure`.**
 
-That is a placement and not a mechanism.
-[Ticket 04](../../.scratch/build-foundation/issues/04-how-a-lane-is-implemented.md)
-chooses the mechanism, and this decision constrains it in one way: the governor
-may not live in `Host`, because a search a person triggers must reach it by the
-same route a routine does, and a policy applied at call sites is one a call site
-can be added without.
+That is a placement and not a mechanism. Ticket 04 chooses the mechanism, and
+this decision constrains it in one way: the governor may not live in `Host`,
+because a search a person triggers must reach it by the same route a routine
+does, and a policy applied at call sites is one a call site can be added
+without.
 
 ### The file lane is where the boundary pays for itself
 
@@ -158,9 +157,8 @@ in `Core` that shadows a glossary term may not take a word from that term's
 ADR 0033's export class and account class are declared where the table is, since
 both are properties of tables. The rule they serve — an exported row references a
 non-exported one only through an outside authority's identifier — is a property
-of the schema as a whole rather than of any class, and
-[ticket 08](../../.scratch/build-foundation/issues/08-what-is-tested-and-how-time-is-read.md)
-already claims it as the one thing worth asserting mechanically.
+of the schema as a whole rather than of any class, and ticket 08 already claims
+it as the one thing worth asserting mechanically.
 
 ## The filesystem, and the one departure from `prdb-ordeno`
 
@@ -192,11 +190,10 @@ than compared, and `Prdb.Sdk` returns the field as a plain `int?` with no enum �
 so `Core` owns the named set and `Infrastructure` translates the number into it,
 which is what that ADR wanted anyway.
 
-Whether a rule needs to say something into a log is
-[ticket 09](../../.scratch/build-foundation/issues/09-how-a-failure-is-expressed-and-logged.md)'s
-question. If the answer needs `Microsoft.Extensions.Logging.Abstractions` in
-`Core`, that is a departure for that ticket to argue. It is not pre-empted here,
-in either direction.
+Whether a rule needs to say something into a log is ticket 09's question. If
+the answer needs `Microsoft.Extensions.Logging.Abstractions` in `Core`, that is
+a departure for that ticket to argue. It is not pre-empted here, in either
+direction.
 
 ## Tests may reference the host
 

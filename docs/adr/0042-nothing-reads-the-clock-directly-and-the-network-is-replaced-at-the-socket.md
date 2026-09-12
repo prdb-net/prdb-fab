@@ -99,8 +99,8 @@ author imagined — which is the one the code already works against. prdb is one
 server whose behaviour is known, SABnzbd is one application, and the CDN is bytes
 with a content type; hand-writing those costs nothing and stays readable.
 
-The three research documents under `.scratch/first-release-spec/research/` are
-the seed, as the ticket said. What is recorded is the *shape* — status codes,
+The three research documents behind that survey are the seed, as the ticket
+said. What is recorded is the *shape* — status codes,
 headers, XML skeletons — never anybody's key and never a real download URL,
 which
 [ADR 0037](0037-credentials-are-stored-in-the-clear-because-there-is-nowhere-to-put-a-key.md)
