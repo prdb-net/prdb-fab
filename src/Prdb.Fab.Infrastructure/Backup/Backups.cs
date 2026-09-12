@@ -41,6 +41,17 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
         // refusal rather than a Backup with a hole in it.
         BackupSections.MustCover(context.Model);
 
+        // One committed view, which is the whole of what a transaction is for
+        // here. Sixteen separate reads could otherwise straddle a lane's write
+        // and produce a document holding an Arriving File whose Download is not
+        // in it — and a Restore would then have nowhere to hang the row.
+        //
+        // It costs the lanes nothing. ADR 0039 opens SQLite in WAL, where a
+        // deferred read transaction takes its snapshot at the first read and
+        // never blocks a writer, which is why ADR 0009 could say that nothing
+        // has to be quiesced for an export.
+        await using var view = await context.Database.BeginTransactionAsync(cancellationToken);
+
         var installation = await context.Installation
             .AsNoTracking()
             .SingleAsync(cancellationToken);

@@ -19,6 +19,58 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-09-12
+
+The installation is now something you can carry. One file holds everything the
+tool cannot fetch again, a fresh container can be started from that file instead
+of from nothing, and what the library says it holds is checked against what is
+actually on disk.
+
+### Added
+
+- **Backup: one portable file, from `Settings → Backup`.** It holds your
+  settings, every indexer with its address and key, the SABnzbd connection and
+  its path mapping, your prdb key, every automation rule including the disabled
+  ones, the review queue, and the local record of what was downloaded, what was
+  filed where, which releases are used up and what has already been reported to
+  prdb. It does not hold anything that can be fetched again — the indexer cache,
+  cached artwork, prdb's catalogue, or the video files.
+
+  **The file is readable, credentials included, and that is deliberate.** The
+  screen says so before it writes one and asks you to acknowledge it. Whatever
+  you already back up with encrypts everything it carries under a key you
+  manage; a second passphrase underneath that would be one more thing to lose at
+  exactly the moment you need the file. Treat the file as you treat the data
+  volume and put it somewhere that encrypts it.
+
+- **Restore, as the second way to begin.** A container that holds nothing yet
+  offers *Restore a backup* beside *set a password* — the login credential is
+  inside the file, so there is nobody to sign in as yet. It asks once where your
+  library and your downloads are mounted in this container, prefilled with
+  wherever they were on the machine that wrote the file, and re-roots every
+  recorded path. It refuses an installation that already holds an indexer, an
+  automation rule or a library entry, and names what it found. A file from a
+  newer version of the tool is refused by name rather than half-read.
+
+  Afterwards, outstanding downloads are picked up at SABnzbd by their job id
+  where it still knows them; where it does not, the download counts as failed
+  and that release stays used up for the video, which is the same rule that has
+  always applied.
+
+- **Library verification, and a `Verification` filter on the Library.** A
+  background pass checks that each filed file is where the library says it is,
+  using the cheap hash rather than reading whole files. Until it has, entries
+  count as held, so automation will not decide to fetch them again. **Nothing is
+  deleted and nothing is re-fetched over a file that is missing** — a library
+  mounted somewhere else looks exactly the same from here — and no report to
+  prdb is retracted. What could not be confirmed is a count on Status, linking
+  into the Library filtered to it.
+
+### Changed
+
+- **`Settings → Backup` is no longer a named placeholder.** It was listed and
+  greyed out; it is now the page above.
+
 ## [0.19.0] - 2026-09-11
 
 This release settles what order things come back in. The Library leads with what

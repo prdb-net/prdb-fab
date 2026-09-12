@@ -43,8 +43,8 @@ how precisely it separates them:
 
 For any of them, the log is the most useful thing you can attach. Turn
 `Logging__LogLevel__Prdb.Fab` up to `Debug`, reproduce it, and send the newest
-file from `/data/logs/`. It never contains a key, a passphrase or a URL — that
-is enforced by a test — so it is safe to attach as it is. Its first line names
+file from `/data/logs/`. It never contains a key or a URL — that is enforced by
+a test — so it is safe to attach as it is. Its first line names
 the version that produced it; please leave that in.
 
 ## Working on the code
@@ -86,6 +86,10 @@ The container is built and exercised the same way CI does it:
 docker buildx build --load --tag prdb-fab:local .
 docker/smoke-test.sh prdb-fab:local
 ```
+
+What that smoke test covers, what has to be checked by hand against real
+services before a release, and how a release is cut:
+**[docs/releasing.md](docs/releasing.md)**.
 
 ## What the tests are for
 

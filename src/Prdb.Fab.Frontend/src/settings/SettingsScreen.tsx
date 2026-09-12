@@ -67,11 +67,13 @@ export function SettingsScreen() {
             Two independent opt-in channels for what may be sent back to prdb.
           </span>
         </li>
-        <li className={styles.pending}>
-          Backup
+        <li>
+          <Link to="/settings/backup">Backup</Link>
           <br />
           <span className={styles.detail}>
-            Exporting this installation. Arrives with the backup.
+            One readable file holding everything this installation cannot fetch
+            again &mdash; credentials included, which is why it says so before it
+            writes one.
           </span>
         </li>
       </ul>

@@ -29,10 +29,12 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<VideoFileMover>();
         services.AddScoped<FilingRoutine>();
         services.AddScoped<TidyUpRoutine>();
+        services.AddScoped<LibraryVerificationRoutine>();
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectingRoutine>());
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<ArrivalIdentificationRoutine>());
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<FilingRoutine>());
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<TidyUpRoutine>());
+        services.AddScoped<IRoutine>(provider => provider.GetRequiredService<LibraryVerificationRoutine>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, LibraryEntryVideoPin>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, DownloadVideoPin>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICataloguePin, ArrivingFileVideoPin>());

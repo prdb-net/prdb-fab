@@ -444,8 +444,8 @@ _Avoid_: Integration, Endpoint, Service
 
 **Password**:
 The single secret the user signs in with, set during onboarding and belonging
-to the installation rather than to an account. Never the passphrase a backup is
-encrypted under.
+to the installation rather than to an account. The only secret this tool asks a
+person to remember.
 _Avoid_: Credentials, Passphrase, PIN
 
 ### Knowing it works
@@ -473,7 +473,9 @@ _Avoid_: Warning, Limit, Block, Throttle
 
 **Backup**:
 The single file the tool exports, holding everything about this installation
-that cannot be fetched again, and nothing that can be.
+that cannot be fetched again, and nothing that can be. Readable throughout,
+credentials included, so it is as sensitive as the data volume and whatever
+carries it is what encrypts it (ADR 0057).
 _Avoid_: Archive, Snapshot, Dump, Export
 
 **Restore**:
@@ -481,8 +483,3 @@ Turning a backup back into a working installation, on an installation that
 holds nothing yet.
 _Avoid_: Import, Recovery, Migration
 
-**Passphrase**:
-What the secrets inside a backup are encrypted under, chosen when it is
-exported and needed again to restore it. Never the password the user signs in
-with.
-_Avoid_: Password, Key

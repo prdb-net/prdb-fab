@@ -205,9 +205,10 @@ failed and, per [ADR 0038](0038-a-lane-is-one-worker-and-the-routine-row-is-the-
 interrupted — read in the UI, not exported. It answers *did the thing run*. It
 does not answer *what went wrong*, and it is not widened to.
 
-**And what goes in neither.** Keys, the backup passphrase and the password are
-never logged, at any level, Debug included, and never inside an exception
-message. The rule that enforces it is not a filter list but a place:
+**And what goes in neither.** Keys and the password are never logged, at any
+level, Debug included, and never inside an exception message. (This said *and
+the backup passphrase* until ADR 0057 removed it; the backup is readable and has
+no secret of its own to keep out of a log.) The rule that enforces it is not a filter list but a place:
 
 > **A URL is never logged whole.** What is written is ADR 0041's transport name
 > and the host; never the query string.

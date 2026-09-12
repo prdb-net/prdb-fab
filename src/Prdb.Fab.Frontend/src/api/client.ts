@@ -8,6 +8,9 @@ import type { components } from './schema.d.ts'
 type Schema = components['schemas']
 
 export type AccessState = Schema['AccessState']
+export type RestoreVerdict = Schema['RestoreVerdict']
+export type RestoreOutcome = Schema['RestoreOutcome']
+export type BackupSummary = Schema['BackupSummary']
 export type OnboardingStep = Schema['OnboardingStep']
 export type ChangePasswordVerdict = Schema['ChangePasswordVerdict']
 export type SetPasswordVerdict = Schema['SetPasswordVerdict']
@@ -591,6 +594,7 @@ export async function readLibrary(filters: {
   quality?: string
   sort?: LibraryEntrySort
   page: number
+  confirmed?: string
 }): Promise<LibraryPage> {
   return json<LibraryPage>(
     await fetch(`/api/library?${parameters({
@@ -600,6 +604,9 @@ export async function readLibrary(filters: {
       quality: filters.quality,
       sort: filters.sort,
       page: String(filters.page),
+      // The status page's Gap links here with confirmed=no, so the address bar
+      // carries the words rather than "true"/"false" (ADR 0036).
+      confirmed: filters.confirmed === 'no' ? 'false' : filters.confirmed === 'yes' ? 'true' : undefined,
     })}`),
   )
 }
@@ -639,6 +646,74 @@ export async function readLibrarySettings(): Promise<LibrarySettingsState> {
 
 export async function saveLibrarySettings(deleteLeftovers: boolean): Promise<LibrarySettingsState> {
   return post<LibrarySettingsState>('/api/settings/library', { deleteLeftovers })
+}
+
+/**
+ * ADR 0010's second unauthenticated write, and ADR 0009's Restore.
+ *
+ * One act asked twice. Called without roots it reads the file and answers what
+ * it needs; called with them it writes. The document goes up both times rather
+ * than being parked on the server between the calls — there is no session to
+ * park it under, which is the whole reason this endpoint is anonymous.
+ */
+export async function restoreBackup(
+  document: string,
+  roots?: { library: string | null; downloads: string | null },
+): Promise<RestoreVerdict> {
+  return post<RestoreVerdict>('/api/backup/restore', { document, roots: roots ?? null })
+}
+
+/**
+ * The Backup, as a file the browser saves.
+ *
+ * A `POST` rather than a link, because ADR 0040 makes the export a named act and
+ * because a link to this is a link to every credential the installation holds —
+ * one a prefetch or a mis-click could follow. The response is therefore read
+ * here and handed to the browser as a download, which is also what keeps the
+ * cookie on it: a plain navigation would carry the session anyway, but nothing
+ * would stop the file being re-fetched from history.
+ *
+ * Returns the name the file was saved under, so that the screen can say which
+ * file it just produced rather than that something happened.
+ */
+export async function exportBackup(): Promise<string> {
+  const response = await fetch('/api/backup/export', { method: 'POST' })
+
+  if (response.status === 401) {
+    throw new NotSignedIn()
+  }
+
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`)
+  }
+
+  const name = attachmentName(response) ?? 'prdb-fab-backup.json'
+  const href = URL.createObjectURL(await response.blob())
+  const anchor = document.createElement('a')
+
+  anchor.href = href
+  anchor.download = name
+  anchor.click()
+
+  // Released once the browser has taken the blob, not before: revoking in the
+  // same turn cancels the download in some browsers. Released at all because
+  // the object URL is the one copy of a readable credential file this tab would
+  // otherwise hold until it is closed.
+  setTimeout(() => URL.revokeObjectURL(href), 30_000)
+
+  return name
+}
+
+/** The name the server put on the attachment, or null when it did not. */
+function attachmentName(response: Response): string | null {
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const quoted = /filename="([^"]+)"/.exec(disposition)
+
+  if (quoted) return quoted[1]
+
+  const bare = /filename=([^;]+)/.exec(disposition)
+
+  return bare ? bare[1].trim() : null
 }
 
 /**

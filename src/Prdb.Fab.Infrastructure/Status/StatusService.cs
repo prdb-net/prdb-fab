@@ -100,6 +100,7 @@ public sealed class StatusService(
             .OrderBy(row => row.LastAttemptedAt)
             .ToListAsync(cancellationToken);
         AddDownloadBrakes(conditions, downloads, review, installation.RetryBudget);
+        await AddLibraryVerificationGapAsync(conditions, cancellationToken);
 
         var stages = StageOrder.Select(id => BuildStage(
             id,
@@ -236,6 +237,10 @@ public sealed class StatusService(
             () => context.Downloads.CountAsync(row => row.State == DownloadState.Completed, cancellationToken));
         await SetAsync(TidyUpRoutine.RoutineName,
             () => context.Downloads.CountAsync(row => row.State == DownloadState.Collected && row.TidiedAt == null, cancellationToken));
+        await SetAsync(LibraryVerificationRoutine.RoutineName,
+            () => context.VideoFiles.CountAsync(
+                file => !context.LibraryVerifications.Any(answer => answer.VideoFileId == file.Id),
+                cancellationToken));
         await SetAsync(DownloadFollowingRoutine.RoutineName, async () =>
         {
             var outstanding = await context.Downloads.CountAsync(
@@ -412,6 +417,44 @@ public sealed class StatusService(
                 OwnerRoute(row.Name, row.Target),
                 !current));
         }
+    }
+
+    /// <summary>
+    /// ADR 0009's third silent-failure count, beside those of ADR 0006 and
+    /// ADR 0007: Library Entries verification could not confirm.
+    /// </summary>
+    /// <remarks>
+    /// A Gap and not a Brake, and the distinction matters here more than
+    /// anywhere: ADR 0018 reserves Brake for the tool deliberately not acting,
+    /// and this is the tool unable to account for content it believes it holds.
+    /// It is still not a conclusion — a library mounted somewhere else reads
+    /// exactly like this — which is why the sentence says what was <em>not</em>
+    /// done about it.
+    /// </remarks>
+    private async Task AddLibraryVerificationGapAsync(
+        List<StatusCondition> conditions,
+        CancellationToken cancellationToken)
+    {
+        var unconfirmed = await context.LibraryVerifications
+            .Where(row => row.Outcome != LibraryVerification.Confirmed)
+            .GroupBy(row => row.Outcome)
+            .Select(group => new { Outcome = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+
+        if (unconfirmed.Count == 0) return;
+
+        var total = unconfirmed.Sum(item => item.Count);
+        var parts = unconfirmed
+            .OrderBy(item => item.Outcome)
+            .Select(item => $"{item.Count} {item.Outcome.ToString().ToLowerInvariant()}");
+
+        conditions.Add(Gap(
+            $"{total} library file(s) could not be confirmed",
+            $"{string.Join(", ", parts)}. Nothing has been deleted and nothing will be fetched "
+            + "again over this — a library mounted somewhere else looks the same from here. The "
+            + "entries stay held, so automation will not replace them.",
+            "file",
+            "/library?confirmed=no"));
     }
 
     private static bool IsCurrentGap(RoutineRow row) =>
@@ -698,6 +741,7 @@ public sealed class StatusService(
         or FilingRoutine.RoutineName
         or CollectingRoutine.RoutineName
         or TidyUpRoutine.RoutineName
+        or LibraryVerificationRoutine.RoutineName
         or DownloadFollowingRoutine.RoutineName
         or ReportingRoutine.RoutineName
         or AutomaticDecisionRoutine.RoutineName
@@ -710,7 +754,7 @@ public sealed class StatusService(
         DiscoveryRoutineNames.Screening or DiscoveryRoutineNames.BackwardsSearch or DiscoveryRoutineNames.Identification or ArrivalIdentificationRoutine.RoutineName => "match",
         AutomaticDecisionRoutine.RoutineName => "decide",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName => "download",
-        CollectingRoutine.RoutineName or FilingRoutine.RoutineName or TidyUpRoutine.RoutineName or ReportingRoutine.RoutineName => "file",
+        CollectingRoutine.RoutineName or FilingRoutine.RoutineName or TidyUpRoutine.RoutineName or ReportingRoutine.RoutineName or LibraryVerificationRoutine.RoutineName => "file",
         _ => "decide",
     };
 
@@ -724,6 +768,7 @@ public sealed class StatusService(
         DiscoveryRoutineNames.Screening => "Release screening",
         DiscoveryRoutineNames.BackwardsSearch => "Backwards screening",
         DiscoveryRoutineNames.Identification => "Release identification",
+        LibraryVerificationRoutine.RoutineName => "Library verification",
         AutomaticDecisionRoutine.RoutineName => "Automatic decisions",
         _ => name,
     };

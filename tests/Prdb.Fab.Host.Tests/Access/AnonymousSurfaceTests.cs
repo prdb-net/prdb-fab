@@ -22,10 +22,7 @@ namespace Prdb.Fab.Host.Tests.Access;
 /// </remarks>
 public sealed class AnonymousSurfaceTests
 {
-    /// <summary>
-    /// The whole of it. Restore joins as the second write, on the same
-    /// condition, when ADR 0009's file exists.
-    /// </summary>
+    /// <summary>The whole of it, both writes now in.</summary>
     private static readonly string[] Expected =
     [
         // Says the process is answering, and nothing else. What the image's own
@@ -38,6 +35,11 @@ public sealed class AnonymousSurfaceTests
 
         // The first of ADR 0010's two unauthenticated writes.
         "POST /api/access/password",
+
+        // And the second, which is the whole of it. ADR 0009 needs the
+        // anonymous path because the login credential is inside the file, and
+        // it is gated on the same condition: no password exists yet.
+        "POST /api/backup/restore",
 
         // Not a write against the installation: it mints a session for whoever
         // already knows the password, and is throttled.

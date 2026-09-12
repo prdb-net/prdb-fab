@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { setPassword } from '../api/client.ts'
 import { accessStateKey } from './state.ts'
+import { RestoreScreen } from './RestoreScreen.tsx'
 import styles from './Access.module.css'
 
 /**
@@ -10,6 +11,10 @@ import styles from './Access.module.css'
  * without being signed in, and the act that closes it for good.
  */
 export function SetPasswordScreen() {
+  // ADR 0010's step 1 is a fork rather than a question, and it lives here
+  // because both sides of it are gated on the same condition — no password
+  // exists yet — and that is exactly the condition this screen is shown under.
+  const [restoring, setRestoring] = useState(false)
   const [password, setChosen] = useState('')
   const [repeated, setRepeated] = useState('')
   const [refusal, setRefusal] = useState<string | null>(null)
@@ -38,6 +43,10 @@ export function SetPasswordScreen() {
   // — the server has no second field to compare. It is a guard against a typo
   // in the one secret that cannot be recovered over the network.
   const mismatched = repeated.length > 0 && repeated !== password
+
+  if (restoring) {
+    return <RestoreScreen onBack={() => setRestoring(false)} />
+  }
 
   return (
     <main className={styles.screen}>
@@ -90,6 +99,18 @@ export function SetPasswordScreen() {
           Set it
         </button>
       </form>
+
+      <p className={styles.fork}>
+        Moving an installation, or coming back from a lost disk?{' '}
+        <button
+          className={styles.forkButton}
+          type="button"
+          onClick={() => setRestoring(true)}
+        >
+          Restore a backup
+        </button>{' '}
+        instead &mdash; the password is in the file.
+      </p>
 
       <p className={styles.note}>
         Losing it is recovered at the host rather than over the network: start

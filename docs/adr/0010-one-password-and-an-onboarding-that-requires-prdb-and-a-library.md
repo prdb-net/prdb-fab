@@ -26,6 +26,13 @@ hashed at all, so whoever can read it already holds the secrets worth having.
 The file that is designed to travel — the backup — is the one that gets the
 memory-hard derivation.
 
+**Amended by [ADR 0057](0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md):
+there is no Argon2id anywhere, so the last sentence describes a file that no
+longer gets one and the first describes a dependency that was never taken.** The
+choice of `PasswordHasher<T>` is untouched, because the reason in the middle —
+the hash sits beside credentials nothing hashes — is the whole of the argument
+and is now a decision of its own (ADR 0037) rather than an observation.
+
 A successful sign-in creates a session row and returns its token in an HttpOnly,
 `SameSite=Strict` cookie, `Secure` whenever the request arrived over https. The
 row is what makes a session survive a restart and what makes it revocable;
