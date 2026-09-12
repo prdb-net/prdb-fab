@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>ReleaseTablePaging</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--
+      The measurement is of the real service, not of a reconstruction of it:
+      what is being priced is the in-memory ordering inside
+      ReleaseBrowse.ReadAsync, and a rewrite of that here would price the
+      rewrite instead.
+    -->
+    <ProjectReference Include="../../src/Prdb.Fab.Infrastructure/Prdb.Fab.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
