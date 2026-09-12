@@ -39,6 +39,13 @@ public static class PersistenceServiceCollectionExtensions
         services.AddScoped<IRoutine>(provider =>
             provider.GetRequiredService<DatabaseAnalysisRoutine>());
 
+        // ADR 0059: the write-ahead log ADR 0039 opened, folded back and
+        // truncated on the schedule, because SQLite's own autocheckpoint gives
+        // up whenever a reader is in the way and in this tool one usually is.
+        services.AddScoped<DatabaseCheckpointRoutine>();
+        services.AddScoped<IRoutine>(provider =>
+            provider.GetRequiredService<DatabaseCheckpointRoutine>());
+
         // ADR 0033's account cut, read off the model rather than kept in step
         // by hand. See AccountScopedRows.
         services.AddScoped<AccountScopedRows>();

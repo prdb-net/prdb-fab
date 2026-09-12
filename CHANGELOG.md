@@ -21,6 +21,33 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ### Changed
 
+- **Browsing the catalogue no longer waits for the pictures.** Clicking Search,
+  Sites or What's New took seconds before the grid appeared, and none of it was
+  the database: the queries behind those grids answer in tens of milliseconds
+  even at fifty thousand videos. What was slow was the artwork. Only images of
+  videos you hold were fetched in advance, so a grid of two dozen tiles meant
+  two dozen live fetches from prdb's CDN before it was complete, each one
+  written to disk and served on the way past.
+
+  The catalogue's artwork is now fetched before you look at it, newest release
+  first, along with the front of the Actors list. The cache this fills may take
+  **eight gigabytes** rather than two — two held about a sixth of a catalogue
+  this size, which is why most of every grid was still a live fetch. Filling an
+  empty cache takes a few hours in the background and costs nothing from your
+  prdb budget; nothing waits on it, and a tile that is not there yet is fetched
+  the way it always was.
+
+  Your browser may also now keep an artwork image for a year instead of a day.
+  The old horizon expired between one visit and the next, so every visit
+  re-fetched every tile through the tool. A video that simply has no picture is
+  remembered as such for a week; a CDN that did not answer in time is still
+  retried after five minutes, which it was not able to tell apart before.
+
+  Two things underneath, for anyone watching disk activity: serving an image no
+  longer writes a row every time — two dozen writes per grid, against a database
+  with one writer, on disks where a write costs 40 ms — and the write-ahead log
+  is now emptied daily instead of growing to tens of megabytes.
+
 - **Downloads reads as a list.** Fifty cards that had to be read one at a time
   are one line each: the state as a symbol whose shape says as much as its
   colour, the Site in front of the title — a catalogue title on its own does not
@@ -42,6 +69,14 @@ before changing the tag — the backup file is deliberately not the whole of it.
   does not, since they are what the choice is made from. Stop following moved
   out of the rows into a bar that appears once something is selected and says
   how many it covers.
+
+### Fixed
+
+- **Sorting Catalogue Search by title now ignores case.** It put every
+  lower-cased title after every upper-cased one, so `Zebra` came before `apple`
+  and half the alphabet was in the wrong place. Accented letters still sort
+  after the unaccented ones, which the Library has always done too and which
+  SQLite offers nothing better for.
 
 ## [0.20.0] - 2026-09-12
 

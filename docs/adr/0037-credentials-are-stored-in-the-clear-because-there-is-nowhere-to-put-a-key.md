@@ -71,8 +71,8 @@ start the process — which is the first argument again, now paid for.
 
 The URL is stored as the indexer returned it. It is cache, it is not exported,
 and it refills itself. What follows is a rule rather than a change: **it is never
-displayed and never logged**, which [ticket 09](../../.scratch/build-foundation/issues/09-how-a-failure-is-expressed-and-logged.md)
-already lists among the things that must never reach a log line.
+displayed and never logged**, which ticket 09 already lists among the things
+that must never reach a log line.
 
 ## The failure it would create is worse than the one it prevents
 

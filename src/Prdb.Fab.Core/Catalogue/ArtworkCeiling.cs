@@ -15,9 +15,13 @@ namespace Prdb.Fab.Core.Catalogue;
 /// documentation and held in the head.
 /// </para>
 /// <para>
-/// Two gigabytes. At the few hundred kilobytes prdb's images run to that is
-/// several thousand browse-grid videos, which is more than anyone scrolls
-/// between restarts.
+/// Eight gigabytes, and the figure is measured rather than round. A catalogue
+/// of ~47 000 Videos publishes ~69 000 images averaging ~135 KB, which is
+/// ~9.3 GB — so eight holds very nearly all of one. The two gigabytes this
+/// replaced held ~15 000 images, and ADR 0059 measured what that cost on a
+/// catalogue of that size: the cache stayed 1.2 % full, every browse grid went
+/// to the CDN for most of its two dozen tiles, and the click took seconds
+/// rather than the milliseconds the queries behind it take.
 /// </para>
 /// <para>
 /// It bounds the <strong>unpinned</strong> half only. Pinned images are the
@@ -35,7 +39,23 @@ namespace Prdb.Fab.Core.Catalogue;
 public static class ArtworkCeiling
 {
     /// <summary>The most disk the unpinned half of the cache may hold.</summary>
-    public const long Bytes = 2L * 1024 * 1024 * 1024;
+    public const long Bytes = 8L * 1024 * 1024 * 1024;
+
+    /// <summary>
+    /// How far a proactive fill takes the unpinned half, which is short of
+    /// <see cref="Bytes"/> on purpose.
+    /// </summary>
+    /// <remarks>
+    /// Six of the eight, so that the two above belong to whoever is actually
+    /// browsing and a warm pass is never itself the cause of an eviction.
+    /// Without the gap the two would fight: the pass would fill to the ceiling,
+    /// the sweep would drop the least recently served — which is precisely a
+    /// file warmed and not yet looked at — and the next pass would fetch it
+    /// again. Two gigabytes of headroom is ~15 000 images, which is more than
+    /// anybody serves between two passes of a routine that runs every thirty
+    /// seconds.
+    /// </remarks>
+    public const long WarmTo = 6L * 1024 * 1024 * 1024;
 
     /// <summary>
     /// The most one image may weigh before it is refused. ADR 0030 puts a

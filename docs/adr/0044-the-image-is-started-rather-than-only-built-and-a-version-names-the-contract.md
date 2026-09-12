@@ -189,7 +189,6 @@ made pinning a version the documented instruction.
 - **`CONTEXT.md` is unchanged.** A workflow, a registry and a version scheme are
   artefacts, which ADR 0034 already settled is not something the language needs
   a term for.
-- **Left to [ticket 11](../../.scratch/build-foundation/issues/11-the-walking-skeleton.md):**
-  the workflow files themselves, how the version reaches the assembly from the
-  tag, and what the smoke test asserts beyond ADR 0034's five claims. The
-  skeleton is the first thing that has to pass all of it.
+- **Left to ticket 11:** the workflow files themselves, how the version reaches
+  the assembly from the tag, and what the smoke test asserts beyond ADR 0034's
+  five claims. The skeleton is the first thing that has to pass all of it.

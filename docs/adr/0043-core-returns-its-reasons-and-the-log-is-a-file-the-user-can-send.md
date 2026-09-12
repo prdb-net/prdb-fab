@@ -311,7 +311,7 @@ forces reasons to be values.
 - **`CONTEXT.md` is unchanged.** Logging levels, sinks and retention are
   construction, and ADR 0034 already established that build and runtime
   artefacts are not concepts the language needs.
-- **Left to [ticket 11](../../.scratch/build-foundation/issues/11-the-walking-skeleton.md):**
-  the message template, how the pipeline floor is computed from the configured
-  overrides, where the outcome types sit in the namespace, and how the lane's
-  catch is written. All of them are cheaper to get right by writing them.
+- **Left to ticket 11:** the message template, how the pipeline floor is
+  computed from the configured overrides, where the outcome types sit in the
+  namespace, and how the lane's catch is written. All of them are cheaper to get
+  right by writing them.

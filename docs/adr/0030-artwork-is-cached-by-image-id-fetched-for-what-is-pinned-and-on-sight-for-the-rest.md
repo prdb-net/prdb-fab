@@ -1,5 +1,15 @@
 # Artwork is cached by image id, fetched for what is pinned and on sight for the rest
 
+**Amended by [ADR 0059](0059-the-artwork-cache-is-warmed-ahead-of-the-grid-and-a-serve-stops-writing.md),
+which warms the unpinned half too and raises the ceiling to 8 GiB.** *On sight*
+turned out to describe the state the cache never left: on a catalogue of fifty
+thousand Videos it stayed 1.2 % full, so almost every tile of almost every grid
+was still a live fetch and the click took seconds. Everything else below stands —
+one file per image under the image's own id, the pinned half outside the ceiling
+and never evicted, a dead URL marked once, the small fixed concurrency, the
+per-file size stop, and nothing passing the governor. The title keeps a word
+that decision took back.
+
 One image per video — the same one
 [ADR 0027](0027-the-sidecar-and-the-entry-image-are-overwritten-until-they-match-the-catalogue.md)
 picks — stored under the image's own id. What is **pinned** is fetched by a
@@ -67,6 +77,15 @@ predictable set than what is held. Prefetching them means fetching the artwork
 of the entire catalogue up to its row ceiling for pictures nobody will scroll
 to.
 
+**Reversed by [ADR 0059](0059-the-artwork-cache-is-warmed-ahead-of-the-grid-and-a-serve-stops-writing.md).**
+Nobody scrolls all of the catalogue, and everybody scrolls the *front* of it —
+which is the same front every time, because those surfaces are ordered by
+release date or by popularity and both orders are stable between one visit and
+the next. So the unpinned half is warmed too, newest release first, up to a
+budget short of the ceiling. What this paragraph got right is the cost of
+fetching *everything*: the warm pass is bounded by bytes rather than by the
+catalogue, and the Actors are bounded by a front rather than a set.
+
 The grid asks the tool for the image, never the CDN; the tool serves the cached
 file, or fetches it, stores it, and serves it. This is precisely the sentence
 `VISION.md` uses to justify caching at all — "a grid of thumbnails that fetches
@@ -106,6 +125,11 @@ not the same as a page reading itself.
 ## What bounds it, and what it may not evict
 
 **A byte ceiling over the unpinned part only, and it is a constant: 2 GiB.**
+([ADR 0059](0059-the-artwork-cache-is-warmed-ahead-of-the-grid-and-a-serve-stops-writing.md)
+raises the constant to 8 GiB. Bytes rather than rows, the unpinned part only,
+and a constant rather than a setting are all unchanged — what changed is that
+something eventually measured what a catalogue of images weighs, which is
+~9.3 GB, so two held about a sixth of one.)
 
 Bytes rather than rows, which is where this departs from ADR 0013's and
 ADR 0015's choice of counts, and the departure has a reason rather than being an
@@ -192,7 +216,10 @@ diffed.
 **Prefetch the whole catalogue's artwork.** Rejected under *two triggers*: it
 fetches up to the catalogue's row ceiling of images to serve grids that show a
 page at a time, and it is the single largest bandwidth cost the tool could
-choose to incur unasked.
+choose to incur unasked. ([ADR 0059](0059-the-artwork-cache-is-warmed-ahead-of-the-grid-and-a-serve-stops-writing.md)
+takes the half of this that the byte ceiling already bounds: warming stops at a
+budget under the ceiling rather than at the catalogue's row count, and it is
+paced at a hundred images every thirty seconds rather than incurred at once.)
 
 **Fetch everything lazily, including pinned videos.** Rejected: the library grid
 of a restored installation would be blank until scrolled, and filing would find

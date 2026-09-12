@@ -151,13 +151,11 @@ the same row cost nothing.
 - The data model gains four columns on the video file row and one on whatever
   a review queue entry turns out to be, all exported. The `osHash` sits with
   them.
-- [Ticket 17](../../.scratch/first-release-spec/issues/17-what-the-review-queue-holds.md)
-  is unblocked and inherits a bound: a queue entry may display runtime,
-  dimensions, codec, quality, size and the `osHash`, and nothing else read from
-  the file.
-- [Ticket 26](../../.scratch/first-release-spec/issues/26-what-the-sidecar-and-the-poster-carry.md)
-  gains a closed door: the sidecar cannot carry audio or subtitle languages,
-  because they are not read.
+- Ticket 17 is unblocked and inherits a bound: a queue entry may display
+  runtime, dimensions, codec, quality, size and the `osHash`, and nothing else
+  read from the file.
+- Ticket 26 gains a closed door: the sidecar cannot carry audio or subtitle
+  languages, because they are not read.
 - Adding a field after the first release is a one-shot routine in ADR 0014's
   table, with a lane and a resumable position. That is decided now rather than
   discovered at the first schema change, which is what lets the list above stay

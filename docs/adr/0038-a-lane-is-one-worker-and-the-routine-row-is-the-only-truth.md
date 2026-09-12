@@ -2,9 +2,8 @@
 
 Four decisions, and deliberately no more. What a lane *is* had to be settled
 because the alternatives are expensive to unwind; how a lane is *written* is the
-skeleton's work, and this decision says which parts of
-[ticket 04](../../.scratch/build-foundation/issues/04-how-a-lane-is-implemented.md)
-it is deliberately leaving to it.
+skeleton's work, and this decision says which parts of ticket 04 it is
+deliberately leaving to it.
 
 [ADR 0014](0014-one-schedule-of-routines-paced-by-a-governor.md) and
 [ADR 0032](0032-a-routine-with-a-work-set-is-due-when-the-set-is-not-empty.md)
@@ -102,8 +101,7 @@ onboarding is, seen from the loop's side.
 ## What this decision deliberately does not settle
 
 The rest of ticket 04 is mechanism, and mechanism is decided by writing it. It
-belongs to [ticket 11](../../.scratch/build-foundation/issues/11-the-walking-skeleton.md),
-with one exception noted below:
+belongs to ticket 11, with one exception noted below:
 
 - **How the loop waits** when nothing is due, and at what resolution due-ness is
   read. The four numbers that matter are already fixed by ADR 0014 and ADR 0032;
@@ -114,11 +112,10 @@ with one exception noted below:
 - **What a run returns**, and therefore how ADR 0032's *an empty tick is not a
   run* is expressed without being said twice.
 - **The governor's mechanism.** ADR 0035 placed it and pointed here; it moves on
-  to [ticket 07](../../.scratch/build-foundation/issues/07-how-outbound-http-is-done.md),
-  which is where outbound HTTP is settled and therefore where it belongs. One
-  constraint travels with it, from ADR 0026: the governor may not be a wait
-  inside a lane, because a routine waiting on it holds a lane in order to do
-  nothing.
+  to ticket 07, which is where outbound HTTP is settled and therefore where it
+  belongs. One constraint travels with it, from ADR 0026: the governor may not
+  be a wait inside a lane, because a routine waiting on it holds a lane in order
+  to do nothing.
 
 **Nothing needs a claim on a row.** ADR 0026's chain moves an arriving file
 through states that each belong to exactly one lane, so ownership follows the

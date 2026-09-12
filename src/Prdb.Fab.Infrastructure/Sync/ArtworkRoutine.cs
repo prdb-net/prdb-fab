@@ -9,8 +9,8 @@ using Prdb.Fab.Infrastructure.Persistence;
 namespace Prdb.Fab.Infrastructure.Sync;
 
 /// <summary>
-/// ADR 0030's sixth routine: fetch the artwork of pinned videos, and hold both
-/// caches to their ceilings.
+/// ADR 0030's sixth routine: fetch the artwork of pinned videos, warm the rest
+/// of the Catalogue behind them, and hold both caches to their ceilings.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -19,8 +19,18 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// disk so that filing has something to copy — and neither tolerates
 /// <em>fetch it when someone looks</em>: the first would show a grid of blanks
 /// on a fresh restore, the second would put a network read inside the file
-/// lane, which ADR 0026 built to wait on nothing. Everything unpinned is
-/// <see cref="ArtworkCache"/>'s, fetched when a grid asks.
+/// lane, which ADR 0026 built to wait on nothing.
+/// </para>
+/// <para>
+/// <strong>And the warm pass behind it.</strong> ADR 0059 reversed ADR 0030's
+/// <em>everything unpinned is fetched when a grid asks</em>: at 1.2 % cached, a
+/// grid of two dozen tiles meant two dozen live CDN fetches before it was
+/// complete, and the click took seconds while the queries behind it took
+/// milliseconds. So the unpinned Catalogue is warmed too — newest release
+/// first, because that is the order What's New and Catalogue Search's default
+/// come back in — until the unpinned half reaches
+/// <see cref="ArtworkCeiling.WarmTo"/>. Pinned work goes first and is never
+/// waited on by it: the two are separate passes of the same turn.
 /// </para>
 /// <para>
 /// <strong>Newly pinned first.</strong> <see cref="CataloguePins.NewestPinFirst"/>
@@ -52,6 +62,7 @@ public sealed class ArtworkRoutine(
     FabDbContext context,
     CataloguePins pins,
     ArtworkCache cache,
+    ActorArtworkCache actorCache,
     CatalogueEviction catalogue,
     ArtworkEviction artwork,
     ILogger<ArtworkRoutine> logger) : IRoutine
@@ -81,6 +92,20 @@ public sealed class ArtworkRoutine(
     /// </remarks>
     public const int AtOnce = 4;
 
+    /// <summary>
+    /// How far down the Actors grid the warm pass reaches.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the Videos, the Actors cannot simply be warmed until the budget
+    /// is full: a Catalogue holding ~47 000 Videos holds ~323 000 Actors, which
+    /// at the size a profile image runs to is several times the whole ceiling.
+    /// So this is a front rather than a set — the two thousand the grid puts on
+    /// its first eighty pages, which is further than anybody scrolls a list
+    /// ordered by credit count. Everything behind it is served lazily, exactly
+    /// as every Actor was before.
+    /// </remarks>
+    public const int AnActorFront = 2_000;
+
     public string Name => RoutineName;
 
     /// <summary>ADR 0030 puts this in the bulk lane, beside the repair pass.</summary>
@@ -102,7 +127,16 @@ public sealed class ArtworkRoutine(
         var evicted = await catalogue.EvictAsync(cancellationToken: cancellationToken);
         var swept = await artwork.SweepAsync(cancellationToken: cancellationToken);
 
-        if (fetched == 0 && evicted.Removed == 0 && !swept.DidSomething)
+        // Last, and on the figure the sweep has just read off the disk: warming
+        // has to know how much room is left, and the walk that answers that has
+        // already happened this turn. It is the pre-eviction weight, which is
+        // the conservative one — the half is never heavier than the sweep found
+        // it.
+        var warmed = await WarmAsync(
+            swept.UnpinnedBytes,
+            cancellationToken: cancellationToken);
+
+        if (fetched == 0 && warmed == 0 && evicted.Removed == 0 && !swept.DidSomething)
         {
             // ADR 0032: an empty work set is not a run. Nothing was fetched,
             // nothing was over a ceiling, and nothing was left behind — so this
@@ -110,7 +144,154 @@ public sealed class ArtworkRoutine(
             return RunResult.NothingToDo;
         }
 
-        return RunResult.Handled(fetched + evicted.Removed + swept.Evicted + swept.Orphans);
+        return RunResult.Handled(fetched + warmed + evicted.Removed + swept.Evicted + swept.Orphans);
+    }
+
+    /// <summary>
+    /// One window of the unpinned Catalogue, newest release first, and one of
+    /// the front of the Actors grid — both only while there is room under
+    /// <see cref="ArtworkCeiling.WarmTo"/>.
+    /// </summary>
+    /// <remarks>
+    /// The budget is checked once for the turn rather than per image. A window
+    /// is a hundred images of a few hundred kilobytes, and the gap between
+    /// <see cref="ArtworkCeiling.WarmTo"/> and <see cref="ArtworkCeiling.Bytes"/>
+    /// is two gigabytes, so the overshoot a coarse check allows is two orders of
+    /// magnitude inside it.
+    /// </remarks>
+    /// <param name="held">
+    /// What the unpinned half weighs, which the caller has just read off the
+    /// disk.
+    /// </param>
+    /// <param name="warmTo">
+    /// Where to stop, defaulted the way <see cref="ArtworkEviction.SweepAsync"/>
+    /// defaults its ceiling — so that a test can move the bound without the
+    /// bound being a setting.
+    /// </param>
+    public async Task<int> WarmAsync(
+        long held,
+        long warmTo = ArtworkCeiling.WarmTo,
+        CancellationToken cancellationToken = default)
+    {
+        if (held >= warmTo)
+        {
+            return 0;
+        }
+
+        return await WarmVideosAsync(cancellationToken)
+            + await WarmActorsAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// The unpinned Videos whose chosen image is not in the cache, newest
+    /// release first.
+    /// </summary>
+    /// <remarks>
+    /// Driven from the images rather than from the Videos, for
+    /// <see cref="FillAsync"/>'s reason: the filtered index on <c>cached</c>
+    /// narrows to what is actually missing before pinning is asked about, and
+    /// once the warm pass has caught up that set is empty rather than enormous.
+    /// Videos with no release date sort last — they are the ones no browse
+    /// surface puts on a first page either.
+    /// </remarks>
+    private async Task<int> WarmVideosAsync(CancellationToken cancellationToken)
+    {
+        var pending = ChosenImages.In(
+            context,
+            context.CatalogueImages.Where(image => !image.Cached && !image.FoundDead));
+
+        var due = await pending
+            .Join(
+                pins.Unpinned(context.CatalogueVideos),
+                image => image.VideoId,
+                video => video.Id,
+                (image, video) => new { Image = image, video.ReleaseDate })
+            .OrderByDescending(row => row.ReleaseDate.HasValue)
+            .ThenByDescending(row => row.ReleaseDate)
+            .ThenByDescending(row => row.Image.VideoId)
+            .Take(AWindow)
+            .Select(row => new Due(row.Image.Id, row.Image.VideoId, row.Image.PrdbId, row.Image.Url))
+            .ToListAsync(cancellationToken);
+
+        if (due.Count == 0)
+        {
+            return 0;
+        }
+
+        var arrived = 0;
+
+        foreach (var (image, fetch) in await FetchAsync(due, cancellationToken))
+        {
+            await cache.RecordAsync(image.Id, fetch, cancellationToken);
+
+            if (fetch.Bytes is not null)
+            {
+                arrived++;
+            }
+        }
+
+        logger.LogInformation(
+            "The artwork routine warmed {Arrived} image(s) of the {Asked} unpinned Video(s) it asked for.",
+            arrived,
+            due.Count);
+
+        return arrived;
+    }
+
+    /// <summary>
+    /// The uncached Actors inside <see cref="AnActorFront"/>, in the order the
+    /// Actors grid puts them in.
+    /// </summary>
+    private async Task<int> WarmActorsAsync(CancellationToken cancellationToken)
+    {
+        var front = context.CatalogueActors
+            .Where(row => row.ProfileImageUrl != null && row.ArtworkCacheKey != null)
+            .OrderByDescending(row => context.CatalogueVideoActors.Count(credit => credit.ActorId == row.Id))
+            .ThenBy(row => row.Name)
+            .ThenBy(row => row.Id)
+            .Take(AnActorFront);
+
+        var due = await front
+            .Where(row => !row.ArtworkCached && !row.ArtworkFoundDead)
+            .Take(AWindow)
+            .Select(row => new DueActor(row.Id, row.ArtworkCacheKey!.Value, row.ProfileImageUrl!))
+            .ToListAsync(cancellationToken);
+
+        if (due.Count == 0)
+        {
+            return 0;
+        }
+
+        var fetches = new List<(DueActor Actor, ArtworkFetch Fetch)>(due.Count);
+
+        foreach (var batch in due.Chunk(AtOnce))
+        {
+            var running = batch
+                .Select(async actor =>
+                    (actor, await cache.FillAsync(actor.CacheKey, actor.Url, cancellationToken)))
+                .ToList();
+
+            fetches.AddRange(await Task.WhenAll(running));
+        }
+
+        var arrived = 0;
+
+        foreach (var (actor, fetch) in fetches)
+        {
+            await actorCache.RecordAsync(actor.Id, fetch, cancellationToken);
+
+            if (fetch.Bytes is not null)
+            {
+                arrived++;
+            }
+        }
+
+        logger.LogInformation(
+            "The artwork routine warmed {Arrived} profile image(s) of the {Asked} Actor(s) it asked for.",
+            arrived,
+            due.Count);
+
+        return arrived;
     }
 
     /// <summary>
@@ -210,4 +391,7 @@ public sealed class ArtworkRoutine(
 
     /// <summary>An image this pass is about to fetch, by both of its names.</summary>
     private sealed record Due(long Id, long VideoId, Guid PrdbId, string Url);
+
+    /// <summary>An Actor profile image this pass is about to fetch.</summary>
+    private sealed record DueActor(long Id, Guid CacheKey, string Url);
 }

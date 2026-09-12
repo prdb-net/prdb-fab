@@ -13,13 +13,15 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <strong>The second of the two triggers.</strong> Pinned videos are filled by
-/// <see cref="ArtworkRoutine"/> ahead of anybody looking; everything else is
-/// fetched when a grid asks, because What's New, Sites, Actors and Wanted range
-/// over a catalogue nobody scrolls all of. The grid asks the tool and never the
-/// CDN, and the tool serves the cached file or fetches, stores and serves it.
-/// The <em>second</em> scroll is free, which is the property <c>VISION.md</c> is
-/// buying.
+/// <strong>The second of the two triggers, and since ADR 0059 the smaller
+/// one.</strong> <see cref="ArtworkRoutine"/> warms the pinned Videos and then
+/// the front of the Catalogue behind them, so what reaches here is a tile the
+/// warm pass has not got to yet — the tail of a long scroll, or a fresh
+/// installation whose first fill is still running. The grid asks the tool and
+/// never the CDN, and the tool serves the cached file or fetches, stores and
+/// serves it. The <em>second</em> scroll is free, which is the property
+/// <c>VISION.md</c> is buying; ADR 0059's finding was that the first one has to
+/// be too.
 /// </para>
 /// <para>
 /// <strong>A page request may do network I/O here</strong>, which is the first
@@ -39,8 +41,22 @@ public sealed class ArtworkCache(
     ILogger<ArtworkCache> logger)
 {
     /// <summary>
-    /// The bytes for a video, and the stamp that puts it at the back of the
-    /// eviction queue.
+    /// How stale <see cref="CatalogueImageRow.LastServedAt"/> is allowed to get
+    /// before a serve rewrites it.
+    /// </summary>
+    /// <remarks>
+    /// The stamp drives one thing — least-recently-served eviction — and an hour
+    /// is finer than that needs. What the throttle buys is the price of a browse
+    /// grid: two dozen tiles were two dozen writes against ADR 0004's single
+    /// writer, every time the grid was drawn, contending on a spinning disk with
+    /// the routines that write continuously. A second look at the same grid now
+    /// writes nothing at all.
+    /// </remarks>
+    public static readonly TimeSpan ServedAgain = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// The bytes for a video, or why there are none, and the stamp that puts it
+    /// at the back of the eviction queue.
     /// </summary>
     /// <remarks>
     /// Serving is what <see cref="CatalogueImageRow.LastServedAt"/> records —
@@ -48,7 +64,7 @@ public sealed class ArtworkCache(
     /// least-recently-<em>served</em> first, so the stamp has to mean somebody
     /// looked at it.
     /// </remarks>
-    public async Task<Served?> ServeAsync(long videoId, CancellationToken cancellationToken)
+    public async Task<ArtworkAnswer> ServeAsync(long videoId, CancellationToken cancellationToken)
     {
         var image = await ChosenImages.OfAsync(context, videoId, cancellationToken);
 
@@ -56,7 +72,7 @@ public sealed class ArtworkCache(
         {
             // No image, or one marked dead and never asked about again
             // (ADR 0030). The caller draws the no-artwork tile.
-            return null;
+            return ArtworkAnswer.Absent;
         }
 
         if (!image.Cached || !store.Holds(image.PrdbId))
@@ -67,7 +83,7 @@ public sealed class ArtworkCache(
 
             if (fetch.Bytes is null)
             {
-                return null;
+                return fetch.UrlIsDead ? ArtworkAnswer.Absent : ArtworkAnswer.NotNow;
             }
         }
 
@@ -84,7 +100,7 @@ public sealed class ArtworkCache(
                     row => row.SetProperty(cached => cached.Cached, false),
                     cancellationToken);
 
-            return null;
+            return ArtworkAnswer.NotNow;
         }
 
         var mediaType = await MediaTypeOfAsync(bytes, cancellationToken);
@@ -95,12 +111,12 @@ public sealed class ArtworkCache(
             // so this is a file somebody put there or one that was truncated.
             await bytes.DisposeAsync();
 
-            return null;
+            return ArtworkAnswer.NotNow;
         }
 
-        await ServedAsync(image.Id, cancellationToken);
+        await ServedAsync(image, cancellationToken);
 
-        return new Served(bytes, mediaType);
+        return ArtworkAnswer.Of(new Served(bytes, mediaType));
     }
 
     /// <summary>
@@ -194,12 +210,55 @@ public sealed class ArtworkCache(
                 cancellationToken);
     }
 
-    private Task ServedAsync(long imageId, CancellationToken cancellationToken) =>
-        context.CatalogueImages
-            .Where(row => row.Id == imageId)
+    private Task ServedAsync(CatalogueImageRow image, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+
+        if (image.LastServedAt is { } last && now - last < ServedAgain)
+        {
+            // Inside the window the stamp already says what it would be made to
+            // say. The row is read either way; not writing it is the whole of
+            // what this saves, and it is a write in the click path.
+            return Task.CompletedTask;
+        }
+
+        return context.CatalogueImages
+            .Where(row => row.Id == image.Id)
             .ExecuteUpdateAsync(
-                row => row.SetProperty(image => image.LastServedAt, time.GetUtcNow()),
+                row => row.SetProperty(cached => cached.LastServedAt, now),
                 cancellationToken);
+    }
+}
+
+/// <summary>
+/// What the cache had for one video: the bytes, or an absence that either
+/// stands or is only about this minute.
+/// </summary>
+/// <remarks>
+/// The three ways of having nothing used to be one <see langword="null"/>, and
+/// to a grid they still are — every one of them draws the no-artwork tile. They
+/// differ to the <em>browser</em>: prdb publishing no image for a Video is a
+/// property of the Catalogue and worth remembering for days, while a CDN that
+/// did not answer in time is a property of this minute and worth remembering
+/// for as long as it takes to try again. Collapsing the two means either
+/// re-asking about thousands of Videos that will never have a picture, or
+/// remembering one bad minute for a week.
+/// </remarks>
+/// <param name="Served">The bytes, or <see langword="null"/> where there are none.</param>
+/// <param name="AbsenceStands">
+/// Whether an absence is the Catalogue's answer rather than this attempt's.
+/// False whenever <paramref name="Served"/> is not null, where it says nothing.
+/// </param>
+public sealed record ArtworkAnswer(Served? Served, bool AbsenceStands)
+{
+    /// <summary>prdb publishes no image for this Video, or none that still resolves.</summary>
+    public static ArtworkAnswer Absent { get; } = new(null, true);
+
+    /// <summary>A CDN that did not answer, or bytes that were not there after all.</summary>
+    public static ArtworkAnswer NotNow { get; } = new(null, false);
+
+    /// <summary>An image, on its way out.</summary>
+    public static ArtworkAnswer Of(Served served) => new(served, false);
 }
 
 /// <summary>

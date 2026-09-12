@@ -64,6 +64,33 @@ public sealed class CatalogueSearchRouteTests
         Assert.Equal("Ready scene", relevant.Videos[0].Title);
     }
 
+    /// <summary>
+    /// A title order reads ADR 0025's comparison form rather than the title.
+    /// </summary>
+    /// <remarks>
+    /// The shared seed cannot tell the two apart: every title in it begins with
+    /// a capital, and SQLite's BINARY collation agrees with a case-insensitive
+    /// order on those. Under BINARY this seed comes back as "Banana", "Cherry",
+    /// "apple", "zebra" — every lower-cased title after every upper-cased one.
+    /// </remarks>
+    [Fact]
+    public async Task A_title_order_reads_the_comparison_form_and_not_the_title()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        await SeedTitlesAsync(application, "apple scene", "Banana scene", "Cherry scene", "zebra scene");
+
+        var ascending = await ReadAsync(client, "filter=All&sort=TitleAscending");
+        var descending = await ReadAsync(client, "filter=All&sort=TitleDescending");
+
+        Assert.Equal(
+            ["apple scene", "Banana scene", "Cherry scene", "zebra scene"],
+            ascending.Videos.Select(video => video.Title));
+        Assert.Equal(
+            ["zebra scene", "Cherry scene", "Banana scene", "apple scene"],
+            descending.Videos.Select(video => video.Title));
+    }
+
     private static async Task<Page> ReadAsync(HttpClient client, string query) =>
         (await client.GetFromJsonAsync<Page>(
             "/api/catalogue/videos" + (query.Length > 0 ? $"?{query}" : string.Empty),
@@ -134,6 +161,16 @@ public sealed class CatalogueSearchRouteTests
             CreatedAt = Noon,
             OriginIsPerson = true,
         });
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>Undated Videos with nothing about them but their titles.</summary>
+    private static async Task SeedTitlesAsync(FabApplication application, params string[] titles)
+    {
+        await using var scope = application.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        context.CatalogueVideos.AddRange(
+            titles.Select((title, place) => Video(title, released: null, createdDay: place + 1)));
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
