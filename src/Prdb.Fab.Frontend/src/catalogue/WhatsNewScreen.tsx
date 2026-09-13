@@ -8,7 +8,7 @@ import { whatsNewKey } from './state.ts'
 import styles from './BrowseScreen.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
-import { Preview } from './Preview.tsx'
+import { PreviewOverlay } from './Preview.tsx'
 import { usePreview } from './preview.ts'
 
 /**
@@ -26,7 +26,7 @@ export function WhatsNewScreen() {
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
-  const { open, openPreview, closePreview } = usePreview()
+  const { openPreview } = usePreview()
 
   const videos = useQuery({
     queryKey: whatsNewKey(page),
@@ -96,14 +96,7 @@ export function WhatsNewScreen() {
             )}
           />
 
-          {open && (
-            <Preview
-              card={videos.data?.videos.find((video) => video.prdbId === open)}
-              onClose={closePreview}
-              prdbId={open}
-              returnTo={here}
-            />
-          )}
+          <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
 
           {pages > 1 && (
             <nav className={styles.pager}>

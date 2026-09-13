@@ -1,8 +1,10 @@
 import type { FormEvent, ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import type { VideoCard } from '../api/client.ts'
 import { CachedArtwork, Grid } from './Grid.tsx'
+import { PreviewOverlay } from './Preview.tsx'
+import { usePreview } from './preview.ts'
 import gridStyles from './Grid.module.css'
 import styles from './ContextBrowse.module.css'
 
@@ -175,6 +177,10 @@ export function VideoContextView({
   contextAction?: ReactNode
   contextDetail?: ReactNode
 }) {
+  const location = useLocation()
+  const { openPreview } = usePreview()
+  const here = location.pathname + location.search
+
   return (
     <main className={styles.screen}>
       <Link className={styles.back} to={backTo}>
@@ -195,9 +201,12 @@ export function VideoContextView({
       ) : (
         <Grid
           videos={videos}
+          onOpen={(video) => openPreview(video.prdbId)}
           action={(video) => <span className={gridStyles.actions}>{videoAction(video)}</span>}
         />
       )}
+
+      <PreviewOverlay returnTo={here} videos={videos} />
 
       <Pager page={page} pages={pages} goTo={goTo} />
     </main>

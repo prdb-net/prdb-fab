@@ -7,6 +7,8 @@ import { wantedKey } from './state.ts'
 import styles from './Wanted.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
+import { PreviewOverlay } from './Preview.tsx'
+import { usePreview } from './preview.ts'
 
 /**
  * The wanted list, and where setting up ends.
@@ -25,6 +27,8 @@ export function WantedScreen() {
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const { openPreview } = usePreview()
+  const here = location.pathname + location.search
 
   const wanted = useQuery({
     queryKey: wantedKey(page),
@@ -79,13 +83,16 @@ export function WantedScreen() {
         <>
           <Grid
             videos={wanted.data?.videos ?? []}
+            onOpen={(video) => openPreview(video.prdbId)}
             action={(video) => (
               <CardActions
                 video={video}
-                returnTo={location.pathname + location.search}
+                returnTo={here}
               />
             )}
           />
+
+          <PreviewOverlay returnTo={here} videos={wanted.data?.videos ?? []} />
 
           {pages > 1 && (
             <nav className={styles.pager}>

@@ -10,7 +10,67 @@ import {
 } from '../api/client.ts'
 import { CardActions } from './CardActions.tsx'
 import { CachedArtwork } from './Grid.tsx'
+import { usePreview } from './preview.ts'
 import styles from './Preview.module.css'
+
+/**
+ * The sheet, over whichever grid the screen is showing, and the two keys that
+ * walk that grid without closing it.
+ *
+ * Every browse surface renders this once and passes `onOpen` to its `Grid`;
+ * ADR 0012 keeps the card the same across the five, and this keeps the way into
+ * a Video the same with it.
+ */
+export function PreviewOverlay({
+  videos,
+  returnTo,
+}: {
+  videos: readonly VideoCard[]
+  returnTo: string
+}) {
+  const { open, openPreview, closePreview } = usePreview()
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+
+      const at = videos.findIndex((video) => video.prdbId === open)
+      const next = at + (event.key === 'ArrowRight' ? 1 : -1)
+
+      // The ends of the loaded page are the ends. A keypress that fetched the
+      // next page and changed the list under the sheet would be a different act
+      // from stepping, and it would make the last card of a page unpredictable.
+      if (at < 0 || next < 0 || next >= videos.length) return
+
+      event.preventDefault()
+      openPreview(videos[next].prdbId)
+
+      // The grid underneath follows, so closing lands in front of whatever was
+      // last looked at rather than back at the top.
+      requestAnimationFrame(() =>
+        document
+          .querySelector(`[data-video="${videos[next].prdbId}"]`)
+          ?.scrollIntoView({ block: 'nearest' }),
+      )
+    }
+
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, openPreview, videos])
+
+  if (!open) return null
+
+  return (
+    <Preview
+      card={videos.find((video) => video.prdbId === open)}
+      onClose={closePreview}
+      prdbId={open}
+      returnTo={returnTo}
+    />
+  )
+}
 
 /**
  * One Video opened over the grid it was found in (ADR 0060).
@@ -27,7 +87,7 @@ import styles from './Preview.module.css'
  * centred dialog would leave the same area of screen and none of it usable. On
  * a phone it is the screen.
  */
-export function Preview({
+function Preview({
   prdbId,
   card,
   returnTo,

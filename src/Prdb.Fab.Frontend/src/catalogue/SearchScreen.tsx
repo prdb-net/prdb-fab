@@ -10,7 +10,7 @@ import {
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
 import { Grid } from './Grid.tsx'
-import { Preview } from './Preview.tsx'
+import { PreviewOverlay } from './Preview.tsx'
 import { usePreview } from './preview.ts'
 import styles from './SearchScreen.module.css'
 
@@ -45,7 +45,7 @@ export function SearchScreen() {
     search ? 'Relevance' : 'ReleaseDateDescending',
   )
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
-  const { open, openPreview, closePreview } = usePreview()
+  const { openPreview } = usePreview()
   const videos = useQuery({
     queryKey: ['catalogue-videos', search, filter, sort, page],
     queryFn: () => listVideos(search, page, filter, sort),
@@ -151,14 +151,7 @@ export function SearchScreen() {
         />
       )}
 
-      {open && (
-        <Preview
-          card={videos.data?.videos.find((video) => video.prdbId === open)}
-          onClose={closePreview}
-          prdbId={open}
-          returnTo={here}
-        />
-      )}
+      <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
 
       {pages > 1 && (
         <nav className={styles.pager}>

@@ -85,6 +85,7 @@ function Card({
     badge={badge}
     action={action?.(video)}
     onOpen={onOpen && (() => onOpen(video))}
+    prdbId={video.prdbId}
   />
 }
 
@@ -118,6 +119,7 @@ function GridCard({
   action,
   to,
   onOpen,
+  prdbId,
 }: {
   artworkId: VideoCard['id']
   title: string
@@ -127,6 +129,8 @@ function GridCard({
   action?: ReactNode
   to?: string
   onOpen?: () => void
+  /** Named on the opener so the Preview can scroll the grid to this card. */
+  prdbId?: string
 }) {
   const artwork = <span className={styles.artwork}>
     <Artwork videoId={artworkId} title={title} />
@@ -141,6 +145,7 @@ function GridCard({
           ? <button
               aria-label={`Preview ${title}`}
               className={styles.opener}
+              data-video={prdbId}
               onClick={onOpen}
               type="button"
             >
