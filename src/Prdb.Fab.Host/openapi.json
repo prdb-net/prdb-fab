@@ -1552,6 +1552,74 @@
         }
       }
     },
+    "/api/catalogue/videos/{prdbId}/user-previews": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreviewAsk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/user-previews/{previewId}/{version}/tiles": {
+      "get": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "previewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpriteTiles"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/catalogue/wanted/{prdbId}": {
       "post": {
         "tags": [
@@ -8010,6 +8078,89 @@
           }
         }
       },
+      "SpriteTiles": {
+        "required": [
+          "usable",
+          "tiles",
+          "coming"
+        ],
+        "type": "object",
+        "properties": {
+          "usable": {
+            "type": "boolean"
+          },
+          "tiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpriteTileView"
+            }
+          },
+          "coming": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SpriteTileView": {
+        "required": [
+          "startMs",
+          "endMs",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "endMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "x": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "y": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "StatusCondition": {
         "required": [
           "kind",
@@ -8336,6 +8487,91 @@
           }
         }
       },
+      "UserPreviewAsk": {
+        "required": [
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/UserPreviewOutcome"
+          }
+        }
+      },
+      "UserPreviewCard": {
+        "required": [
+          "prdbId",
+          "version",
+          "sprite",
+          "width",
+          "height",
+          "tileWidth",
+          "tileHeight",
+          "tileCount"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string"
+          },
+          "sprite": {
+            "type": "boolean"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tileWidth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tileHeight": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tileCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UserPreviewOutcome": {
+        "enum": [
+          "Asked",
+          "Fresh"
+        ]
+      },
       "VideoAcquisition": {
         "required": [
           "downloadsSpent",
@@ -8542,7 +8778,9 @@
           "durationFileCount",
           "picturesComing",
           "actors",
-          "images"
+          "images",
+          "userPreviews",
+          "userPreviewsComing"
         ],
         "type": "object",
         "properties": {
@@ -8590,6 +8828,15 @@
             "items": {
               "$ref": "#/components/schemas/PreviewImage"
             }
+          },
+          "userPreviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserPreviewCard"
+            }
+          },
+          "userPreviewsComing": {
+            "type": "boolean"
           }
         }
       },

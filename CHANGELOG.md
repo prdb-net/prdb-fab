@@ -19,6 +19,25 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Added
+
+- **The pictures other people made.** prdb publishes a second kind of picture
+  beside its own: ones its users submitted, each made from one specific file.
+  A Preview now shows them under the Video's own gallery, in their own section,
+  because they are a picture of a *file* rather than of the Video.
+- **A scrubbing strip where somebody made one.** Where a submitted preview is a
+  sprite sheet with times, the Preview draws it as what it is — one tile at a
+  time, with a slider that works with a finger, a mouse or the arrow keys, and
+  the second each tile belongs to. Nothing plays and nothing streams: it is a
+  picture and a list of times.
+- They are fetched as you scroll to them, like every other picture in the
+  sheet, and asked for from a small reserved share of the request budget — so
+  opening a Video and moving straight on costs nothing.
+- **A picture a moderator removes stops being shown.** These are moderated, and
+  removal and restoration both reach this tool within the hour. A withdrawn
+  preview disappears from a sheet that is already open, and a restored one
+  comes back.
+
 ## [0.21.0] - 2026-09-13
 
 A picture on a browse grid is now something you can open. Click one and the

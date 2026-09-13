@@ -218,6 +218,63 @@ public sealed class PreviewAssetCache(
             : SpriteTimelineResult.Unusable("The sprite sheet has no readable dimensions.");
     }
 
+    /// <summary>
+    /// The tiles of one sprite sheet, for a gallery that has to put a picture
+    /// under a person's finger.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// It fills the cache if it has to, which makes this a local read that may
+    /// do network I/O — the same property <see cref="ArtworkCache"/> has and
+    /// with the same guard: a short transport timeout and a caller that draws
+    /// nothing rather than waiting. It spends no prdb budget, so ADR 0018 is
+    /// intact.
+    /// </para>
+    /// <para>
+    /// The answer is a verdict rather than an exception (ADR 0040): a preview
+    /// that is withdrawn, unknown, at another version or whose pair does not
+    /// hold together is simply one the gallery does not draw.
+    /// </para>
+    /// </remarks>
+    public async Task<SpriteTiles> TilesAsync(
+        Guid previewId,
+        string version,
+        CancellationToken cancellationToken)
+    {
+        var row = await context.UserPreviews
+            .AsNoTracking()
+            .SingleOrDefaultAsync(preview => preview.PrdbId == previewId, cancellationToken);
+
+        if (row is null
+            || !row.Shown
+            || !Paired(row)
+            || !string.Equals(version, VersionOf(row), StringComparison.Ordinal))
+        {
+            return SpriteTiles.None;
+        }
+
+        if ((row.CachedVersion != version || !store.Holds(previewId, version, paired: true))
+            && !await FillAsync(row, version, cancellationToken))
+        {
+            return SpriteTiles.NotYet;
+        }
+
+        var timeline = await TimelineAsync(previewId, version, cancellationToken);
+
+        return timeline.Usable
+            ? new SpriteTiles(
+                true,
+                [.. timeline.Tiles.Select(tile => new SpriteTileView(
+                    (long)tile.Start.TotalMilliseconds,
+                    (long)tile.End.TotalMilliseconds,
+                    tile.X,
+                    tile.Y,
+                    tile.Width,
+                    tile.Height))],
+                false)
+            : SpriteTiles.None;
+    }
+
     /// <summary>Which version of this row's asset is the current one.</summary>
     public static string VersionOf(UserPreviewRow row) => UserPreviewAsset.VersionOf(
         row.Url,
@@ -262,6 +319,35 @@ public sealed class PreviewAssetCache(
                 cancellationToken);
     }
 }
+
+/// <summary>
+/// A sprite sheet's tiles, or the two ways of having none.
+/// </summary>
+/// <remarks>
+/// The distinction is what the gallery draws. <em>Waiting</em> is a CDN that
+/// has not answered yet and is worth asking about again in a moment;
+/// <em>none</em> is a preview that is withdrawn, at another version, or whose
+/// pair does not describe its sheet — settled, and the strip is simply not
+/// there.
+/// </remarks>
+public sealed record SpriteTiles(bool Usable, IReadOnlyList<SpriteTileView> Tiles, bool Coming)
+{
+    /// <summary>Settled: there is no strip to draw for this preview.</summary>
+    public static SpriteTiles None { get; } = new(false, [], false);
+
+    /// <summary>Not yet: the pair is still being fetched. Worth asking again.</summary>
+    public static SpriteTiles NotYet { get; } = new(false, [], true);
+}
+
+/// <summary>
+/// One tile: when it is, and the rectangle of the sheet to show for it.
+/// </summary>
+/// <remarks>
+/// Milliseconds rather than a duration, because what reads this is a browser
+/// and ADR 0040's document has no duration type. The rectangle is in the
+/// sheet's own pixels, which is what a background position is written in.
+/// </remarks>
+public sealed record SpriteTileView(long StartMs, long EndMs, int X, int Y, int Width, int Height);
 
 /// <summary>
 /// What the cache had for one preview: the bytes, or an absence that either

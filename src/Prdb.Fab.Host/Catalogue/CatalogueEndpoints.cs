@@ -82,6 +82,30 @@ public static class CatalogueEndpoints
                 : TypedResults.Ok(ask);
         });
 
+        // ADR 0061's demand, and the same shape for the same reason: a GET that
+        // scheduled work would make ADR 0018's rule — refreshing never causes
+        // work — one the code contradicts where it is easiest to read. One
+        // request per Video opened, deduplicated by the routine row behind it.
+        group.MapPost("/videos/{prdbId:guid}/user-previews", async (
+            Guid prdbId,
+            UserPreviews previews,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await previews.AskAsync(
+                prdbId,
+                UserPreviewDemand.Preview,
+                cancellationToken)));
+
+        // What a sprite sheet's tiles are, read off the cached pair. A local
+        // read that fills the cache if it has to: the fetch is against a CDN
+        // and spends no prdb budget (ADR 0030), and the gallery cannot draw a
+        // scrubbing strip without knowing which tile is when.
+        group.MapGet("/user-previews/{previewId:guid}/{version}/tiles", async (
+            Guid previewId,
+            string version,
+            PreviewAssetCache previews,
+            CancellationToken cancellationToken) =>
+            TypedResults.Ok(await previews.TilesAsync(previewId, version, cancellationToken)));
+
         MapPreference(group, "/wanted/{prdbId:guid}", AccountPreferenceKind.WantedVideo);
         MapPreference(group, "/actors/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteActor);
         MapPreference(group, "/sites/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteSite);
