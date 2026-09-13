@@ -7,8 +7,9 @@ File and used by a media server for timeline scrubbing.
 **The answer is no, for both targets, and one of the two ways of trying it is
 actively harmful.** A supported path into Jellyfin exists, but it is a different
 thing from publishing what prdb gave us, and taking it is a decision with a
-cost that a person has to weigh. Nothing has been built, `ADR 0027` is
-unamended, and the implementation stays blocked.
+cost that a person has to weigh. Nothing has been built, ADR 0027 is unamended,
+and the choice is left open at the end of this document rather than made
+quietly.
 
 ## What was tested
 
@@ -167,12 +168,32 @@ layout above. Three things stand in the way, and none of them is a detail:
 - **ADR 0027 is unamended.** It is amended only for a demonstrated path, and
   what was demonstrated is that the intended one does not exist. `movie.nfo` and
   `fanart.jpg` are untouched.
-- **The implementation stays blocked**, with a question on it rather than a
-  decision taken quietly on somebody's behalf. Reducing the Library's scope and
-  authorising a re-cut are both real answers, and both belong to a person.
+- **Nothing is written beside a Video File**, and the question below is left
+  open rather than answered on somebody's behalf. Reducing the Library's scope
+  and authorising a re-cut are both real answers, and both belong to a person.
 - **Nothing was sent anywhere.** The Jellyfin behaviour is worth reporting
   upstream — `ThumbnailCount` counting files is a defect on its own terms — but
   reporting it is a separate act.
+
+## The open question
+
+Three answers, and this document has no preference it would defend:
+
+1. **Re-cut for Jellyfin at its default settings.** Timeline previews appear for
+   most people; they are wrong or absent for anybody who changed `Interval`,
+   `WidthResolutions`, `TileWidth` or `TileHeight`, with nothing telling them
+   why. It accepts the resampling loss and a per-file `ffmpeg` pass.
+2. **Drop the Library scope.** User previews stay on this tool's own surfaces —
+   the Preview gallery and the Review Queue — and nothing is written beside a
+   Video File.
+3. **Read the server's settings.** Let this tool ask a Jellyfin server for its
+   trickplay configuration so the re-cut is correct rather than assumed. That is
+   a media-server connection this tool does not have, and it would be a decision
+   of its own.
+
+The first ships something most people see and quietly misleads a minority; the
+second is honest and delivers nothing here; the third is right and is larger
+than the work this investigation belongs to.
 
 ## Reproducing it
 

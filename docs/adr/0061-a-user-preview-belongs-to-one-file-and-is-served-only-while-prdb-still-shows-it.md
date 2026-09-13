@@ -11,7 +11,7 @@ that says *this picture is of that file* rather than *of that Video*.
 This decision settles what may be asked of prdb about them, what is kept, how
 long, and what happens when prdb stops showing one. It settles nothing about
 what they are shown *in* — the Preview gallery, the Review Queue and the Library
-each have a ticket of their own — and it deliberately leaves the automatic
+each answer for themselves — and it deliberately leaves the automatic
 Identification evidence policy to
 [ADR 0062](0062-a-preview-hash-binding-is-evidence-and-prdbs-answer-is-still-the-authority.md).
 
@@ -189,8 +189,8 @@ fact the row already holds (ADR 0033).
 ## Cadences, bounds and freshness
 
 Every number this contract fixes, in one place — and in the code as
-`Core/Sync/UserPreviewContract.cs`, so that a ticket downstream consumes the
-figure rather than restating it.
+`Core/Sync/UserPreviewContract.cs`, so that the code downstream reads the figure
+rather than restating it.
 
 | | |
 | --- | --- |

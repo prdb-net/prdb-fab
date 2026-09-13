@@ -107,7 +107,7 @@ opening a Preview or by a Video File being filed. So the check is **one indexed
 local query** and no prdb request at all: nothing to pace, nothing to
 deduplicate, no cadence, and no new failure mode when prdb is unreachable.
 
-That is also why **FAB-36 is not blocked on prdb**. The by-hash endpoint cannot
+That is also why **none of this waits on prdb**. The by-hash endpoint cannot
 answer the question (ADR 0061), and asking prdb per unidentified file would be
 the "unbounded client-side mirror" this contract was told to avoid — so the
 narrower thing is done instead, and the wider capability stays a recorded
