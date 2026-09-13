@@ -19,6 +19,55 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-09-13
+
+A picture on a browse grid is now something you can open. Click one and the
+Video appears over the list you were in — the facts, the actors, the same
+actions the card offers, and every picture prdb publishes for it rather than the
+one tile you were looking at. The list stays where it was underneath, four
+gestures close it, and the arrow keys walk to the next Video without closing
+anything.
+
+### Added
+
+- **A Preview on every Catalogue grid.** The artwork and the title of a card on
+  What's New, Search, Sites, Actors and Wanted open the Video in place: a panel
+  against the right-hand side on a wide window, the whole screen on a phone.
+  Click outside it, press `Esc`, press the close control or press the browser's
+  back button to get back to exactly where you were — the list is never
+  reloaded, re-paged or scrolled away. It is an address, so a Video you have
+  open can be linked to and reloaded.
+- **The rest of a Video's pictures.** prdb usually publishes several images per
+  Video and the grids have only ever shown one. The Preview shows them all: the
+  familiar one large, the others as a strip underneath, with a click, the arrow
+  keys or a swipe to move between them. They are fetched as you scroll to them
+  rather than all at once, so opening a Video and moving straight on costs one
+  picture.
+- **Actors, the Site and the runtime on the Preview**, each a link onward, and
+  the card's own Download, Mark Wanted and View Releases exactly as they behave
+  on the card.
+- **`←` and `→` step through the page** while a Preview is open, moving the
+  list underneath with them. They stop at the ends of the page rather than
+  fetching the next one. With a picture selected the same keys move through the
+  pictures instead.
+- **A Video with no picture asks prdb once.** Around one Video in ten arrives in
+  the catalogue before its artwork does. Opening its Preview now asks for it,
+  at most once a week per Video, from a small reserved share of the request
+  budget — so it fills in while you look rather than whenever the background
+  sync gets to it. The panel never waits for it.
+
+### Changed
+
+- **The artwork cache may now hold more than one picture per Video.** The extra
+  ones are fetched only when a Preview asks for them, count against the same
+  8 GiB ceiling as the rest of the browsing cache, and are the first thing
+  dropped when it is reached. Nothing about the picture your library and your
+  grids use has changed, and nothing extra is fetched in the background.
+- **A held Video's extra pictures are droppable.** Previously every image row of
+  a Video in your library sat outside the cache ceiling. Only the one picture
+  the library and filing use does now — otherwise a gallery you opened once
+  would have been kept forever.
+
 ## [0.20.0] - 2026-09-13
 
 The installation is now something you can carry. One file holds everything the
