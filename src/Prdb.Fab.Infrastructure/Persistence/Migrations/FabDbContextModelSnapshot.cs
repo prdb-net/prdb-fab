@@ -996,6 +996,36 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IdentificationFlagRow", b =>
+                {
+                    b.Property<Guid>("VideoFileId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("NowNamesVideoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("VideoId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("VideoFileId");
+
+                    b.HasIndex("VideoId");
+
+                    b.ToTable("identification_flag", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
             modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IdentificationOutcomeRow", b =>
                 {
                     b.Property<long>("Id")
@@ -1796,6 +1826,139 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("session", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.UserPreviewInterestRow", b =>
+                {
+                    b.Property<Guid>("VideoPrdbId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ForTheLibrary")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("TouchedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("VideoPrdbId");
+
+                    b.HasIndex("LastReadAt");
+
+                    b.HasIndex("TouchedAt");
+
+                    b.ToTable("user_preview_interest", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.UserPreviewRow", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CachedVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Columns")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Deleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("Filesize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastServedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModerationStatus")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModerationVisibility")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OsHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PrdbId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("Rows")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Shown")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("ShownUnder")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TileCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("TileHeight")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("TileWidth")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("VideoPrdbId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VttUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastServedAt");
+
+                    b.HasIndex("OsHash");
+
+                    b.HasIndex("PrdbId")
+                        .IsUnique();
+
+                    b.HasIndex("VideoPrdbId", "OsHash", "DisplayOrder", "PrdbId");
+
+                    b.ToTable("user_preview", (string)null);
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")

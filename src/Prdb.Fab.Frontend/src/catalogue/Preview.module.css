@@ -246,3 +246,74 @@
     padding-top: 0.5rem;
   }
 }
+
+/* ADR 0061's second population, under prdb's own pictures rather than mixed
+   into them: they are made from one file by somebody who had it, and a strip
+   that blurred the two would make "a picture of this Video" and "a picture of
+   this file" the same claim. */
+.contributed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contributedHeading {
+  align-items: baseline;
+  color: var(--text-quiet);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.5rem;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.contributedList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* One tile of a sheet, positioned by the grid rather than by pixels, so that
+   the strip is the same at any width and needs nothing measured. */
+.tile {
+  background-color: var(--surface);
+  background-repeat: no-repeat;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: block;
+  max-height: 46vh;
+  width: 100%;
+}
+
+.tileEmpty {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  color: var(--text-quiet);
+  display: flex;
+  justify-content: center;
+}
+
+.scrub {
+  accent-color: var(--accent);
+  display: block;
+  width: 100%;
+}
+
+.at {
+  color: var(--text-quiet);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.singles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

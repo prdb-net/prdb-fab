@@ -299,3 +299,26 @@ question gets asked properly, once there is a file.
   it is usable — `Category` on `GET /predb/latest`, or `videoId` on
   `PreDbSummaryDto`, plus a `GET /predb/{id}` so pre-names have a repair path at
   all.
+
+## Amended by ADR 0062
+
+[ADR 0062](0062-a-preview-hash-binding-is-evidence-and-prdbs-answer-is-still-the-authority.md)
+adds exactly one clause, and it does not touch what this decision is actually
+about. What is refused here is this tool *inferring* an identity — matching a
+title, trusting a release name, deciding for itself that two things are the same
+scene — and the Pre-Name is the worked example of a strong-looking local signal
+that is only ever a reason to ask.
+
+The clause is:
+
+> An identification may also be made from an exact match between a Video File's
+> stored osHash and the hash prdb publishes on a **linked, currently visible**
+> user preview, where every such preview names one Video, and only where prdb's
+> own answer named none. It records `Strong` and the `PreviewHash` rung. It is
+> not a Confirmed Assignment and is never reported to prdb as one.
+
+That is not an inference: it is an assertion prdb published and a moderator
+approved, cached locally like any other Catalogue row, applied by an exact match
+on a hash. Nothing is guessed, nothing is scored, and no threshold is chosen.
+Everything else here stands — a Pre-Name is still only a reason to ask, a file
+name still identifies nothing, and the ladder is still prdb's.

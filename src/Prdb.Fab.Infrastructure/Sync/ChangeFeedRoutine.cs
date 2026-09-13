@@ -72,8 +72,31 @@ public abstract class ChangeFeedRoutine(
     /// <summary>ADR 0014 puts the prdb feeds in the sync lane.</summary>
     public virtual Lane Lane => Lane.Sync;
 
+    /// <summary>
+    /// Whether this feed has anything to follow at all.
+    /// </summary>
+    /// <remarks>
+    /// True for the five ADR 0013 named: what they carry is the Catalogue and
+    /// the user's own lists, and an installation always has both. ADR 0061's
+    /// feed is the exception — it follows moderation of a population that only
+    /// exists here once somebody has looked at something — and ADR 0032's shape
+    /// is what keeps that from costing a request an hour forever: a routine
+    /// with a work set is due when the set is not empty, and answers
+    /// <em>nothing to do</em> when it is.
+    /// </remarks>
+    protected virtual Task<bool> AnythingToFollowAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(true);
+
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
+        if (!await AnythingToFollowAsync(cancellationToken))
+        {
+            // Nothing is interested, so there is nothing to be behind on. Not a
+            // failure and not a Gap: ADR 0032 calls the empty work set the
+            // healthy idle state.
+            return RunResult.NothingToDo;
+        }
+
         var apiKey = await Context.Installation
             .Select(row => row.PrdbApiKey)
             .SingleAsync(cancellationToken);

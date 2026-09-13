@@ -72,6 +72,45 @@
         }
       }
     },
+    "/api/previews/{previewId}/{version}/{half}": {
+      "get": {
+        "tags": [
+          "Artwork"
+        ],
+        "parameters": [
+          {
+            "name": "previewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "half",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/artwork/actors/{actorId}": {
       "get": {
         "tags": [
@@ -1509,6 +1548,74 @@
           },
           "404": {
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/catalogue/videos/{prdbId}/user-previews": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPreviewAsk"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/user-previews/{previewId}/{version}/tiles": {
+      "get": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "previewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpriteTiles"
+                }
+              }
+            }
           }
         }
       }
@@ -4894,6 +5001,7 @@
           "Filename",
           "ReleaseName",
           "Site",
+          "PreviewHash",
           null
         ]
       },
@@ -6268,6 +6376,16 @@
           }
         }
       },
+      "PreviewHashOutcome": {
+        "enum": [
+          "NoEvidence",
+          "Conflicting",
+          "OutsideTheCandidates",
+          "WaitingForTheCatalogue",
+          "Assigned",
+          "NotNeeded"
+        ]
+      },
       "PreviewImage": {
         "required": [
           "prdbId",
@@ -7152,6 +7270,26 @@
           }
         }
       },
+      "ReviewPicture": {
+        "required": [
+          "prdbId",
+          "version",
+          "sprite"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string"
+          },
+          "sprite": {
+            "type": "boolean"
+          }
+        }
+      },
       "ReviewQueueAction": {
         "enum": [
           "FileAs",
@@ -7198,7 +7336,9 @@
           "filedFile",
           "download",
           "release",
-          "indexer"
+          "indexer",
+          "automaticIdentification",
+          "pictures"
         ],
         "type": "object",
         "properties": {
@@ -7335,6 +7475,15 @@
           },
           "indexer": {
             "type": "string"
+          },
+          "automaticIdentification": {
+            "$ref": "#/components/schemas/PreviewHashOutcome"
+          },
+          "pictures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewPicture"
+            }
           }
         }
       },
@@ -7971,6 +8120,89 @@
           }
         }
       },
+      "SpriteTiles": {
+        "required": [
+          "usable",
+          "tiles",
+          "coming"
+        ],
+        "type": "object",
+        "properties": {
+          "usable": {
+            "type": "boolean"
+          },
+          "tiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpriteTileView"
+            }
+          },
+          "coming": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SpriteTileView": {
+        "required": [
+          "startMs",
+          "endMs",
+          "x",
+          "y",
+          "width",
+          "height"
+        ],
+        "type": "object",
+        "properties": {
+          "startMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "endMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "x": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "y": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "StatusCondition": {
         "required": [
           "kind",
@@ -8297,6 +8529,91 @@
           }
         }
       },
+      "UserPreviewAsk": {
+        "required": [
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/UserPreviewOutcome"
+          }
+        }
+      },
+      "UserPreviewCard": {
+        "required": [
+          "prdbId",
+          "version",
+          "sprite",
+          "width",
+          "height",
+          "tileWidth",
+          "tileHeight",
+          "tileCount"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string"
+          },
+          "sprite": {
+            "type": "boolean"
+          },
+          "width": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tileWidth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tileHeight": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tileCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "UserPreviewOutcome": {
+        "enum": [
+          "Asked",
+          "Fresh"
+        ]
+      },
       "VideoAcquisition": {
         "required": [
           "downloadsSpent",
@@ -8503,7 +8820,9 @@
           "durationFileCount",
           "picturesComing",
           "actors",
-          "images"
+          "images",
+          "userPreviews",
+          "userPreviewsComing"
         ],
         "type": "object",
         "properties": {
@@ -8551,6 +8870,15 @@
             "items": {
               "$ref": "#/components/schemas/PreviewImage"
             }
+          },
+          "userPreviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserPreviewCard"
+            }
+          },
+          "userPreviewsComing": {
+            "type": "boolean"
           }
         }
       },

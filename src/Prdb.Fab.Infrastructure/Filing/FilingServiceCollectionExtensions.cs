@@ -13,6 +13,12 @@ public static class FilingServiceCollectionExtensions
         services.TryAddScoped<IProbeProcess, FfprobeProcess>();
         services.TryAddScoped<IContactSheetProcess, FfmpegContactSheetProcess>();
         services.TryAddScoped<ArtworkStore>();
+
+        // ADR 0061's interest register, which Filing writes to when a Video
+        // File lands. Taken here as well as in AddFabSync for the reason
+        // ArtworkStore is: a slice asks for what it uses, and whichever of the
+        // two is added first wins.
+        services.TryAddScoped<UserPreviews>();
         services.AddScoped<VideoProbe>();
         services.AddScoped<IdentificationSettings>();
         services.AddScoped<LibrarySettings>();
@@ -24,6 +30,7 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<LibraryEntryDeletion>();
         services.AddScoped<OperationLogBrowse>();
         services.AddScoped<CollectingRoutine>();
+        services.AddScoped<PreviewHashEvidence>();
         services.AddScoped<ArrivalIdentificationRoutine>();
         services.AddScoped<EntryFiles>();
         services.AddScoped<VideoFileMover>();

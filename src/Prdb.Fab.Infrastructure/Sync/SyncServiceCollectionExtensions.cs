@@ -51,7 +51,20 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<ActorVideoLoads>();
         services.AddScoped<PreviewPictures>();
 
+        // ADR 0061's second population: who is interested, what is held, and
+        // the two writers of it.
+        services.TryAddScoped<UserPreviews>();
+        services.TryAddScoped<UserPreviewWrites>();
+
+        // ADR 0061's asset cache: the pairs on disk, the fetch that validates
+        // them, and the sweep that bounds them. The display path takes
+        // PreviewAssetCache directly.
+        services.TryAddScoped<PreviewAssetStore>();
+        services.AddScoped<PreviewAssetCache>();
+        services.AddScoped<PreviewAssetEviction>();
+
         services.AddScoped<ActorFeed>();
+        services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();
         services.AddScoped<WantedVideoFeed>();
         services.AddScoped<FavouriteSiteFeed>();
@@ -70,6 +83,9 @@ public static class SyncServiceCollectionExtensions
         Routine<ActorProfileRoutine>(services);
         Routine<ActorVideoLoadRoutine>(services);
         Routine<PreviewPictureRoutine>(services);
+        Routine<PreviewUserPreviewRoutine>(services);
+        Routine<LibraryUserPreviewRoutine>(services);
+        Routine<UserPreviewFeedRoutine>(services);
         Routine<VideoImageFeedRoutine>(services);
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);

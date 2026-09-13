@@ -128,3 +128,48 @@ public sealed class LibraryVerificationRow
     public LibraryVerification Outcome { get; set; }
     public DateTimeOffset At { get; set; }
 }
+
+/// <summary>
+/// ADR 0062's flag: a filed Video File whose Video was named from evidence prdb
+/// has since withdrawn or corrected.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <strong>Nothing on disk moves for a withdrawal.</strong> A filed file is
+/// content the person now has, in a place their media server knows, and a
+/// moderator taking a picture down is not grounds for this tool to rename,
+/// delete or reassign it. So the answer is a record and a person, which is what
+/// this is.
+/// </para>
+/// <para>
+/// <strong>Exported</strong>, and it is the only thing in the user-preview slice
+/// besides the Library's own assets that is. It cannot be re-derived: the
+/// preview rows it is about are gone by definition, so a Restore that arrived
+/// without it would show a filed file as ordinarily identified and the question
+/// would never be asked again. That is ADR 0009's <em>cannot be fetched
+/// again</em>, read literally.
+/// </para>
+/// <para>
+/// One row per Video File, cleared by a person. A second withdrawal on a file
+/// that is already flagged rewrites the reason rather than queueing behind it —
+/// what a person needs is the current state, not a history of it.
+/// </para>
+/// </remarks>
+public sealed class IdentificationFlagRow
+{
+    public Guid VideoFileId { get; set; }
+
+    /// <summary>The Video the file is filed under, which is not changed by this.</summary>
+    public Guid VideoId { get; set; }
+
+    /// <summary>
+    /// The Video the evidence names now, where it names one — a correction
+    /// rather than a withdrawal. Null where the evidence simply went.
+    /// </summary>
+    public Guid? NowNamesVideoId { get; set; }
+
+    /// <summary>Why it was flagged, as a sentence for the person deciding.</summary>
+    public string Reason { get; set; } = string.Empty;
+
+    public DateTimeOffset At { get; set; }
+}

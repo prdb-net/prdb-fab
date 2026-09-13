@@ -20,6 +20,13 @@ public enum Feed
     /// </summary>
     VideoImages,
 
+    /// <summary>
+    /// prdb's user-preview change feed (ADR 0061). Unlike the other five it
+    /// carries a moderation state as well as a row, which is how a withdrawal
+    /// and a restoration are learned about at all.
+    /// </summary>
+    VideoUserImages,
+
     /// <summary>The user's wanted list.</summary>
     WantedVideos,
 

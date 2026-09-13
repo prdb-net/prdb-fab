@@ -63,6 +63,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<CatalogueImageRow> CatalogueImages => Set<CatalogueImageRow>();
 
+    /// <summary>The user previews prdb publishes beside its own images (ADR 0061).</summary>
+    public DbSet<UserPreviewRow> UserPreviews => Set<UserPreviewRow>();
+
+    /// <summary>Which Videos' user previews this installation holds (ADR 0061).</summary>
+    public DbSet<UserPreviewInterestRow> UserPreviewInterests => Set<UserPreviewInterestRow>();
+
     /// <summary>One row per feed. See <see cref="FeedCursorRow"/>.</summary>
     public DbSet<FeedCursorRow> FeedCursors => Set<FeedCursorRow>();
 
@@ -121,6 +127,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     public DbSet<OperationLogEntryRow> OperationLogEntries => Set<OperationLogEntryRow>();
 
     public DbSet<GateAdmissionRow> GateAdmissions => Set<GateAdmissionRow>();
+
+    /// <summary>Filed Video Files whose evidence prdb has withdrawn (ADR 0062).</summary>
+    public DbSet<IdentificationFlagRow> IdentificationFlags => Set<IdentificationFlagRow>();
 
     /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
@@ -460,6 +469,71 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(row => row.VideoId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<IdentificationFlagRow>(flag =>
+        {
+            flag.ToTable("identification_flag");
+
+            // The Video File is the key: what a person needs is the current
+            // state of one file, not a history of what its evidence did.
+            flag.HasKey(row => row.VideoFileId);
+
+            // It says nothing about whose prdb account read the evidence — the
+            // moderation it rests on is what prdb shows everybody.
+            flag.Declares(AccountClass.AccountFree);
+
+            flag.Property(row => row.Reason).IsRequired();
+
+            // What the Library entry asks: is anything under this Video
+            // flagged?
+            flag.HasIndex(row => row.VideoId);
+        });
+
+        builder.Entity<UserPreviewRow>(preview =>
+        {
+            preview.ToTable("user_preview");
+            preview.HasKey(row => row.Id);
+
+            // Nothing here belongs to the prdb account: a user preview is what
+            // prdb shows everybody, and the submitter's own id is not read.
+            preview.Declares(AccountClass.AccountFree);
+
+            preview.HasIndex(row => row.PrdbId).IsUnique();
+
+            preview.Property(row => row.OsHash).IsRequired();
+            preview.Property(row => row.Kind).IsRequired();
+            preview.Property(row => row.Url).IsRequired();
+            preview.Property(row => row.Shown).HasDefaultValue(false);
+            preview.Property(row => row.Deleted).HasDefaultValue(false);
+
+            // The gallery's question — this Video's previews, in prdb's own
+            // order — and the Library's, which adds the hash. Both are served
+            // from the front of this one index.
+            preview.HasIndex(row => new { row.VideoPrdbId, row.OsHash, row.DisplayOrder, row.PrdbId });
+
+            // The Identification evidence's question, asked of a hash with no
+            // Video in hand (ADR 0062).
+            preview.HasIndex(row => row.OsHash);
+
+            // Eviction, least-recently-served first, over the half that has
+            // bytes at all.
+            preview.HasIndex(row => row.LastServedAt);
+        });
+
+        builder.Entity<UserPreviewInterestRow>(interest =>
+        {
+            interest.ToTable("user_preview_interest");
+
+            // The Video is the key: a second row for one Video would be two
+            // freshness stamps over one question.
+            interest.HasKey(row => row.VideoPrdbId);
+            interest.Declares(AccountClass.AccountFree);
+            interest.Property(row => row.ForTheLibrary).HasDefaultValue(false);
+
+            // What the expiry pass reads, and what says whether a read is due.
+            interest.HasIndex(row => row.TouchedAt);
+            interest.HasIndex(row => row.LastReadAt);
         });
 
         builder.Entity<FeedCursorRow>(cursor =>
@@ -906,6 +980,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<ReportedStateRow>().Declares(ExportClass.Exported);
         builder.Entity<OperationLogEntryRow>().Declares(ExportClass.Exported);
         builder.Entity<GateAdmissionRow>().Declares(ExportClass.Exported);
+        builder.Entity<IdentificationFlagRow>().Declares(ExportClass.Exported);
         builder.Entity<AccountPreferenceWriteRow>().Declares(ExportClass.Exported);
     }
 }

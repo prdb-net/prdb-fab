@@ -54,6 +54,10 @@ export type VideoPreview = Schema['VideoPreview']
 export type PreviewActor = Schema['PreviewActor']
 export type PreviewImage = Schema['PreviewImage']
 export type PreviewPictureAsk = Schema['PreviewPictureAsk']
+export type UserPreviewCard = Schema['UserPreviewCard']
+export type UserPreviewAsk = Schema['UserPreviewAsk']
+export type SpriteTiles = Schema['SpriteTiles']
+export type SpriteTileView = Schema['SpriteTileView']
 export type CatalogueVideoFilter = Schema['CatalogueVideoFilter']
 export type CatalogueVideoSort = Schema['CatalogueVideoSort']
 export type LibraryEntrySort = Schema['LibraryEntrySort']
@@ -398,6 +402,30 @@ export async function readVideoPreview(prdbId: string): Promise<VideoPreview> {
  */
 export async function askForPictures(prdbId: string): Promise<PreviewPictureAsk> {
   return post<PreviewPictureAsk>(`/api/catalogue/videos/${prdbId}/pictures`)
+}
+
+/**
+ * ADR 0061's demand: a person opened a Preview, so this installation now has a
+ * reason to hold that Video's user previews. Deduplicated behind the routine
+ * row, and refused rather than repeated inside the freshness window, so it is
+ * safe to call once per Video opened.
+ */
+export async function askForUserPreviews(prdbId: string): Promise<UserPreviewAsk> {
+  return post<UserPreviewAsk>(`/api/catalogue/videos/${prdbId}/user-previews`)
+}
+
+/**
+ * Which tile of a sprite sheet belongs to which second, read off the cached
+ * pair. A local read that may fill the cache from the CDN on the way — no prdb
+ * request, and nothing that waits: an answer that is still coming says so.
+ */
+export async function readSpriteTiles(
+  previewId: string,
+  version: string,
+): Promise<SpriteTiles> {
+  return json<SpriteTiles>(
+    await fetch(`/api/catalogue/user-previews/${previewId}/${version}/tiles`),
+  )
 }
 
 export async function listSites(

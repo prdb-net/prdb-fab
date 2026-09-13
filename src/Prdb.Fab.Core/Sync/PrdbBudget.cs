@@ -73,6 +73,13 @@ public sealed record PrdbBudget(int Limit, int Remaining, TimeSpan ResetIn)
         PrdbWork.Actors => 0.25,
         PrdbWork.Sites => 0.30,
 
+        // ADR 0061, and off the staircase for the same reason Preview is: the
+        // steps were laid out before this existed. Below every feed, because
+        // nothing waits on it and the Catalogue's own currency is worth more
+        // than a picture being an hour out of date; above repair, which spends
+        // only what is left above half.
+        PrdbWork.UserPreviews => 0.35,
+
         // ADR 0014's own number, and the only one here that is not a step on
         // the staircase: repair runs on what is left above half the limit.
         PrdbWork.Repair => 0.50,

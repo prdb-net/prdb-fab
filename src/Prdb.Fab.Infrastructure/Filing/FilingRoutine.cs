@@ -5,6 +5,7 @@ using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Sync;
 
 namespace Prdb.Fab.Infrastructure.Filing;
 
@@ -13,6 +14,7 @@ public sealed class FilingRoutine(
     FabDbContext context,
     EntryFiles entryFiles,
     VideoFileMover mover,
+    UserPreviews userPreviews,
     TimeProvider time,
     ILogger<FilingRoutine> logger) : IRoutine
 {
@@ -436,6 +438,14 @@ public sealed class FilingRoutine(
         arrival.State = ArrivingFileState.Filed;
         arrival.IsOnDisk = false;
         arrival.Reason = null;
+
+        // ADR 0061: a filed Video File is one of the two things that create an
+        // interest in a Video's user previews — the Library wants the preview
+        // made from this exact file, and ADR 0062's evidence wants the hash
+        // bindings. It is durable work rather than a request: filing never
+        // waits on prdb, and this is inside the transaction so that a crash
+        // between the two cannot leave a filed file nothing will enrich.
+        await userPreviews.AskAsync(videoId, UserPreviewDemand.Library, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);

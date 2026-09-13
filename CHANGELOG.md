@@ -19,6 +19,41 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Added
+
+- **The pictures other people made.** prdb publishes a second kind of picture
+  beside its own: ones its users submitted, each made from one specific file.
+  A Preview now shows them under the Video's own gallery, in their own section,
+  because they are a picture of a *file* rather than of the Video.
+- **A scrubbing strip where somebody made one.** Where a submitted preview is a
+  sprite sheet with times, the Preview draws it as what it is — one tile at a
+  time, with a slider that works with a finger, a mouse or the arrow keys, and
+  the second each tile belongs to. Nothing plays and nothing streams: it is a
+  picture and a list of times.
+- They are fetched as you scroll to them, like every other picture in the
+  sheet, and asked for from a small reserved share of the request budget — so
+  opening a Video and moving straight on costs nothing.
+- **A picture a moderator removes stops being shown.** These are moderated, and
+  removal and restoration both reach this tool within the hour. A withdrawn
+  preview disappears from a sheet that is already open, and a restored one
+  comes back.
+- **Some files prdb cannot name are now identified anyway.** A submitted
+  preview carries the hash of the file it was made from, so when prdb publishes
+  one under a Video it is saying, in a moderated way, that a file with that
+  hash is that Video. A downloaded file prdb's own lookup could not name is now
+  matched against those — and where exactly one Video is named, it is
+  identified and filed like any other, at a Strong confidence and through the
+  same gate you configured. It costs no request, so a file that has sat in the
+  review queue for a week is picked up the moment you open its Video's Preview.
+- Where the evidence disagrees with itself, or names something prdb did not
+  list, nothing is chosen and the file stays in the review queue with the
+  reason spelled out — and the pictures made from that exact file are shown
+  beside it.
+- **A withdrawal after the fact never moves a filed file.** If prdb stops
+  showing the preview a file's Video was named from, nothing is renamed,
+  deleted or reassigned: the file is flagged so you can look at it, and the
+  flag goes away by itself if the preview comes back.
+
 ## [0.21.0] - 2026-09-13
 
 A picture on a browse grid is now something you can open. Click one and the

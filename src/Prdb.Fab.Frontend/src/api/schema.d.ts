@@ -109,6 +109,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/previews/{previewId}/{version}/{half}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    previewId: string;
+                    version: string;
+                    half: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/artwork/actors/{actorId}": {
         parameters: {
             query?: never;
@@ -1832,6 +1869,81 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/videos/{prdbId}/user-previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserPreviewAsk"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/user-previews/{previewId}/{version}/tiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    previewId: string;
+                    version: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SpriteTiles"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3912,7 +4024,7 @@ export interface components {
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
         };
         /** @enum {unknown} */
-        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | null;
+        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | "PreviewHash" | null;
         IdentificationSettingsRequest: {
             beforeDownload: components["schemas"]["BeforeDownloadGateChoice"];
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
@@ -4241,6 +4353,8 @@ export interface components {
             prdbId: string;
             name: string;
         };
+        /** @enum {unknown} */
+        PreviewHashOutcome: "NoEvidence" | "Conflicting" | "OutsideTheCandidates" | "WaitingForTheCatalogue" | "Assigned" | "NotNeeded";
         PreviewImage: {
             /** Format: uuid */
             prdbId: string;
@@ -4435,6 +4549,12 @@ export interface components {
             /** Format: int64 */
             sizeBytes: number | string;
         };
+        ReviewPicture: {
+            /** Format: uuid */
+            prdbId: string;
+            version: string;
+            sprite: boolean;
+        };
         /** @enum {unknown} */
         ReviewQueueAction: "FileAs" | "Replace" | "FileAsOnlyCopy" | null;
         ReviewQueueCount: {
@@ -4468,6 +4588,8 @@ export interface components {
             download: components["schemas"]["ReviewDownload"];
             release: string;
             indexer: string;
+            automaticIdentification: components["schemas"]["PreviewHashOutcome"];
+            pictures: components["schemas"]["ReviewPicture"][];
         };
         ReviewQueuePage: {
             entries: components["schemas"]["ReviewQueueEntry"][];
@@ -4615,6 +4737,25 @@ export interface components {
             site: components["schemas"]["BrowseContext"];
             videos: components["schemas"]["VideoPage"];
         };
+        SpriteTiles: {
+            usable: boolean;
+            tiles: components["schemas"]["SpriteTileView"][];
+            coming: boolean;
+        };
+        SpriteTileView: {
+            /** Format: int64 */
+            startMs: number | string;
+            /** Format: int64 */
+            endMs: number | string;
+            /** Format: int32 */
+            x: number | string;
+            /** Format: int32 */
+            y: number | string;
+            /** Format: int32 */
+            width: number | string;
+            /** Format: int32 */
+            height: number | string;
+        };
         StatusCondition: {
             kind: components["schemas"]["StatusConditionKind"];
             title: string;
@@ -4686,6 +4827,27 @@ export interface components {
             /** Format: date-time */
             at: null | string;
         };
+        UserPreviewAsk: {
+            outcome: components["schemas"]["UserPreviewOutcome"];
+        };
+        UserPreviewCard: {
+            /** Format: uuid */
+            prdbId: string;
+            version: string;
+            sprite: boolean;
+            /** Format: int32 */
+            width: number | string;
+            /** Format: int32 */
+            height: number | string;
+            /** Format: int32 */
+            tileWidth: null | number | string;
+            /** Format: int32 */
+            tileHeight: null | number | string;
+            /** Format: int32 */
+            tileCount: null | number | string;
+        };
+        /** @enum {unknown} */
+        UserPreviewOutcome: "Asked" | "Fresh";
         VideoAcquisition: {
             /** Format: int32 */
             downloadsSpent: number | string;
@@ -4746,6 +4908,8 @@ export interface components {
             picturesComing: boolean;
             actors: components["schemas"]["PreviewActor"][];
             images: components["schemas"]["PreviewImage"][];
+            userPreviews: components["schemas"]["UserPreviewCard"][];
+            userPreviewsComing: boolean;
         };
         WantedList: {
             videos: components["schemas"]["VideoCard"][];

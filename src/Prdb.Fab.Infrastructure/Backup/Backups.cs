@@ -202,6 +202,17 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
             .OrderBy(row => row.Id)
             .ToListAsync(cancellationToken);
 
+        var identificationFlags = await context.IdentificationFlags
+            .AsNoTracking()
+            .OrderBy(row => row.VideoFileId)
+            .Select(row => new BackupIdentificationFlag(
+                row.VideoFileId,
+                row.VideoId,
+                row.NowNamesVideoId,
+                row.Reason,
+                row.At))
+            .ToListAsync(cancellationToken);
+
         var accountPreferenceWrites = await context.AccountPreferenceWrites
             .AsNoTracking()
             .OrderBy(row => row.Id)
@@ -304,6 +315,7 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 row.Actor,
                 row.Reason,
                 row.At))],
-            accountPreferenceWrites);
+            accountPreferenceWrites,
+            identificationFlags);
     }
 }

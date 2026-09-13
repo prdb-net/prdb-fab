@@ -67,6 +67,28 @@ file, and never compared against one automatically — nothing here refuses a
 file for disagreeing with it.
 _Avoid_: Duration, Expected runtime, Reference runtime
 
+**User Preview**:
+A picture a prdb user submitted for a video, made from one specific file and
+carrying that file's osHash. Either a single still or a Sprite Sheet with a
+paired WebVTT. It may or may not be linked to a video, it is moderated, and it
+can be withdrawn and restored — none of which is true of the images prdb
+publishes itself, which is why it is a second population rather than more of
+the same one.
+_Avoid_: User image, Submission, Contribution, Screenshot
+
+**Sprite Sheet**:
+One image holding a grid of equally sized tiles, one per timestamp, with a
+paired WebVTT saying which tile belongs to which second. The form a timed User
+Preview arrives in, and the form the tool writes one back out in.
+_Avoid_: Contact sheet, Filmstrip, Montage, Trickplay, Atlas
+
+**Moderation Visibility**:
+Whether prdb currently shows a User Preview. Not a property of the picture and
+not permanent: a withdrawn preview stops being served here and a restored one
+becomes usable again under the same id. Distinct from a dead image URL, which is
+about the bytes and, for the images prdb publishes itself, permanent.
+_Avoid_: Approval, Status, Visibility flag, Deleted
+
 ### Indexers and acquisition
 
 **Indexer**:
@@ -156,10 +178,20 @@ _Avoid_: Cause, Source, Trigger, Reason
 ### Identification
 
 **Identification**:
-Deciding which video a release or a file belongs to. Always prdb's answer,
-never one this tool worked out for itself — before a download from the name,
-after one from the hash.
+Deciding which video a release or a file belongs to. Always prdb's answer or a
+binding prdb published, never one this tool worked out for itself — before a
+download from the name, after one from the hash. Where prdb's own ladder names
+no video, Preview-Hash Evidence may.
 _Avoid_: Matching, Lookup, Recognition
+
+**Preview-Hash Evidence**:
+A User Preview prdb has linked to a video and is currently showing, whose
+osHash is a video file's. A statement prdb published and a moderator approved
+rather than anything this tool inferred, and the only source of an
+Identification other than prdb's own answer. It never overrides that answer, it
+records a Strong Confidence and its own rung, and it is never a Confirmed
+Assignment.
+_Avoid_: Hash match, Fingerprint, Community identification
 
 **Confidence**:
 How strongly an identification is carried by the evidence behind it. A set of
@@ -287,6 +319,15 @@ the slot whose name suggests itself is measured to look worse than none.
 Distinct from the artwork the browse surfaces show, which is served from the
 cache and never read back off the library.
 _Avoid_: Poster, Fanart, Backdrop, Thumbnail, Cover
+
+**Timeline Preview**:
+The Sprite Sheet and WebVTT this tool may write beside one Video File, so that a
+media server can show the picture at a point in the file while somebody scrubs
+it. Bound to that one file by its osHash: a different cut or encode of the same
+video is a different file and gets its own or none. Distinct from the Entry
+Image, which is one picture for the whole entry, and from the User Preview it
+was made from, which is prdb's row rather than this tool's file.
+_Avoid_: Trickplay, BIF, Scrub strip, Chapter images
 
 **Replacing**:
 Putting an arriving video file in the place of the one the library holds at that

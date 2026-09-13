@@ -68,7 +68,8 @@ public sealed record BackupDocument(
     IReadOnlyList<BackupReportedState> ReportedStates,
     IReadOnlyList<BackupConfirmedAssignment> ConfirmedAssignments,
     IReadOnlyList<BackupOperationLogEntry> OperationLog,
-    IReadOnlyList<BackupAccountPreferenceWrite> AccountPreferenceWrites);
+    IReadOnlyList<BackupAccountPreferenceWrite> AccountPreferenceWrites,
+    IReadOnlyList<BackupIdentificationFlag> IdentificationFlags);
 
 /// <summary>
 /// The one Installation row. Its key is not in the document: ADR 0033 leaves
@@ -114,6 +115,23 @@ public sealed record BackupInstallation(
 
 /// <summary>ADR 0006's two admission sets, as the rows that are their form.</summary>
 public sealed record BackupGateAdmission(string Gate, IdentificationConfidence Confidence);
+
+/// <summary>
+/// ADR 0062's flag: a filed Video File whose Video was named from evidence prdb
+/// has since withdrawn or corrected.
+/// </summary>
+/// <remarks>
+/// In the document because it cannot be fetched again — the preview rows it is
+/// about are gone by definition, so a Restore arriving without it would show the
+/// file as ordinarily identified and the question would never be asked a second
+/// time.
+/// </remarks>
+public sealed record BackupIdentificationFlag(
+    Guid VideoFileId,
+    Guid VideoId,
+    Guid? NowNamesVideoId,
+    string Reason,
+    DateTimeOffset At);
 
 public sealed record BackupIndexer(
     Guid Id,

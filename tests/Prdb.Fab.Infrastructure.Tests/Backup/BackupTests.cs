@@ -37,7 +37,7 @@ public sealed class BackupTests
     public void Every_exported_table_has_a_section_and_every_section_a_table()
     {
         Assert.Empty(BackupSections.Unaccounted(TheModel()));
-        Assert.Equal(15, BackupSections.Carried.Count);
+        Assert.Equal(16, BackupSections.Carried.Count);
     }
 
     /// <summary>
@@ -115,6 +115,9 @@ public sealed class BackupTests
         Assert.Equal("os-hash", Assert.Single(document.ConfirmedAssignments).OsHash);
         Assert.Equal("Moved", Assert.Single(document.OperationLog).Act);
         Assert.Equal(AccountPreferenceKind.WantedVideo, Assert.Single(document.AccountPreferenceWrites).Kind);
+        Assert.Equal(
+            APopulatedInstallation.VideoFile,
+            Assert.Single(document.IdentificationFlags).VideoFileId);
 
         // Nothing from a cache table has a section of its own, which is the
         // other half of ADR 0033's boundary: the Catalogue, the APopulatedInstallation.Indexer Cache,
@@ -143,6 +146,7 @@ public sealed class BackupTests
                 "confirmedAssignments",
                 "operationLog",
                 "accountPreferenceWrites",
+                "identificationFlags",
             ],
             sections);
     }
@@ -227,7 +231,7 @@ public sealed class BackupTests
         var document = await ReadAsync(database);
         var written = BackupJson.Write(document);
 
-        Assert.Equal(1, document.FormatVersion);
+        Assert.Equal(BackupFormat.Version, document.FormatVersion);
 
         await using var scope = database.Scope();
         var applied = await scope.ServiceProvider.GetRequiredService<FabDbContext>()

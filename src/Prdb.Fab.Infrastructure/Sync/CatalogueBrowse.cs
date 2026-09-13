@@ -4,6 +4,7 @@ using Prdb.Fab.Core;
 using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.ReleaseDiscovery;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -31,6 +32,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public sealed class CatalogueBrowse(
     FabDbContext context,
     FeedCursors cursors,
+    UserPreviews userPreviews,
     ReleaseRankings rankings)
 {
     /// <summary>
@@ -520,6 +522,14 @@ public sealed class CatalogueBrowse(
             row => row.Name == PreviewPictureRoutine.RoutineName && row.Target == target,
             cancellationToken);
 
+        // ADR 0061's second population, beside prdb's own pictures rather than
+        // instead of them. A row that is not shown never reaches here, and a
+        // kind this build does not know is left out rather than drawn as a
+        // still — a sprite sheet presented as one picture is a contact sheet
+        // somebody would take for a frame.
+        var previews = await userPreviews.OfAsync(prdbId, cancellationToken);
+        var previewsComing = await userPreviews.ComingAsync(prdbId, cancellationToken);
+
         return new VideoPreview(
             cards[0],
             video.DurationMs,
@@ -532,7 +542,19 @@ public sealed class CatalogueBrowse(
             // strip of pictures rather than a census of image rows.
             [.. images
                 .Where(image => !image.FoundDead)
-                .Select(image => new PreviewImage(image.PrdbId, image.PrdbId == chosen))]);
+                .Select(image => new PreviewImage(image.PrdbId, image.PrdbId == chosen))],
+            [.. previews
+                .Where(preview => UserPreviewAsset.IsKnown(preview.Kind))
+                .Select(preview => new UserPreviewCard(
+                    preview.PrdbId,
+                    PreviewAssetCache.VersionOf(preview),
+                    UserPreviewAsset.IsSprite(preview.Kind),
+                    preview.Width,
+                    preview.Height,
+                    preview.TileWidth,
+                    preview.TileHeight,
+                    preview.TileCount))],
+            previewsComing);
     }
 
     /// <summary>
@@ -962,7 +984,9 @@ public sealed record VideoPreview(
     int? DurationFileCount,
     bool PicturesComing,
     IReadOnlyList<PreviewActor> Actors,
-    IReadOnlyList<PreviewImage> Images);
+    IReadOnlyList<PreviewImage> Images,
+    IReadOnlyList<UserPreviewCard> UserPreviews,
+    bool UserPreviewsComing);
 
 /// <summary>One credit on a Preview, and the Actor page it leads to.</summary>
 public sealed record PreviewActor(Guid PrdbId, string Name);
@@ -980,3 +1004,35 @@ public sealed record PreviewActor(Guid PrdbId, string Name);
 /// picture carries it, and none does where the chosen URL was found dead.
 /// </param>
 public sealed record PreviewImage(Guid PrdbId, bool Chosen);
+
+/// <summary>
+/// One user preview in a Preview's gallery (ADR 0061).
+/// </summary>
+/// <remarks>
+/// Named by id <em>and version</em>, unlike an image: prdb may republish a
+/// sprite at a different URL or a different grid under the same id, and a
+/// browser holding an address that quietly means something else is the thing
+/// the version exists to prevent. No URL prdb published crosses this boundary,
+/// for ADR 0030's reason — the browser asks the tool and never the CDN — and
+/// here it matters more, because a user preview's address is mutable and this
+/// tool has to be able to stop serving one.
+/// </remarks>
+/// <param name="Sprite">
+/// Whether this is a grid of timed tiles rather than one picture. A sprite is
+/// never drawn as an ordinary still: it is a contact sheet, and shown as one it
+/// would read as a frame of the Video that it is not.
+/// </param>
+/// <param name="TileCount">
+/// How many tiles prdb says the sheet is cut into, where it says. What the
+/// tiles actually are is the WebVTT's to say, and it is asked for separately —
+/// the pair has to be in the cache before anybody can be told.
+/// </param>
+public sealed record UserPreviewCard(
+    Guid PrdbId,
+    string Version,
+    bool Sprite,
+    int Width,
+    int Height,
+    int? TileWidth,
+    int? TileHeight,
+    int? TileCount);

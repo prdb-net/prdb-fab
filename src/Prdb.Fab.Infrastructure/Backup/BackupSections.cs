@@ -44,6 +44,7 @@ public static class BackupSections
         [typeof(ConfirmedAssignmentRow)] = nameof(BackupDocument.ConfirmedAssignments),
         [typeof(OperationLogEntryRow)] = nameof(BackupDocument.OperationLog),
         [typeof(AccountPreferenceWriteRow)] = nameof(BackupDocument.AccountPreferenceWrites),
+        [typeof(IdentificationFlagRow)] = nameof(BackupDocument.IdentificationFlags),
     };
 
     /// <summary>

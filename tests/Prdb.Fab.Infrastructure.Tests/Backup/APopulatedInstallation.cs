@@ -196,6 +196,17 @@ public static class APopulatedInstallation
             RuleName = "A Rule",
         });
         context.Add(new ArrivingFileCandidateRow { ArrivingFileId = Arriving, VideoId = OtherVideo });
+
+        // ADR 0062's flag. In the document because it cannot be fetched again:
+        // the preview rows it is about are gone by the time it is written.
+        context.Add(new IdentificationFlagRow
+        {
+            VideoFileId = VideoFile,
+            VideoId = Video,
+            NowNamesVideoId = OtherVideo,
+            Reason = "The evidence now names another Video.",
+            At = new DateTimeOffset(2026, 8, 27, 9, 0, 0, TimeSpan.Zero),
+        });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         await context.Installation.ExecuteUpdateAsync(

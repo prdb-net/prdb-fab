@@ -4,8 +4,12 @@ import { Link } from 'react-router'
 
 import {
   askForPictures,
+  askForUserPreviews,
+  readSpriteTiles,
   readVideoPreview,
   type PreviewImage,
+  type SpriteTileView,
+  type UserPreviewCard,
   type VideoCard,
   type VideoPreview,
 } from '../api/client.ts'
@@ -109,13 +113,17 @@ function Preview({
     queryFn: () => readVideoPreview(prdbId),
     // Stepping back and forth across a page of cards re-reads nothing.
     staleTime: 5 * 60 * 1000,
-    // Except while prdb is being asked for this Video's pictures, which is the
-    // one thing about a Preview that can change under it (ADR 0060). The read
-    // is local, so this costs a query and no request.
-    refetchInterval: (query) => (query.state.data?.picturesComing ? 2000 : false),
+    // Except while prdb is being asked about this Video, which is the one
+    // thing about a Preview that can change under it — ADR 0060's pictures and
+    // ADR 0061's user previews alike. The read is local, so this costs a query
+    // and no request. It is also what makes a moderation removal show up while
+    // the sheet is open: a withdrawn preview stops being in the answer.
+    refetchInterval: (query) =>
+      query.state.data?.picturesComing || query.state.data?.userPreviewsComing ? 2000 : false,
   })
 
   usePictures(prdbId, preview.data)
+  useUserPreviews(prdbId, preview.data)
   const sheet = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   const titleId = useId()
@@ -205,6 +213,13 @@ function Preview({
               <CardActions includeSite video={video} returnTo={returnTo} />
             </div>
           )}
+
+          <Contributed
+            coming={preview.data?.userPreviewsComing}
+            key={`${prdbId}-contributed`}
+            previews={preview.data?.userPreviews}
+            title={title}
+          />
 
           <People preview={preview.data} video={video} />
 
@@ -377,6 +392,300 @@ function Gallery({
       )}
     </div>
   )
+}
+
+/**
+ * ADR 0061's demand, asked once for the Video on screen.
+ *
+ * The same shape as ADR 0060's above and for the same reason: the sheet renders
+ * what it has, the ask is a request of its own rather than a side effect of the
+ * read, and the strip fills in when the answer lands. The backend decides
+ * whether it costs anything — a Video asked about inside the freshness window
+ * is refused rather than repeated, so this is safe to call whenever a Preview
+ * opens.
+ *
+ * Unlike the pictures ask it is not conditional on the Video having none. A
+ * Video with ten pictures may still have a scrubbing strip somebody made from
+ * their own copy, and the only way to find out is to ask.
+ */
+function useUserPreviews(prdbId: string, preview?: VideoPreview) {
+  const ask = useMutation({ mutationFn: () => askForUserPreviews(prdbId) })
+  const { mutate, reset } = ask
+
+  useEffect(() => reset(), [prdbId, reset])
+
+  useEffect(() => {
+    if (!preview || preview.userPreviewsComing) return
+    if (ask.isPending || ask.isSuccess || ask.isError) return
+
+    mutate()
+  }, [ask.isError, ask.isPending, ask.isSuccess, mutate, preview])
+}
+
+/**
+ * The pictures other people made, under the ones prdb publishes itself.
+ *
+ * Under rather than mixed in, and that is the whole of the layout decision: a
+ * user preview is made from **one file** by somebody who had it, and prdb's own
+ * `images[]` are about the Video. A strip that blurred the two would make *a
+ * picture of this Video* and *a picture of this file* the same claim, which is
+ * exactly the distinction the Library and Identification are built on.
+ *
+ * Nothing here changes what the grids draw or what filing copies as the Entry
+ * Image: ADR 0027's choice is untouched, and so is ADR 0060's gallery above.
+ */
+function Contributed({
+  coming = false,
+  previews,
+  title,
+}: {
+  coming?: boolean
+  previews?: readonly UserPreviewCard[]
+  title: string
+}) {
+  const sprites = previews?.filter((preview) => preview.sprite) ?? []
+  const singles = previews?.filter((preview) => !preview.sprite) ?? []
+
+  if (sprites.length === 0 && singles.length === 0) {
+    return coming ? (
+      <p className={styles.looking}>Looking for previews people have made of this Video&hellip;</p>
+    ) : null
+  }
+
+  return (
+    <section className={styles.contributed}>
+      <h3 className={styles.contributedHeading}>
+        <span>From other people</span>
+        {coming && <span>Looking&hellip;</span>}
+      </h3>
+
+      <ul className={styles.contributedList}>
+        {sprites.map((preview) => (
+          <li key={preview.prdbId}>
+            <Sprite preview={preview} title={title} />
+          </li>
+        ))}
+      </ul>
+
+      {singles.length > 0 && (
+        <ul className={styles.singles}>
+          {singles.map((preview, index) => (
+            <li key={preview.prdbId}>
+              <CachedArtwork
+                absentClassName={styles.thumbAbsent}
+                frameClassName={styles.thumbFrame}
+                imageClassName={styles.thumbImage}
+                path={`/api/previews/${preview.prdbId}/${preview.version}/image`}
+                title={`${title} — a picture somebody submitted, ${index + 1} of ${singles.length}`}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+/**
+ * One sprite sheet, shown as the thing it is: a strip somebody can move
+ * through, a tile at a time, with the second each tile belongs to.
+ *
+ * **Never as an ordinary still.** A sheet drawn whole is a grid of a hundred
+ * small pictures that reads as one frame of something it is not, and a sheet
+ * cropped to its first tile is a still that quietly discards what the preview
+ * is for. So it is a control, and the control is a range input: keyboard,
+ * touch and screen reader support for a one-dimensional value is what that
+ * element already is, and none of the three is worth reimplementing.
+ *
+ * **Nothing streams the Video File.** The strip is a picture and a list of
+ * times; there is no player here and no byte of the file is read.
+ */
+function Sprite({ preview, title }: { preview: UserPreviewCard; title: string }) {
+  const [at, setAt] = useState(0)
+  const frame = useRef<HTMLDivElement>(null)
+  const near = useNear(frame)
+  const label = useId()
+
+  const tiles = useQuery({
+    queryKey: ['sprite-tiles', preview.prdbId, preview.version],
+    queryFn: () => readSpriteTiles(preview.prdbId, preview.version),
+    // Lazily, like every other picture in this sheet: a Preview opened and
+    // stepped straight past has fetched nothing (ADR 0060).
+    enabled: near,
+    staleTime: 5 * 60 * 1000,
+    // The first answer may be *still coming* while the pair is fetched from the
+    // CDN. That is the one state worth asking about again, and it settles in a
+    // second or two.
+    refetchInterval: (query) => (query.state.data?.coming ? 1500 : false),
+  })
+
+  const sheet = useCachedImage(
+    `/api/previews/${preview.prdbId}/${preview.version}/image`,
+    near && (tiles.data?.usable ?? false),
+  )
+
+  const list = tiles.data?.tiles ?? []
+  const tile = list[Math.min(at, Math.max(list.length - 1, 0))]
+
+  if (tiles.data && !tiles.data.usable && !tiles.data.coming) {
+    // Withdrawn between the read and now, at another version, or a pair that
+    // does not describe its sheet. A gallery is a strip of pictures rather than
+    // a census of rows, so it is simply not here.
+    return null
+  }
+
+  return (
+    <div className={styles.contributed}>
+      <div
+        aria-label={`${title} — a preview strip somebody made`}
+        className={`${styles.tile} ${sheet && tile ? '' : styles.tileEmpty}`}
+        ref={frame}
+        role="img"
+        style={sheet && tile ? position(preview, tile, sheet) : undefined}
+      >
+        {!(sheet && tile) && <span aria-hidden="true">▤</span>}
+      </div>
+
+      {list.length > 1 && (
+        <>
+          <label className={styles.at} htmlFor={label}>
+            {clock(Number(tile?.startMs ?? 0))} of {clock(Number(list[list.length - 1].endMs))}
+          </label>
+          <input
+            className={styles.scrub}
+            id={label}
+            max={list.length - 1}
+            min={0}
+            onChange={(event) => setAt(Number(event.target.value))}
+            step={1}
+            type="range"
+            value={Math.min(at, list.length - 1)}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Where on the sheet one tile is, as a share of the grid rather than in pixels.
+ *
+ * Percentages, so that the strip is right at any width with nothing measured
+ * and nothing re-measured when the window changes — the CSS sprite arithmetic,
+ * with the columns and rows worked out from the tile the WebVTT actually named
+ * rather than from what the payload claimed the grid was.
+ */
+function position(
+  preview: UserPreviewCard,
+  tile: SpriteTileView,
+  sheet: string,
+): React.CSSProperties {
+  // The generated types carry every integer as `number | string`, because the
+  // document says int32 and JSON says whatever it likes. Everything below is
+  // arithmetic, so each one is read as a number once, here.
+  const tileWidth = Math.max(Number(tile.width), 1)
+  const tileHeight = Math.max(Number(tile.height), 1)
+  const columns = Math.max(1, Math.round(Number(preview.width) / tileWidth))
+  const rows = Math.max(1, Math.round(Number(preview.height) / tileHeight))
+  const column = Math.round(Number(tile.x) / tileWidth)
+  const row = Math.round(Number(tile.y) / tileHeight)
+
+  return {
+    aspectRatio: `${tileWidth} / ${tileHeight}`,
+    backgroundImage: `url(${sheet})`,
+    backgroundSize: `${columns * 100}% ${rows * 100}%`,
+    backgroundPositionX: columns > 1 ? `${(column / (columns - 1)) * 100}%` : '0%',
+    backgroundPositionY: rows > 1 ? `${(row / (rows - 1)) * 100}%` : '0%',
+  }
+}
+
+/** `1:23` — the second a tile belongs to, in the form a player writes it. */
+function clock(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / 1000))
+  const minutes = Math.floor(seconds / 60)
+
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+/**
+ * Whether an element is near enough to the viewport to be worth fetching for.
+ *
+ * The same margin and the same observer `CachedArtwork` uses, as a hook,
+ * because a sprite sheet is not fetched into an `<img>` — it is a background
+ * over which a tile is positioned, and the element that has to be watched is
+ * the one being positioned rather than one this could hand to that component.
+ */
+function useNear(element: React.RefObject<HTMLElement | null>, margin = '240px'): boolean {
+  const [near, setNear] = useState(false)
+
+  useEffect(() => {
+    const target = element.current
+
+    if (!target || !('IntersectionObserver' in window)) {
+      setNear(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          observer.disconnect()
+          setNear(true)
+        }
+      },
+      { rootMargin: margin },
+    )
+
+    observer.observe(target)
+
+    return () => observer.disconnect()
+  }, [element, margin])
+
+  return near
+}
+
+/**
+ * One image fetched through the tool and held as an object URL for as long as
+ * it is on screen.
+ *
+ * The browser asks this tool and never the CDN (ADR 0030), which for a user
+ * preview is what makes a withdrawal enforceable at all: the address is
+ * same-origin, the server stops answering it, and no URL prdb published ever
+ * reaches the page.
+ */
+function useCachedImage(path: string, enabled: boolean): string | null {
+  const [source, setSource] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!enabled) return
+
+    const controller = new AbortController()
+    let objectUrl: string | null = null
+
+    const load = async () => {
+      try {
+        const answer = await fetch(path, { signal: controller.signal })
+
+        if (answer.status === 204 || !answer.ok) return
+
+        objectUrl = URL.createObjectURL(await answer.blob())
+
+        if (!controller.signal.aborted) setSource(objectUrl)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+      }
+    }
+
+    void load()
+
+    return () => {
+      controller.abort()
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      setSource(null)
+    }
+  }, [enabled, path])
+
+  return source
 }
 
 /**
