@@ -51,7 +51,13 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<ActorVideoLoads>();
         services.AddScoped<PreviewPictures>();
 
+        // ADR 0061's second population: who is interested, what is held, and
+        // the two writers of it.
+        services.TryAddScoped<UserPreviews>();
+        services.TryAddScoped<UserPreviewWrites>();
+
         services.AddScoped<ActorFeed>();
+        services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();
         services.AddScoped<WantedVideoFeed>();
         services.AddScoped<FavouriteSiteFeed>();
@@ -70,6 +76,9 @@ public static class SyncServiceCollectionExtensions
         Routine<ActorProfileRoutine>(services);
         Routine<ActorVideoLoadRoutine>(services);
         Routine<PreviewPictureRoutine>(services);
+        Routine<PreviewUserPreviewRoutine>(services);
+        Routine<LibraryUserPreviewRoutine>(services);
+        Routine<UserPreviewFeedRoutine>(services);
         Routine<VideoImageFeedRoutine>(services);
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);

@@ -39,6 +39,11 @@ public sealed class ThePlanTests
             // is one of these, and what is left is ADR 0014's table.
             .OfType<ISpendsPrdbBudget>()
             .Where(routine => routine is not IOneShot)
+            // And ADR 0061's user previews feed, which spends real requests
+            // when something is interested and none at all when nothing is.
+            // The idle profile is what the schedule costs with nothing to do,
+            // and with nothing to do this answers before it reaches prdb.
+            .Where(routine => routine is not IWorkSetPaced)
             .Cast<IRoutine>()
             .ToList();
 
