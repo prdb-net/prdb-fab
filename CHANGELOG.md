@@ -19,7 +19,101 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-09-13
+
+The installation is now something you can carry. One file holds everything the
+tool cannot fetch again, a fresh container can be started from that file instead
+of from nothing, and what the library says it holds is checked against what is
+actually on disk.
+
+Settings became one surface rather than a dozen screens built one at a time: a
+rail that says what each group currently holds, three Indexer controls that
+unattended code has always read and nobody could set, and forms that no longer
+show a default as though it were an answer. Browsing is quicker because the
+artwork now arrives before you do, and Downloads reads as a list rather than as
+a wall of cards.
+
+### Added
+
+- **Backup: one portable file, from `Settings → Backup`.** It holds your
+  settings, every indexer with its address and key, the SABnzbd connection and
+  its path mapping, your prdb key, every automation rule including the disabled
+  ones, the review queue, and the local record of what was downloaded, what was
+  filed where, which releases are used up and what has already been reported to
+  prdb. It does not hold anything that can be fetched again — the indexer cache,
+  cached artwork, prdb's catalogue, or the video files.
+
+  **The file is readable, credentials included, and that is deliberate.** The
+  screen says so before it writes one and asks you to acknowledge it. Whatever
+  you already back up with encrypts everything it carries under a key you
+  manage; a second passphrase underneath that would be one more thing to lose at
+  exactly the moment you need the file. Treat the file as you treat the data
+  volume and put it somewhere that encrypts it.
+
+- **Restore, as the second way to begin.** A container that holds nothing yet
+  offers *Restore a backup* beside *set a password* — the login credential is
+  inside the file, so there is nobody to sign in as yet. It asks once where your
+  library and your downloads are mounted in this container, prefilled with
+  wherever they were on the machine that wrote the file, and re-roots every
+  recorded path. It refuses an installation that already holds an indexer, an
+  automation rule or a library entry, and names what it found. A file from a
+  newer version of the tool is refused by name rather than half-read.
+
+  Afterwards, outstanding downloads are picked up at SABnzbd by their job id
+  where it still knows them; where it does not, the download counts as failed
+  and that release stays used up for the video, which is the same rule that has
+  always applied.
+
+- **Library verification, and a `Verification` filter on the Library.** A
+  background pass checks that each filed file is where the library says it is,
+  using the cheap hash rather than reading whole files. Until it has, entries
+  count as held, so automation will not decide to fetch them again. **Nothing is
+  deleted and nothing is re-fetched over a file that is missing** — a library
+  mounted somewhere else looks exactly the same from here — and no report to
+  prdb is retracted. What could not be confirmed is a count on Status, linking
+  into the Library filtered to it.
+
+- **An Indexer can be ranked, given a budget, disabled and deleted.** `Enabled`,
+  `Rank` and `DailyQueryBudget` are read by code that runs unattended, and none
+  of the three could be set from anywhere; an Indexer could not be removed at
+  all. Status said as much, routing *"X's daily query budget is spent"* to a
+  page on which that budget did not appear. They are an act of their own rather
+  than fields on the connection check: changing a rank does not spend a query,
+  and a broken Indexer can be disabled without the re-check failing and taking
+  the change with it. Rank stays a list position — two buttons per row, because
+  a reorder that needs a drag cannot be done from a keyboard — and a move
+  renumbers the list from zero. Deleting one says what goes and what stays: the
+  cache goes, the Downloads stay, and a rule left with no permitted Indexer
+  comes back disabled rather than silently inert.
+
+- **Automation's retry budget has a field.** It is the third of Automation's
+  controls and had none anywhere; it takes 1 to 10.
+
 ### Changed
+
+- **Settings is one surface.** Reaching a setting was the sidebar, then an index
+  page whose whole content was links, then the mask — and once inside there was
+  no way across to a sibling, while the routes for a single Indexer and a single
+  automation rule appeared in no navigation at all, although Status links
+  straight into them. Every settings page now has a rail beside it, in the order
+  the settings are grouped, each group saying what it **currently holds** rather
+  than what it is for, with the Indexers and the rules nested under their
+  groups. A group that Status is pointing a Gap or a Brake at is marked, so the
+  surface says where the loop is bleeding before anything is opened. Below
+  52rem the rail is that page and a mask replaces it. Leaving a mask now returns
+  to where the visit began rather than to the index, wherever it was entered
+  from.
+
+  The masks say more than they did. **Library** names the root it has and opens
+  with it, and says what replacing it does — nothing moves and no record is
+  rewritten, because a filed path is computed once and recorded. **Automation**
+  reads as rules: one card each, saying in a sentence what it permits, with the
+  enable switch on the card. **Identification** says how its two gates relate,
+  and remarks on a pair that inverts the intent while still permitting it.
+  **Reporting** puts each count beside its own switch, where an unread count
+  used to show as a confident zero. **Account** reads as three parts, so the
+  button that ends a session no longer sits directly under the one that changes
+  the password.
 
 - **Browsing the catalogue no longer waits for the pictures.** Clicking Search,
   Sites or What's New took seconds before the grid appeared, and none of it was
@@ -70,65 +164,30 @@ before changing the tag — the backup file is deliberately not the whole of it.
   out of the rows into a bar that appears once something is selected and says
   how many it covers.
 
+- **`Settings → Backup` is no longer a named placeholder.** It was listed and
+  greyed out; it is now the page above.
+
 ### Fixed
+
+- **A settings form no longer shows a default as though it were your answer.**
+  Four screens rendered one while the read behind them was still in flight and
+  then jumped when it landed, so somebody answering in that window answered a
+  question the tool had not asked. Every form now starts from the value it read.
+  With it, five more faults that ran through the whole surface: Save is offered
+  only once something has actually changed; a group heading is announced
+  together with the choices under it rather than as a stray sentence; a read
+  that fails says what failed instead of `Error: Failed to fetch`; the
+  Automation cap no longer puts its stored value back the moment the field is
+  cleared, which made it possible to prefix but never to replace; and deleting
+  an automation rule asks in the application's own confirmation dialog rather
+  than the browser's. A filesystem path quoted back by the SABnzbd step also
+  reads as a path again instead of as a numbered row.
 
 - **Sorting Catalogue Search by title now ignores case.** It put every
   lower-cased title after every upper-cased one, so `Zebra` came before `apple`
   and half the alphabet was in the wrong place. Accented letters still sort
   after the unaccented ones, which the Library has always done too and which
   SQLite offers nothing better for.
-
-## [0.20.0] - 2026-09-12
-
-The installation is now something you can carry. One file holds everything the
-tool cannot fetch again, a fresh container can be started from that file instead
-of from nothing, and what the library says it holds is checked against what is
-actually on disk.
-
-### Added
-
-- **Backup: one portable file, from `Settings → Backup`.** It holds your
-  settings, every indexer with its address and key, the SABnzbd connection and
-  its path mapping, your prdb key, every automation rule including the disabled
-  ones, the review queue, and the local record of what was downloaded, what was
-  filed where, which releases are used up and what has already been reported to
-  prdb. It does not hold anything that can be fetched again — the indexer cache,
-  cached artwork, prdb's catalogue, or the video files.
-
-  **The file is readable, credentials included, and that is deliberate.** The
-  screen says so before it writes one and asks you to acknowledge it. Whatever
-  you already back up with encrypts everything it carries under a key you
-  manage; a second passphrase underneath that would be one more thing to lose at
-  exactly the moment you need the file. Treat the file as you treat the data
-  volume and put it somewhere that encrypts it.
-
-- **Restore, as the second way to begin.** A container that holds nothing yet
-  offers *Restore a backup* beside *set a password* — the login credential is
-  inside the file, so there is nobody to sign in as yet. It asks once where your
-  library and your downloads are mounted in this container, prefilled with
-  wherever they were on the machine that wrote the file, and re-roots every
-  recorded path. It refuses an installation that already holds an indexer, an
-  automation rule or a library entry, and names what it found. A file from a
-  newer version of the tool is refused by name rather than half-read.
-
-  Afterwards, outstanding downloads are picked up at SABnzbd by their job id
-  where it still knows them; where it does not, the download counts as failed
-  and that release stays used up for the video, which is the same rule that has
-  always applied.
-
-- **Library verification, and a `Verification` filter on the Library.** A
-  background pass checks that each filed file is where the library says it is,
-  using the cheap hash rather than reading whole files. Until it has, entries
-  count as held, so automation will not decide to fetch them again. **Nothing is
-  deleted and nothing is re-fetched over a file that is missing** — a library
-  mounted somewhere else looks exactly the same from here — and no report to
-  prdb is retracted. What could not be confirmed is a count on Status, linking
-  into the Library filtered to it.
-
-### Changed
-
-- **`Settings → Backup` is no longer a named placeholder.** It was listed and
-  greyed out; it is now the page above.
 
 ## [0.19.0] - 2026-09-11
 
