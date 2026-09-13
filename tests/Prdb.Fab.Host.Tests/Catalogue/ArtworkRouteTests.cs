@@ -91,6 +91,51 @@ public sealed class ArtworkRouteTests
     }
 
     /// <summary>
+    /// ADR 0060's gallery route: the same machine addressed by the picture
+    /// rather than by the Video, because a gallery was told which pictures
+    /// there are and a position moves when prdb publishes another.
+    /// </summary>
+    [Fact]
+    public async Task A_named_picture_is_served_and_may_be_kept_for_a_year()
+    {
+        await using var application = new FabApplication()
+            .Answering(FabTransports.Artwork, new OneImage());
+
+        using var client = await application.SignedInClientAsync();
+
+        var imageId = Guid.NewGuid();
+
+        await SeedAsync(application, Url, imageId);
+
+        using var answer = await client.GetAsync(
+            $"/api/artwork/images/{imageId}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, answer.StatusCode);
+        Assert.Equal(ArtworkEndpoints.CacheSeconds, MaxAge(answer));
+    }
+
+    /// <summary>
+    /// An id no image row carries. It is the Catalogue's answer rather than
+    /// this minute's — a picture prdb hard-deleted, or a Video evicted out from
+    /// under a link — so the tile stops asking for a week.
+    /// </summary>
+    [Fact]
+    public async Task A_picture_the_catalogue_does_not_name_is_an_absence_that_stands()
+    {
+        await using var application = new FabApplication();
+
+        using var client = await application.SignedInClientAsync();
+
+        using var answer = await client.GetAsync(
+            $"/api/artwork/images/{Guid.NewGuid()}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, answer.StatusCode);
+        Assert.Equal(ArtworkEndpoints.SettledAbsenceSeconds, MaxAge(answer));
+    }
+
+    /// <summary>
     /// Read off the parsed header rather than the string, because the writer
     /// normalises the order of the directives and the order is not what any of
     /// this is about.
@@ -99,7 +144,10 @@ public sealed class ArtworkRouteTests
         (int?)answer.Headers.CacheControl?.MaxAge?.TotalSeconds;
 
     /// <summary>One Catalogue Video, with an image row or without one.</summary>
-    private static async Task<long> SeedAsync(FabApplication application, string? url)
+    private static async Task<long> SeedAsync(
+        FabApplication application,
+        string? url,
+        Guid? imageId = null)
     {
         await using var scope = application.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
@@ -118,7 +166,7 @@ public sealed class ArtworkRouteTests
         {
             context.CatalogueImages.Add(new CatalogueImageRow
             {
-                PrdbId = Guid.NewGuid(),
+                PrdbId = imageId ?? Guid.NewGuid(),
                 VideoId = video.Id,
                 Url = url,
                 Position = 0,

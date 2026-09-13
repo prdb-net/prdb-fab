@@ -91,6 +91,29 @@ public static class ArtworkEndpoints
         })
         .WithTags("Artwork");
 
+        // One named picture, for a Preview's gallery (ADR 0060). Addressed by
+        // the image rather than by the Video, because a gallery was told which
+        // pictures there are and a position moves when prdb publishes another.
+        routes.MapGet("/api/artwork/images/{imageId:guid}", async (
+            Guid imageId,
+            ArtworkCache cache,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            var answer = await cache.ServeImageAsync(imageId, cancellationToken);
+
+            if (answer.Served is not { } served)
+            {
+                http.Response.Headers.CacheControl = Absence(answer);
+                return Results.NoContent();
+            }
+
+            http.Response.Headers.CacheControl = Present;
+
+            return Results.Stream(served.Bytes, served.MediaType);
+        })
+        .WithTags("Artwork");
+
         routes.MapGet("/api/artwork/actors/{actorId:guid}", async (
             Guid actorId,
             ActorArtworkCache cache,

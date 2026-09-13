@@ -441,6 +441,65 @@ public sealed class ArtworkTests
     }
 
     /// <summary>
+    /// ADR 0060's second population. A picture that is not its Video's chosen
+    /// one has no bytes until somebody opens a Preview and scrolls to it —
+    /// nothing warms it, and the routine that warms the chosen ones walks past.
+    /// </summary>
+    [Fact]
+    public async Task A_picture_that_is_not_the_chosen_one_is_fetched_when_a_preview_asks()
+    {
+        var cdn = new FakeCdn().Serves(Url(1)).Serves(Url(2));
+
+        await using var database = await CreateAsync(cdn);
+
+        var video = await HoldAsync(database, Video(1));
+        await GiveArtworkAsync(database, video, Image(1), Url(1));
+        await GiveArtworkAsync(database, video, Image(2), Url(2), position: 1);
+
+        // The warm pass takes the chosen image and only the chosen image.
+        await RunAsync(database);
+
+        Assert.True(Store(database).Holds(Image(1)));
+        Assert.False(Store(database).Holds(Image(2)));
+
+        Assert.Equal("image/png", await ServeImageAsync(database, Image(2)));
+        Assert.True(Store(database).Holds(Image(2)));
+    }
+
+    /// <summary>
+    /// ADR 0060's narrowing. What a pinned Video protects is the picture
+    /// ADR 0027 chose; the rest of its gallery is as disposable as anybody
+    /// else's. Reading the pin wide would put every picture of every held Video
+    /// outside the ceiling for good.
+    /// </summary>
+    [Fact]
+    public async Task A_pinned_videos_other_pictures_are_evictable()
+    {
+        var cdn = new FakeCdn().Serves(Url(1), 1024).Serves(Url(2), 4096);
+
+        await using var database = await CreateAsync(cdn);
+
+        var video = await HoldAsync(database, Video(1));
+        await GiveArtworkAsync(database, video, Image(1), Url(1));
+        await GiveArtworkAsync(database, video, Image(2), Url(2), position: 1);
+        await WantAsync(database, video, Noon);
+
+        await RunAsync(database);
+        Assert.NotNull(await ServeImageAsync(database, Image(2)));
+
+        // A ceiling the gallery picture alone is over, and the chosen one is
+        // not counted towards at all.
+        var swept = await SweepAsync(database, ceiling: 2048);
+
+        Assert.Equal(1, swept.Pinned);
+        Assert.Equal(4096, swept.UnpinnedBytes);
+        Assert.Equal(1, swept.Evicted);
+
+        Assert.True(Store(database).Holds(Image(1)));
+        Assert.False(Store(database).Holds(Image(2)));
+    }
+
+    /// <summary>
     /// ADR 0030 puts the artwork work set and ADR 0033's catalogue eviction in
     /// one routine, and this is why it is one: a catalogue row dropped takes its
     /// image rows with it by cascade, and the bytes they leave are swept in the
@@ -534,6 +593,25 @@ public sealed class ArtworkTests
         var answer = await scope.ServiceProvider
             .GetRequiredService<ArtworkCache>()
             .ServeAsync(videoId, TestContext.Current.CancellationToken);
+
+        if (answer.Served is not { } served)
+        {
+            return null;
+        }
+
+        await served.Bytes.DisposeAsync();
+
+        return served.MediaType;
+    }
+
+    /// <summary>ADR 0060's gallery path: one picture asked for by name.</summary>
+    private static async Task<string?> ServeImageAsync(TestDatabase database, Guid imageId)
+    {
+        await using var scope = database.Scope();
+
+        var answer = await scope.ServiceProvider
+            .GetRequiredService<ArtworkCache>()
+            .ServeImageAsync(imageId, TestContext.Current.CancellationToken);
 
         if (answer.Served is not { } served)
         {

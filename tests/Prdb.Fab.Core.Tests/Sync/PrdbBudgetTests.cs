@@ -67,6 +67,28 @@ public sealed class PrdbBudgetTests
         Assert.False(almostSpent.Admits(PrdbWork.Repair));
     }
 
+    /// <summary>
+    /// ADR 0060's request has a place in the order rather than a place of its
+    /// own: below a write, which is a queued obligation, and above every feed,
+    /// because somebody is sitting in front of it.
+    /// </summary>
+    [Fact]
+    public void A_preview_gives_up_after_a_write_and_before_a_feed()
+    {
+        var limit = 1000;
+
+        Assert.True(new PrdbBudget(limit, 81, TimeSpan.Zero).Admits(PrdbWork.Preview));
+        Assert.False(new PrdbBudget(limit, 80, TimeSpan.Zero).Admits(PrdbWork.Preview));
+
+        // Where a Preview has stopped, a write has not; where a feed has
+        // stopped, a Preview has not.
+        var betweenTheTwo = new PrdbBudget(limit, 90, TimeSpan.Zero);
+
+        Assert.True(betweenTheTwo.Admits(PrdbWork.Writes));
+        Assert.True(betweenTheTwo.Admits(PrdbWork.Preview));
+        Assert.False(betweenTheTwo.Admits(PrdbWork.UserFeeds));
+    }
+
     /// <summary>And a spent one admits nothing at all.</summary>
     [Fact]
     public void A_spent_budget_admits_nothing()

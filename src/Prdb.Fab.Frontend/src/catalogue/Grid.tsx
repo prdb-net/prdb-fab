@@ -18,15 +18,22 @@ type LibraryCard = LibraryPage['entries'][number]
 export function Grid({
   videos,
   action,
+  onOpen,
 }: {
   videos: readonly VideoCard[]
   /** What this surface offers on a card, if anything. */
   action?: (video: VideoCard) => ReactNode
+  /**
+   * What a click on the card itself does, if anything. ADR 0060 makes that a
+   * Preview over this grid, which is why it is a callback rather than a
+   * destination: nothing is navigated to, and the list stays where it was.
+   */
+  onOpen?: (video: VideoCard) => void
 }) {
   return (
     <ul className={styles.grid}>
       {videos.map((video) => (
-        <Card key={video.id} video={video} action={action} />
+        <Card key={video.id} video={video} action={action} onOpen={onOpen} />
       ))}
     </ul>
   )
@@ -50,9 +57,11 @@ export function LibraryGrid({
 function Card({
   video,
   action,
+  onOpen,
 }: {
   video: VideoCard
   action?: (video: VideoCard) => ReactNode
+  onOpen?: (video: VideoCard) => void
 }) {
   const held = video.heldQualities?.length
     ? video.heldQualities.join(', ')
@@ -75,6 +84,8 @@ function Card({
     status={statusOf(video).join(' · ')}
     badge={badge}
     action={action?.(video)}
+    onOpen={onOpen && (() => onOpen(video))}
+    prdbId={video.prdbId}
   />
 }
 
@@ -91,6 +102,14 @@ function HeldCard({ entry, action }: { entry: LibraryCard; action?: ReactNode })
   />
 }
 
+/**
+ * The card, and the three things a caller may put on it: a destination, a way
+ * to open it in place, or neither.
+ *
+ * A Library Entry has a page of its own about the files it holds, so it takes
+ * the destination. A Catalogue Video takes the Preview (ADR 0060). Nothing
+ * takes both — two answers to one click is worse than none.
+ */
 function GridCard({
   artworkId,
   title,
@@ -99,6 +118,8 @@ function GridCard({
   badge,
   action,
   to,
+  onOpen,
+  prdbId,
 }: {
   artworkId: VideoCard['id']
   title: string
@@ -107,6 +128,9 @@ function GridCard({
   badge: ReactNode
   action?: ReactNode
   to?: string
+  onOpen?: () => void
+  /** Named on the opener so the Preview can scroll the grid to this card. */
+  prdbId?: string
 }) {
   const artwork = <span className={styles.artwork}>
     <Artwork videoId={artworkId} title={title} />
@@ -115,10 +139,30 @@ function GridCard({
 
   return (
     <li className={styles.card}>
-      {to ? <Link className={styles.artworkLink} to={to}>{artwork}</Link> : artwork}
+      {to
+        ? <Link className={styles.artworkLink} to={to}>{artwork}</Link>
+        : onOpen
+          ? <button
+              aria-label={`Preview ${title}`}
+              className={styles.opener}
+              data-video={prdbId}
+              onClick={onOpen}
+              type="button"
+            >
+              {artwork}
+            </button>
+          : artwork}
       {to
         ? <Link className={`${styles.title} ${styles.titleLink}`} to={to}>{title}</Link>
-        : <span className={styles.title}>{title}</span>}
+        : onOpen
+          ? <button
+              className={`${styles.title} ${styles.titleButton}`}
+              onClick={onOpen}
+              type="button"
+            >
+              {title}
+            </button>
+          : <span className={styles.title}>{title}</span>}
       <span className={styles.detail}>{detail}</span>
       <span className={styles.status}>{status}</span>
       {action}

@@ -49,6 +49,7 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<AccountPreferences>();
         services.AddScoped<ActorDetails>();
         services.AddScoped<ActorVideoLoads>();
+        services.AddScoped<PreviewPictures>();
 
         services.AddScoped<ActorFeed>();
         services.AddScoped<VideoImageFeed>();
@@ -68,6 +69,7 @@ public static class SyncServiceCollectionExtensions
         Routine<ActorDrainRoutine>(services);
         Routine<ActorProfileRoutine>(services);
         Routine<ActorVideoLoadRoutine>(services);
+        Routine<PreviewPictureRoutine>(services);
         Routine<VideoImageFeedRoutine>(services);
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);

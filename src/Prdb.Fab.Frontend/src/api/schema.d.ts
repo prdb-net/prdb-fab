@@ -74,6 +74,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/artwork/images/{imageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    imageId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/artwork/actors/{actorId}": {
         parameters: {
             query?: never;
@@ -1709,6 +1744,94 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/videos/{prdbId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VideoPreview"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogue/videos/{prdbId}/pictures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreviewPictureAsk"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4113,6 +4236,21 @@ export interface components {
         };
         /** @enum {unknown} */
         PreferredDownloadQuality: "P480" | "P720" | "P1080" | "P2160";
+        PreviewActor: {
+            /** Format: uuid */
+            prdbId: string;
+            name: string;
+        };
+        PreviewImage: {
+            /** Format: uuid */
+            prdbId: string;
+            chosen: boolean;
+        };
+        PreviewPictureAsk: {
+            outcome: components["schemas"]["PreviewPictureOutcome"];
+        };
+        /** @enum {unknown} */
+        PreviewPictureOutcome: "Asked" | "AlreadyKnown" | "PrdbPublishesNone" | "VideoNotFound";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -4596,6 +4734,18 @@ export interface components {
             pageSize: number | string;
             /** Format: int32 */
             total: number | string;
+        };
+        VideoPreview: {
+            video: components["schemas"]["VideoCard"];
+            /** Format: int64 */
+            durationMs: null | number | string;
+            /** Format: int64 */
+            durationSpreadMs: null | number | string;
+            /** Format: int32 */
+            durationFileCount: null | number | string;
+            picturesComing: boolean;
+            actors: components["schemas"]["PreviewActor"][];
+            images: components["schemas"]["PreviewImage"][];
         };
         WantedList: {
             videos: components["schemas"]["VideoCard"][];

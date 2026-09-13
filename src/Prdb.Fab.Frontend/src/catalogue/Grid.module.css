@@ -42,6 +42,41 @@
   text-decoration: none;
 }
 
+/* The way into a Preview (ADR 0060). A control rather than a click handler on
+   a span, so a keyboard reaches it and a screen reader names it. */
+.opener {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.opener:focus-visible,
+.titleButton:focus-visible {
+  border-radius: var(--radius);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.titleButton {
+  background: none;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+  text-align: left;
+}
+
+.titleButton:hover {
+  text-decoration: underline;
+}
+
 .ready,
 .held,
 .downloading {

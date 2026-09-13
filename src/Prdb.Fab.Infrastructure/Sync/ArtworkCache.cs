@@ -64,10 +64,42 @@ public sealed class ArtworkCache(
     /// least-recently-<em>served</em> first, so the stamp has to mean somebody
     /// looked at it.
     /// </remarks>
-    public async Task<ArtworkAnswer> ServeAsync(long videoId, CancellationToken cancellationToken)
-    {
-        var image = await ChosenImages.OfAsync(context, videoId, cancellationToken);
+    public async Task<ArtworkAnswer> ServeAsync(long videoId, CancellationToken cancellationToken) =>
+        await ServeAsync(
+            await ChosenImages.OfAsync(context, videoId, cancellationToken),
+            cancellationToken);
 
+    /// <summary>
+    /// The bytes for one named picture: what a Preview's gallery asks for
+    /// (ADR 0060).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The same machine as <see cref="ServeAsync(long,CancellationToken)"/>,
+    /// addressed differently. A grid holds Video ids and wants whichever picture
+    /// is the Video's choice, so that a changed choice needs no change in the
+    /// browser; a gallery was told exactly which pictures there are and wants
+    /// one of them by name, because <em>the fourth picture of this Video</em>
+    /// moves when prdb publishes another and an address that moves cannot be
+    /// cached for a year.
+    /// </para>
+    /// <para>
+    /// This is where the second population of ADR 0060 enters the cache: a
+    /// picture that is not its Video's chosen one gets bytes here and nowhere
+    /// else. Nothing warms it, and the eviction pass takes it first.
+    /// </para>
+    /// </remarks>
+    public async Task<ArtworkAnswer> ServeImageAsync(Guid imageId, CancellationToken cancellationToken) =>
+        await ServeAsync(
+            await context.CatalogueImages
+                .Where(row => row.PrdbId == imageId && row.Url != string.Empty)
+                .SingleOrDefaultAsync(cancellationToken),
+            cancellationToken);
+
+    private async Task<ArtworkAnswer> ServeAsync(
+        CatalogueImageRow? image,
+        CancellationToken cancellationToken)
+    {
         if (image is null || image.FoundDead)
         {
             // No image, or one marked dead and never asked about again

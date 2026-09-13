@@ -9,7 +9,7 @@ CDN did not reply*. The write-ahead log is checkpointed daily by a routine of
 its own.
 
 This reverses one sentence of
-[ADR 0030](0030-artwork-is-cached-locally-under-a-ceiling-and-a-dead-url-is-marked-once.md)
+[ADR 0030](0030-artwork-is-cached-by-image-id-fetched-for-what-is-pinned-and-on-sight-for-the-rest.md)
 — *everything unpinned is fetched when a grid asks* — and raises the ceiling it
 chose. Everything else that decision settled stands: one file per image named by
 the image's id, the pinned half outside the ceiling, a dead URL marked once and

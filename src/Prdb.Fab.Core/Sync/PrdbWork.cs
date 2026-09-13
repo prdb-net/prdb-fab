@@ -43,6 +43,19 @@ public enum PrdbWork
     /// </summary>
     Writes,
 
+    /// <summary>
+    /// ADR 0060: the detail read a Preview asks for when the Catalogue holds no
+    /// picture of the Video somebody has just opened.
+    /// </summary>
+    /// <remarks>
+    /// Here and not higher, and here and not lower. Somebody is sitting in
+    /// front of it, which is the argument the two at the top make and the
+    /// reason this outranks every feed. It is also the only kind a person can
+    /// cause by clicking, which is why it gives up before a write does: a write
+    /// is a queued obligation and this is a glance.
+    /// </remarks>
+    Preview,
+
     /// <summary>The wanted list and the two favourites feeds.</summary>
     UserFeeds,
 

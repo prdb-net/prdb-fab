@@ -8,6 +8,8 @@ import { whatsNewKey } from './state.ts'
 import styles from './BrowseScreen.module.css'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
+import { PreviewOverlay } from './Preview.tsx'
+import { usePreview } from './preview.ts'
 
 /**
  * What's New, and the landing page. ADR 0013 calls it that and it is what the
@@ -24,6 +26,7 @@ export function WhatsNewScreen() {
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const { openPreview } = usePreview()
 
   const videos = useQuery({
     queryKey: whatsNewKey(page),
@@ -52,6 +55,7 @@ export function WhatsNewScreen() {
     setParameters(wanted === 1 ? {} : { page: String(wanted) })
     window.scrollTo({ top: 0 })
   }
+  const here = location.pathname + location.search
 
   if (videos.isPending && !videos.data) {
     return <PageLoading label="Loading What’s new" />
@@ -82,14 +86,17 @@ export function WhatsNewScreen() {
         <>
           <Grid
             videos={videos.data?.videos ?? []}
+            onOpen={(video) => openPreview(video.prdbId)}
             action={(video) => (
               <CardActions
                 includeSite
                 video={video}
-                returnTo={location.pathname + location.search}
+                returnTo={here}
               />
             )}
           />
+
+          <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
 
           {pages > 1 && (
             <nav className={styles.pager}>
