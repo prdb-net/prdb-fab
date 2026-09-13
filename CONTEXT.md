@@ -178,10 +178,20 @@ _Avoid_: Cause, Source, Trigger, Reason
 ### Identification
 
 **Identification**:
-Deciding which video a release or a file belongs to. Always prdb's answer,
-never one this tool worked out for itself — before a download from the name,
-after one from the hash.
+Deciding which video a release or a file belongs to. Always prdb's answer or a
+binding prdb published, never one this tool worked out for itself — before a
+download from the name, after one from the hash. Where prdb's own ladder names
+no video, Preview-Hash Evidence may.
 _Avoid_: Matching, Lookup, Recognition
+
+**Preview-Hash Evidence**:
+A User Preview prdb has linked to a video and is currently showing, whose
+osHash is a video file's. A statement prdb published and a moderator approved
+rather than anything this tool inferred, and the only source of an
+Identification other than prdb's own answer. It never overrides that answer, it
+records a Strong Confidence and its own rung, and it is never a Confirmed
+Assignment.
+_Avoid_: Hash match, Fingerprint, Community identification
 
 **Confidence**:
 How strongly an identification is carried by the evidence behind it. A set of

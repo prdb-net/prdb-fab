@@ -5001,6 +5001,7 @@
           "Filename",
           "ReleaseName",
           "Site",
+          "PreviewHash",
           null
         ]
       },
