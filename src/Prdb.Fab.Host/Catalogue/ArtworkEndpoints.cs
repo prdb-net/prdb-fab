@@ -114,6 +114,41 @@ public static class ArtworkEndpoints
         })
         .WithTags("Artwork");
 
+        // One half of one user preview's asset, at the version the caller was
+        // told about (ADR 0061). Two things make this different from the two
+        // routes above, and both come from the population being moderated: the
+        // version is in the address, because a sprite and its WebVTT must never
+        // be served from different ones; and the answer is cacheable for
+        // minutes rather than a year, because a withdrawal has to be able to
+        // take effect.
+        routes.MapGet("/api/previews/{previewId:guid}/{version}/{half}", async (
+            Guid previewId,
+            string version,
+            string half,
+            PreviewAssetCache cache,
+            HttpContext http,
+            CancellationToken cancellationToken) =>
+        {
+            if (half is not ("image" or "vtt"))
+            {
+                return Results.NotFound();
+            }
+
+            var answer = await cache.ServeAsync(previewId, version, half == "vtt", cancellationToken);
+
+            if (answer.Served is not { } served)
+            {
+                http.Response.Headers.CacheControl = Withheld(answer);
+
+                return Results.NoContent();
+            }
+
+            http.Response.Headers.CacheControl = Kept;
+
+            return Results.Stream(served.Bytes, served.MediaType);
+        })
+        .WithTags("Artwork");
+
         routes.MapGet("/api/artwork/actors/{actorId:guid}", async (
             Guid actorId,
             ActorArtworkCache cache,
@@ -132,8 +167,35 @@ public static class ArtworkEndpoints
         }).WithTags("Artwork");
     }
 
+    /// <summary>
+    /// How long a browser may keep a user preview, or the knowledge that there
+    /// is none.
+    /// </summary>
+    /// <remarks>
+    /// Five minutes, against the year an <c>images[]</c> picture gets. The
+    /// bytes under one of these addresses are as immutable as any other — the
+    /// version is in the address — but the <em>permission</em> to show them is
+    /// not: a moderator can withdraw a user preview at any time, and this tool
+    /// learns about it within the hour and stops serving it. A cache horizon
+    /// that outlived the withdrawal would make the revocation this whole
+    /// population is built around a thing the server believes and the browser
+    /// ignores. Long enough to carry a gallery being scrolled back and forth,
+    /// short enough that a removed picture is gone in minutes.
+    /// </remarks>
+    public const int RevocableSeconds = 5 * 60;
+
     /// <summary>What a browser may do with an image it has been given.</summary>
     private static string Present => $"private, max-age={CacheSeconds}, immutable";
+
+    /// <summary>What a browser may do with a user preview it has been given.</summary>
+    private static string Kept => $"private, max-age={RevocableSeconds}";
+
+    /// <summary>
+    /// The same, for an absence — including a settled one, because nothing
+    /// about this population is settled for long.
+    /// </summary>
+    private static string Withheld(PreviewAssetAnswer answer) =>
+        answer.AbsenceStands ? $"private, max-age={RevocableSeconds}" : $"private, max-age={AbsentCacheSeconds}";
 
     /// <summary>What a browser may do with a tile it has not been given.</summary>
     private static string Absence(ArtworkAnswer answer) =>

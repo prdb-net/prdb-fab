@@ -72,6 +72,45 @@
         }
       }
     },
+    "/api/previews/{previewId}/{version}/{half}": {
+      "get": {
+        "tags": [
+          "Artwork"
+        ],
+        "parameters": [
+          {
+            "name": "previewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "half",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/artwork/actors/{actorId}": {
       "get": {
         "tags": [

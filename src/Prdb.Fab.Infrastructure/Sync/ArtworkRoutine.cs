@@ -65,6 +65,7 @@ public sealed class ArtworkRoutine(
     ActorArtworkCache actorCache,
     CatalogueEviction catalogue,
     ArtworkEviction artwork,
+    PreviewAssetEviction previews,
     ILogger<ArtworkRoutine> logger) : IRoutine
 {
     public const string RoutineName = "prdb.artwork";
@@ -127,6 +128,13 @@ public sealed class ArtworkRoutine(
         var evicted = await catalogue.EvictAsync(cancellationToken: cancellationToken);
         var swept = await artwork.SweepAsync(cancellationToken: cancellationToken);
 
+        // ADR 0061's second cache, on its own ceiling and with nothing pinned
+        // in it. Here rather than in a routine of its own for the reason the
+        // catalogue's eviction is here: it is a bounded sweep at the bulk
+        // lane's idle tick, and a routine whose whole body is one call is a row
+        // in the run log nobody reads.
+        var previewsSwept = await previews.SweepAsync(cancellationToken: cancellationToken);
+
         // Last, and on the figure the sweep has just read off the disk: warming
         // has to know how much room is left, and the walk that answers that has
         // already happened this turn. It is the pre-eviction weight, which is
@@ -136,7 +144,11 @@ public sealed class ArtworkRoutine(
             swept.UnpinnedBytes,
             cancellationToken: cancellationToken);
 
-        if (fetched == 0 && warmed == 0 && evicted.Removed == 0 && !swept.DidSomething)
+        if (fetched == 0
+            && warmed == 0
+            && evicted.Removed == 0
+            && !swept.DidSomething
+            && !previewsSwept.DidSomething)
         {
             // ADR 0032: an empty work set is not a run. Nothing was fetched,
             // nothing was over a ceiling, and nothing was left behind — so this
@@ -144,7 +156,14 @@ public sealed class ArtworkRoutine(
             return RunResult.NothingToDo;
         }
 
-        return RunResult.Handled(fetched + warmed + evicted.Removed + swept.Evicted + swept.Orphans);
+        return RunResult.Handled(
+            fetched
+            + warmed
+            + evicted.Removed
+            + swept.Evicted
+            + swept.Orphans
+            + previewsSwept.Evicted
+            + previewsSwept.Orphans);
     }
 
     /// <summary>

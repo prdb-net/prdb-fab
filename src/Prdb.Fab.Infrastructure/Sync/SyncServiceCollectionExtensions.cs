@@ -56,6 +56,13 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<UserPreviews>();
         services.TryAddScoped<UserPreviewWrites>();
 
+        // ADR 0061's asset cache: the pairs on disk, the fetch that validates
+        // them, and the sweep that bounds them. The display path takes
+        // PreviewAssetCache directly.
+        services.TryAddScoped<PreviewAssetStore>();
+        services.AddScoped<PreviewAssetCache>();
+        services.AddScoped<PreviewAssetEviction>();
+
         services.AddScoped<ActorFeed>();
         services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();

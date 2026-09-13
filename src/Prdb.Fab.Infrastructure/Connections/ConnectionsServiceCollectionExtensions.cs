@@ -39,6 +39,7 @@ public static class ConnectionsServiceCollectionExtensions
         // configures: ADR 0030 fetches an image from whatever host prdb named in
         // its payload.
         services.AddScoped<ArtworkGateway>();
+        services.AddScoped<PreviewAssetGateway>();
 
         services.AddScoped<PrdbConnections>();
         services.AddScoped<SabnzbdConnections>();
