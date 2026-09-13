@@ -23,8 +23,11 @@ public static class Feeds
     public static AccountClass AccountClassOf(this Feed feed) => feed switch
     {
         Feed.WantedVideos or Feed.FavouriteSites or Feed.FavouriteActors => AccountClass.AccountScoped,
-        Feed.Actors or Feed.VideoImages or Feed.WhatsNew or Feed.WhatsNewBackfill or Feed.Sites =>
-            AccountClass.AccountFree,
+        // The user previews feed is global and moderated rather than personal:
+        // what it carries is what prdb shows everybody, so a cursor into it
+        // says nothing about whose key read it (ADR 0061).
+        Feed.Actors or Feed.VideoImages or Feed.VideoUserImages or Feed.WhatsNew
+            or Feed.WhatsNewBackfill or Feed.Sites => AccountClass.AccountFree,
         _ => throw new ArgumentOutOfRangeException(
             nameof(feed),
             feed,

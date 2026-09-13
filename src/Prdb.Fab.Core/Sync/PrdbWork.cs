@@ -41,6 +41,14 @@ public enum PrdbWork
     /// Fulfilment reports and hash submissions. Rare, and ADR 0013 already
     /// queues them rather than dropping them.
     /// </summary>
+    /// <remarks>
+    /// ADR 0061 puts a submitted user preview here too, rather than giving it a
+    /// kind of its own: it is a queued obligation to prdb about something this
+    /// installation holds, which is what every other member of this one is.
+    /// Writing that down before there is a caller is the same move the two at
+    /// the bottom of this enum were written for — an order stops being a matter
+    /// of opinion once nobody has to insert themselves into it.
+    /// </remarks>
     Writes,
 
     /// <summary>
@@ -70,6 +78,22 @@ public enum PrdbWork
 
     /// <summary>The site list, under its ETag.</summary>
     Sites,
+
+    /// <summary>
+    /// ADR 0061: the user previews read for a filed Video File, and the change
+    /// feed that follows what moderation does to them.
+    /// </summary>
+    /// <remarks>
+    /// Below every feed and above the repair pass, which is where background
+    /// work belongs that nobody is waiting on and that nothing else waits on
+    /// either. A Library preview arriving an hour late costs nothing, and a
+    /// withdrawal observed an hour late costs a picture shown an hour too long
+    /// — neither is worth one request the Catalogue's own feeds would have
+    /// spent. The <em>interactive</em> half of the same population is not here:
+    /// somebody opening a Preview is <see cref="Preview"/>, because it is the
+    /// same act, the same waiting person and the same argument.
+    /// </remarks>
+    UserPreviews,
 
     /// <summary>
     /// ADR 0013's repair pass. Last, and the one ADR 0014 gives a number to:
