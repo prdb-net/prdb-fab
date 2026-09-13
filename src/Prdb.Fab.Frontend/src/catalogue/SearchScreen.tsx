@@ -10,6 +10,8 @@ import {
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
 import { Grid } from './Grid.tsx'
+import { Preview } from './Preview.tsx'
+import { usePreview } from './preview.ts'
 import styles from './SearchScreen.module.css'
 
 const filters: readonly CatalogueVideoFilter[] = [
@@ -43,6 +45,7 @@ export function SearchScreen() {
     search ? 'Relevance' : 'ReleaseDateDescending',
   )
   const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const { open, openPreview, closePreview } = usePreview()
   const videos = useQuery({
     queryKey: ['catalogue-videos', search, filter, sort, page],
     queryFn: () => listVideos(search, page, filter, sort),
@@ -85,6 +88,8 @@ export function SearchScreen() {
     setParameters(next)
     window.scrollTo({ top: 0 })
   }
+
+  const here = location.pathname + location.search
 
   if (videos.isPending && !videos.data) return <PageLoading label="Searching the Catalogue" />
 
@@ -135,13 +140,23 @@ export function SearchScreen() {
       ) : (
         <Grid
           videos={videos.data?.videos ?? []}
+          onOpen={(video) => openPreview(video.prdbId)}
           action={(video) => (
             <CardActions
               includeSite
               video={video}
-              returnTo={location.pathname + location.search}
+              returnTo={here}
             />
           )}
+        />
+      )}
+
+      {open && (
+        <Preview
+          card={videos.data?.videos.find((video) => video.prdbId === open)}
+          onClose={closePreview}
+          prdbId={open}
+          returnTo={here}
         />
       )}
 

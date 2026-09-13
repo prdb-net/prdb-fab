@@ -1,0 +1,180 @@
+/*
+  ADR 0060's sheet. On a wide window it takes the right-hand side and leaves a
+  column of real cards showing, which is the way to the next Video; on a phone
+  it is the screen.
+*/
+.backdrop {
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  inset: 0;
+  justify-content: flex-end;
+  position: fixed;
+  z-index: 95;
+}
+
+.sheet {
+  background: var(--surface-raised);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 900px;
+
+  /* Most of the window, and never all of it: what is left has to be wide
+     enough to hold a card, or clicking outside is the only thing it is for. */
+  width: 60vw;
+}
+
+/* The drag is a phone gesture; a mouse has the scrim, Esc and the close. */
+.handle {
+  display: none;
+}
+
+.header {
+  align-items: start;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem 0.9rem;
+}
+
+.heading {
+  min-width: 0;
+}
+
+.title {
+  font-size: 1.15rem;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.facts {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin: 0.3rem 0 0;
+}
+
+.close {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-quiet);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.close:hover {
+  color: var(--text);
+}
+
+.icon {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto;
+  padding: 1.1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+}
+
+/* The same box the grid draws, larger: the picture may be missing, may arrive
+   late, and may never arrive, and none of the three may move what is under it. */
+.frame {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex: none;
+  justify-content: center;
+
+  /* A tall window must not push the actions and the credits off the bottom:
+     what a Preview is for is the picture *and* being able to act on it. */
+  max-height: 46vh;
+  overflow: hidden;
+}
+
+.image {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.absent {
+  color: var(--text-quiet);
+  font-size: 2rem;
+}
+
+.actions {
+  display: flex;
+}
+
+.people {
+  display: grid;
+  gap: 0.3rem 1rem;
+  grid-template-columns: auto 1fr;
+  margin: 0;
+}
+
+.people dt {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+}
+
+.people dd {
+  margin: 0;
+}
+
+.credits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+}
+
+.problem {
+  color: var(--bad);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+@media (max-width: 52rem) {
+  .backdrop {
+    align-items: end;
+  }
+
+  .sheet {
+    border-left: 0;
+    border-radius: 14px 14px 0 0;
+    height: 94vh;
+    max-width: none;
+    width: 100%;
+  }
+
+  .handle {
+    display: flex;
+    justify-content: center;
+    padding: 0.55rem 0 0.15rem;
+    touch-action: none;
+  }
+
+  .grip {
+    background: #454d5a;
+    border-radius: 999px;
+    height: 4px;
+    width: 2.5rem;
+  }
+
+  .header {
+    padding-top: 0.5rem;
+  }
+}
