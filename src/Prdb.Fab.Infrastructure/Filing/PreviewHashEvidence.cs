@@ -60,19 +60,18 @@ public sealed class PreviewHashEvidence(
     {
         var eligible = await context.ArrivingFiles
             .AsTracking()
+            // Two populations. A file nothing has named yet — which is both the
+            // one prdb has just answered nothing for and the one that has been
+            // in the Review Queue since Tuesday — and every file this policy
+            // itself named, whatever became of it. What the second is for
+            // depends on whether it has been moved: not yet, and the assignment
+            // can still be taken back; already, and nothing on disk moves and
+            // the person is told instead.
             .Where(row => row.OsHash != null
                 && ((row.State == ArrivingFileState.AwaitingIdentification
                         && row.Reason == ArrivingFileReason.Unidentified
                         && row.VideoId == null)
-                    // Already assigned from evidence and not yet moved: the
-                    // withdrawal check, which is the only moment an assignment
-                    // can still be taken back without touching a disk.
-                    || (row.MatchedBy == IdentificationRung.PreviewHash
-                        && row.State != ArrivingFileState.Filed)
-                    // Already filed from evidence: nothing on disk moves, but
-                    // the person is told.
-                    || (row.MatchedBy == IdentificationRung.PreviewHash
-                        && row.State == ArrivingFileState.Filed)))
+                    || row.MatchedBy == IdentificationRung.PreviewHash))
             .OrderBy(row => row.Id)
             .Take(ABatch)
             .ToListAsync(cancellationToken);
