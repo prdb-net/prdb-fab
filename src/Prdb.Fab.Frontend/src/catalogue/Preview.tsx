@@ -2,9 +2,14 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 
-import { readVideoPreview, type VideoCard, type VideoPreview } from '../api/client.ts'
+import {
+  readVideoPreview,
+  type PreviewImage,
+  type VideoCard,
+  type VideoPreview,
+} from '../api/client.ts'
 import { CardActions } from './CardActions.tsx'
-import { Artwork } from './Grid.tsx'
+import { CachedArtwork } from './Grid.tsx'
 import styles from './Preview.module.css'
 
 /**
@@ -120,15 +125,7 @@ export function Preview({
         </header>
 
         <div className={styles.body}>
-          {video && (
-            <Artwork
-              videoId={video.id}
-              title={title}
-              frameClassName={styles.frame}
-              imageClassName={styles.image}
-              absentClassName={styles.absent}
-            />
-          )}
+          <Gallery images={preview.data?.images} key={prdbId} title={title} video={video} />
 
           {video && (
             <div className={styles.actions}>
@@ -148,6 +145,166 @@ export function Preview({
       </div>
     </div>
   )
+}
+
+/**
+ * Every picture prdb publishes for the Video, oldest first — its own order,
+ * which it documents as stable and expressly not a ranking, so the strip shows
+ * it as given and says nothing about which picture is best.
+ *
+ * **A tile is fetched when it is scrolled into view, never when the sheet
+ * opens.** A Video here carries about ten pictures where it carries any, and a
+ * Preview that a person opens and steps straight past must have cost one
+ * picture rather than ten (ADR 0060). That is what `CachedArtwork` already
+ * does for a grid tile, so this reuses it rather than writing a second image
+ * loader: one observer, one fetch, an object URL revoked on unmount, and the
+ * no-artwork tile on an empty answer, a failed fetch and a broken image alike.
+ */
+function Gallery({
+  images,
+  title,
+  video,
+}: {
+  images?: readonly PreviewImage[]
+  title: string
+  video?: VideoCard
+}) {
+  const [shown, setShown] = useState(0)
+  const [pulled, setPulled] = useState<number | null>(null)
+  const dwelt = useDwell()
+  const gallery = useRef<HTMLDivElement>(null)
+
+  if (images?.length === 0 || (!images && !video)) {
+    return (
+      <span aria-label={`No pictures for ${title}`} className={styles.frame} role="img">
+        <span aria-hidden="true" className={styles.absent}>▤</span>
+      </span>
+    )
+  }
+
+  const at = images ? Math.min(shown, images.length - 1) : 0
+  const step = (by: number) => {
+    if (!images) return
+
+    const next = (at + by + images.length) % images.length
+    setShown(next)
+
+    // The ring follows the picture. Leaving focus on the thumbnail that was
+    // selected a moment ago would put the keyboard somewhere other than where
+    // the eye is, and the next press would step from there.
+    requestAnimationFrame(() =>
+      gallery.current
+        ?.querySelectorAll<HTMLElement>('[aria-label^="Picture "]')
+        .item(next)
+        ?.focus(),
+    )
+  }
+
+  // Until the read lands there is one picture worth showing and the grid has
+  // already shown it: the Video's own, at the address every grid tile uses. The
+  // chosen picture then resolves to that same address, so the picture does not
+  // change hands when the read arrives and nothing is fetched twice.
+  const path = images ? pathOf(images[at], video) : `/api/artwork/${video!.id}`
+
+  return (
+    <div
+      className={styles.gallery}
+      ref={gallery}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+
+        // The same two keys walk the grid underneath (ADR 0060). Which one they
+        // mean is decided by what has focus, so a gallery being used swallows
+        // them rather than moving the sheet to another Video.
+        event.stopPropagation()
+        event.preventDefault()
+        step(event.key === 'ArrowRight' ? 1 : -1)
+      }}
+    >
+      <div
+        className={styles.stage}
+        onPointerDown={(event) => setPulled(event.clientX)}
+        onPointerUp={(event) => {
+          if (pulled !== null && Math.abs(event.clientX - pulled) > 50) {
+            step(event.clientX < pulled ? 1 : -1)
+          }
+          setPulled(null)
+        }}
+      >
+        <CachedArtwork
+          absentClassName={styles.absent}
+          frameClassName={styles.frame}
+          imageClassName={styles.image}
+          key={path}
+          path={path}
+          title={images ? `${title} — picture ${at + 1} of ${images.length}` : title}
+        />
+      </div>
+
+      {images && images.length > 1 && dwelt && (
+        <ul className={styles.strip}>
+          {images.map((image, index) => (
+            <li key={image.prdbId}>
+              <button
+                aria-current={index === at}
+                aria-label={`Picture ${index + 1} of ${images.length}`}
+                className={`${styles.thumb} ${index === at ? styles.thumbShown : ''}`}
+                onClick={() => setShown(index)}
+                type="button"
+              >
+                <CachedArtwork
+                  absentClassName={styles.thumbAbsent}
+                  frameClassName={styles.thumbFrame}
+                  imageClassName={styles.thumbImage}
+                  path={pathOf(image, video)}
+                  title=""
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Whether the sheet has been showing this Video long enough to be worth
+ * fetching a strip of thumbnails for.
+ *
+ * ADR 0060 wants a Preview that is opened and stepped straight past to have
+ * cost one picture rather than ten, and on a wide window the strip is in view
+ * the moment the sheet opens — so *scrolled into view* is not on its own the
+ * bound the ADR describes. Walking a page of twenty-four cards with the arrow
+ * keys must not be two hundred fetches, and a quarter of a second is longer
+ * than a keypress and shorter than a look.
+ *
+ * The Gallery is keyed by the Video, so stepping remounts it and the wait
+ * starts again.
+ */
+function useDwell(after = 250): boolean {
+  const [dwelt, setDwelt] = useState(false)
+
+  useEffect(() => {
+    const waiting = setTimeout(() => setDwelt(true), after)
+    return () => clearTimeout(waiting)
+  }, [after])
+
+  return dwelt
+}
+
+/**
+ * Where a picture's bytes are asked for.
+ *
+ * The chosen one is asked for by Video, which is the address the grid tile
+ * already used and the one the browser therefore already holds — ADR 0030 lets
+ * it keep an image for a year. Asking for the same bytes by image id would be a
+ * second fetch of a picture that is on the screen behind the sheet.
+ */
+function pathOf(image: PreviewImage, video?: VideoCard): string {
+  return image.chosen && video
+    ? `/api/artwork/${video.id}`
+    : `/api/artwork/images/${image.prdbId}`
 }
 
 /** The Site and the Actors, each a way further into the catalogue. */

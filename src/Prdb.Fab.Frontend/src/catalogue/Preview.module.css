@@ -115,6 +115,68 @@
   font-size: 2rem;
 }
 
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+/* The swipe is a phone gesture and a drag is not a selection. */
+.stage {
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.thumb {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: block;
+  padding: 0;
+}
+
+.thumbFrame {
+  align-items: center;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  width: 5.5rem;
+}
+
+.thumbShown .thumbFrame {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.thumb:focus-visible .thumbFrame {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.thumbImage {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.thumbAbsent {
+  color: var(--text-quiet);
+  font-size: 0.9rem;
+}
+
 .actions {
   display: flex;
 }
