@@ -156,9 +156,17 @@ public sealed class ArtworkEviction(
         // The pinned ones of this batch, by the query ADR 0033 made pinning
         // into. Joined from the video side because that is the side the clauses
         // are written about.
+        //
+        // ADR 0060 narrows what a pinned Video protects to the image ADR 0027
+        // chose: that one is the library grid's tile and the file filing
+        // copies, and the rest of its pictures are a Preview's gallery, which is
+        // as disposable as anybody else's. Reading the pin wide would put every
+        // picture of every held Video outside the ceiling for good.
         var isPinned = await pins.Pinned(context.CatalogueVideos)
             .Join(
-                context.CatalogueImages.Where(row => batch.Contains(row.PrdbId)),
+                ChosenImages.In(
+                    context,
+                    context.CatalogueImages.Where(row => batch.Contains(row.PrdbId))),
                 video => video.Id,
                 image => image.VideoId,
                 (_, image) => image.PrdbId)

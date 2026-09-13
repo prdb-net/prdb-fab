@@ -49,6 +49,29 @@
         }
       }
     },
+    "/api/artwork/images/{imageId}": {
+      "get": {
+        "tags": [
+          "Artwork"
+        ],
+        "parameters": [
+          {
+            "name": "imageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/artwork/actors/{actorId}": {
       "get": {
         "tags": [
@@ -1420,6 +1443,39 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/catalogue/videos/{prdbId}": {
+      "get": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoPreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
           }
         }
       }
@@ -6163,6 +6219,38 @@
           "P2160"
         ]
       },
+      "PreviewActor": {
+        "required": [
+          "prdbId",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PreviewImage": {
+        "required": [
+          "prdbId",
+          "chosen"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chosen": {
+            "type": "boolean"
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -8352,6 +8440,61 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "VideoPreview": {
+        "required": [
+          "video",
+          "durationMs",
+          "durationSpreadMs",
+          "durationFileCount",
+          "actors",
+          "images"
+        ],
+        "type": "object",
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoCard"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "durationSpreadMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "durationFileCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "actors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewActor"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewImage"
+            }
           }
         }
       },

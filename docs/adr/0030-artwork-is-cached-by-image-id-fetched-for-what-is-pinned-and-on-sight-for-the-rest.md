@@ -10,6 +10,14 @@ and never evicted, a dead URL marked once, the small fixed concurrency, the
 per-file size stop, and nothing passing the governor. The title keeps a word
 that decision took back.
 
+**Amended again by [ADR 0060](0060-a-preview-fetches-the-rest-of-a-videos-pictures-on-sight-and-they-are-evicted-first.md),
+which builds the surface this one said did not exist.** A Preview shows every
+picture prdb publishes for a Video, so *Cache every image* below is rejected for
+its second clause only: the pictures that are not the chosen one get bytes when
+a Preview asks for one, count against the unpinned ceiling and are evicted
+before anything else in it. The choice of *the* image, and everything the grids
+and filing do with it, is untouched.
+
 One image per video — the same one
 [ADR 0027](0027-the-sidecar-and-the-entry-image-are-overwritten-until-they-match-the-catalogue.md)
 picks — stored under the image's own id. What is **pinned** is fetched by a
@@ -147,6 +155,10 @@ with no picture and a repair pass fetching it back. So the ceiling bounds
 exactly the half `VISION.md` calls disposable, and the other half is
 proportional to what the user actually has — the same shape ADR 0013 gave the
 catalogue.
+([ADR 0060](0060-a-preview-fetches-the-rest-of-a-videos-pictures-on-sight-and-they-are-evicted-first.md)
+narrows *pinned image* to the chosen one. While one image per video could hold
+bytes the two readings were the same; once a Preview can fetch the other nine,
+the wider one would put them outside the ceiling for good.)
 
 **Eviction is least-recently-served first**, run by the same routine when the
 ceiling is exceeded. Unpinning does not delete anything: it makes a file
@@ -206,7 +218,11 @@ disk stays — ADR 0027 decided that, and this changes nothing about it.
 **Cache every image in `images[]`.** Rejected: no surface displays a second
 image, and the store becomes a multiple of the catalogue for rows nobody looks
 at — the same argument ADR 0013 used to make the images feed discard what it
-cannot place.
+cannot place. ([ADR 0060](0060-a-preview-fetches-the-rest-of-a-videos-pictures-on-sight-and-they-are-evicted-first.md)
+builds a surface that displays them, and keeps the rejection on the second
+clause: caching them *ahead of being asked* is what the store cannot afford, so
+a picture is fetched when somebody scrolls to it and dropped before anything
+else.)
 
 **Name the file by video id.** Rejected: it re-introduces the question ADR 0027
 answered by identity, forcing either a stored marker saying which image the

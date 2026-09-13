@@ -363,12 +363,22 @@ unless something local pins it.
 _Avoid_: Backfill window, Lookback, Retention period
 
 **Artwork Cache**:
-The image files the tool holds locally, one per video, so that a grid does not
-fetch on every scroll. Disposable in both directions: it is never backed up, and
-what nothing points at is evicted to hold a ceiling. The source for every grid,
-and the source filing copies an entry image from — never read back off the
-library.
+The image files the tool holds locally so that a grid does not fetch on every
+scroll: one per video for the grids, and the rest of a video's pictures once a
+Preview has asked for them. Disposable in both directions: it is never backed
+up, and what nothing points at is evicted to hold a ceiling. The source for
+every grid, and the source filing copies an entry image from — never read back
+off the library.
 _Avoid_: Thumbnail store, Image cache, Media cache
+
+**Preview**:
+One Video seen without leaving the grid it was found in: the card's facts, its
+Actors, the actions the card offers, and every picture prdb publishes for it
+rather than the one the grid shows. A sheet over a list that stays where it was,
+addressed on that list's own address and closed by a click outside it. Not the
+Release view, which is what the Indexers have, and not the Library Entry, which
+is what is held on disk.
+_Avoid_: Lightbox, Quick look, Detail page, Modal
 
 **Pinned**:
 Said of a row the tool must keep because something local points at it — a

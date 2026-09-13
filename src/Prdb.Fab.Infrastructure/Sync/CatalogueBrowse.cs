@@ -442,6 +442,90 @@ public sealed class CatalogueBrowse(
     }
 
     /// <summary>
+    /// One Video for a Preview: the card, what the card has no room for, and
+    /// the identity of every picture prdb publishes for it (ADR 0060).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Every row of it is local, so opening a Preview spends no prdb request
+    /// and ADR 0018's rule is intact without an argument. The Catalogue already
+    /// holds the whole of <c>images[]</c> — ADR 0030 stores every entry as a row
+    /// and only <em>chooses</em> one of them to hold bytes for — so what the
+    /// gallery is missing is the bytes, which it asks the artwork route for one
+    /// at a time.
+    /// </para>
+    /// <para>
+    /// <strong>No image URL leaves this method.</strong> The browser asks the
+    /// tool for a picture and never the CDN (ADR 0030), which is what makes the
+    /// timeout, the size ceiling and the dead-URL mark enforceable at all.
+    /// Sending the URL would turn that rule into a convention.
+    /// </para>
+    /// </remarks>
+    public async Task<VideoPreview?> VideoAsync(Guid prdbId, CancellationToken cancellationToken)
+    {
+        var video = await context.CatalogueVideos
+            .AsNoTracking()
+            .Where(row => row.PrdbId == prdbId)
+            .Select(row => new
+            {
+                Card = new VideoCard(
+                    row.Id,
+                    row.PrdbId,
+                    row.Title,
+                    row.Site == null ? null : row.Site.Title,
+                    row.Site == null ? null : row.Site.PrdbId,
+                    row.ReleaseDate),
+                row.DurationMs,
+                row.DurationSpreadMs,
+                row.DurationFileCount,
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (video is null)
+        {
+            return null;
+        }
+
+        var cards = await WithAvailabilityAsync([video.Card], cancellationToken);
+
+        var actors = await context.CatalogueVideoActors
+            .AsNoTracking()
+            .Where(credit => credit.VideoId == video.Card.Id && credit.Actor != null)
+            .OrderBy(credit => credit.Actor!.Name)
+            .ThenBy(credit => credit.Actor!.Id)
+            .Select(credit => new PreviewActor(credit.Actor!.PrdbId, credit.Actor.Name))
+            .ToListAsync(cancellationToken);
+
+        // The order prdb publishes the array in, which it documents as stable
+        // and expressly not a ranking — so the gallery shows them oldest first
+        // and says nothing about which is best. Which one is the Video's choice
+        // is the clause ADR 0027 wrote rather than a column, so it is worked out
+        // here the same way ChosenImages works it out: the first with a URL,
+        // whether or not that URL has since been found dead.
+        var images = await context.CatalogueImages
+            .AsNoTracking()
+            .Where(row => row.VideoId == video.Card.Id && row.Url != string.Empty)
+            .OrderBy(row => row.Position)
+            .ThenBy(row => row.PrdbId)
+            .Select(row => new { row.PrdbId, row.FoundDead })
+            .ToListAsync(cancellationToken);
+        var chosen = images.Count > 0 ? images[0].PrdbId : (Guid?)null;
+
+        return new VideoPreview(
+            cards[0],
+            video.DurationMs,
+            video.DurationSpreadMs,
+            video.DurationFileCount,
+            actors,
+            // A dead URL is left out rather than sent and drawn as a gap: the
+            // route would answer 204 for it every time, and a gallery is a
+            // strip of pictures rather than a census of image rows.
+            [.. images
+                .Where(image => !image.FoundDead)
+                .Select(image => new PreviewImage(image.PrdbId, image.PrdbId == chosen))]);
+    }
+
+    /// <summary>
     /// Whether the first Recent Window fill is unfinished or a later pass is active.
     /// </summary>
     /// <remarks>
@@ -831,3 +915,52 @@ public sealed record ActorProfile(
     IReadOnlyList<ActorLink>? Links = null);
 
 public sealed record ActorVideos(ActorProfile Actor, VideoPage Videos);
+
+/// <summary>
+/// One Video opened over the grid it was found in (ADR 0060): the card it was
+/// drawn from, what the card has no room for, and every picture prdb publishes
+/// for it.
+/// </summary>
+/// <param name="Video">
+/// The same card the grid rendered, so the sheet shows the same facts and
+/// offers the same actions without a second read and without a second shape for
+/// a person to learn.
+/// </param>
+/// <param name="DurationMs">
+/// The Consensus Runtime, in prdb's spelling. ADR 0031 shows it beside a file's
+/// own and lets it decide nothing; the card has no room for it and this does.
+/// </param>
+/// <param name="DurationSpreadMs">
+/// How far the files disagree. Null exactly when <paramref name="DurationMs"/>
+/// is, and unreadable without <paramref name="DurationFileCount"/>.
+/// </param>
+/// <param name="DurationFileCount">How many files the runtime was taken over.</param>
+/// <param name="Images">
+/// The Video's pictures, oldest first — prdb's own order, which it documents as
+/// stable and expressly not a ranking. Named by id and never by URL, because
+/// the browser asks the tool for a picture and never the CDN (ADR 0030).
+/// </param>
+public sealed record VideoPreview(
+    VideoCard Video,
+    long? DurationMs,
+    long? DurationSpreadMs,
+    int? DurationFileCount,
+    IReadOnlyList<PreviewActor> Actors,
+    IReadOnlyList<PreviewImage> Images);
+
+/// <summary>One credit on a Preview, and the Actor page it leads to.</summary>
+public sealed record PreviewActor(Guid PrdbId, string Name);
+
+/// <summary>
+/// One picture in a Preview's gallery.
+/// </summary>
+/// <param name="PrdbId">
+/// prdb's image id, which is what <c>/api/artwork/images/{imageId}</c> is
+/// addressed by and what the cached file is named.
+/// </param>
+/// <param name="Chosen">
+/// Whether this is the image ADR 0027 chose for the Video: the one the grids
+/// draw, the one filing copies, and the one the gallery opens on. At most one
+/// picture carries it, and none does where the chosen URL was found dead.
+/// </param>
+public sealed record PreviewImage(Guid PrdbId, bool Chosen);

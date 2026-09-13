@@ -56,6 +56,18 @@ public static class CatalogueEndpoints
             CatalogueVideoSort sort = CatalogueVideoSort.ReleaseDateDescending) =>
             TypedResults.Ok(await browse.VideosAsync(search, page, filter, sort, cancellationToken)));
 
+        // One Video for a Preview (ADR 0060), from local rows only: a person
+        // opening a sheet over a grid spends no prdb request, and the grid
+        // underneath is neither re-read nor re-paged.
+        group.MapGet("/videos/{prdbId:guid}", async Task<Results<Ok<VideoPreview>, NotFound>> (
+            Guid prdbId,
+            CatalogueBrowse browse,
+            CancellationToken cancellationToken) =>
+        {
+            var preview = await browse.VideoAsync(prdbId, cancellationToken);
+            return preview is null ? TypedResults.NotFound() : TypedResults.Ok(preview);
+        });
+
         MapPreference(group, "/wanted/{prdbId:guid}", AccountPreferenceKind.WantedVideo);
         MapPreference(group, "/actors/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteActor);
         MapPreference(group, "/sites/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteSite);
