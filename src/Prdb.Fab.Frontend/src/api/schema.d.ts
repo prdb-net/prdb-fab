@@ -1794,6 +1794,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/catalogue/videos/{prdbId}/pictures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    prdbId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreviewPictureAsk"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/catalogue/wanted/{prdbId}": {
         parameters: {
             query?: never;
@@ -4202,6 +4246,11 @@ export interface components {
             prdbId: string;
             chosen: boolean;
         };
+        PreviewPictureAsk: {
+            outcome: components["schemas"]["PreviewPictureOutcome"];
+        };
+        /** @enum {unknown} */
+        PreviewPictureOutcome: "Asked" | "AlreadyKnown" | "PrdbPublishesNone" | "VideoNotFound";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -4694,6 +4743,7 @@ export interface components {
             durationSpreadMs: null | number | string;
             /** Format: int32 */
             durationFileCount: null | number | string;
+            picturesComing: boolean;
             actors: components["schemas"]["PreviewActor"][];
             images: components["schemas"]["PreviewImage"][];
         };

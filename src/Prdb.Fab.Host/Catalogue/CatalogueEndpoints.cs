@@ -68,6 +68,20 @@ public static class CatalogueEndpoints
             return preview is null ? TypedResults.NotFound() : TypedResults.Ok(preview);
         });
 
+        // ADR 0060's one request. A person opened a Preview of a Video the
+        // Catalogue holds no picture of; this is the act, which is why it is a
+        // POST and not a side effect of the read above.
+        group.MapPost("/videos/{prdbId:guid}/pictures", async Task<Results<Ok<PreviewPictureAsk>, NotFound>> (
+            Guid prdbId,
+            PreviewPictures pictures,
+            CancellationToken cancellationToken) =>
+        {
+            var ask = await pictures.AskAsync(prdbId, cancellationToken);
+            return ask.Outcome == PreviewPictureOutcome.VideoNotFound
+                ? TypedResults.NotFound()
+                : TypedResults.Ok(ask);
+        });
+
         MapPreference(group, "/wanted/{prdbId:guid}", AccountPreferenceKind.WantedVideo);
         MapPreference(group, "/actors/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteActor);
         MapPreference(group, "/sites/{prdbId:guid}/favourite", AccountPreferenceKind.FavouriteSite);

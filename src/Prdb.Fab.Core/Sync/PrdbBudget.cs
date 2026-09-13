@@ -59,6 +59,14 @@ public sealed record PrdbBudget(int Limit, int Remaining, TimeSpan ResetIn)
         PrdbWork.Verification or PrdbWork.Identification => 0,
 
         PrdbWork.Writes => 0.05,
+
+        // Not a step on the five-point staircase below, because the staircase
+        // was laid out before this existed: moving every number on it to keep
+        // the steps round would change what each feed is held back from, for
+        // nothing. Between a write and a feed is where this belongs, and eight
+        // is between.
+        PrdbWork.Preview => 0.08,
+
         PrdbWork.UserFeeds => 0.10,
         PrdbWork.WhatsNew => 0.15,
         PrdbWork.Images => 0.20,

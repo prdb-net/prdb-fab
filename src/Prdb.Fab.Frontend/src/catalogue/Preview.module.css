@@ -203,6 +203,12 @@
   gap: 0.3rem 0.75rem;
 }
 
+.looking {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
 .problem {
   color: var(--bad);
   font-size: 0.85rem;

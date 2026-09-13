@@ -203,18 +203,46 @@ applied to one Video:
 
 - **Explicit.** It happens because a person opened a Preview. Nothing sweeps for
   candidates, and a Video that has any image row never triggers it.
-- **At most once per Video, durably.** Asked-and-answered is recorded, including
-  the answer *prdb publishes none*, and survives a restart. Reopening the sheet
-  a hundred times is one request.
+- **At most once per Video, durably — and nothing new is recorded to say so.**
+  `CatalogueVideo.LastReadAt` already says when a Video was last read from prdb
+  in detail, and the detail write moves it. So *read recently and still no
+  pictures* **is** the answer *prdb publishes none*, kept where it already
+  belongs; a second column saying *asked* would be ADR 0033's stored fact with
+  two writers and no reader that would notice them disagreeing. A row a list
+  feed wrote carries no stamp at all, which is exactly the Video worth asking
+  about — and the repair pass already reads that same absence as *take this one
+  first*.
+
+  The word is taken for a **week**. Not forever, because a Video may acquire a
+  picture later and the images feed carries only what is newer than its cursor;
+  not shorter, because a Video that genuinely has none is the ordinary case and
+  must not cost a request every time somebody glances at it.
+
+  While the read is outstanding the **routine row is the record**, so reopening
+  the sheet a hundred times schedules once and a restart does not forget.
 - **Refusable, with a place in the order of precedence.** `PrdbWork` is an
   ordered enum whose declaration order *is* ADR 0014's precedence. This goes
   below `Writes` and above the feeds: somebody is sitting in front of it, which
   argues for high, and it is the only kind a person can cause by clicking, which
-  argues against the top. A share is held back from it on the same staircase the
-  feeds are on.
-- **Not in the request's path.** The sheet never waits on prdb. The read is
-  scheduled, the Preview renders what it has, and the gallery fills in when it
-  lands.
+  argues against the top — a write is a queued obligation and this is a glance.
+
+  Its share is **8 %**, which is not a step on the five-point staircase the
+  feeds are on. The staircase was laid out before this existed, and moving every
+  number on it to keep the steps round would change what each feed is held back
+  from, for nothing. Between a write and a feed is where this belongs, and eight
+  is between.
+- **Not in the request's path, and asked for by a POST of its own.** The sheet
+  never waits on prdb: it renders what it has, and the gallery fills in when the
+  read lands. A GET that scheduled work as a side effect would make *refreshing
+  never causes work* a rule the code contradicts in the one place it is easiest
+  to read, so the person's act is a request of its own, the way ADR 0054's fill
+  is.
+
+  The Preview read says whether one is outstanding, so an empty gallery can say
+  that something is being done about it and the sheet can re-read while it is —
+  a local query, not a prdb request. The routine sits in the **Sync** lane
+  rather than the Bulk one for the reason ADR 0049 put manual search there: the
+  Bulk lane is where work goes that nothing waits on.
 
 ADR 0018's rule is intact. What that rule protects is the governor and the
 indexers' daily budgets against a person who presses reload; this is not a

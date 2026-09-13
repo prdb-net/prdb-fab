@@ -511,11 +511,21 @@ public sealed class CatalogueBrowse(
             .ToListAsync(cancellationToken);
         var chosen = images.Count > 0 ? images[0].PrdbId : (Guid?)null;
 
+        // ADR 0060's one request, while it is outstanding. The routine row is
+        // the record of it — a Preview that has asked has a row, and one that
+        // has been answered has none — so there is no second place for it to be
+        // true (ADR 0033).
+        var target = PreviewPictures.Target(prdbId);
+        var picturesComing = await context.Routines.AnyAsync(
+            row => row.Name == PreviewPictureRoutine.RoutineName && row.Target == target,
+            cancellationToken);
+
         return new VideoPreview(
             cards[0],
             video.DurationMs,
             video.DurationSpreadMs,
             video.DurationFileCount,
+            picturesComing,
             actors,
             // A dead URL is left out rather than sent and drawn as a gap: the
             // route would answer 204 for it every time, and a gallery is a
@@ -935,6 +945,11 @@ public sealed record ActorVideos(ActorProfile Actor, VideoPage Videos);
 /// is, and unreadable without <paramref name="DurationFileCount"/>.
 /// </param>
 /// <param name="DurationFileCount">How many files the runtime was taken over.</param>
+/// <param name="PicturesComing">
+/// Whether a detail read asked for by a Preview is outstanding for this Video
+/// (ADR 0060). True only between the ask and the answer, so a sheet showing an
+/// empty gallery can say that something is being done about it.
+/// </param>
 /// <param name="Images">
 /// The Video's pictures, oldest first — prdb's own order, which it documents as
 /// stable and expressly not a ranking. Named by id and never by URL, because
@@ -945,6 +960,7 @@ public sealed record VideoPreview(
     long? DurationMs,
     long? DurationSpreadMs,
     int? DurationFileCount,
+    bool PicturesComing,
     IReadOnlyList<PreviewActor> Actors,
     IReadOnlyList<PreviewImage> Images);
 

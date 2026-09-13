@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 
 import {
+  askForPictures,
   readVideoPreview,
   type PreviewImage,
   type VideoCard,
@@ -108,7 +109,13 @@ function Preview({
     queryFn: () => readVideoPreview(prdbId),
     // Stepping back and forth across a page of cards re-reads nothing.
     staleTime: 5 * 60 * 1000,
+    // Except while prdb is being asked for this Video's pictures, which is the
+    // one thing about a Preview that can change under it (ADR 0060). The read
+    // is local, so this costs a query and no request.
+    refetchInterval: (query) => (query.state.data?.picturesComing ? 2000 : false),
   })
+
+  usePictures(prdbId, preview.data)
   const sheet = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   const titleId = useId()
@@ -185,7 +192,13 @@ function Preview({
         </header>
 
         <div className={styles.body}>
-          <Gallery images={preview.data?.images} key={prdbId} title={title} video={video} />
+          <Gallery
+            coming={preview.data?.picturesComing}
+            images={preview.data?.images}
+            key={prdbId}
+            title={title}
+            video={video}
+          />
 
           {video && (
             <div className={styles.actions}>
@@ -208,6 +221,33 @@ function Preview({
 }
 
 /**
+ * ADR 0060's one request, asked once for the Video on screen.
+ *
+ * A Preview opened on a Video the Catalogue holds no picture of asks prdb for
+ * its detail. The sheet never waits on that: it renders what it has, the ask is
+ * scheduled, and the gallery fills in when the read lands — for whoever opened
+ * it, if they are still there.
+ *
+ * The backend decides whether the ask is spent at all. A Video that already has
+ * pictures, or that was read recently enough that having none is prdb's answer,
+ * is refused rather than repeated, so this is safe to call whenever a Preview
+ * finds itself empty.
+ */
+function usePictures(prdbId: string, preview?: VideoPreview) {
+  const ask = useMutation({ mutationFn: () => askForPictures(prdbId) })
+  const { mutate, reset } = ask
+
+  useEffect(() => reset(), [prdbId, reset])
+
+  useEffect(() => {
+    if (!preview || preview.images.length > 0 || preview.picturesComing) return
+    if (ask.isPending || ask.isSuccess || ask.isError) return
+
+    mutate()
+  }, [ask.isError, ask.isPending, ask.isSuccess, mutate, preview])
+}
+
+/**
  * Every picture prdb publishes for the Video, oldest first — its own order,
  * which it documents as stable and expressly not a ranking, so the strip shows
  * it as given and says nothing about which picture is best.
@@ -221,10 +261,13 @@ function Preview({
  * no-artwork tile on an empty answer, a failed fetch and a broken image alike.
  */
 function Gallery({
+  coming = false,
   images,
   title,
   video,
 }: {
+  /** Whether ADR 0060's one request is outstanding for this Video. */
+  coming?: boolean
   images?: readonly PreviewImage[]
   title: string
   video?: VideoCard
@@ -236,9 +279,17 @@ function Gallery({
 
   if (images?.length === 0 || (!images && !video)) {
     return (
-      <span aria-label={`No pictures for ${title}`} className={styles.frame} role="img">
-        <span aria-hidden="true" className={styles.absent}>▤</span>
-      </span>
+      <div className={styles.gallery}>
+        <span aria-label={`No pictures for ${title}`} className={styles.frame} role="img">
+          <span aria-hidden="true" className={styles.absent}>▤</span>
+        </span>
+        {coming && (
+          <p className={styles.looking}>
+            prdb published no picture of this Video when it was last read. Asking
+            again &mdash; anything it has will appear here.
+          </p>
+        )}
+      </div>
     )
   }
 

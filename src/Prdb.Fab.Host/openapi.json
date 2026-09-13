@@ -1480,6 +1480,39 @@
         }
       }
     },
+    "/api/catalogue/videos/{prdbId}/pictures": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "prdbId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewPictureAsk"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/catalogue/wanted/{prdbId}": {
       "post": {
         "tags": [
@@ -6251,6 +6284,25 @@
           }
         }
       },
+      "PreviewPictureAsk": {
+        "required": [
+          "outcome"
+        ],
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/PreviewPictureOutcome"
+          }
+        }
+      },
+      "PreviewPictureOutcome": {
+        "enum": [
+          "Asked",
+          "AlreadyKnown",
+          "PrdbPublishesNone",
+          "VideoNotFound"
+        ]
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -8449,6 +8501,7 @@
           "durationMs",
           "durationSpreadMs",
           "durationFileCount",
+          "picturesComing",
           "actors",
           "images"
         ],
@@ -8483,6 +8536,9 @@
               "string"
             ],
             "format": "int32"
+          },
+          "picturesComing": {
+            "type": "boolean"
           },
           "actors": {
             "type": "array",

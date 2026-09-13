@@ -53,6 +53,7 @@ export type VideoPage = Schema['VideoPage']
 export type VideoPreview = Schema['VideoPreview']
 export type PreviewActor = Schema['PreviewActor']
 export type PreviewImage = Schema['PreviewImage']
+export type PreviewPictureAsk = Schema['PreviewPictureAsk']
 export type CatalogueVideoFilter = Schema['CatalogueVideoFilter']
 export type CatalogueVideoSort = Schema['CatalogueVideoSort']
 export type LibraryEntrySort = Schema['LibraryEntrySort']
@@ -388,6 +389,15 @@ export async function listVideos(
  */
 export async function readVideoPreview(prdbId: string): Promise<VideoPreview> {
   return json<VideoPreview>(await fetch(`/api/catalogue/videos/${prdbId}`))
+}
+
+/**
+ * ADR 0060's one request: a detail read for a Video the Catalogue holds no
+ * picture of. Refused rather than repeated where the Catalogue already has
+ * pictures, or read recently enough that having none is prdb's answer.
+ */
+export async function askForPictures(prdbId: string): Promise<PreviewPictureAsk> {
+  return post<PreviewPictureAsk>(`/api/catalogue/videos/${prdbId}/pictures`)
 }
 
 export async function listSites(
