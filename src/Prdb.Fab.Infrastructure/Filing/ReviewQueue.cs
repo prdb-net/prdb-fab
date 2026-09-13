@@ -7,7 +7,7 @@ using Prdb.Fab.Infrastructure.Persistence;
 namespace Prdb.Fab.Infrastructure.Filing;
 
 /// <summary>The Review Queue and the two universal exits from it.</summary>
-public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
+public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence evidence, TimeProvider time)
 {
     public const int APage = 50;
 
@@ -202,6 +202,20 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
             .ToListAsync(cancellationToken);
         var filed = await FiledComparisonAsync(arrival, cancellationToken);
 
+        // ADR 0062, from the reading side: what the evidence said about this
+        // file, and the pictures a person may be shown while they decide. The
+        // reason is worked out from the same rows the sweep reads rather than
+        // stored beside the file, so the queue cannot show one account of it
+        // while the sweep acts on another.
+        var named = (await evidence.EvidenceForAsync([arrival.OsHash], cancellationToken))
+            .Values.FirstOrDefault() ?? [];
+        var automatic = PreviewHashEvidence.OutcomeOf(
+            named,
+            [.. candidates.Select(row => row.Id)],
+            arrival.VideoId,
+            arrival.MatchedBy);
+        var pictures = await PicturesAsync(arrival.OsHash, cancellationToken);
+
         return new ReviewQueueEntry(
             arrival.Id,
             arrival.Reason!.Value,
@@ -223,7 +237,50 @@ public sealed class ReviewQueue(FabDbContext context, TimeProvider time)
             filed,
             download,
             release,
-            indexer);
+            indexer,
+            automatic,
+            pictures);
+    }
+
+    /// <summary>
+    /// The user previews made from this exact file, which is the image context
+    /// a person deciding may be shown.
+    /// </summary>
+    /// <remarks>
+    /// <strong>Selecting one of these is not a decision.</strong> They are
+    /// pictures of the file in front of the person, and looking at one says
+    /// nothing about which Video it is — that is still an act they take
+    /// deliberately, and it is still what becomes a Confirmed Assignment.
+    /// Withdrawn previews are not among them, because the row is not shown and
+    /// the bytes would not be served.
+    /// </remarks>
+    private async Task<IReadOnlyList<ReviewPicture>> PicturesAsync(
+        string? osHash,
+        CancellationToken cancellationToken)
+    {
+        if (Core.Sync.UserPreviewHash.Normalise(osHash) is not { } hash)
+        {
+            return [];
+        }
+
+        var rows = await context.UserPreviews
+            .AsNoTracking()
+            .Where(row => row.OsHash == hash && row.Shown)
+            .OrderBy(row => row.DisplayOrder)
+            .ThenBy(row => row.CreatedAtUtc)
+            .ThenBy(row => row.PrdbId)
+            .Take(12)
+            .ToListAsync(cancellationToken);
+
+        return
+        [
+            .. rows
+                .Where(row => Core.Sync.UserPreviewAsset.IsKnown(row.Kind))
+                .Select(row => new ReviewPicture(
+                    row.PrdbId,
+                    Sync.PreviewAssetCache.VersionOf(row),
+                    Core.Sync.UserPreviewAsset.IsSprite(row.Kind))),
+        ];
     }
 
     private async Task<ReviewVideo?> VideoAsync(Guid? videoId, CancellationToken cancellationToken)
@@ -323,7 +380,20 @@ public sealed record ReviewQueueEntry(
     ReviewFiledFile? FiledFile,
     ReviewDownload Download,
     string Release,
-    string Indexer);
+    string Indexer,
+    /// <summary>
+    /// What ADR 0062's evidence made of this file, and therefore the reason
+    /// automatic Identification did not proceed where it did not.
+    /// </summary>
+    Core.Filing.PreviewHashOutcome AutomaticIdentification,
+    /// <summary>
+    /// The user previews made from this exact file. Context for a person, and
+    /// never a control: selecting one is not a Confirmed Assignment.
+    /// </summary>
+    IReadOnlyList<ReviewPicture> Pictures);
+
+/// <summary>One picture of the file under review, addressed the way ADR 0061 addresses them.</summary>
+public sealed record ReviewPicture(Guid PrdbId, string Version, bool Sprite);
 
 public sealed record ReviewQueuePage(
     IReadOnlyList<ReviewQueueEntry> Entries,

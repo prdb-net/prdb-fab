@@ -6376,6 +6376,16 @@
           }
         }
       },
+      "PreviewHashOutcome": {
+        "enum": [
+          "NoEvidence",
+          "Conflicting",
+          "OutsideTheCandidates",
+          "WaitingForTheCatalogue",
+          "Assigned",
+          "NotNeeded"
+        ]
+      },
       "PreviewImage": {
         "required": [
           "prdbId",
@@ -7260,6 +7270,26 @@
           }
         }
       },
+      "ReviewPicture": {
+        "required": [
+          "prdbId",
+          "version",
+          "sprite"
+        ],
+        "type": "object",
+        "properties": {
+          "prdbId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string"
+          },
+          "sprite": {
+            "type": "boolean"
+          }
+        }
+      },
       "ReviewQueueAction": {
         "enum": [
           "FileAs",
@@ -7306,7 +7336,9 @@
           "filedFile",
           "download",
           "release",
-          "indexer"
+          "indexer",
+          "automaticIdentification",
+          "pictures"
         ],
         "type": "object",
         "properties": {
@@ -7443,6 +7475,15 @@
           },
           "indexer": {
             "type": "string"
+          },
+          "automaticIdentification": {
+            "$ref": "#/components/schemas/PreviewHashOutcome"
+          },
+          "pictures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewPicture"
+            }
           }
         }
       },

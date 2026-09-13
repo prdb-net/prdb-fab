@@ -514,6 +514,18 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
                 Blocked = row.Blocked,
             }));
 
+        context.IdentificationFlags.AddRange(
+            // Absent from a format-1 document, which is the same state as an
+            // installation that has never flagged anything.
+            (document.IdentificationFlags ?? []).Select(row => new IdentificationFlagRow
+            {
+                VideoFileId = row.VideoFileId,
+                VideoId = row.VideoId,
+                NowNamesVideoId = row.NowNamesVideoId,
+                Reason = row.Reason,
+                At = row.At,
+            }));
+
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }

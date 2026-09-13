@@ -152,8 +152,12 @@ no second Library entry. A filed file is content the person now has, in a place
 their media server knows, and a moderator withdrawing a picture is not grounds
 for this tool to touch it. What happens instead is that the Video File is
 **flagged for review**: a durable record saying *this file was identified
-automatically from evidence prdb has since withdrawn*, carried per Video File,
-surfaced on the Library entry, and cleared by a person.
+automatically from evidence prdb has since withdrawn*, carried per Video File
+and surfaced where the file is. The flag goes on its own when the evidence
+comes back — a restored preview is not something anybody needs to be told about
+twice — and otherwise it stands. There is deliberately no *dismiss* action yet:
+what a person does about it is decide, and the decisions this tool already
+offers about a filed file are the ones on the Library entry.
 
 That record is **exported**. It cannot be re-derived — the preview rows it is
 about are gone by definition — and it is a statement about a file in the user's

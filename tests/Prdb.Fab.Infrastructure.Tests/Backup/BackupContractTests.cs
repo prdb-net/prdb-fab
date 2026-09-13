@@ -28,10 +28,15 @@ namespace Prdb.Fab.Infrastructure.Tests.Backup;
 public sealed class BackupContractTests : IDisposable
 {
     /// <summary>
-    /// The recorded document of every format this build still reads. One entry
-    /// today; a second format adds a file here rather than a branch anywhere.
+    /// The recorded document of every format this build still reads. A new
+    /// format adds a file here rather than a branch anywhere — and the old one
+    /// stays, because what this asserts is that a document written before the
+    /// change still restores.
     /// </summary>
-    public static TheoryData<string> SupportedFormats() => ["format-1.json"];
+    public static TheoryData<string> SupportedFormats() => ["format-1.json", "format-2.json"];
+
+    /// <summary>The newest of them, which is the shape this build writes.</summary>
+    private const string TheCurrentFormat = "format-2.json";
 
     private readonly string library = NewDirectory();
     private readonly string downloads = NewDirectory();
@@ -91,7 +96,7 @@ public sealed class BackupContractTests : IDisposable
     public async Task The_document_this_build_writes_is_the_recorded_shape()
     {
         var recorded = JsonDocument.Parse(await File.ReadAllTextAsync(
-            Path.Combine(AppContext.BaseDirectory, "Backup", "Recorded", "format-1.json"),
+            Path.Combine(AppContext.BaseDirectory, "Backup", "Recorded", TheCurrentFormat),
             TestContext.Current.CancellationToken));
 
         var written = JsonDocument.Parse(BackupJson.Write(await AnExportAsync()));

@@ -19,6 +19,7 @@ public sealed class ArrivalIdentificationRoutine(
     PrdbGateway prdb,
     VideoDetails details,
     CatalogueRows catalogue,
+    PreviewHashEvidence evidence,
     TimeProvider time,
     ILogger<ArrivalIdentificationRoutine> logger) : IRoutine
 {
@@ -39,17 +40,20 @@ public sealed class ArrivalIdentificationRoutine(
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
 
-        if (arrivals.Count == 0)
-        {
-            return RunResult.NothingToDo;
-        }
-
         var apiKey = await context.Installation
             .Select(row => row.PrdbApiKey)
             .SingleAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(apiKey))
+
+        if (arrivals.Count == 0 || string.IsNullOrWhiteSpace(apiKey))
         {
-            return RunResult.NothingToDo;
+            // ADR 0062's pass runs anyway, and that is the whole of why it does
+            // not need a routine of its own: it spends no prdb request, so
+            // nothing about it depends on there being an answer to ask for. A
+            // file that has sat in the Review Queue for a week is identified on
+            // the tick after somebody opens its Video's Preview.
+            var alone = await evidence.SweepAsync(cancellationToken);
+
+            return alone == 0 ? RunResult.NothingToDo : RunResult.Handled(alone);
         }
 
         // Nothing durable is changed before this governed call. Deferral can
@@ -135,7 +139,13 @@ public sealed class ArrivalIdentificationRoutine(
 
         await context.SaveChangesAsync(cancellationToken);
         logger.LogInformation("prdb identified {Count} arriving Video File(s).", arrivals.Count);
-        return RunResult.Handled(arrivals.Count);
+
+        // After prdb's answer and never instead of it (ADR 0062). What this
+        // reaches is exactly the files the ladder named nothing for, which
+        // ApplyAsync has just marked unidentified.
+        var followed = await evidence.SweepAsync(cancellationToken);
+
+        return RunResult.Handled(arrivals.Count + followed);
     }
 
     private async Task ApplyAsync(

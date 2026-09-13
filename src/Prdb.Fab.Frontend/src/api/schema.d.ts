@@ -4024,7 +4024,7 @@ export interface components {
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
         };
         /** @enum {unknown} */
-        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | null;
+        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | "PreviewHash" | null;
         IdentificationSettingsRequest: {
             beforeDownload: components["schemas"]["BeforeDownloadGateChoice"];
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
@@ -4353,6 +4353,8 @@ export interface components {
             prdbId: string;
             name: string;
         };
+        /** @enum {unknown} */
+        PreviewHashOutcome: "NoEvidence" | "Conflicting" | "OutsideTheCandidates" | "WaitingForTheCatalogue" | "Assigned" | "NotNeeded";
         PreviewImage: {
             /** Format: uuid */
             prdbId: string;
@@ -4547,6 +4549,12 @@ export interface components {
             /** Format: int64 */
             sizeBytes: number | string;
         };
+        ReviewPicture: {
+            /** Format: uuid */
+            prdbId: string;
+            version: string;
+            sprite: boolean;
+        };
         /** @enum {unknown} */
         ReviewQueueAction: "FileAs" | "Replace" | "FileAsOnlyCopy" | null;
         ReviewQueueCount: {
@@ -4580,6 +4588,8 @@ export interface components {
             download: components["schemas"]["ReviewDownload"];
             release: string;
             indexer: string;
+            automaticIdentification: components["schemas"]["PreviewHashOutcome"];
+            pictures: components["schemas"]["ReviewPicture"][];
         };
         ReviewQueuePage: {
             entries: components["schemas"]["ReviewQueueEntry"][];

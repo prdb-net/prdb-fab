@@ -99,6 +99,14 @@
 .identificationCallout { align-items: center; background: #2a2419; border-block: 1px solid #4c4029; display: flex; gap: .7rem; margin: 0; padding: .55rem .85rem; }
 .identificationCallout strong { color: #e8bd79; flex: 0 0 auto; }
 .identificationCallout span { color: #c9c0ae; font-size: .78rem; }
+/* ADR 0062: pictures other people made from this exact file. Context while a
+   person decides, and deliberately not a control — no button, no hover state,
+   nothing to click. */
+.filePictures { display: grid; gap: .35rem; margin: 0; padding: .75rem .85rem; }
+.filePictures figcaption { color: var(--text-quiet); font-size: .68rem; font-weight: 700; text-transform: uppercase; }
+.filePictures div { display: flex; flex-wrap: wrap; gap: .35rem; }
+.filePictures img { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; max-height: 5rem; max-width: 100%; object-fit: contain; }
+
 .filedComparison { display: grid; gap: .1rem; padding: .75rem .85rem; }
 .filedComparison span { color: var(--text-quiet); font-size: .68rem; font-weight: 700; text-transform: uppercase; }
 .filedComparison code { overflow-wrap: anywhere; }

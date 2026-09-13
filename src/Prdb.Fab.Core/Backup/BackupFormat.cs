@@ -21,8 +21,14 @@ namespace Prdb.Fab.Core.Backup;
 public static class BackupFormat
 {
     /// <summary>
-    /// The first format. Raised when the document changes shape, never when the
-    /// database does.
+    /// Raised when the document changes shape, never when the database does.
     /// </summary>
-    public const int Version = 1;
+    /// <remarks>
+    /// <strong>2</strong> adds ADR 0062's <c>identificationFlags</c>: filed
+    /// Video Files whose Video was named from evidence prdb has since
+    /// withdrawn. A document written by version 1 still restores — the section
+    /// is simply absent, which is the same state as an installation that has
+    /// never flagged anything — so nothing here refuses one.
+    /// </remarks>
+    public const int Version = 2;
 }

@@ -128,6 +128,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<GateAdmissionRow> GateAdmissions => Set<GateAdmissionRow>();
 
+    /// <summary>Filed Video Files whose evidence prdb has withdrawn (ADR 0062).</summary>
+    public DbSet<IdentificationFlagRow> IdentificationFlags => Set<IdentificationFlagRow>();
+
     /// <summary>
     /// Stored as plain UTC rather than as an offset. SQLite has no date type,
     /// and the provider refuses a <see cref="DateTimeOffset"/> on either side of
@@ -466,6 +469,25 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(row => row.VideoId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<IdentificationFlagRow>(flag =>
+        {
+            flag.ToTable("identification_flag");
+
+            // The Video File is the key: what a person needs is the current
+            // state of one file, not a history of what its evidence did.
+            flag.HasKey(row => row.VideoFileId);
+
+            // It says nothing about whose prdb account read the evidence — the
+            // moderation it rests on is what prdb shows everybody.
+            flag.Declares(AccountClass.AccountFree);
+
+            flag.Property(row => row.Reason).IsRequired();
+
+            // What the Library entry asks: is anything under this Video
+            // flagged?
+            flag.HasIndex(row => row.VideoId);
         });
 
         builder.Entity<UserPreviewRow>(preview =>
@@ -958,6 +980,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<ReportedStateRow>().Declares(ExportClass.Exported);
         builder.Entity<OperationLogEntryRow>().Declares(ExportClass.Exported);
         builder.Entity<GateAdmissionRow>().Declares(ExportClass.Exported);
+        builder.Entity<IdentificationFlagRow>().Declares(ExportClass.Exported);
         builder.Entity<AccountPreferenceWriteRow>().Declares(ExportClass.Exported);
     }
 }

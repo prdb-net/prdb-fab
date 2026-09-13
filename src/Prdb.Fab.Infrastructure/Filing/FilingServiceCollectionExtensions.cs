@@ -30,6 +30,7 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<LibraryEntryDeletion>();
         services.AddScoped<OperationLogBrowse>();
         services.AddScoped<CollectingRoutine>();
+        services.AddScoped<PreviewHashEvidence>();
         services.AddScoped<ArrivalIdentificationRoutine>();
         services.AddScoped<EntryFiles>();
         services.AddScoped<VideoFileMover>();

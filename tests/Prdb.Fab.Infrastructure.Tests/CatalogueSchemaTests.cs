@@ -72,6 +72,7 @@ public sealed class CatalogueSchemaTests
                 "download",
                 "download_origin_rule",
                 "gate_admission",
+                "identification_flag",
                 "indexer",
                 "installation",
                 "library_entry",

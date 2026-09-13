@@ -53,10 +53,11 @@ public sealed record BackupIntake(
 /// a restore is either of the current shape or is not attempted.
 /// </para>
 /// <para>
-/// <see cref="Upgrades"/> is empty, because version 1 is the only version there
-/// has been. The seam exists rather than the step: the shape of what a format
-/// change costs is decided now, while there is nothing at stake, rather than in
-/// front of the first file somebody cannot restore.
+/// <see cref="Upgrades"/> carries one step, and it is the shape every later one
+/// should have: a document that predates a section gets an empty one, because
+/// <em>the section did not exist</em> and <em>the section is empty</em> are the
+/// same installation. The seam was built before there was a step to put in it,
+/// which is why adding the step was three lines rather than a decision.
 /// </para>
 /// </remarks>
 public static class BackupReader
@@ -72,7 +73,17 @@ public static class BackupReader
     /// of every DTO being kept alive for the sake of one migration.
     /// </remarks>
     private static readonly IReadOnlyDictionary<int, Action<JsonObject>> Upgrades =
-        new Dictionary<int, Action<JsonObject>>();
+        new Dictionary<int, Action<JsonObject>>
+        {
+            // 1 -> 2: ADR 0062's flag on a filed Video File whose evidence prdb
+            // has withdrawn. A document written before it existed describes an
+            // installation that has flagged nothing.
+            [1] = envelope =>
+            {
+                envelope["identificationFlags"] = new JsonArray();
+                envelope["formatVersion"] = BackupFormat.Version;
+            },
+        };
 
     public static BackupIntake Read(string text)
     {

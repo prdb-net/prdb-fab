@@ -318,6 +318,17 @@ function ReviewDetail({
       <span>{reasonDescriptions[entry.reason]}</span>
     </p>
 
+    {automaticIdentification[entry.automaticIdentification] && (
+      <p className={styles.identificationCallout}>
+        <strong>Automatic identification</strong>
+        <span>{automaticIdentification[entry.automaticIdentification]}</span>
+      </p>
+    )}
+
+    {entry.pictures.length > 0 && (
+      <FilePictures pictures={entry.pictures} />
+    )}
+
     {entry.probeError && <p className={styles.error}>Probe: {entry.probeError}</p>}
     {entry.filedFile && <div className={styles.filedComparison}><span>Filed copy</span><code>{entry.filedFile.path}</code><small>{entry.filedFile.quality} · {formatBytes(entry.filedFile.sizeBytes)}</small></div>}
 
@@ -538,6 +549,51 @@ function formatDuration(seconds: number) {
 function codecLabel(codec: string) {
   const labels: Record<string, string> = { h264: 'H.264', hevc: 'HEVC', h265: 'HEVC', av1: 'AV1', vp9: 'VP9' }
   return labels[codec.toLowerCase()] ?? codec.toUpperCase()
+}
+
+/**
+ * What ADR 0062's evidence made of this file, said plainly.
+ *
+ * Not shown at all where it succeeded or where prdb answered for itself: what a
+ * person in the Review Queue needs is the reason the automatic path did *not*
+ * take this file off their list, and a line saying it worked would be a line
+ * about a file that is not here.
+ */
+const automaticIdentification: Record<string, string | null> = {
+  Assigned: null,
+  NotNeeded: null,
+  NoEvidence: 'Nobody has published a preview made from this exact file, so there was nothing to identify it by.',
+  Conflicting:
+    'Previews made from this exact file are published under more than one Video, so nothing was chosen. Both are among the candidates below.',
+  OutsideTheCandidates:
+    'A preview made from this exact file names a Video that prdb did not list among its own candidates. prdb’s list stands.',
+  WaitingForTheCatalogue:
+    'A preview made from this exact file names a Video the catalogue has no details for yet. It will be read shortly.',
+}
+
+/**
+ * The pictures other people made from this exact file.
+ *
+ * Context while a person decides, and never a control: clicking one says
+ * nothing about which Video the file is, and choosing a Video is still the
+ * deliberate act below that becomes a Confirmed Assignment.
+ */
+function FilePictures({ pictures }: { pictures: ReviewQueueEntry['pictures'] }) {
+  return (
+    <figure className={styles.filePictures}>
+      <figcaption>Pictures other people made from this exact file</figcaption>
+      <div>
+        {pictures.map((picture) => (
+          <img
+            alt=""
+            key={picture.prdbId}
+            loading="lazy"
+            src={`/api/previews/${picture.prdbId}/${picture.version}/image`}
+          />
+        ))}
+      </div>
+    </figure>
+  )
 }
 
 function confidenceLabel(confidence: string) {
