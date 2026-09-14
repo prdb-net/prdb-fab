@@ -55,9 +55,9 @@ public sealed class UserPreviews(FabDbContext context, TimeProvider time)
 
         interest.TouchedAt = now;
 
-        // Once the Library wants them it goes on wanting them: a file on disk
-        // outlives a glance at a sheet, and its Timeline Preview has to be
-        // reconcilable for as long as the file is there.
+        // Once a filed file is among the reasons it goes on being one: a file
+        // on disk outlives a glance at a sheet, and the hash bindings read for
+        // it are ADR 0062's evidence for as long as it is there.
         interest.ForTheLibrary |= demand == UserPreviewDemand.Library;
 
         var fresh = interest.LastReadAt is { } last && now - last < UserPreviewContract.Freshness;
@@ -173,10 +173,11 @@ public sealed class UserPreviews(FabDbContext context, TimeProvider time)
     /// the backlog lasted (ADR 0032).
     /// </para>
     /// <para>
-    /// <strong>The Library's interest does not expire.</strong> A filed Video
-    /// File goes on being a filed Video File, and its Timeline Preview has to
-    /// be reconcilable against a withdrawal for as long as it is on disk. What
-    /// expires is a browse: somebody looked at a Video three months ago.
+    /// <strong>A filed file's interest does not expire.</strong> A filed Video
+    /// File goes on being a filed Video File, and the bindings read for it are
+    /// what ADR 0062 names a later arrival from — including a withdrawal, which
+    /// has to reach them for as long as the file is there. What expires is a
+    /// browse: somebody looked at a Video three months ago.
     /// </para>
     /// </remarks>
     public async Task<int> ExpireAsync(CancellationToken cancellationToken)
@@ -237,8 +238,8 @@ public enum UserPreviewDemand
 
     /// <summary>
     /// A Video File was filed. Background work nothing is sitting in front of,
-    /// and the input to both the Library's Timeline Preview and ADR 0062's
-    /// evidence.
+    /// and the input to ADR 0062's evidence — which is what makes the next
+    /// arrival of the same Video nameable without asking prdb again.
     /// </summary>
     Library,
 }

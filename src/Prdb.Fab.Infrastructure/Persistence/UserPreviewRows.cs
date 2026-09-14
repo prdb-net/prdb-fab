@@ -179,9 +179,9 @@ public sealed class UserPreviewInterestRow
     /// at a sheet.
     /// </summary>
     /// <remarks>
-    /// The Library's interest is not expired by time the way a browse is: a file
-    /// on disk goes on being a file on disk, and its Timeline Preview has to be
-    /// reconcilable for as long as it is there.
+    /// A filed file's interest is not expired by time the way a browse is: a
+    /// file on disk goes on being a file on disk, and the hash bindings read for
+    /// it are ADR 0062's evidence for as long as it is there.
     /// </remarks>
     public bool ForTheLibrary { get; set; }
 }
