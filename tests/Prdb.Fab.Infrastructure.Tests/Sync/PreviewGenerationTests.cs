@@ -487,7 +487,7 @@ public sealed class PreviewGenerationTests
 
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        Assert.False(again);
+        Assert.Null(again);
         Assert.Equal(1, await context.PreviewPublications.CountAsync(TestContext.Current.CancellationToken));
     }
 
@@ -512,7 +512,7 @@ public sealed class PreviewGenerationTests
 
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        Assert.False(owed);
+        Assert.Null(owed);
         Assert.Equal(0, await context.PreviewPublications.CountAsync(TestContext.Current.CancellationToken));
     }
 
@@ -596,7 +596,8 @@ public sealed class PreviewGenerationTests
         {
             Assert.True(
                 await scope.ServiceProvider.GetRequiredService<PreviewPublications>()
-                    .IntendAsync(File, Video, hash, Runtime, TestContext.Current.CancellationToken),
+                    .IntendAsync(File, Video, hash, Runtime, TestContext.Current.CancellationToken)
+                is not null,
                 "the filed file this test is about was not owed a preview.");
 
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);

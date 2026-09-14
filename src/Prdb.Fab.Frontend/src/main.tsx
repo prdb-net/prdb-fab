@@ -23,6 +23,7 @@ import { SabnzbdSettings } from './settings/SabnzbdSettings.tsx'
 import { SettingsGate } from './settings/SettingsPage.tsx'
 import { SettingsScreen } from './settings/SettingsScreen.tsx'
 import { ReportingScreen } from './settings/ReportingScreen.tsx'
+import { PublicationsScreen } from './settings/PublicationsScreen.tsx'
 import { AutomationScreen } from './settings/AutomationScreen.tsx'
 import { DownloadSettingsScreen } from './settings/DownloadSettingsScreen.tsx'
 import { Chrome } from './shell/Chrome.tsx'
@@ -104,6 +105,7 @@ function pageTitle(pathname: string): string {
   if (pathname.startsWith('/settings/automation/rules/')) return 'Automation rule'
   if (pathname === '/settings/library') return 'Library settings'
   if (pathname === '/settings/reporting') return 'Reporting settings'
+  if (pathname === '/settings/reporting/publications') return 'Published previews'
   if (pathname === '/settings/backup') return 'Backup'
   if (pathname.startsWith('/onboarding/')) return 'Setup'
   return 'Page not found'
@@ -161,6 +163,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="automation/rules/:id" element={<AutomationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
                 <Route path="reporting" element={<ReportingScreen />} />
+                <Route path="reporting/publications" element={<PublicationsScreen />} />
                 <Route path="backup" element={<BackupScreen />} />
               </Route>
               <Route path="*" element={<NotFoundScreen />} />

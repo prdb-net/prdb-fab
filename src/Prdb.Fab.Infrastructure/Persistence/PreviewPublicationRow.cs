@@ -63,6 +63,27 @@ public sealed class PreviewPublicationRow
     public required string UserHash { get; set; }
 
     /// <summary>
+    /// The Library backfill that took this file up, or null where Filing did.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Two things read it, and neither is about the publication itself. A
+    /// person pausing or cancelling a request needs to know which rows the
+    /// request selected, and the generating and delivering routines need to
+    /// know which rows are somebody's backlog rather than the file that has
+    /// just arrived — because ADR 0064's automatic scope must not queue behind
+    /// five thousand of them.
+    /// </para>
+    /// <para>
+    /// <strong>It stays behind at the Backup boundary</strong>, as
+    /// <see cref="PreviewBackfillRow"/> does: it names a request that is not in
+    /// the document, and a row restored without it is one Filing could have
+    /// written, which is exactly what it is once the request is gone.
+    /// </para>
+    /// </remarks>
+    public Guid? BackfillId { get; set; }
+
+    /// <summary>
     /// Which generation of this tool's output this is
     /// (<see cref="PreviewPublicationContract.OutputVersion"/>).
     /// </summary>

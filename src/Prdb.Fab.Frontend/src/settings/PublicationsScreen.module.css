@@ -1,0 +1,103 @@
+/*
+  ADR 0064's publishing side, made readable without the run log.
+
+  Everything here is a list or a count. There is deliberately no picture of a
+  sheet: what is generated is disposable, and a page that showed one would be a
+  page somebody scrolls rather than reads.
+*/
+
+.tally {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 0.75rem 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin: 0 0 var(--gap);
+  padding: 0.9rem 1rem;
+}
+
+.tally div {
+  min-width: 0;
+}
+
+.tally dt {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+}
+
+.tally dd {
+  font-size: 1.4rem;
+  margin: 0.1rem 0 0;
+}
+
+/* The number that is a question rather than a count. */
+.asking dd {
+  color: var(--accent);
+}
+
+.request {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+}
+
+.request h3 {
+  font-size: 1rem;
+  margin: 0 0 0.4rem;
+}
+
+/*
+  The bar is a picture of one number and says the number beside it, because a
+  request whose count moved under it would otherwise look like a bar that lied.
+*/
+.bar {
+  background: var(--surface-raised);
+  border-radius: 999px;
+  height: 0.5rem;
+  margin: 0.6rem 0 0.4rem;
+  overflow: hidden;
+}
+
+.barFill {
+  background: var(--accent);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.uncertain {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.uncertain li {
+  border-bottom: 1px solid var(--border);
+  padding: 0.7rem 0.9rem;
+}
+
+.uncertain li:last-child {
+  border-bottom: 0;
+}
+
+.hash {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+}
+
+.when {
+  color: var(--text-quiet);
+  font-size: 0.85rem;
+}
+
+.why {
+  margin: 0.3rem 0 0;
+}

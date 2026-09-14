@@ -144,13 +144,7 @@ public sealed class PreviewUploadRoutine(
             return Done(settled);
         }
 
-        var owed = await context.PreviewPublications
-            .AsTracking()
-            .Where(row => row.State == PreviewPublicationState.Ready
-                          && row.UserHash == installation.PrdbUserHash)
-            .OrderBy(row => row.GeneratedAt)
-            .ThenBy(row => row.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+        var owed = await NextAsync(installation.PrdbUserHash, cancellationToken);
 
         if (owed is null)
         {
@@ -167,6 +161,40 @@ public sealed class PreviewUploadRoutine(
         }
 
         return await SendAsync(owed, installation.PrdbApiKey, settled, cancellationToken);
+    }
+
+    /// <summary>
+    /// The next generated pair to send: what Filing owed before what anybody
+    /// asked for.
+    /// </summary>
+    /// <remarks>
+    /// The generating routine's order, kept on this side too, and for the same
+    /// reason: a person who files a file while a Library request is draining
+    /// should see that file's picture submitted rather than queued behind five
+    /// thousand historical ones. A pair belonging to a paused request waits —
+    /// ADR 0064's switch-off argument applied one level down, since pausing
+    /// stops unsent uploads and gives nothing up.
+    /// </remarks>
+    private async Task<PreviewPublicationRow?> NextAsync(
+        string userHash,
+        CancellationToken cancellationToken)
+    {
+        var ready = context.PreviewPublications
+            .AsTracking()
+            .Where(row => row.State == PreviewPublicationState.Ready && row.UserHash == userHash);
+
+        return await ready
+                   .Where(row => row.BackfillId == null)
+                   .OrderBy(row => row.GeneratedAt)
+                   .ThenBy(row => row.Id)
+                   .FirstOrDefaultAsync(cancellationToken)
+               ?? await ready
+                   .Where(row => context.PreviewBackfills.Any(
+                       request => request.Id == row.BackfillId
+                                  && request.State == PreviewBackfillState.Running))
+                   .OrderBy(row => row.GeneratedAt)
+                   .ThenBy(row => row.Id)
+                   .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <summary>

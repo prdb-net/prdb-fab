@@ -3501,6 +3501,296 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/publications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicationProgressState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/publications/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreviewBackfillVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/publications/backfill/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicationProgressState"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/publications/backfill/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicationProgressState"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/publications/backfill/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicationProgressState"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/publications/{id}/send-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicationProgressState"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/publications/{id}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicationProgressState"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/backup/export": {
         parameters: {
             query?: never;
@@ -4353,6 +4643,21 @@ export interface components {
             prdbId: string;
             name: string;
         };
+        PreviewBackfillOffer: {
+            /** Format: int32 */
+            eligible: number | string;
+            publishing: boolean;
+            explained: boolean;
+            connected: boolean;
+            askable?: boolean;
+        };
+        /** @enum {unknown} */
+        PreviewBackfillState: "Running" | "Paused" | "Cancelled" | "Finished";
+        PreviewBackfillVerdict: {
+            /** Format: uuid */
+            id: null | string;
+            refusal: null | string;
+        };
         /** @enum {unknown} */
         PreviewHashOutcome: "NoEvidence" | "Conflicting" | "OutsideTheCandidates" | "WaitingForTheCatalogue" | "Assigned" | "NotNeeded";
         PreviewImage: {
@@ -4372,6 +4677,49 @@ export interface components {
             status?: null | number | string;
             detail?: null | string;
             instance?: null | string;
+        };
+        PublicationProgressState: {
+            publishing: boolean;
+            explained: boolean;
+            connected: boolean;
+            tally: components["schemas"]["PublicationTally"];
+            uncertain: components["schemas"]["UncertainPublication"][];
+            request: null | components["schemas"]["PublicationRequest"];
+            offer: components["schemas"]["PreviewBackfillOffer"];
+        };
+        PublicationRequest: {
+            /** Format: uuid */
+            id: string;
+            state: components["schemas"]["PreviewBackfillState"];
+            /** Format: int32 */
+            selected: number | string;
+            /** Format: int32 */
+            takenUp: number | string;
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            settledAt: null | string;
+            note: null | string;
+            /** Format: int32 */
+            remaining: number | string;
+        };
+        PublicationTally: {
+            /** Format: int32 */
+            waiting: number | string;
+            /** Format: int32 */
+            ready: number | string;
+            /** Format: int32 */
+            sending: number | string;
+            /** Format: int32 */
+            submitted: number | string;
+            /** Format: int32 */
+            shown: number | string;
+            /** Format: int32 */
+            refused: number | string;
+            /** Format: int32 */
+            uncertain: number | string;
+            /** Format: int32 */
+            dropped: number | string;
         };
         RecentWindowCoverageState: {
             /** Format: int32 */
@@ -4829,6 +5177,17 @@ export interface components {
             act: string;
             /** Format: date-time */
             at: null | string;
+        };
+        UncertainPublication: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            videoId: string;
+            osHash: string;
+            /** Format: date-time */
+            at: null | string;
+            note: null | string;
+            holds: boolean;
         };
         UserPreviewAsk: {
             outcome: components["schemas"]["UserPreviewOutcome"];

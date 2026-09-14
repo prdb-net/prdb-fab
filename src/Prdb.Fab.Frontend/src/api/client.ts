@@ -102,6 +102,12 @@ export type LibraryEntryDeleteVerdict = Schema['LibraryEntryDeleteVerdict']
 export type LibrarySettingsState = Schema['LibrarySettingsState']
 export type OperationLogPage = Schema['OperationLogPage']
 export type ReportingSettingsState = Schema['ReportingSettingsState']
+export type PublicationProgressState = Schema['PublicationProgressState']
+export type PublicationTally = Schema['PublicationTally']
+export type PublicationRequest = Schema['PublicationRequest']
+export type UncertainPublication = Schema['UncertainPublication']
+export type PreviewBackfillOffer = Schema['PreviewBackfillOffer']
+export type PreviewBackfillVerdict = Schema['PreviewBackfillVerdict']
 
 /**
  * ADR 0010: an unauthenticated request gets 401 and never a redirect, so this
@@ -355,6 +361,44 @@ export async function saveReportingSettings(
     reportConfirmedAssignments,
     publishGeneratedPreviews,
   })
+}
+
+/**
+ * ADR 0064's publishing side: where every generated preview stands, and the
+ * acts a person may take on it.
+ *
+ * Every act answers with the whole state rather than with an acknowledgement,
+ * so the page after a click is the page the server has rather than the page the
+ * browser guessed. They are separate functions rather than one taking a verb
+ * because they are separate endpoints, which is ADR 0040's rule and the reason
+ * the operation log can name which one happened.
+ */
+export async function readPublications(): Promise<PublicationProgressState> {
+  return json<PublicationProgressState>(await fetch('/api/publications'))
+}
+
+export async function askForLibraryPreviews(): Promise<PreviewBackfillVerdict> {
+  return post<PreviewBackfillVerdict>('/api/publications/backfill')
+}
+
+export async function pauseLibraryPreviews(id: string): Promise<PublicationProgressState> {
+  return post<PublicationProgressState>(`/api/publications/backfill/${id}/pause`)
+}
+
+export async function resumeLibraryPreviews(id: string): Promise<PublicationProgressState> {
+  return post<PublicationProgressState>(`/api/publications/backfill/${id}/resume`)
+}
+
+export async function cancelLibraryPreviews(id: string): Promise<PublicationProgressState> {
+  return post<PublicationProgressState>(`/api/publications/backfill/${id}/cancel`)
+}
+
+export async function sendPublicationAgain(id: string): Promise<PublicationProgressState> {
+  return post<PublicationProgressState>(`/api/publications/${id}/send-again`)
+}
+
+export async function leavePublication(id: string): Promise<PublicationProgressState> {
+  return post<PublicationProgressState>(`/api/publications/${id}/leave`)
 }
 
 /**

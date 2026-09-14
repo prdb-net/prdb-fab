@@ -121,6 +121,24 @@ public static class PreviewPublicationContract
     /// </remarks>
     public static readonly TimeSpan GenerationCadence = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// How often the generating routine looks for work while a Library
+    /// backfill is running.
+    /// </summary>
+    /// <remarks>
+    /// A minute, and — like <see cref="MostAttempts"/> — it is not the ADR's.
+    /// The five-minute cadence above is sized for work that arrives one filed
+    /// file at a time and that nothing is waiting on; a backfill is a finite
+    /// set somebody asked for and is watching a progress bar over, and at five
+    /// minutes a Library of five thousand files would take seventeen days. A
+    /// minute puts the generating side alongside
+    /// <see cref="UploadCadence"/> — which is what actually bounds the pace,
+    /// since <see cref="MostWaiting"/> stops generation until uploads drain —
+    /// so the two halves of the pipeline run at the same speed rather than one
+    /// waiting on the other.
+    /// </remarks>
+    public static readonly TimeSpan BackfillCadence = TimeSpan.FromMinutes(1);
+
     /// <summary>How often the uploading routine looks for work.</summary>
     /// <remarks>
     /// A minute, in the <c>Bulk</c> lane, one upload per run. One at a time

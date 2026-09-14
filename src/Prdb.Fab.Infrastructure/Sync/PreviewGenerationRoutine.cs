@@ -46,6 +46,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public sealed class PreviewGenerationRoutine(
     FabDbContext context,
     PreviewPublications publications,
+    PreviewBackfill backfill,
     PublicationStore store,
     ISpriteSheetProcess sheets,
     VideoFileMover mover,
@@ -73,9 +74,14 @@ public sealed class PreviewGenerationRoutine(
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
         // The work set, asked before anything else: an installation that has
-        // never filed an identified file spends nothing on this routine.
+        // never filed an identified file and has asked for nothing spends
+        // nothing on this routine. A request counts even before it has taken
+        // anything up, because taking one up is this routine's work too.
         if (!await context.PreviewPublications.AnyAsync(
                 row => row.State == PreviewPublicationState.Intended,
+                cancellationToken)
+            && !await context.PreviewBackfills.AnyAsync(
+                row => row.State == PreviewBackfillState.Running,
                 cancellationToken))
         {
             return RunResult.NothingToDo;
@@ -103,11 +109,15 @@ public sealed class PreviewGenerationRoutine(
 
         var settled = await SettleAsync(installation.PrdbUserHash, cancellationToken);
 
+        settled += await backfill.AbandonAsync(installation.PrdbUserHash, cancellationToken);
+
         await ReclaimAsync(cancellationToken);
 
         // ADR 0064's Brake on the transient store: fifty generated pairs are
         // waiting for their own uploads, and the backlog drains before another
-        // is made.
+        // is made. It is also what bounds a backfill — it drains through the
+        // ceiling rather than around it — so this is asked before anything is
+        // taken up as well as before anything is decoded.
         if (await context.PreviewPublications.CountAsync(
                 row => row.State == PreviewPublicationState.Ready,
                 cancellationToken) >= PreviewPublicationContract.MostWaiting)
@@ -115,13 +125,18 @@ public sealed class PreviewGenerationRoutine(
             return settled > 0 ? RunResult.Handled(settled) : RunResult.NothingToDo;
         }
 
-        var owed = await context.PreviewPublications
-            .AsTracking()
-            .Where(row => row.State == PreviewPublicationState.Intended
-                          && row.UserHash == installation.PrdbUserHash)
-            .OrderBy(row => row.IntendedAt)
-            .ThenBy(row => row.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+        var owed = await NextAsync(installation.PrdbUserHash, cancellationToken);
+
+        if (owed is null)
+        {
+            // Nothing owed, so this is the run that takes a file up — and it is
+            // the only thing that ever selects one out of the existing Library.
+            // Taking one up writes an intent, which the read below then finds.
+            if (await backfill.TakeUpAsync(installation.PrdbUserHash, cancellationToken))
+            {
+                owed = await NextAsync(installation.PrdbUserHash, cancellationToken);
+            }
+        }
 
         if (owed is null)
         {
@@ -130,6 +145,68 @@ public sealed class PreviewGenerationRoutine(
 
         return await GenerateAsync(owed, settled, cancellationToken);
     }
+
+    /// <summary>
+    /// The next preview to decode: what Filing owes before what anybody asked
+    /// for.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <strong>The order is the whole of how a backfill stays out of the
+    /// way.</strong> ADR 0064's automatic scope is the file that has just been
+    /// filed, and a person who files one while five thousand historical ones
+    /// are queued would otherwise wait a week for the picture of the file they
+    /// were actually watching. An intent with no request in front of it goes
+    /// first, whatever the clock says.
+    /// </para>
+    /// <para>
+    /// A row belonging to a request that is paused is passed over rather than
+    /// given up: pausing holds work back and gives nothing up, which is what
+    /// makes resuming mean anything.
+    /// </para>
+    /// </remarks>
+    private async Task<PreviewPublicationRow?> NextAsync(
+        string userHash,
+        CancellationToken cancellationToken)
+    {
+        var owed = context.PreviewPublications
+            .AsTracking()
+            .Where(row => row.State == PreviewPublicationState.Intended
+                          && row.UserHash == userHash);
+
+        return await owed
+                   .Where(row => row.BackfillId == null)
+                   .OrderBy(row => row.IntendedAt)
+                   .ThenBy(row => row.Id)
+                   .FirstOrDefaultAsync(cancellationToken)
+               ?? await owed
+                   .Where(row => context.PreviewBackfills.Any(
+                       request => request.Id == row.BackfillId
+                                  && request.State == PreviewBackfillState.Running))
+                   .OrderBy(row => row.IntendedAt)
+                   .ThenBy(row => row.Id)
+                   .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// What a finished decode hands back, at the cadence the run itself knows
+    /// to be right.
+    /// </summary>
+    /// <remarks>
+    /// ADR 0064's five minutes is sized for work that arrives one filed file at
+    /// a time and that nothing waits on. A backfill is neither: it is a finite
+    /// set somebody asked for and is watching, and at five minutes a file a
+    /// Library of any size would outlast most subscriptions. So a run that got
+    /// through a file of somebody's request asks to be seen again at
+    /// <see cref="PreviewPublicationContract.BackfillCadence"/>, which is the
+    /// uploading routine's cadence — the two halves of the pipeline then run at
+    /// one speed, and <see cref="PreviewPublicationContract.MostWaiting"/> is
+    /// what actually bounds the pace.
+    /// </remarks>
+    private static RunResult Generated(int items, bool forARequest) =>
+        forARequest
+            ? RunResult.Handled(items, PreviewPublicationContract.BackfillCadence)
+            : RunResult.Handled(items);
 
     /// <summary>
     /// Gives up on what can no longer become a publication, before anything is
@@ -348,7 +425,7 @@ public sealed class PreviewGenerationRoutine(
             plan.Tiles,
             run.Bytes.LongLength);
 
-        return RunResult.Handled(settled + 1);
+        return Generated(settled + 1, owed.BackfillId is not null);
     }
 
     /// <summary>
@@ -415,13 +492,20 @@ public sealed class PreviewGenerationRoutine(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        var forARequest = owed.BackfillId is not null;
+
         Drop(owed, why, now);
 
         await context.SaveChangesAsync(cancellationToken);
 
         // Succeeded with a note rather than failed: nothing went wrong, and the
-        // sentence is what a person reading the log is owed.
-        return RunResult.Handled(settled + 1, why);
+        // sentence is what a person reading the log is owed. A request's file
+        // that could not be made keeps the request's cadence — a Library with a
+        // hundred files that have moved is exactly the case that must not take
+        // an afternoon to walk past.
+        return forARequest
+            ? RunResult.Handled(settled + 1, PreviewPublicationContract.BackfillCadence, why)
+            : RunResult.Handled(settled + 1, why);
     }
 
     private void Drop(PreviewPublicationRow owed, string why, DateTimeOffset now)

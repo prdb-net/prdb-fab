@@ -73,6 +73,21 @@ public sealed record RunResult
     public static RunResult Handled(int itemsHandled, string reason) =>
         new(RunOutcome.Succeeded, itemsHandled, reason);
 
+    /// <summary>
+    /// A successful run that knows when it is next due better than its cadence
+    /// does.
+    /// </summary>
+    /// <remarks>
+    /// The same escape <see cref="Discovered(int, int, TimeSpan)"/> already has
+    /// and for the same reason: a routine whose cadence is sized for work
+    /// arriving a piece at a time has nothing to say about a finite set
+    /// somebody asked for and is watching. It shortens nothing on its own —
+    /// what it hands back is a request to the schedule, which applies it the
+    /// way it applies any other <see cref="DueIn"/>.
+    /// </remarks>
+    public static RunResult Handled(int itemsHandled, TimeSpan dueIn, string? reason = null) =>
+        new(RunOutcome.Succeeded, itemsHandled, reason, dueIn);
+
     public static RunResult Discovered(int resultsSeen, int rowsAdded) =>
         new(RunOutcome.Succeeded, resultsSeen, reason: null, resultsSeen: resultsSeen, rowsAdded: rowsAdded);
 
