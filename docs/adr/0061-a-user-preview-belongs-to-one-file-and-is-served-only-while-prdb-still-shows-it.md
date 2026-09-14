@@ -231,7 +231,13 @@ declaration order of `PrdbWork`, and this adds exactly one member to it.
 - **Uploads are `Writes`.** The companion epic submits generated previews, and a
   submission is a queued obligation exactly like a Fulfilment report. It is
   written here so that it is not *inserted* later by whoever builds it, which is
-  how an order becomes a matter of opinion.
+  how an order becomes a matter of opinion. (*Amended by
+  [ADR 0064](0064-a-preview-is-published-only-after-it-has-been-explained-and-an-uncertain-upload-is-never-sent-twice.md),
+  which weighed one rather than only placing it: a publication carries megabytes
+  where the rest of this member carries a sentence, and a backlog would occupy
+  the reserve that exists to keep a Fulfilment moving. Uploads are
+  `Publications`, at 40 %. Being moved by an argument is what this paragraph was
+  written for.*)
 - **Nothing is starved.** `Identification` and `Verification` are held back at
   zero and are unreachable from here; `Writes` at 5 % is above every member this
   adds. The new member is below all six existing feeds, so no existing work

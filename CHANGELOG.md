@@ -53,6 +53,24 @@ before changing the tag — the backup file is deliberately not the whole of it.
   showing the preview a file's Video was named from, nothing is renamed,
   deleted or reassigned: the file is flagged so you can look at it, and the
   flag goes away by itself if the preview comes back.
+- **A third Reporting switch: publishing previews back to prdb.** prdb shows
+  pictures its users made from their own files, and this installation holds
+  files and can make them. The switch is on, it is independent of the other
+  two, and it is the only thing this tool sends that strangers see.
+- **Nothing is published before you have read what it publishes.** Setting up
+  gains a last step saying what leaves and where it goes; an installation that
+  was already running is told on Settings → Reporting, and until it has been,
+  nothing is generated and nothing is sent. Status says so while it waits.
+  Turning the switch off stops future publications — prdb has no retraction for
+  one it has accepted, and neither does this.
+- Only files filed from now on, and only ones prdb identified. What the library
+  already holds is left alone.
+
+### Changed
+
+- The backup file's format is now **3**. A file written by an older build still
+  restores: it arrives with the new channel switched on and not yet explained,
+  which is the same position an installation that upgraded is in.
 
 ## [0.21.0] - 2026-09-13
 

@@ -131,6 +131,13 @@ public sealed class Onboarding(FabDbContext context, ILogger<Onboarding> logger)
         OnboardingStep.Sabnzbd => Task.FromResult(installation.SabnzbdApiKey is { Length: > 0 }),
         OnboardingStep.Indexers => context.Indexers.AnyAsync(cancellationToken),
         OnboardingStep.LibraryRoot => Task.FromResult(installation.LibraryRoot is { Length: > 0 }),
+
+        // ADR 0064: the step is answered once somebody has saved the form,
+        // whichever way they left the switch. The stamp is what the form wrote,
+        // and it is the same stamp the settings route writes — which is what
+        // makes this one form with two entry points rather than two forms.
+        OnboardingStep.Publishing =>
+            Task.FromResult(installation.PreviewPublicationExplainedAt is not null),
         _ => Task.FromResult(false),
     };
 }

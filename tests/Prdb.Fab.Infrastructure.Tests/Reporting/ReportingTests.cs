@@ -91,7 +91,7 @@ public sealed class ReportingTests
         await using (var act = database.Scope())
         {
             await act.ServiceProvider.GetRequiredService<ReportingSettings>()
-                .SaveAsync(true, false, TestContext.Current.CancellationToken);
+                .SaveAsync(true, false, false, TestContext.Current.CancellationToken);
         }
 
         await using var assertScope = database.Scope();
@@ -317,7 +317,7 @@ public sealed class ReportingTests
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         await scope.ServiceProvider.GetRequiredService<ReportingSettings>()
-            .SaveAsync(false, false, TestContext.Current.CancellationToken);
+            .SaveAsync(false, false, false, TestContext.Current.CancellationToken);
 
         Assert.Equal(1, await context.ReportedStates.CountAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, await context.ConfirmedAssignments.CountAsync(TestContext.Current.CancellationToken));

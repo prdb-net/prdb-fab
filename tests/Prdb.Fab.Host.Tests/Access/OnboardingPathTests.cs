@@ -46,7 +46,10 @@ public sealed class OnboardingPathTests : IDisposable
         Assert.Equal("LibraryRoot", (await TakeAsync(client, "Indexers")).NextStep);
 
         await SaveLibraryRootAsync(client);
-        Assert.Equal("Complete", (await TakeAsync(client, "LibraryRoot")).NextStep);
+        Assert.Equal("Publishing", (await TakeAsync(client, "LibraryRoot")).NextStep);
+
+        await AnswerPublishingAsync(client);
+        Assert.Equal("Complete", (await TakeAsync(client, "Publishing")).NextStep);
 
         var connections = await ConnectionsAsync(client);
 
@@ -73,6 +76,8 @@ public sealed class OnboardingPathTests : IDisposable
 
         await SaveLibraryRootAsync(client);
         await TakeAsync(client, "LibraryRoot");
+        await AnswerPublishingAsync(client);
+        await TakeAsync(client, "Publishing");
 
         Assert.Equal("Complete", await NextStepAsync(client));
 
@@ -175,6 +180,8 @@ public sealed class OnboardingPathTests : IDisposable
         await SkipAsync(client, "Indexers");
         await SaveLibraryRootAsync(client);
         await TakeAsync(client, "LibraryRoot");
+        await AnswerPublishingAsync(client);
+        await TakeAsync(client, "Publishing");
 
         await SaveSabnzbdAsync(client);
         await AddIndexerAsync(client);
@@ -186,6 +193,57 @@ public sealed class OnboardingPathTests : IDisposable
 
         // And the wizard is still finished: filling a Gap is not re-entering it.
         Assert.Equal("Complete", await NextStepAsync(client));
+    }
+
+    /// <summary>
+    /// ADR 0064: the publishing step is answered by saving, and it cannot be
+    /// walked past without one — which is the whole of the gate, since nothing
+    /// is published until the stamp that save writes exists.
+    /// </summary>
+    [Fact]
+    public async Task The_publishing_step_is_not_passed_without_an_answer()
+    {
+        await using var application = Fresh();
+        var client = await application.SignedInClientAsync();
+
+        await SavePrdbKeyAsync(client);
+        await TakeAsync(client, "PrdbKey");
+        await SkipAsync(client, "Sabnzbd");
+        await SkipAsync(client, "Indexers");
+        await SaveLibraryRootAsync(client);
+        await TakeAsync(client, "LibraryRoot");
+
+        var refused = await TakeAsync(client, "Publishing");
+
+        Assert.Equal("NotConfigured", refused.Outcome);
+        Assert.Equal("Publishing", await NextStepAsync(client));
+
+        // And it cannot be skipped either: this is the one explanation that has
+        // to happen before content leaves.
+        Assert.Equal("NotSkippable", (await SkipAsync(client, "Publishing")).Outcome);
+        Assert.Equal("Publishing", await NextStepAsync(client));
+    }
+
+    /// <summary>
+    /// Answering it with the switch off is an answer. The path continues, and
+    /// what is stored is a decision rather than a default nobody looked at.
+    /// </summary>
+    [Fact]
+    public async Task The_publishing_step_is_answered_by_turning_it_off_too()
+    {
+        await using var application = Fresh();
+        var client = await application.SignedInClientAsync();
+
+        await SavePrdbKeyAsync(client);
+        await TakeAsync(client, "PrdbKey");
+        await SkipAsync(client, "Sabnzbd");
+        await SkipAsync(client, "Indexers");
+        await SaveLibraryRootAsync(client);
+        await TakeAsync(client, "LibraryRoot");
+
+        await AnswerPublishingAsync(client, publish: false);
+
+        Assert.Equal("Complete", (await TakeAsync(client, "Publishing")).NextStep);
     }
 
     [Fact]
@@ -282,6 +340,26 @@ public sealed class OnboardingPathTests : IDisposable
             TestContext.Current.CancellationToken);
 
         await StoredAsync(response, "Saved");
+    }
+
+    /// <summary>
+    /// ADR 0064's step, answered the way the form answers it: the Reporting
+    /// settings are saved, whichever way the switch is left, and saving is what
+    /// records that the explanation has been in front of somebody.
+    /// </summary>
+    private static async Task AnswerPublishingAsync(HttpClient client, bool publish = true)
+    {
+        using var response = await client.PostAsJsonAsync(
+            "/api/settings/reporting",
+            new
+            {
+                reportFulfilments = true,
+                reportConfirmedAssignments = true,
+                publishGeneratedPreviews = publish,
+            },
+            TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
     }
 
     private async Task SaveLibraryRootAsync(HttpClient client)

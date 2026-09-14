@@ -318,6 +318,14 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
         installation.DeleteLeftovers = carried.DeleteLeftovers;
         installation.ReportFulfilments = carried.ReportFulfilments;
         installation.ReportConfirmedAssignments = carried.ReportConfirmedAssignments;
+        installation.PublishGeneratedPreviews = carried.PublishGeneratedPreviews;
+
+        // ADR 0064: the person restoring is the person it was explained to, so
+        // the stamp travels. A document from before the channel existed carries
+        // null, which puts the restored installation exactly where an upgraded
+        // one stands — explained before it publishes anything.
+        installation.PreviewPublicationExplainedAt = carried.PreviewPublicationExplainedAt;
+
         installation.WhatsNewObservedAt = carried.WhatsNewObservedAt;
 
         // ADR 0033's translation, and there is nothing to translate back into:

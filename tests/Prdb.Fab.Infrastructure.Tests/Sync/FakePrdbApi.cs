@@ -40,7 +40,17 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     public sealed record Asking(Uri Uri, string? IfNoneMatch, string Body);
 
     /// <summary>What prdb answers with once.</summary>
-    private sealed record Answer(HttpStatusCode Status, string? Json, string? EntityTag);
+    /// <param name="Unreachable">
+    /// Not an answer at all: the request leaves and nothing comes back. ADR 0041
+    /// makes that distinct from every status code, and ADR 0064 needs it — an
+    /// upload whose outcome never arrived is the whole reason the uncertain
+    /// state exists.
+    /// </param>
+    private sealed record Answer(
+        HttpStatusCode Status,
+        string? Json,
+        string? EntityTag,
+        bool Unreachable = false);
 
     /// <summary>
     /// Every request that was made, whole, newest last. A copy: a lane is a
@@ -77,6 +87,20 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     /// </summary>
     public FakePrdbApi AnswersNotModified(string path, string entityTag) =>
         Queue(path, new Answer(HttpStatusCode.NotModified, null, entityTag));
+
+    /// <summary>Queues the <c>201</c> a write answers with.</summary>
+    public FakePrdbApi AnswersCreated(string path, string json) =>
+        Queue(path, new Answer(HttpStatusCode.Created, json, null));
+
+    /// <summary>Queues a refusal prdb considered and gave.</summary>
+    public FakePrdbApi Refuses(string path, HttpStatusCode status, string title) =>
+        Queue(path, new Answer(status, $$"""{"type":"about:blank","title":"{{title}}","status":{{(int)status}}}""", null));
+
+    /// <summary>
+    /// Queues a request that leaves and is never answered.
+    /// </summary>
+    public FakePrdbApi IsUnreachable(string path) =>
+        Queue(path, new Answer(HttpStatusCode.OK, null, null, Unreachable: true));
 
     /// <summary>What was asked of <paramref name="path"/>, in order.</summary>
     public IReadOnlyList<Asking> AskingFor(string path) =>
@@ -121,11 +145,19 @@ internal sealed class FakePrdbApi : HttpMessageHandler
             return Problem(HttpStatusCode.NotFound, $"Nothing was said about {path}");
         }
 
+        if (answer.Unreachable)
+        {
+            throw new HttpRequestException("The connection was closed before an answer arrived.");
+        }
+
         var response = new HttpResponseMessage(answer.Status);
 
         if (answer.Json is { } json)
         {
-            response.Content = new StringContent(json, Encoding.UTF8, "application/json");
+            response.Content = new StringContent(
+                json,
+                Encoding.UTF8,
+                answer.Status is >= HttpStatusCode.BadRequest ? "application/problem+json" : "application/json");
         }
 
         if (answer.EntityTag is { } tag)

@@ -4298,7 +4298,7 @@ export interface components {
         /** @enum {unknown} */
         OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";
         /** @enum {unknown} */
-        OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Complete" | null;
+        OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Publishing" | "Complete" | null;
         OnboardingStepRequest: {
             step: components["schemas"]["OnboardingStep"];
         };
@@ -4504,6 +4504,7 @@ export interface components {
         ReportingSettingsRequest: {
             reportFulfilments: boolean;
             reportConfirmedAssignments: boolean;
+            publishGeneratedPreviews: boolean;
         };
         ReportingSettingsState: {
             reportFulfilments: boolean;
@@ -4512,6 +4513,8 @@ export interface components {
             reportConfirmedAssignments: boolean;
             /** Format: int32 */
             confirmedAssignmentBacklog: number | string;
+            publishGeneratedPreviews: boolean;
+            previewPublicationExplained: boolean;
         };
         /** @enum {unknown} */
         RestoreOutcome: "Restored" | "NotOffered" | "NotABackup" | "FromANewerTool" | "RootsNeeded" | "NotEmpty" | "LibraryRootRefused" | "DownloadDirectoryRefused" | "PathOutsideItsRoot";

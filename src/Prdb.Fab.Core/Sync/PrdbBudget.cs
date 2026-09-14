@@ -80,6 +80,13 @@ public sealed record PrdbBudget(int Limit, int Remaining, TimeSpan ResetIn)
         // only what is left above half.
         PrdbWork.UserPreviews => 0.35,
 
+        // ADR 0064, and the reason it is not beside Writes at five: that
+        // reserve is what keeps a Fulfilment moving, and a publication backlog
+        // would occupy it for as long as the backlog lasted. Below every feed
+        // because nothing waits on it, above repair because it is an obligation
+        // rather than a sweep.
+        PrdbWork.Publications => 0.40,
+
         // ADR 0014's own number, and the only one here that is not a step on
         // the staircase: repair runs on what is left above half the limit.
         PrdbWork.Repair => 0.50,

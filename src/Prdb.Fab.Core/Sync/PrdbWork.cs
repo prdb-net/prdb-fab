@@ -42,12 +42,11 @@ public enum PrdbWork
     /// queues them rather than dropping them.
     /// </summary>
     /// <remarks>
-    /// ADR 0061 puts a submitted user preview here too, rather than giving it a
-    /// kind of its own: it is a queued obligation to prdb about something this
-    /// installation holds, which is what every other member of this one is.
-    /// Writing that down before there is a caller is the same move the two at
-    /// the bottom of this enum were written for — an order stops being a matter
-    /// of opinion once nobody has to insert themselves into it.
+    /// ADR 0061 put a submitted user preview here too, before there was one to
+    /// weigh. ADR 0064 takes it back out: this reserve is sized for what is in
+    /// it — a report and a hash submission, both small, both rare, both over in
+    /// one request — and a publication backlog sitting inside it would drain a
+    /// Fulfilment queue behind megabytes. See <see cref="Publications"/>.
     /// </remarks>
     Writes,
 
@@ -94,6 +93,21 @@ public enum PrdbWork
     /// same act, the same waiting person and the same argument.
     /// </remarks>
     UserPreviews,
+
+    /// <summary>
+    /// ADR 0064: a generated Sprite Sheet and its paired WebVTT, submitted to
+    /// prdb for a Video File this installation filed.
+    /// </summary>
+    /// <remarks>
+    /// A queued obligation like a <see cref="Writes"/> is, and nothing like one
+    /// to send. It carries megabytes, it takes seconds on the wire rather than
+    /// milliseconds, and after a Library backfill there can be thousands of
+    /// them — so it is held back well below the reserve that exists to keep the
+    /// small obligations moving, and below every feed, because a preview
+    /// published an hour late costs nothing at all. Above repair, which spends
+    /// only what is left above half the limit.
+    /// </remarks>
+    Publications,
 
     /// <summary>
     /// ADR 0013's repair pass. Last, and the one ADR 0014 gives a number to:

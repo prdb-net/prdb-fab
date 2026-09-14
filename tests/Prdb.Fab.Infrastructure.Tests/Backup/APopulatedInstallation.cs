@@ -221,6 +221,12 @@ public static class APopulatedInstallation
                 .SetProperty(row => row.PathMappingFrom, "/remote/complete")
                 .SetProperty(row => row.PathMappingTo, "/downloads")
                 .SetProperty(row => row.OnboardingStep, OnboardingStep.Complete)
+                // ADR 0064's stamp, set to something rather than left null, so
+                // that the recorded document carries a value and a restore of
+                // it is the case where somebody has already been told.
+                .SetProperty(
+                    row => row.PreviewPublicationExplainedAt,
+                    new DateTimeOffset(2026, 8, 27, 9, 0, 0, TimeSpan.Zero))
                 .SetProperty(row => row.WhatsNewObservedAt, now)
                 .SetProperty(row => row.WhatsNewObservedVideoId, video.Id),
             TestContext.Current.CancellationToken);

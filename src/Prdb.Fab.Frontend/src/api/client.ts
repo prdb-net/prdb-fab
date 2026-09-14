@@ -348,10 +348,12 @@ export async function readReportingSettings(): Promise<ReportingSettingsState> {
 export async function saveReportingSettings(
   reportFulfilments: boolean,
   reportConfirmedAssignments: boolean,
+  publishGeneratedPreviews: boolean,
 ): Promise<ReportingSettingsState> {
   return post<ReportingSettingsState>('/api/settings/reporting', {
     reportFulfilments,
     reportConfirmedAssignments,
+    publishGeneratedPreviews,
   })
 }
 

@@ -10,6 +10,7 @@ import {
   readLibrarySettings,
   readReportingSettings,
   readStatus,
+  type ReportingSettingsState,
   type StatusState,
 } from '../api/client.ts'
 import { connectionsKey, indexersKey } from '../onboarding/state.ts'
@@ -114,7 +115,7 @@ export function SettingsRail() {
       </Group>
 
       <Group to="/settings/reporting" icon="reporting" label="Reporting" marks={pointedAt}>
-        {reporting.data ? channels(reporting.data.reportFulfilments, reporting.data.reportConfirmedAssignments) : null}
+        {reporting.data ? channels(reporting.data) : null}
       </Group>
 
       <Group to="/settings/backup" icon="backup" label="Backup" marks={pointedAt}>
@@ -212,8 +213,25 @@ function gateLabel(gate: string): string {
       : 'Exact'
 }
 
-function channels(fulfilments: boolean, assignments: boolean): string {
-  if (fulfilments && assignments) return 'Both channels on'
-  if (!fulfilments && !assignments) return 'Both channels off'
-  return fulfilments ? 'Fulfilments only' : 'Assignments only'
+/**
+ * Three switches in a line under a heading, which is one more than a sentence
+ * naming each of them can carry. So it counts — except for the one state worth
+ * a word of its own, which is ADR 0064's gate: publishing is on and has never
+ * been answered, so it is not publishing.
+ */
+function channels(state: ReportingSettingsState): string {
+  if (state.publishGeneratedPreviews && !state.previewPublicationExplained) {
+    return 'Publishing waits to be answered'
+  }
+
+  const on = [
+    state.reportFulfilments,
+    state.reportConfirmedAssignments,
+    state.publishGeneratedPreviews,
+  ].filter(Boolean).length
+
+  if (on === 3) return 'All three channels on'
+  if (on === 0) return 'All three channels off'
+
+  return `${on} of three channels on`
 }

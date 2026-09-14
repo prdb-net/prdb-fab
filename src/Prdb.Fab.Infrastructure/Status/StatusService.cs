@@ -514,6 +514,18 @@ public sealed class StatusService(
             conditions.Add(Brake("Fulfilment reporting is off", $"{state.FulfilmentBacklog} local differences are intentionally not sent.", "file", "/settings/reporting"));
         if (!state.ReportConfirmedAssignments && state.ConfirmedAssignmentBacklog > 0)
             conditions.Add(Brake("Confirmed-assignment reporting is off", $"{state.ConfirmedAssignmentBacklog} human-confirmed assignments are intentionally not sent.", "file", "/settings/reporting"));
+
+        // ADR 0064's gate, and the only Brake here that is raised while a
+        // channel is switched *on*: the switch says yes and the explanation has
+        // not happened, so nothing is generated and nothing is uploaded until
+        // somebody has read what would leave.
+        if (state.PublishGeneratedPreviews && !state.PreviewPublicationExplained)
+            conditions.Add(Brake(
+                "Preview publication is waiting to be explained",
+                "Publishing generated previews is switched on, and nothing is generated or sent until what it "
+                + "publishes has been read.",
+                "file",
+                "/settings/reporting"));
     }
 
     private static void AddGateBrakes(
