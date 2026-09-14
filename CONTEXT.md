@@ -100,6 +100,17 @@ key, and a row in moderation is invisible to every endpoint that could be asked
 about it.
 _Avoid_: Upload, Contribution, Share, Sync
 
+**Library Preview Request**:
+One person's explicit, bounded ask that the Video Files the Library already
+holds be given Preview Publications. The only thing that ever selects the
+existing Library: starting up, upgrading, enabling the switch and restoring a
+Backup each select nothing, and a request is shown the count and what publishing
+sends before it is made. It can be paused, which holds its work and gives
+nothing up, and cancelled, which gives up what has not left and takes back
+nothing that has. It carries no list — what is left to take up is read off the
+publications already recorded — so asking twice never publishes a file twice.
+_Avoid_: Backfill job, Batch, Migration, Bulk upload, Queue
+
 ### Indexers and acquisition
 
 **Indexer**:

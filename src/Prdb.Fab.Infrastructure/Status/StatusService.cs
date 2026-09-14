@@ -29,6 +29,18 @@ public sealed class StatusService(
 {
     private static readonly string[] StageOrder = ["sync-prdb", "sync-indexers", "match", "decide", "download", "file"];
 
+    /// <summary>
+    /// Where every Gap and Brake about publishing points, and where the two
+    /// preview routines answer for themselves.
+    /// </summary>
+    /// <remarks>
+    /// Not <c>/settings/reporting</c>, which is where the switch is: a person
+    /// following a Brake about an upload nobody can account for wants the row
+    /// and the two things they may do about it, not the checkbox that decides
+    /// whether more are made.
+    /// </remarks>
+    private const string PublicationsRoute = "/settings/reporting/publications";
+
     public async Task<StatusState> ReadAsync(CancellationToken cancellationToken = default)
     {
         var now = time.GetUtcNow();
@@ -65,13 +77,18 @@ public sealed class StatusService(
             runs.Where(run => run.RoutineId == row.Id).ToArray(),
             workSets.GetValueOrDefault(Key(row.Name, row.Target)))).ToArray();
 
+        // ADR 0064's publishing side, read once: the Brakes below and the facts
+        // on the prdb stage are two views of the same numbers, and asking twice
+        // would let them disagree on a page whose whole job is to be believed.
+        var publishing = await PublishingAsync(cancellationToken);
+
         var conditions = new List<StatusCondition>();
         AddInstallationGaps(conditions, installation, governor);
         AddRecentWindowGaps(conditions, installation, recentCoverage);
         AddRoutineGaps(conditions, routines, runs, indexers);
         AddDeferralBrakes(conditions, routines, now);
         AddIndexerBudgetBrakes(conditions, indexers, walkStates, now);
-        AddReportingBrakes(conditions, reportingState);
+        AddReportingBrakes(conditions, reportingState, publishing);
 
         var admissions = await context.GateAdmissions.ToListAsync(cancellationToken);
         var gateTallies = await GateTalliesAsync(sevenDaysAgo, admissions, cancellationToken);
@@ -101,7 +118,7 @@ public sealed class StatusService(
             .ToListAsync(cancellationToken);
         AddDownloadBrakes(conditions, downloads, review, installation.RetryBudget);
         await AddLibraryVerificationGapAsync(conditions, cancellationToken);
-        await AddPublicationBrakesAsync(conditions, cancellationToken);
+        AddPublicationBrakes(conditions, publishing);
 
         var stages = StageOrder.Select(id => BuildStage(
             id,
@@ -119,6 +136,7 @@ public sealed class StatusService(
             automaticDecisions,
             recentCoverage,
             governor,
+            publishing,
             now)).ToArray();
 
         return new StatusState(
@@ -439,6 +457,112 @@ public sealed class StatusService(
     }
 
     /// <summary>
+    /// ADR 0064's publishing side as Status reads it: what is waiting, what is
+    /// submitted, what prdb has actually shown, and whose request is behind it.
+    /// </summary>
+    /// <remarks>
+    /// <strong>Submitted and shown are counted apart</strong>, which is the one
+    /// distinction on this page worth a query of its own. ADR 0064 keeps those
+    /// two words separate until a read endpoint has returned the row, because a
+    /// <c>201</c> is the entry state of a moderation process and not a verdict
+    /// — so a page saying <em>published</em> over a number that only means
+    /// <em>accepted</em> would be the one lie this surface cannot afford.
+    /// </remarks>
+    private async Task<StatusPublishing> PublishingAsync(CancellationToken cancellationToken)
+    {
+        var counts = (await context.PreviewPublications
+                .GroupBy(row => row.State)
+                .Select(group => new { State = group.Key, Count = group.Count() })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(item => item.State, item => item.Count);
+
+        var shown = await context.PreviewPublications
+            .CountAsync(
+                row => row.State == PreviewPublicationState.Sent && row.PrdbImageId != null
+                       && context.UserPreviews.Any(preview => preview.PrdbId == row.PrdbImageId
+                                                              && preview.Shown
+                                                              && !preview.Deleted),
+                cancellationToken);
+
+        var request = await context.PreviewBackfills
+            .AsNoTracking()
+            .Where(row => row.State == PreviewBackfillState.Running
+                          || row.State == PreviewBackfillState.Paused)
+            .OrderByDescending(row => row.RequestedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return new StatusPublishing(
+            counts.GetValueOrDefault(PreviewPublicationState.Intended),
+            counts.GetValueOrDefault(PreviewPublicationState.Ready),
+            counts.GetValueOrDefault(PreviewPublicationState.Sent),
+            shown,
+            counts.GetValueOrDefault(PreviewPublicationState.Uncertain),
+            request?.State,
+            request?.Selected ?? 0,
+            request?.TakenUp ?? 0);
+    }
+
+    /// <summary>
+    /// ADR 0064's Brakes on the publishing side, beside the gate the Reporting
+    /// ones already raise.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Brakes rather than Gaps throughout, and the distinction is the one
+    /// ADR 0018 draws: nothing here is broken. An upload nobody can account for
+    /// is the tool deliberately not sending again, because the API offers no
+    /// way to ask whether the first one arrived and a duplicate in a public
+    /// gallery cannot be withdrawn. A full queue is the tool deliberately not
+    /// generating more until the backlog drains. A paused request is somebody
+    /// having said so.
+    /// </para>
+    /// <para>
+    /// The uncertain one is the one worth the words. It is the only state in
+    /// this tool that waits for a person because <em>no amount of waiting or
+    /// retrying settles it</em>, so the detail says what deciding either way
+    /// would cost rather than only counting rows — and it points at the page
+    /// where either decision can be taken.
+    /// </para>
+    /// </remarks>
+    private static void AddPublicationBrakes(
+        ICollection<StatusCondition> conditions,
+        StatusPublishing publishing)
+    {
+        if (publishing.Uncertain > 0)
+        {
+            conditions.Add(Brake(
+                "Generated previews were submitted and their outcome is unknown",
+                $"{publishing.Uncertain} upload(s) left and were never answered. prdb cannot be asked "
+                + "whether they arrived while moderation keeps them invisible, so they are not sent "
+                + "again unless somebody says so: a second copy would be a duplicate picture nobody "
+                + "can take down.",
+                "file",
+                PublicationsRoute));
+        }
+
+        if (publishing.Ready >= PreviewPublicationContract.MostWaiting)
+        {
+            conditions.Add(Brake(
+                "The generated preview queue is full",
+                $"{publishing.Ready} generated previews are waiting to be sent, which is the ceiling. "
+                + "Nothing more is generated until the backlog drains.",
+                "file",
+                PublicationsRoute));
+        }
+
+        if (publishing.Request == PreviewBackfillState.Paused)
+        {
+            conditions.Add(Brake(
+                "The Library preview request is paused",
+                $"{publishing.TakenUp} of about {publishing.Selected} file(s) were taken up before it "
+                + "was paused. Nothing of it is generated or sent until it is resumed, and nothing of "
+                + "it has been given up.",
+                "file",
+                PublicationsRoute));
+        }
+    }
+
+    /// <summary>
     /// ADR 0009's third silent-failure count, beside those of ADR 0006 and
     /// ADR 0007: Library Entries verification could not confirm.
     /// </summary>
@@ -450,62 +574,6 @@ public sealed class StatusService(
     /// exactly like this — which is why the sentence says what was <em>not</em>
     /// done about it.
     /// </remarks>
-    /// <summary>
-    /// ADR 0064's two Brakes on the publishing side, beside the gate the
-    /// Reporting ones already raise.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Brakes rather than Gaps, and the distinction is the one ADR 0018 draws:
-    /// nothing here is broken. An upload nobody can account for is the tool
-    /// deliberately not sending again, because the API offers no way to ask
-    /// whether the first one arrived and a duplicate in a public gallery cannot
-    /// be withdrawn. A full queue is the tool deliberately not generating more
-    /// until the backlog drains.
-    /// </para>
-    /// <para>
-    /// The uncertain one is the one worth the words. It is the only state in
-    /// this tool that waits for a person because <em>no amount of waiting or
-    /// retrying settles it</em>, so the detail says what deciding either way
-    /// would cost rather than only counting rows.
-    /// </para>
-    /// </remarks>
-    private async Task AddPublicationBrakesAsync(
-        List<StatusCondition> conditions,
-        CancellationToken cancellationToken)
-    {
-        var states = await context.PreviewPublications
-            .Where(row => row.State == PreviewPublicationState.Uncertain
-                          || row.State == PreviewPublicationState.Ready)
-            .GroupBy(row => row.State)
-            .Select(group => new { State = group.Key, Count = group.Count() })
-            .ToListAsync(cancellationToken);
-
-        if (states.SingleOrDefault(item => item.State == PreviewPublicationState.Uncertain)
-            is { Count: > 0 } uncertain)
-        {
-            conditions.Add(Brake(
-                "Generated previews were submitted and their outcome is unknown",
-                $"{uncertain.Count} upload(s) left and were never answered. prdb cannot be asked "
-                + "whether they arrived while moderation keeps them invisible, so they are not sent "
-                + "again: a second copy would be a duplicate picture nobody can take down.",
-                "file",
-                "/settings/reporting"));
-        }
-
-        if (states.SingleOrDefault(item => item.State == PreviewPublicationState.Ready)
-            is { } waiting
-            && waiting.Count >= PreviewPublicationContract.MostWaiting)
-        {
-            conditions.Add(Brake(
-                "The generated preview queue is full",
-                $"{waiting.Count} generated previews are waiting to be sent, which is the ceiling. "
-                + "Nothing more is generated until the backlog drains.",
-                "file",
-                "/settings/reporting"));
-        }
-    }
-
     private async Task AddLibraryVerificationGapAsync(
         List<StatusCondition> conditions,
         CancellationToken cancellationToken)
@@ -583,7 +651,10 @@ public sealed class StatusService(
         }
     }
 
-    private static void AddReportingBrakes(ICollection<StatusCondition> conditions, ReportingSettingsState state)
+    private static void AddReportingBrakes(
+        ICollection<StatusCondition> conditions,
+        ReportingSettingsState state,
+        StatusPublishing publishing)
     {
         if (!state.ReportFulfilments && state.FulfilmentBacklog > 0)
             conditions.Add(Brake("Fulfilment reporting is off", $"{state.FulfilmentBacklog} local differences are intentionally not sent.", "file", "/settings/reporting"));
@@ -599,6 +670,19 @@ public sealed class StatusService(
                 "Preview publication is waiting to be explained",
                 "Publishing generated previews is switched on, and nothing is generated or sent until what it "
                 + "publishes has been read.",
+                "file",
+                "/settings/reporting"));
+
+        // The other way round, and the one that needs the count beside it:
+        // ADR 0064 has switching off stop generation and unsent uploads without
+        // dropping what is already made, so the rows wait and the expiry
+        // settles them if nothing changes.
+        if (!state.PublishGeneratedPreviews && publishing.Waiting + publishing.Ready > 0)
+            conditions.Add(Brake(
+                "Preview publication is off",
+                $"{publishing.Waiting + publishing.Ready} generated preview(s) are intentionally not "
+                + "sent. Nothing of them is given up while the switch is off, and what prdb has "
+                + "already accepted stays at prdb.",
                 "file",
                 "/settings/reporting"));
     }
@@ -706,6 +790,7 @@ public sealed class StatusService(
         IReadOnlyList<StatusAutomaticDecision> automaticDecisions,
         RecentWindowCoverageState recentWindow,
         PrdbGovernor governor,
+        StatusPublishing publishing,
         DateTimeOffset now)
     {
         var facts = new List<StatusFact>();
@@ -714,6 +799,37 @@ public sealed class StatusService(
             var budget = governor.LastReading;
             facts.Add(new("prdb connection", string.IsNullOrWhiteSpace(installation.PrdbApiKey) ? "Not configured" : governor.RefusedWith is null ? "Configured" : $"Refused with {governor.RefusedWith}", "/settings/connections/prdb"));
             facts.Add(new("Hourly budget", budget is null ? "Not read yet" : $"{budget.Remaining} of {budget.Limit} remaining", null));
+
+            // ADR 0064's channel, in the two sentences a person reading this
+            // page is owed about it. The first is what is still owed and what
+            // is in the queue; the second keeps *submitted* and *published*
+            // apart, because prdb's 201 is a moderation process starting and
+            // never a verdict.
+            facts.Add(new(
+                "Generated previews",
+                publishing.Waiting == 0 && publishing.Ready == 0 && publishing.Submitted == 0
+                    ? "Nothing generated and nothing submitted"
+                    : $"{publishing.Waiting} waiting to be made, {publishing.Ready} waiting to be sent",
+                PublicationsRoute));
+
+            if (publishing.Submitted > 0)
+            {
+                facts.Add(new(
+                    "Submitted to prdb",
+                    $"{publishing.Submitted} accepted, of which {publishing.Shown} "
+                        + $"{(publishing.Shown == 1 ? "is" : "are")} publicly shown; the rest are "
+                        + "waiting for moderation",
+                    PublicationsRoute));
+            }
+
+            if (publishing.Request is { } request)
+            {
+                facts.Add(new(
+                    "Library preview request",
+                    $"{request}: {publishing.TakenUp} of about {publishing.Selected} file(s) taken up",
+                    PublicationsRoute));
+            }
+
             facts.Add(new(
                 $"Recent Window ({recentWindow.Days} days)",
                 recentWindow.Catalogue.CompletedAt is null
@@ -864,6 +980,10 @@ public sealed class StatusService(
 
     private static string? OwnerRoute(string name, string? target) => name switch
     {
+        // ADR 0064's two routines before the general prdb rule below, because a
+        // failing decode or a deferred upload is answered on the publishing
+        // page rather than at the connection.
+        PreviewGenerationRoutine.RoutineName or PreviewUploadRoutine.RoutineName => PublicationsRoute,
         var value when UsesPrdb(value) => "/settings/connections/prdb",
         DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.RecentWindow or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep when target is not null => $"/settings/connections/indexers/{target}",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName or CollectingRoutine.RoutineName => "/settings/connections/sabnzbd",
@@ -871,6 +991,30 @@ public sealed class StatusService(
         _ => null,
     };
 }
+
+/// <summary>
+/// ADR 0064's publishing side, counted once for the page that reads it twice.
+/// </summary>
+/// <param name="Submitted">
+/// Accepted by prdb, which ADR 0064 is careful is not the same as public.
+/// </param>
+/// <param name="Shown">
+/// Of those, the ones a read endpoint has since returned — the only evidence
+/// moderation let one through.
+/// </param>
+/// <param name="Request">
+/// The state of the one Library request still running or held, or null where
+/// nobody has asked for the existing Library.
+/// </param>
+internal sealed record StatusPublishing(
+    int Waiting,
+    int Ready,
+    int Submitted,
+    int Shown,
+    int Uncertain,
+    PreviewBackfillState? Request,
+    int Selected,
+    int TakenUp);
 
 public enum StatusConditionKind { Gap, Brake }
 public sealed record StatusState(int GapCount, StatusUsefulAct? LastUsefulAct, IReadOnlyList<StatusStage> Stages, IReadOnlyList<StatusLink> Related);

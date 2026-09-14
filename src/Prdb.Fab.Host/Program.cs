@@ -215,6 +215,8 @@ app.MapFiling();
 
 app.MapReporting();
 
+app.MapPublications();
+
 app.MapStatus();
 
 app.MapBackup();

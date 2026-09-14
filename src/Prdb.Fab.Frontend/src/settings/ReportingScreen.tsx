@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
 
 import {
   readReportingSettings,
@@ -146,6 +147,17 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
           onChange={(checked) => { setPublish(checked); setSaved(false) }}
           explained={held.previewPublicationExplained}
         />
+
+        {/* The switch decides whether more are made; the page behind this link
+            is where what has been made is accounted for, where the existing
+            Library is asked for, and where an upload nobody can account for is
+            decided. Two surfaces because they are two questions. */}
+        <p className={styles.detail}>
+          <Link to="/settings/reporting/publications">Published previews</Link> shows
+          what has been generated and submitted, publishes previews of the Library
+          you already hold, and is where an upload whose outcome is unknown is
+          decided.
+        </p>
       </Fieldset>
 
       <SaveBar

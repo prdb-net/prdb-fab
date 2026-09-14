@@ -72,6 +72,11 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<PublicationStore>();
         services.TryAddScoped<ISpriteSheetProcess, FfmpegSpriteSheetProcess>();
 
+        // The explicit request for the existing Library, and the page that
+        // makes the whole channel readable without the run log.
+        services.TryAddScoped<PreviewBackfill>();
+        services.TryAddScoped<PublicationProgress>();
+
         services.AddScoped<ActorFeed>();
         services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();

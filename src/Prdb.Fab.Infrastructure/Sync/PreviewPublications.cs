@@ -40,14 +40,20 @@ public sealed class PreviewPublications(FabDbContext context, TimeProvider time)
     /// calls <c>SaveChangesAsync</c>.
     /// </para>
     /// <para>
-    /// It answers <see langword="false"/> far more often than it is a failure
+    /// It answers <see langword="null"/> far more often than it is a failure
     /// for it to: an unidentified file, a file with no Runtime, a channel that
     /// is off, an account that is not configured, and — the ordinary case once
     /// a Library has any size — a file whose exact bytes have been published
     /// already.
     /// </para>
+    /// <para>
+    /// <strong>It hands back the row rather than a yes</strong>, because the
+    /// Library backfill has one thing to add to it that Filing has not: which
+    /// request took the file up. Everything about being owed a preview is the
+    /// same either way, and that one column is the whole of the difference.
+    /// </para>
     /// </remarks>
-    public async Task<bool> IntendAsync(
+    public async Task<PreviewPublicationRow?> IntendAsync(
         Guid videoFileId,
         Guid videoPrdbId,
         string? osHash,
@@ -60,7 +66,7 @@ public sealed class PreviewPublications(FabDbContext context, TimeProvider time)
         // preview without one.
         if (UserPreviewHash.Normalise(osHash) is not { } hash || runtimeSeconds is not > 0)
         {
-            return false;
+            return null;
         }
 
         var installation = await context.Installation
@@ -71,7 +77,7 @@ public sealed class PreviewPublications(FabDbContext context, TimeProvider time)
         if (!installation.PublishGeneratedPreviews
             || string.IsNullOrWhiteSpace(installation.PrdbUserHash))
         {
-            return false;
+            return null;
         }
 
         // The unique key says the same thing; asking first is what keeps a
@@ -84,12 +90,12 @@ public sealed class PreviewPublications(FabDbContext context, TimeProvider time)
                        && row.OutputVersion == PreviewPublicationContract.OutputVersion,
                 cancellationToken))
         {
-            return false;
+            return null;
         }
 
         var now = time.GetUtcNow();
 
-        context.PreviewPublications.Add(new PreviewPublicationRow
+        var row = new PreviewPublicationRow
         {
             Id = Guid.CreateVersion7(now),
             VideoFileId = videoFileId,
@@ -99,9 +105,11 @@ public sealed class PreviewPublications(FabDbContext context, TimeProvider time)
             OutputVersion = PreviewPublicationContract.OutputVersion,
             State = PreviewPublicationState.Intended,
             IntendedAt = now,
-        });
+        };
 
-        return true;
+        context.PreviewPublications.Add(row);
+
+        return row;
     }
 
     /// <summary>

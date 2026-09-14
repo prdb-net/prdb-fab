@@ -162,7 +162,7 @@ decision, tidy-up removes only `.nfo`, `.par2`, `.sfv`, `.srr`, `.url`, `.txt`,
 Unknown files remain, and the parent directory of single-file storage is never
 tidied.
 
-Reporting under **Settings → Reporting** is on by default and has two
+Reporting under **Settings → Reporting** is on by default and has three
 independent switches. Fulfilment reporting sends a wanted Video id, whether it
 is held, when it was filed and the highest truthfully expressible quality.
 Confirmed-assignment reporting sends the exact file metadata a person approved
@@ -171,6 +171,16 @@ runtime, dimensions and codec. Turning either switch off makes no outbound
 report for that channel; pending differences remain local, and reports prdb
 already accepted are not retracted. See
 [docs/privacy.md](docs/privacy.md).
+
+The third switch is the only one whose payload strangers see: **published
+previews** submits a scrubbing sheet generated from a filed Video File, which
+prdb shows under that Video after moderation. Nothing is generated or sent until
+the form saying what it publishes has been saved once, and prdb offers no
+retraction for a submission it has accepted. Only files filed from then on are
+published automatically; the Library you already hold is published only by
+asking, from **Settings → Reporting → Published previews**, which is also where
+an upload whose outcome could not be established is decided. See
+[docs/publishing-previews.md](docs/publishing-previews.md).
 
 The SABnzbd boundary remains exact: **prdb-fab never calls SABnzbd retry or
 delete**, and *Stop following* changes only the local record. Removing a Video

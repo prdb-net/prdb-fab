@@ -100,6 +100,27 @@ before changing the tag — the backup file is deliberately not the whole of it.
 - Changing your prdb key drops whatever was waiting to be sent rather than
   sending one account's queue under another's. What was already sent is kept,
   so nothing is published twice.
+- **A page that says where every picture stands.** Settings → Reporting →
+  Published previews counts what is waiting to be made, what is queued, what
+  prdb accepted and — separately — what prdb is actually showing. Submitted and
+  published are different words on that page and they stay different: an
+  accepted submission is in moderation until a read endpoint hands the picture
+  back.
+- **The library you already hold can now be published, by asking.** The page
+  says how many files it would be and what publishing them sends, and nothing
+  starts until you say so — not upgrading, not turning the switch on, and not
+  restoring a backup. It then works through them one at a time in the
+  background, and a file you download while it runs still gets its own picture
+  submitted first.
+- The request can be paused and resumed, and cancelled. Cancelling gives up
+  what has not been sent, pictures included, and takes back nothing that has —
+  prdb has no retraction. Asking again later offers only the files the first
+  request did not reach, so nothing is ever published twice.
+- **An upload nobody could account for is now yours to decide.** Each one is
+  listed with what happened to it and two buttons: send it again, which
+  publishes it if it never arrived and duplicates it if it did, or leave it,
+  which discards the picture and never offers the file again. The tool still
+  does neither on its own.
 
 ### Changed
 

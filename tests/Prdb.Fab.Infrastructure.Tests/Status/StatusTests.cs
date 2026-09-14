@@ -387,6 +387,106 @@ public sealed class StatusTests
             item => item.Title == "The generated preview queue is full");
     }
 
+    /// <summary>
+    /// A paused Library request is a Brake: somebody said so, and nothing of it
+    /// is given up while it is held.
+    /// </summary>
+    [Fact]
+    public async Task A_paused_library_request_is_a_brake()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+            context.PreviewBackfills.Add(new PreviewBackfillRow
+            {
+                Id = Guid.NewGuid(),
+                UserHash = "a-user-hash",
+                State = PreviewBackfillState.Paused,
+                Selected = 40,
+                TakenUp = 7,
+                RequestedAt = database.Time.GetUtcNow(),
+            });
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, status.GapCount);
+
+        var brake = Assert.Single(
+            status.Stages.Single(stage => stage.Id == "file").Brakes,
+            item => item.Title == "The Library preview request is paused");
+
+        Assert.Contains("7 of about 40", brake.Detail, StringComparison.Ordinal);
+        Assert.Contains("given up", brake.Detail, StringComparison.Ordinal);
+
+        // And the prdb stage says where the request stands, which is the fact
+        // rather than the condition.
+        Assert.Contains(
+            status.Stages.Single(stage => stage.Id == "sync-prdb").Facts,
+            fact => fact.Label == "Library preview request"
+                    && fact.Value.Contains("Paused", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Switching the channel off with previews already made is a Brake with the
+    /// count beside it: ADR 0064 has the switch stop sending rather than drop
+    /// what is made, so the rows wait.
+    /// </summary>
+    [Fact]
+    public async Task Publication_switched_off_with_work_in_hand_is_a_brake()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+            await context.Installation.ExecuteUpdateAsync(
+                update => update.SetProperty(row => row.PublishGeneratedPreviews, false),
+                TestContext.Current.CancellationToken);
+
+            foreach (var state in (PreviewPublicationState[])
+                     [PreviewPublicationState.Intended, PreviewPublicationState.Ready])
+            {
+                context.PreviewPublications.Add(new PreviewPublicationRow
+                {
+                    Id = Guid.NewGuid(),
+                    VideoFileId = Guid.NewGuid(),
+                    VideoPrdbId = Guid.NewGuid(),
+                    OsHash = state == PreviewPublicationState.Ready
+                        ? "A1B2C3D4E5F60718"
+                        : "0F0E0D0C0B0A0908",
+                    UserHash = "a-user-hash",
+                    OutputVersion = PreviewPublicationContract.OutputVersion,
+                    State = state,
+                    IntendedAt = database.Time.GetUtcNow(),
+                });
+            }
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, status.GapCount);
+
+        var brake = Assert.Single(
+            status.Stages.Single(stage => stage.Id == "file").Brakes,
+            item => item.Title == "Preview publication is off");
+
+        Assert.Contains("2 generated preview(s)", brake.Detail, StringComparison.Ordinal);
+        Assert.Contains("stays at prdb", brake.Detail, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Run_now_refuses_an_empty_work_set_without_changing_due_time()
     {

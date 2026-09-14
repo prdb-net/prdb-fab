@@ -261,6 +261,78 @@ gains the request: an idempotency key on the submission, or an endpoint that
 lists the caller's own submissions including ones not yet visible. Either would
 turn every paragraph above into a retry. Sending the proposal is a separate act.
 
+## The explicit request, and the surface the whole channel is read on
+
+The existing Library is outside the automatic scope above and is published by
+**one thing only: a request somebody made**, from Settings → Reporting →
+Published previews, having been shown how many files it is and what publishing
+them sends. Nothing else selects it.
+
+**The list of events that must not start one now has four entries.** Starting
+up, upgrading and enabling the switch were named above; **restoring a Backup**
+is the fourth and the most dangerous, because the Library a document is restored
+onto may not be the Library it was written from. So `preview_backfill` is the
+one table in this channel that deliberately does **not** cross ADR 0033's export
+boundary, and `preview_publication.BackfillId` stays behind with it. A Restore
+therefore arrives having published exactly what its history says, with nobody's
+request outstanding, and somebody asks again knowing what they are asking for.
+The progress is lost with it, and the progress is the cheap half.
+
+**A request holds no list and no cursor.** What is left to take up is a query —
+an eligible Video File with no publication row for this account and output
+version — and taking one up writes the row that removes it from that query's
+answer. A restart re-asks the question rather than recovering a position, a
+second request finds only what the first did not reach, and a row given up on
+answers the question as finally as a submission does. That is what makes
+*bounded, deduplicated and restart-safe* one property rather than three
+mechanisms, and it is why repeated requests, matching hashes and a Restore
+cannot produce a duplicate submission.
+
+**A request can be paused, resumed and cancelled**, and the three mean different
+things. Pausing holds the work and gives nothing up, because a decode is minutes
+of CPU and somebody who wants it back has no other way to ask. Cancelling gives
+up what has not left — an intent, and a generated pair waiting for its upload —
+and takes back nothing that has; it deliberately leaves an uncertain upload
+alone, since cancelling a request is not an answer to a question about one. The
+answer says how many were dropped and how many prdb had already accepted, in the
+same breath, because those stay.
+
+**The automatic scope stays in front of the backlog.** Both routines take an
+intent with no request on it before one with a request, whatever the clock says
+about which was written first. Without that, a person who files a file while five
+thousand historical ones are draining would wait a week for the picture of the
+file they were actually watching — which is the same argument that put
+`Publications` below every feed, applied one level down.
+
+**Two numbers are the request's and not the ADR's**, in the sense `MostAttempts`
+already is. The generating routine asks to be seen again after **one minute**
+rather than five while a request is running: five minutes is sized for work that
+arrives one filed file at a time and that nothing waits on, and a backfill is a
+finite set somebody asked for and is watching a progress bar over. And `Selected`
+is the count as it was **shown**, kept so that the progress a person reads is
+measured against what they agreed to; it is a snapshot, and a file filed while
+the request runs is taken up by Filing rather than by it.
+
+### The uncertain upload finally has somewhere to be decided
+
+An upload whose outcome nobody can establish keeps its bytes and waits for a
+person — which was written down above and had nowhere to happen. It happens
+here, as two acts with the words that say what each costs:
+
+- **Send it again**, which publishes it if it never arrived and duplicates it if
+  it did. The row goes back to `Ready` and leaves under the ordinary governor
+  and the ordinary late reads of the switch and the account; where the bytes are
+  gone the generating routine makes the same picture again from the same file
+  and the same output version.
+- **Leave it as it is**, which discards the bytes and settles the row. The hash
+  and the output version stay, so the file is never offered again — by a
+  backfill or by anything else.
+
+Neither is automatic and neither ever becomes automatic. What this adds is the
+surface, not a policy: the asymmetry weighed above is unchanged, and a person
+taking the risk knowingly is the only thing that was ever going to resolve one
+of these.
+
 ## Accepted is not approved, and approved is not permanent
 
 The `201` carries `moderationStatus` and `moderationVisibility`, and they are
@@ -423,8 +495,14 @@ that defensible. A switch nobody finds is not consent either way.
   predates the history restores as an installation that has published nothing,
   which is the safe direction: the other one republishes a Library's worth of
   pictures nobody can take down.
-- **Three Brakes** on the Status page: publication waiting to be explained, a
-  full generation queue, and an upload whose outcome nobody can establish.
+- **Five Brakes** on the Status page: publication waiting to be explained, the
+  channel switched off with previews already made, a full generation queue, an
+  upload whose outcome nobody can establish, and a Library request somebody has
+  paused. All five point at the publishing page rather than at the switch.
+- **`preview_backfill`**, one row per request, **not exported** — and
+  `preview_publication` gains `BackfillId`, also not exported, for the same
+  reason. Neither raises the Backup format: what a document carries about this
+  channel is unchanged.
 - **`PreviewPublicationState` gains `Sending`**, which is not one of the five
   outcomes and is what makes `Uncertain` reachable: it is committed before the
   POST, so a container that stops mid-flight leaves a question rather than a

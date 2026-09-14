@@ -72,6 +72,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     /// <summary>The previews this installation generates and sends (ADR 0064).</summary>
     public DbSet<PreviewPublicationRow> PreviewPublications => Set<PreviewPublicationRow>();
 
+    /// <summary>
+    /// The requests to publish previews of the Library this installation
+    /// already holds (ADR 0064).
+    /// </summary>
+    public DbSet<PreviewBackfillRow> PreviewBackfills => Set<PreviewBackfillRow>();
+
     /// <summary>One row per feed. See <see cref="FeedCursorRow"/>.</summary>
     public DbSet<FeedCursorRow> FeedCursors => Set<FeedCursorRow>();
 
@@ -570,6 +576,30 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
             // The Library's question, asked of one file.
             publication.HasIndex(row => row.VideoFileId);
+
+            // What a backfill asks of its own rows — how far it has got, and
+            // what it gives up when it is cancelled. Filed under the request
+            // rather than under the state, because every one of those questions
+            // begins with which request this is about.
+            publication.HasIndex(row => new { row.BackfillId, row.State });
+        });
+
+        builder.Entity<PreviewBackfillRow>(backfill =>
+        {
+            backfill.ToTable("preview_backfill");
+            backfill.HasKey(row => row.Id);
+
+            // A request is a decision to publish this Library under one key,
+            // which is what ADR 0019 and ADR 0022 need of anything that leaves
+            // under one.
+            backfill.Declares(AccountClass.AccountStamped);
+
+            backfill.Property(row => row.UserHash).IsRequired();
+            backfill.Property(row => row.State).HasConversion<string>();
+
+            // The one question asked of this table on every run of the
+            // generating routine: is anybody asking for the Library.
+            backfill.HasIndex(row => new { row.State, row.RequestedAt });
         });
 
         builder.Entity<FeedCursorRow>(cursor =>

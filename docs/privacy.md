@@ -72,16 +72,22 @@ sheet; the multipart filenames are fixed strings rather than the file's own.
 
 Only Video Files filed after this channel was explained are published
 automatically, and only ones prdb has identified. Files the Library already held
-are not published unless they are asked for explicitly. Turning the switch off
-stops generation and stops anything not yet sent; **prdb offers no retraction**
-for a submission it has accepted, so nothing here can withdraw one.
+are not published unless they are asked for explicitly, from Settings →
+Reporting → Published previews, which says how many files that is before
+anything is taken up; enabling the switch, upgrading and restoring a Backup each
+select nothing. Turning the switch off stops generation and stops anything not
+yet sent; **prdb offers no retraction** for a submission it has accepted, so
+nothing here can withdraw one.
 
 Acceptance is not approval, and approval is not permanent: a submission enters
 moderation, and this tool records what prdb answered without treating it as a
 verdict. A submission whose outcome never arrived — a timeout, a restart — is
 recorded as uncertain and is **never sent again automatically**, because prdb
 exposes no idempotency key and a submission still in moderation is invisible to
-every endpoint that could be asked whether it arrived.
+every endpoint that could be asked whether it arrived. It is listed on the
+Published previews page, where a person may send it again — accepting that a
+duplicate cannot be withdrawn either — or leave it, which discards the generated
+picture and never offers that file again.
 
 ### What no channel sends
 

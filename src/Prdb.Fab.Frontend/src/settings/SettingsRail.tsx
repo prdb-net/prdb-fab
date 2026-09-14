@@ -8,8 +8,10 @@ import {
   readDownloadSettings,
   readIdentificationSettings,
   readLibrarySettings,
+  readPublications,
   readReportingSettings,
   readStatus,
+  type PublicationProgressState,
   type ReportingSettingsState,
   type StatusState,
 } from '../api/client.ts'
@@ -42,6 +44,7 @@ export function SettingsRail() {
   const downloads = useQuery({ queryKey: ['download-settings'], queryFn: readDownloadSettings })
   const library = useQuery({ queryKey: ['library-settings'], queryFn: readLibrarySettings })
   const reporting = useQuery({ queryKey: ['reporting-settings'], queryFn: readReportingSettings })
+  const publications = useQuery({ queryKey: ['publications'], queryFn: readPublications })
   const status = useQuery({ queryKey: ['status'], queryFn: readStatus })
 
   const pointedAt = conditionRoutes(status.data)
@@ -116,6 +119,18 @@ export function SettingsRail() {
 
       <Group to="/settings/reporting" icon="reporting" label="Reporting" marks={pointedAt}>
         {reporting.data ? channels(reporting.data) : null}
+      </Group>
+
+      {/* ADR 0064's publishing side has a route of its own for the reason every
+          Indexer does: Status points a Brake at the row rather than at the
+          group, and an upload waiting on a decision is exactly such a row. */}
+      <Group
+        to="/settings/reporting/publications"
+        label="Published previews"
+        marks={pointedAt}
+        nested
+      >
+        {publications.data ? publishing(publications.data) : null}
       </Group>
 
       <Group to="/settings/backup" icon="backup" label="Backup" marks={pointedAt}>
@@ -203,6 +218,34 @@ function conditionRoutes(status: StatusState | undefined): ReadonlySet<string> {
   }
 
   return routes
+}
+
+/**
+ * What the publishing side is doing, in the one clause the rail has room for.
+ *
+ * The order is what somebody would want to know first: a decision waiting on
+ * them, then a request of theirs in flight, then the plain count. Submitted is
+ * the word, never published — ADR 0064 keeps those apart until prdb shows the
+ * row.
+ */
+function publishing(state: PublicationProgressState): string {
+  if (Number(state.tally.uncertain) > 0) {
+    return `${state.tally.uncertain} upload(s) waiting on a decision`
+  }
+
+  if (state.request?.state === 'Running') {
+    return `Library request: ${state.request.takenUp} of about ${state.request.selected}`
+  }
+
+  if (state.request?.state === 'Paused') return 'Library request paused'
+
+  const owed = Number(state.tally.waiting) + Number(state.tally.ready)
+
+  if (owed > 0) return `${owed} waiting, ${state.tally.submitted} submitted`
+
+  return Number(state.tally.submitted) === 0
+    ? 'Nothing submitted'
+    : `${state.tally.submitted} submitted, ${state.tally.shown} shown`
 }
 
 function gateLabel(gate: string): string {
