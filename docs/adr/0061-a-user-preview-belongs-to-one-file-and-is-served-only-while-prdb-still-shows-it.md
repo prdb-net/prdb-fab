@@ -323,7 +323,8 @@ contract stands in its way.
 **The media-server output format.** Whether a sprite and a WebVTT beside a Video
 File are discovered and played by Jellyfin is a question about Jellyfin, and the
 answer is not predetermined. Until it is proven, no Library integration is
-chosen and none is counted as delivered.
+chosen and none is counted as delivered. **It was put to a running server and
+answered: see the amendment at the end of this document.**
 
 ## Considered options
 
@@ -374,3 +375,29 @@ anybody restores.
   while something is interested.
 - **An entry in `docs/prdb-api-proposals.md`**, which is a new file: the first
   place this repository writes down what it would ask prdb for.
+
+## Answered by ADR 0063
+
+[ADR 0063](0063-the-timeline-preview-stays-the-media-servers-and-nothing-is-written-beside-a-video-file.md)
+closes the one thing this decision left open, and the answer is no: a sprite and
+a WebVTT beside a Video File are not something Jellyfin takes, Plex keeps its
+preview thumbnails in a private store, and a WebVTT beside a video becomes an
+external subtitle track. The control run that was meant to be a baseline
+established something further — the server's import branch *replaces* its own
+extraction rather than supplementing it, so anything written there is a downgrade
+of a better preview the server makes from the file itself.
+
+Two things above are therefore not built, and this is the record of it:
+
+- **`library_preview_asset` does not exist.** *Three tables, two disposable and
+  one exported* is two tables, both disposable. Nothing is written into the
+  user's library, so there is no ownership to record — the very argument that
+  earned the table its place on the exported side is what removes it.
+- ***Timeline Preview* means the other thing.** The glossary keeps the word and
+  turns it around: it names what the media server makes, and what this tool
+  deliberately does not write.
+
+Everything else here stands unchanged. The interest a filed Video File registers,
+the lane it reads in, the share it spends and the fact that it never expires are
+all still right — ADR 0063 only replaces the reason, which is now that those
+bindings are ADR 0062's evidence rather than an asset to reconcile.

@@ -321,12 +321,14 @@ cache and never read back off the library.
 _Avoid_: Poster, Fanart, Backdrop, Thumbnail, Cover
 
 **Timeline Preview**:
-The Sprite Sheet and WebVTT this tool may write beside one Video File, so that a
-media server can show the picture at a point in the file while somebody scrubs
-it. Bound to that one file by its osHash: a different cut or encode of the same
-video is a different file and gets its own or none. Distinct from the Entry
-Image, which is one picture for the whole entry, and from the User Preview it
-was made from, which is prdb's row rather than this tool's file.
+The strip of pictures a player shows while somebody scrubs a video. **The media
+server's, and deliberately not this tool's**: Jellyfin makes one out of the
+Video File itself, better than anything that could be placed beside the file and
+instead of it where a directory is already there. Nothing of the kind is written
+into the library, and the term names a thing this tool does not own — which is
+why it is in the glossary. Distinct from the Entry Image, which is one picture
+for the whole entry, and from the User Preview, which is prdb's row and is shown
+on this tool's own surfaces.
 _Avoid_: Trickplay, BIF, Scrub strip, Chapter images
 
 **Replacing**:

@@ -6,10 +6,12 @@ File and used by a media server for timeline scrubbing.
 
 **The answer is no, for both targets, and one of the two ways of trying it is
 actively harmful.** A supported path into Jellyfin exists, but it is a different
-thing from publishing what prdb gave us, and taking it is a decision with a
-cost that a person has to weigh. Nothing has been built, ADR 0027 is unamended,
-and the choice is left open at the end of this document rather than made
-quietly.
+thing from publishing what prdb gave us — and the control run, which was set up
+to be a baseline, turned out to be the finding. The server already makes a
+better timeline preview out of the Video File itself, and its import branch runs
+only where our directory exists, so writing one replaces that rather than
+supplying something missing. The scope was dropped on purpose; ADR 0027 is
+unamended and nothing is written beside a Video File.
 
 ## What was tested
 
@@ -124,6 +126,32 @@ every file this tool filed. That is not an unsupported feature quietly doing
 nothing; it is a visible defect in something that works today, and it rules the
 naive layout out on its own.
 
+## What the server does when we do nothing at all
+
+The control was meant to establish what a correct import looks like. It
+establishes something larger, and it is worth stating on its own because every
+option below is measured against it.
+
+`TrickplayManager.RefreshTrickplayDataAsync` takes the import branch **where the
+directory exists, is not being replaced, and holds files**. It does not merge and
+it does not compare: a directory that is there is the answer, and the server's
+own extraction never runs for that file. So the choice is not *timeline preview
+or none*. It is *ours or the server's*, and the server's is the better one —
+twelve thumbnails at 3200x1800 against our one sheet at 1280x540, generated from
+the original file rather than resampled from somebody else's sheet, at the
+interval the server is going to tell its clients about anyway.
+
+That holds even for the corrected re-cut described below. prdb's tiles are
+whatever resolution prdb published; Jellyfin's come out of the source at
+`WidthResolutions`. Substituting the first for the second costs fidelity in
+every case and gains nothing except extraction time — and only for those files a
+user preview happens to exist for, which would leave a library where some
+entries scrub and some do not.
+
+Binding the preview to the individual file — the thing the OS hash was carried
+for — is free here for a reason that cannot be competed with: the server reads
+the file.
+
 ## Plex
 
 Not run, and it did not need to be. Plex's own documentation describes video
@@ -163,37 +191,32 @@ layout above. Three things stand in the way, and none of them is a detail:
   work per Video File, on the machine, and it is not what "copy the pair beside
   the file" implied.
 
-## Where this leaves the work
+## The decision
+
+**Nothing is written beside a Video File, and the Library scope is dropped.**
+
+Three answers were on the table. Re-cutting prdb's sheet into the server's grid
+at its default settings would have shipped something most people see — but the
+section above turns that from *right for most, wrong for a minority* into
+quietly worse for everybody, because it displaces a better preview the server
+makes for free. Asking a Jellyfin server for its trickplay configuration would
+make the re-cut correct rather than assumed, and it is ruled out a level above
+an ADR: `VISION.md` says this tool is "not a media server or a player, **and not
+on the way to becoming one**", and a connection to a server's API is a step onto
+exactly that path — spent on reimplementing a feature the server already has.
+
+What remains is not a gap. The outcome the Library wanted exists today and is a
+checkbox in Jellyfin's own library settings; `docs/running-in-docker.md` says
+where. User previews stay on this tool's own surfaces, where they are something
+the media server cannot do: the Preview gallery, the Review Queue, and the
+hash evidence that names an arriving file without anybody looking at it.
 
 - **ADR 0027 is unamended.** It is amended only for a demonstrated path, and
   what was demonstrated is that the intended one does not exist. `movie.nfo` and
   `fanart.jpg` are untouched.
-- **Nothing is written beside a Video File**, and the question below is left
-  open rather than answered on somebody's behalf. Reducing the Library's scope
-  and authorising a re-cut are both real answers, and both belong to a person.
-- **Nothing was sent anywhere.** The Jellyfin behaviour is worth reporting
-  upstream — `ThumbnailCount` counting files is a defect on its own terms — but
-  reporting it is a separate act.
-
-## The open question
-
-Three answers, and this document has no preference it would defend:
-
-1. **Re-cut for Jellyfin at its default settings.** Timeline previews appear for
-   most people; they are wrong or absent for anybody who changed `Interval`,
-   `WidthResolutions`, `TileWidth` or `TileHeight`, with nothing telling them
-   why. It accepts the resampling loss and a per-file `ffmpeg` pass.
-2. **Drop the Library scope.** User previews stay on this tool's own surfaces —
-   the Preview gallery and the Review Queue — and nothing is written beside a
-   Video File.
-3. **Read the server's settings.** Let this tool ask a Jellyfin server for its
-   trickplay configuration so the re-cut is correct rather than assumed. That is
-   a media-server connection this tool does not have, and it would be a decision
-   of its own.
-
-The first ships something most people see and quietly misleads a minority; the
-second is honest and delivers nothing here; the third is right and is larger
-than the work this investigation belongs to.
+- **Nothing was sent anywhere.** `ThumbnailCount` counting files rather than
+  thumbnails is a defect on its own terms, but reporting it is a separate act
+  and one this project is not spending.
 
 ## Reproducing it
 
