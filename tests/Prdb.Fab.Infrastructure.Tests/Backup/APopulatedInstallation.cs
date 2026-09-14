@@ -8,6 +8,7 @@ using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Reporting;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Persistence;
 
 using Xunit;
@@ -38,6 +39,9 @@ public static class APopulatedInstallation
     public static readonly Guid VideoFile = Guid.Parse("0198ec28-1c00-7000-8000-000000000006");
     public static readonly Guid LogEntry = Guid.Parse("0198ec28-1c00-7000-8000-000000000007");
     public static readonly Guid Preference = Guid.Parse("0198ec28-1c00-7000-8000-000000000008");
+    public static readonly Guid Publication = Guid.Parse("0198ec28-1c00-7000-8000-000000000009");
+    public static readonly Guid PublishedImage = Guid.Parse("0198ec28-1c00-7000-8000-00000000000a");
+    public static readonly Guid ModerationTarget = Guid.Parse("0198ec28-1c00-7000-8000-00000000000b");
 
     /// <summary>
     /// One row in every exported table, and two in the cache beside them so
@@ -206,6 +210,25 @@ public static class APopulatedInstallation
             NowNamesVideoId = OtherVideo,
             Reason = "The evidence now names another Video.",
             At = new DateTimeOffset(2026, 8, 27, 9, 0, 0, TimeSpan.Zero),
+        });
+        // ADR 0064's publication, in the state that is the reason the table is
+        // exported at all: submitted, accepted, and impossible to ask prdb
+        // about while moderation keeps it invisible.
+        context.Add(new PreviewPublicationRow
+        {
+            Id = Publication,
+            VideoFileId = VideoFile,
+            VideoPrdbId = Video,
+            OsHash = "A1B2C3D4E5F60718",
+            UserHash = "user-hash",
+            OutputVersion = PreviewPublicationContract.OutputVersion,
+            State = PreviewPublicationState.Sent,
+            Note = "Submitted to prdb and waiting for moderation.",
+            IntendedAt = new DateTimeOffset(2026, 8, 27, 9, 30, 0, TimeSpan.Zero),
+            SettledAt = new DateTimeOffset(2026, 8, 27, 9, 45, 0, TimeSpan.Zero),
+            PrdbImageId = PublishedImage,
+            ModerationTargetId = ModerationTarget,
+            SubmittedUnder = "pending|hidden",
         });
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 

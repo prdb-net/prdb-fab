@@ -561,8 +561,12 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             publication.HasIndex(row => new { row.UserHash, row.OsHash, row.OutputVersion }).IsUnique();
 
             // What the generating routine asks — the oldest thing still owed —
-            // and what the delivery and the surfaces ask after it.
+            // and what the delivery and the surfaces ask after it. The upload
+            // reads it in the other order: the oldest thing generated, which is
+            // the order the backlog has to drain in for the waiting ceiling to
+            // mean anything.
             publication.HasIndex(row => new { row.State, row.IntendedAt });
+            publication.HasIndex(row => new { row.State, row.GeneratedAt });
 
             // The Library's question, asked of one file.
             publication.HasIndex(row => row.VideoFileId);
@@ -1014,5 +1018,11 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<GateAdmissionRow>().Declares(ExportClass.Exported);
         builder.Entity<IdentificationFlagRow>().Declares(ExportClass.Exported);
         builder.Entity<AccountPreferenceWriteRow>().Declares(ExportClass.Exported);
+
+        // ADR 0064: not the intent and not the bytes, both of which are
+        // remakeable, but the submission — which cannot be fetched again while
+        // moderation keeps it invisible, and without which a Restore would
+        // publish the whole Library a second time.
+        builder.Entity<PreviewPublicationRow>().Declares(ExportClass.Exported);
     }
 }

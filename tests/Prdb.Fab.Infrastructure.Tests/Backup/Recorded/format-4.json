@@ -1,0 +1,264 @@
+{
+  "formatVersion": 4,
+  "toolVersion": "0.22.0",
+  "writtenAt": "2026-08-27T09:00:00+00:00",
+  "installation": {
+    "passwordHash": "hashed",
+    "prdbApiKey": "prdb-key",
+    "prdbUserHash": "user-hash",
+    "libraryRoot": "/library",
+    "sabnzbdUrl": "http://sabnzbd.invalid",
+    "sabnzbdApiKey": "sabnzbd-key",
+    "sabnzbdCategory": "Müller & Söhne",
+    "pathMappingFrom": "/remote/complete",
+    "pathMappingTo": "/downloads",
+    "onboardingStep": "Complete",
+    "sabnzbdSkipped": false,
+    "indexersSkipped": false,
+    "planShortSince": null,
+    "retryBudget": 3,
+    "preferredDownloadQuality": "P2160",
+    "automaticDownloadCap": 20,
+    "deleteLeftovers": true,
+    "reportFulfilments": true,
+    "reportConfirmedAssignments": true,
+    "publishGeneratedPreviews": true,
+    "previewPublicationExplainedAt": "2026-08-27T09:00:00+00:00",
+    "whatsNewObservedAt": "2026-08-27T09:00:00+00:00",
+    "whatsNewObservedVideo": "aaaaaaaa-0000-4000-8000-000000000001"
+  },
+  "gateAdmissions": [
+    {
+      "gate": "AfterDownload",
+      "confidence": "Exact"
+    },
+    {
+      "gate": "AfterDownload",
+      "confidence": "Strong"
+    },
+    {
+      "gate": "BeforeDownload",
+      "confidence": "Exact"
+    },
+    {
+      "gate": "BeforeDownload",
+      "confidence": "Probable"
+    },
+    {
+      "gate": "BeforeDownload",
+      "confidence": "Strong"
+    }
+  ],
+  "indexers": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000001",
+      "name": "An Indexer",
+      "url": "https://indexer.invalid/api",
+      "apiKey": "indexer-key",
+      "categories": "Adult",
+      "lastVerdict": "Saved",
+      "lastCheckedAt": "2026-08-27T09:00:00+00:00",
+      "enabled": true,
+      "rank": 1,
+      "dailyQueryBudget": 1000
+    }
+  ],
+  "automationRules": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000002",
+      "name": "A Rule",
+      "enabled": true,
+      "minimumSize": 1000,
+      "maximumSize": 2000
+    }
+  ],
+  "automationRuleIndexers": [
+    {
+      "automationRuleId": "0198ec28-1c00-7000-8000-000000000002",
+      "indexerId": "0198ec28-1c00-7000-8000-000000000001"
+    }
+  ],
+  "libraryEntries": [
+    {
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "entryDirectory": {
+        "root": "Library",
+        "path": "A Site/An Entry"
+      },
+      "filedAt": "2026-08-27T09:00:00+00:00"
+    }
+  ],
+  "videoFiles": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000006",
+      "libraryEntryVideoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "filedPath": {
+        "root": "Library",
+        "path": "A Site/An Entry/video.mkv"
+      },
+      "qualityLabel": "quality",
+      "sizeBytes": 3000,
+      "runtimeSeconds": null,
+      "width": null,
+      "height": null,
+      "videoCodec": null,
+      "osHash": "os-hash"
+    }
+  ],
+  "downloads": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000003",
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "indexerId": "0198ec28-1c00-7000-8000-000000000001",
+      "derivedReleaseId": "release-1",
+      "submittedName": "A.Release.1080p",
+      "nzoId": "SABnzbd_nzo_1",
+      "submissionState": "Submitted",
+      "state": "Collected",
+      "cause": null,
+      "lastSabnzbdStatus": null,
+      "failMessage": null,
+      "stageLog": null,
+      "storage": null,
+      "consecutiveAbsences": 0,
+      "outstandingSince": "2026-08-27T09:00:00+00:00",
+      "tidiedAt": null,
+      "originIsPerson": false,
+      "createdAt": "2026-08-27T09:00:00+00:00"
+    }
+  ],
+  "downloadOriginRules": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000004",
+      "downloadId": "0198ec28-1c00-7000-8000-000000000003",
+      "automationRuleId": "0198ec28-1c00-7000-8000-000000000002",
+      "ruleName": "A Rule"
+    }
+  ],
+  "arrivingFiles": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000005",
+      "downloadId": "0198ec28-1c00-7000-8000-000000000003",
+      "indexerId": "0198ec28-1c00-7000-8000-000000000001",
+      "derivedReleaseId": "release-1",
+      "sourcePath": {
+        "root": "Downloads",
+        "path": "A.Release.1080p/video.mkv"
+      },
+      "arrivedName": "video.mkv",
+      "isOnDisk": true,
+      "state": "AwaitingFiling",
+      "reason": null,
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "siteId": "bbbbbbbb-0000-4000-8000-000000000001",
+      "sizeBytes": 3000,
+      "runtimeSeconds": null,
+      "width": null,
+      "height": null,
+      "videoCodec": null,
+      "qualityLabel": null,
+      "osHash": null,
+      "intendedPath": {
+        "root": "Library",
+        "path": "A Site/An Entry/video.mkv"
+      },
+      "lastAttemptedAt": null,
+      "confidence": null,
+      "matchedBy": null,
+      "probeOutcome": "Read",
+      "probeError": null
+    }
+  ],
+  "arrivingFileCandidates": [
+    {
+      "arrivingFileId": "0198ec28-1c00-7000-8000-000000000005",
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000002"
+    }
+  ],
+  "reportedStates": [
+    {
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "userHash": "user-hash",
+      "isFulfilled": true,
+      "quality": "P1080",
+      "fulfilledAt": "2026-08-27T09:00:00+00:00",
+      "terminalOutcome": null
+    }
+  ],
+  "confirmedAssignments": [
+    {
+      "osHash": "os-hash",
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "userHash": "user-hash",
+      "sizeBytes": 3000,
+      "arrivalFileName": "video.mkv",
+      "releaseName": "A.Release.1080p",
+      "runtimeSeconds": null,
+      "width": null,
+      "height": null,
+      "videoCodec": null,
+      "prdbAnswer": null,
+      "sentAt": "2026-08-27T09:00:00+00:00"
+    }
+  ],
+  "operationLog": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000007",
+      "act": "Moved",
+      "videoFileId": "0198ec28-1c00-7000-8000-000000000006",
+      "libraryEntryVideoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "downloadId": "0198ec28-1c00-7000-8000-000000000003",
+      "pathBefore": {
+        "root": "Downloads",
+        "path": "A.Release.1080p/video.mkv"
+      },
+      "pathAfter": {
+        "root": "Library",
+        "path": "A Site/An Entry/video.mkv"
+      },
+      "displacedPath": null,
+      "leftoverNamesJson": "[\"leftover.nfo\"]",
+      "actor": "Automation",
+      "reason": "Filed",
+      "at": "2026-08-27T09:00:00+00:00"
+    }
+  ],
+  "accountPreferenceWrites": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000008",
+      "kind": "WantedVideo",
+      "entityId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "desired": true,
+      "requestedAt": "2026-08-27T09:00:00+00:00",
+      "lastFailure": null,
+      "blocked": false
+    }
+  ],
+  "identificationFlags": [
+    {
+      "videoFileId": "0198ec28-1c00-7000-8000-000000000006",
+      "videoId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "nowNamesVideoId": "aaaaaaaa-0000-4000-8000-000000000002",
+      "reason": "The evidence now names another Video.",
+      "at": "2026-08-27T09:00:00+00:00"
+    }
+  ],
+  "previewPublications": [
+    {
+      "id": "0198ec28-1c00-7000-8000-000000000009",
+      "videoFileId": "0198ec28-1c00-7000-8000-000000000006",
+      "videoPrdbId": "aaaaaaaa-0000-4000-8000-000000000001",
+      "osHash": "A1B2C3D4E5F60718",
+      "userHash": "user-hash",
+      "outputVersion": 1,
+      "state": "Sent",
+      "note": "Submitted to prdb and waiting for moderation.",
+      "intendedAt": "2026-08-27T09:30:00+00:00",
+      "settledAt": "2026-08-27T09:45:00+00:00",
+      "prdbImageId": "0198ec28-1c00-7000-8000-00000000000a",
+      "moderationTargetId": "0198ec28-1c00-7000-8000-00000000000b",
+      "submittedUnder": "pending|hidden"
+    }
+  ]
+}

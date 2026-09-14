@@ -34,10 +34,10 @@ public sealed class BackupContractTests : IDisposable
     /// change still restores.
     /// </summary>
     public static TheoryData<string> SupportedFormats() =>
-        ["format-1.json", "format-2.json", "format-3.json"];
+        ["format-1.json", "format-2.json", "format-3.json", "format-4.json"];
 
     /// <summary>The newest of them, which is the shape this build writes.</summary>
-    private const string TheCurrentFormat = "format-3.json";
+    private const string TheCurrentFormat = "format-4.json";
 
     private readonly string library = NewDirectory();
     private readonly string downloads = NewDirectory();
@@ -104,6 +104,39 @@ public sealed class BackupContractTests : IDisposable
 
         Assert.Equal(BackupFormat.Version, written.RootElement.GetProperty("formatVersion").GetInt32());
         Assert.Equal(Shape(recorded.RootElement), Shape(written.RootElement));
+    }
+
+    /// <summary>
+    /// ADR 0064: a document written before there was a publication history
+    /// restores as an installation that has published nothing.
+    /// </summary>
+    /// <remarks>
+    /// The empty direction is the safe one and it is worth saying why, because
+    /// the other direction is the one that cannot be undone. A restored row
+    /// this installation never sent would silently suppress a preview prdb's
+    /// population is short of; a missing row republishes one, and a duplicate
+    /// picture in a public gallery has no retraction. So the step supplies an
+    /// empty section — which is what a format-3 installation was — and the
+    /// history begins from the Library it actually filed.
+    /// </remarks>
+    [Fact]
+    public async Task A_document_from_before_the_publication_history_restores_with_none()
+    {
+        var recorded = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "Backup", "Recorded", "format-3.json"),
+            TestContext.Current.CancellationToken);
+
+        await using var target = await TestDatabase.CreateAsync();
+        await using var scope = target.Scope();
+
+        var act = await scope.ServiceProvider.GetRequiredService<Restores>().ApplyAsync(
+            recorded, new RestoreRoots(library, downloads), TestContext.Current.CancellationToken);
+
+        Assert.Equal(RestoreOutcome.Restored, act.Outcome);
+
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+        Assert.Equal(0, await context.PreviewPublications.CountAsync(TestContext.Current.CancellationToken));
     }
 
     /// <summary>

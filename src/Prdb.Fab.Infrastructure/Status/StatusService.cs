@@ -101,6 +101,7 @@ public sealed class StatusService(
             .ToListAsync(cancellationToken);
         AddDownloadBrakes(conditions, downloads, review, installation.RetryBudget);
         await AddLibraryVerificationGapAsync(conditions, cancellationToken);
+        await AddPublicationBrakesAsync(conditions, cancellationToken);
 
         var stages = StageOrder.Select(id => BuildStage(
             id,
@@ -292,6 +293,14 @@ public sealed class StatusService(
             () => context.PreviewPublications.CountAsync(
                 row => row.State == PreviewPublicationState.Intended,
                 cancellationToken));
+
+        // And what is generated and not yet sent. Not the same number and not
+        // the same routine: a person reading the page can see whether the
+        // decode is behind or the wire is.
+        await SetAsync(PreviewUploadRoutine.RoutineName,
+            () => context.PreviewPublications.CountAsync(
+                row => row.State == PreviewPublicationState.Ready,
+                cancellationToken));
         return answer;
     }
 
@@ -441,6 +450,62 @@ public sealed class StatusService(
     /// exactly like this — which is why the sentence says what was <em>not</em>
     /// done about it.
     /// </remarks>
+    /// <summary>
+    /// ADR 0064's two Brakes on the publishing side, beside the gate the
+    /// Reporting ones already raise.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Brakes rather than Gaps, and the distinction is the one ADR 0018 draws:
+    /// nothing here is broken. An upload nobody can account for is the tool
+    /// deliberately not sending again, because the API offers no way to ask
+    /// whether the first one arrived and a duplicate in a public gallery cannot
+    /// be withdrawn. A full queue is the tool deliberately not generating more
+    /// until the backlog drains.
+    /// </para>
+    /// <para>
+    /// The uncertain one is the one worth the words. It is the only state in
+    /// this tool that waits for a person because <em>no amount of waiting or
+    /// retrying settles it</em>, so the detail says what deciding either way
+    /// would cost rather than only counting rows.
+    /// </para>
+    /// </remarks>
+    private async Task AddPublicationBrakesAsync(
+        List<StatusCondition> conditions,
+        CancellationToken cancellationToken)
+    {
+        var states = await context.PreviewPublications
+            .Where(row => row.State == PreviewPublicationState.Uncertain
+                          || row.State == PreviewPublicationState.Ready)
+            .GroupBy(row => row.State)
+            .Select(group => new { State = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+
+        if (states.SingleOrDefault(item => item.State == PreviewPublicationState.Uncertain)
+            is { Count: > 0 } uncertain)
+        {
+            conditions.Add(Brake(
+                "Generated previews were submitted and their outcome is unknown",
+                $"{uncertain.Count} upload(s) left and were never answered. prdb cannot be asked "
+                + "whether they arrived while moderation keeps them invisible, so they are not sent "
+                + "again: a second copy would be a duplicate picture nobody can take down.",
+                "file",
+                "/settings/reporting"));
+        }
+
+        if (states.SingleOrDefault(item => item.State == PreviewPublicationState.Ready)
+            is { } waiting
+            && waiting.Count >= PreviewPublicationContract.MostWaiting)
+        {
+            conditions.Add(Brake(
+                "The generated preview queue is full",
+                $"{waiting.Count} generated previews are waiting to be sent, which is the ceiling. "
+                + "Nothing more is generated until the backlog drains.",
+                "file",
+                "/settings/reporting"));
+        }
+    }
+
     private async Task AddLibraryVerificationGapAsync(
         List<StatusCondition> conditions,
         CancellationToken cancellationToken)
@@ -768,7 +833,8 @@ public sealed class StatusService(
         or ReportingRoutine.RoutineName
         or AutomaticDecisionRoutine.RoutineName
         or CatalogueRepairRoutine.RoutineName
-        or PreviewGenerationRoutine.RoutineName;
+        or PreviewGenerationRoutine.RoutineName
+        or PreviewUploadRoutine.RoutineName;
 
     private static string StageOf(string name) => name switch
     {

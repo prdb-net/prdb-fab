@@ -534,6 +534,36 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
                 At = row.At,
             }));
 
+        context.PreviewPublications.AddRange(
+            // ADR 0064's history, and the section whose absence is not a
+            // shrug: without it a Restore would publish every filed file a
+            // second time, and a duplicate in a public gallery cannot be
+            // withdrawn. Absent from a format-3 document, which is an
+            // installation that had submitted nothing.
+            //
+            // The states arrive as they were written, including the two that
+            // describe bytes this document does not carry. The uploading
+            // routine settles both: a row saying Ready finds nothing on disk
+            // and goes back to its intent, and one saying Sending is an
+            // unanswered request and becomes uncertain. Neither is decided
+            // here, because a Restore is not the only way to arrive at them.
+            (document.PreviewPublications ?? []).Select(row => new PreviewPublicationRow
+            {
+                Id = row.Id,
+                VideoFileId = row.VideoFileId,
+                VideoPrdbId = row.VideoPrdbId,
+                OsHash = row.OsHash,
+                UserHash = row.UserHash,
+                OutputVersion = row.OutputVersion,
+                State = row.State,
+                Note = row.Note,
+                IntendedAt = row.IntendedAt,
+                SettledAt = row.SettledAt,
+                PrdbImageId = row.PrdbImageId,
+                ModerationTargetId = row.ModerationTargetId,
+                SubmittedUnder = row.SubmittedUnder,
+            }));
+
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }

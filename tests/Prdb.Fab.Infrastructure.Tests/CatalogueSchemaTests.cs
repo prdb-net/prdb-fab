@@ -77,6 +77,7 @@ public sealed class CatalogueSchemaTests
                 "installation",
                 "library_entry",
                 "operation_log_entry",
+                "preview_publication",
                 "reported_state",
                 "video_file",
             ],

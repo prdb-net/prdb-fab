@@ -213,6 +213,26 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 row.At))
             .ToListAsync(cancellationToken);
 
+        var previewPublications = await context.PreviewPublications
+            .AsNoTracking()
+            .OrderBy(row => row.IntendedAt)
+            .ThenBy(row => row.Id)
+            .Select(row => new BackupPreviewPublication(
+                row.Id,
+                row.VideoFileId,
+                row.VideoPrdbId,
+                row.OsHash,
+                row.UserHash,
+                row.OutputVersion,
+                row.State,
+                row.Note,
+                row.IntendedAt,
+                row.SettledAt,
+                row.PrdbImageId,
+                row.ModerationTargetId,
+                row.SubmittedUnder))
+            .ToListAsync(cancellationToken);
+
         var accountPreferenceWrites = await context.AccountPreferenceWrites
             .AsNoTracking()
             .OrderBy(row => row.Id)
@@ -318,6 +338,7 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 row.Reason,
                 row.At))],
             accountPreferenceWrites,
-            identificationFlags);
+            identificationFlags,
+            previewPublications);
     }
 }

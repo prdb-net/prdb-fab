@@ -23,14 +23,15 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// account starts having published nothing.
 /// </para>
 /// <para>
-/// <strong>Not exported, for now.</strong> ADR 0033's boundary runs between
-/// tables and ADR 0064 puts this one on the exported side — but for what it
-/// will carry once there is a delivery to record: <em>which submission was
-/// accepted</em>, which cannot be fetched again and without which a Restore
-/// would republish everything ever sent. What the table holds until then is an
-/// intent and some disposable bytes, and an intent that does not survive a
-/// Restore costs one preview that was never sent. The row crosses the boundary
-/// with the history it is there to protect.
+/// <strong>Exported</strong>, which is what it became once there was a delivery
+/// to record. What earns the boundary is <em>which submission was accepted</em>:
+/// that cannot be fetched again — a row in moderation is invisible to every
+/// read endpoint prdb offers — so a Restore without it would republish a whole
+/// Library's worth of previews as though none had ever been sent. The generated
+/// bytes do not cross with it. They are disposable by construction and
+/// remakeable from the file and the output version, so the four columns
+/// describing them and the two counters beside them stay behind, each named in
+/// <c>BackupSections.Omitted</c> with the reason.
 /// </para>
 /// </remarks>
 public sealed class PreviewPublicationRow
@@ -109,5 +110,38 @@ public sealed class PreviewPublicationRow
     public DateTimeOffset? GeneratedAt { get; set; }
 
     /// <summary>When this row reached a state nothing moves it out of.</summary>
+    /// <remarks>
+    /// Written for every ending, <see cref="PreviewPublicationState.Uncertain"/>
+    /// included — which is the one a person can still move, so what this says
+    /// is when the answer stopped being owed rather than when the row became
+    /// immutable.
+    /// </remarks>
     public DateTimeOffset? SettledAt { get; set; }
+
+    /// <summary>
+    /// prdb's <c>videoUserImageId</c> for the accepted submission, or null
+    /// where nothing has been accepted.
+    /// </summary>
+    /// <remarks>
+    /// The one thing in this table that cannot be worked out again from
+    /// anything local, and the reason the row is exported at all: it names a
+    /// picture this installation put in a public gallery and cannot ask about
+    /// until moderation has made it visible.
+    /// </remarks>
+    public Guid? PrdbImageId { get; set; }
+
+    /// <summary>prdb's <c>moderationTargetId</c> for the accepted submission.</summary>
+    public Guid? ModerationTargetId { get; set; }
+
+    /// <summary>
+    /// The moderation signature the submission entered under, as the <c>201</c>
+    /// reported it.
+    /// </summary>
+    /// <remarks>
+    /// Quoted, never parsed. ADR 0061 established that prdb documents no
+    /// vocabulary for its two moderation strings, and this is kept for the
+    /// reason that population keeps <c>ShownUnder</c>: so that a later change
+    /// is recognisable as a change rather than read as a verdict.
+    /// </remarks>
+    public string? SubmittedUnder { get; set; }
 }

@@ -295,6 +295,98 @@ public sealed class StatusTests
             item => item.Title == "Preview publication is waiting to be explained");
     }
 
+    /// <summary>
+    /// ADR 0064's uncertain upload, on the page as what it is: a Brake, because
+    /// nothing is broken and the tool is deliberately not sending again.
+    /// </summary>
+    /// <remarks>
+    /// The detail is asserted rather than only the title. This is the one state
+    /// in the tool that waits for a person because no amount of retrying
+    /// settles it, so a page that said only <em>1 upload</em> would leave
+    /// somebody to guess why nothing is happening about it.
+    /// </remarks>
+    [Fact]
+    public async Task An_upload_of_unknown_outcome_is_a_brake_not_a_gap()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+            context.PreviewPublications.Add(new PreviewPublicationRow
+            {
+                Id = Guid.NewGuid(),
+                VideoFileId = Guid.NewGuid(),
+                VideoPrdbId = Guid.NewGuid(),
+                OsHash = "A1B2C3D4E5F60718",
+                UserHash = "a-user-hash",
+                OutputVersion = PreviewPublicationContract.OutputVersion,
+                State = PreviewPublicationState.Uncertain,
+                Note = "Nothing came back.",
+                IntendedAt = database.Time.GetUtcNow(),
+                SettledAt = database.Time.GetUtcNow(),
+            });
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, status.GapCount);
+
+        var brake = Assert.Single(
+            status.Stages.Single(stage => stage.Id == "file").Brakes,
+            item => item.Title == "Generated previews were submitted and their outcome is unknown");
+
+        Assert.Contains("1 upload(s)", brake.Detail, StringComparison.Ordinal);
+        Assert.Contains("not sent", brake.Detail, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// And the other Brake on this channel: the generated queue at its ceiling,
+    /// which stops generation until the uploads drain.
+    /// </summary>
+    [Fact]
+    public async Task A_full_generated_queue_is_a_brake()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+
+            for (var index = 0; index < PreviewPublicationContract.MostWaiting; index++)
+            {
+                context.PreviewPublications.Add(new PreviewPublicationRow
+                {
+                    Id = Guid.NewGuid(),
+                    VideoFileId = Guid.NewGuid(),
+                    VideoPrdbId = Guid.NewGuid(),
+                    OsHash = $"{index:X16}",
+                    UserHash = "a-user-hash",
+                    OutputVersion = PreviewPublicationContract.OutputVersion,
+                    State = PreviewPublicationState.Ready,
+                    IntendedAt = database.Time.GetUtcNow(),
+                    GeneratedAt = database.Time.GetUtcNow(),
+                });
+            }
+
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, status.GapCount);
+        Assert.Single(
+            status.Stages.Single(stage => stage.Id == "file").Brakes,
+            item => item.Title == "The generated preview queue is full");
+    }
+
     [Fact]
     public async Task Run_now_refuses_an_empty_work_set_without_changing_due_time()
     {

@@ -105,6 +105,17 @@ public static class BackupReader
 
                 envelope["formatVersion"] = 3;
             },
+
+            // 3 -> 4: ADR 0064's publication history. A document written before
+            // it existed describes an installation that has submitted nothing,
+            // which is an empty section rather than a missing decision — the
+            // ordinary shape of a step, and the reason this one is two lines.
+            [3] = envelope =>
+            {
+                envelope["previewPublications"] = new JsonArray();
+
+                envelope["formatVersion"] = 4;
+            },
         };
 
     public static BackupIntake Read(string text)

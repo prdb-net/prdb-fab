@@ -358,7 +358,11 @@ anything. The interval comes from the stored Runtime, which is ADR 0061's
 amendment to it applied again.
 
 **[ADR 0009](0009-a-backup-is-a-readable-document-with-encrypted-secrets.md)**'s
-document gains two installation fields and the format is raised to 3.
+document gains two installation fields, raising the format to 3, and then the
+publication table itself, raising it to 4. Two steps rather than one because the
+two arrived with different work: the switch and the stamp are configuration and
+existed before anything could be sent, and the history only became worth
+carrying once there was a delivery to record.
 
 ## Considered options
 
@@ -414,9 +418,17 @@ that defensible. A switch nobody finds is not consent either way.
 - **`InstallationRow` gains two columns**, both exported: the switch and the
   stamp.
 - **The Backup format is raised to 3**, with an upgrade step that supplies the
-  shipped default and a null stamp.
-- **A third Brake** on the Status page: publication waiting to be explained, and
-  later a full generation queue and an uncertain upload.
+  shipped default and a null stamp — and to **4** when the publication table
+  crosses with it, whose step supplies an empty section. A document that
+  predates the history restores as an installation that has published nothing,
+  which is the safe direction: the other one republishes a Library's worth of
+  pictures nobody can take down.
+- **Three Brakes** on the Status page: publication waiting to be explained, a
+  full generation queue, and an upload whose outcome nobody can establish.
+- **`PreviewPublicationState` gains `Sending`**, which is not one of the five
+  outcomes and is what makes `Uncertain` reachable: it is committed before the
+  POST, so a container that stops mid-flight leaves a question rather than a
+  row the next run would send again. It is exported for that reason.
 - **`docs/privacy.md` gains the third channel**, with the payload enumerated.
 - **`docs/prdb-api-proposals.md` gains a second entry**: an idempotency key, or
   a way to see one's own submissions before moderation makes them visible.

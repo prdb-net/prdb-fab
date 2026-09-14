@@ -25,6 +25,15 @@ public static class BackupFormat
     /// </summary>
     /// <remarks>
     /// <para>
+    /// <strong>4</strong> adds ADR 0064's <c>previewPublications</c>: which
+    /// generated previews this installation has submitted to prdb, and under
+    /// which account. It is the one section that cannot be fetched again from
+    /// anywhere — a submission in moderation is invisible to every read
+    /// endpoint prdb offers — and a document written by version 3 has no
+    /// section for it, which is the same state as an installation that has
+    /// published nothing.
+    /// </para>
+    /// <para>
     /// <strong>3</strong> adds ADR 0064's two installation fields: the third
     /// Reporting switch and the stamp saying the explanation behind it has been
     /// in front of somebody. A document written by version 2 has neither, and
@@ -40,5 +49,5 @@ public static class BackupFormat
     /// never flagged anything — so nothing here refuses one.
     /// </para>
     /// </remarks>
-    public const int Version = 3;
+    public const int Version = 4;
 }

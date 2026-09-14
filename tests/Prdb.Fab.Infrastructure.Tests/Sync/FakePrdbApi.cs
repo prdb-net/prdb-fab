@@ -28,6 +28,7 @@ internal sealed class FakePrdbApi : HttpMessageHandler
 {
     private readonly ConcurrentDictionary<string, Queue<Answer>> queued = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, Answer> last = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> stops = new(StringComparer.Ordinal);
     private readonly List<Asking> asked = [];
 
     /// <summary>One request, as much of it as an assertion has asked about.</summary>
@@ -102,6 +103,26 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     public FakePrdbApi IsUnreachable(string path) =>
         Queue(path, new Answer(HttpStatusCode.OK, null, null, Unreachable: true));
 
+    /// <summary>
+    /// The tool stopping with the request in flight: <paramref name="stopping"/>
+    /// is cancelled the moment the request reaches the socket, and nothing is
+    /// answered.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="IsUnreachable"/> in the one way that matters to
+    /// ADR 0064: a routine cancelled here cannot write anything, because the
+    /// token it would write under is the token that was cancelled. So what the
+    /// row says <em>before</em> the request is all there is to read afterwards,
+    /// which is what makes this the fixture for the state that exists to be
+    /// found.
+    /// </remarks>
+    public FakePrdbApi IsStopped(string path, CancellationTokenSource stopping)
+    {
+        stops[path] = stopping;
+
+        return this;
+    }
+
     /// <summary>What was asked of <paramref name="path"/>, in order.</summary>
     public IReadOnlyList<Asking> AskingFor(string path) =>
         [.. Requests.Where(request => request.Uri.AbsolutePath == path)];
@@ -131,6 +152,13 @@ internal sealed class FakePrdbApi : HttpMessageHandler
         }
 
         var path = uri.AbsolutePath;
+
+        if (stops.TryGetValue(path, out var stopping))
+        {
+            await stopping.CancelAsync();
+
+            throw new OperationCanceledException("The tool stopped with the request in flight.");
+        }
 
         if (RefusedForMissingSince(uri) is { } refusal)
         {
