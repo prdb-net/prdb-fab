@@ -19,6 +19,23 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-09-14
+
+prdb shows a second kind of picture beside its own: sprite sheets its users made,
+each cut from one specific file. Both directions of that arrive here. A Preview
+now shows them under the Video's own gallery, as a strip you can scrub through
+with a finger or the arrow keys; and because each one carries the hash of the
+file it was made from, a downloaded file prdb's own lookup could not name is now
+identified from one — at no request cost and through the same gate you
+configured.
+
+The other direction is new to this tool: it now makes sheets of its own and
+sends them back. A file that has been filed and identified gets a grid of tiles
+and the WebVTT that times them, generated in the background and submitted one a
+minute. It is the only thing this tool sends that strangers see, so nothing is
+generated or sent until a page has said exactly what leaves — and the library
+you already hold is published only if you ask for it.
+
 ### Added
 
 - **The pictures other people made.** prdb publishes a second kind of picture
