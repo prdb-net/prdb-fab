@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Prdb.Fab.Core.Scheduling;
+using Prdb.Fab.Infrastructure.Filing;
 
 namespace Prdb.Fab.Infrastructure.Sync;
 
@@ -63,6 +64,14 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<PreviewAssetCache>();
         services.AddScoped<PreviewAssetEviction>();
 
+        // ADR 0064's other direction: what this installation owes prdb, the
+        // bytes it generates, and the decode that makes them. The process is
+        // behind an interface so that a test can say what ffmpeg produced
+        // without one being installed.
+        services.TryAddScoped<PreviewPublications>();
+        services.TryAddScoped<PublicationStore>();
+        services.TryAddScoped<ISpriteSheetProcess, FfmpegSpriteSheetProcess>();
+
         services.AddScoped<ActorFeed>();
         services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();
@@ -95,6 +104,7 @@ public static class SyncServiceCollectionExtensions
         Routine<SiteListRoutine>(services);
         Routine<CatalogueRepairRoutine>(services);
         Routine<ArtworkRoutine>(services);
+        Routine<PreviewGenerationRoutine>(services);
         Routine<AccountPreferenceRoutine>(services);
 
         return services;

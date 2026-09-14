@@ -19,6 +19,11 @@ public static class FilingServiceCollectionExtensions
         // ArtworkStore is: a slice asks for what it uses, and whichever of the
         // two is added first wins.
         services.TryAddScoped<UserPreviews>();
+
+        // ADR 0064's intent, written by the same act and taken here for the
+        // same reason. What it writes is a row; what decodes it lives in the
+        // Bulk lane and is added with the rest of the channel.
+        services.TryAddScoped<PreviewPublications>();
         services.AddScoped<VideoProbe>();
         services.AddScoped<IdentificationSettings>();
         services.AddScoped<LibrarySettings>();
