@@ -22,6 +22,7 @@ public static class OnboardingPath
         OnboardingStep.Sabnzbd,
         OnboardingStep.Indexers,
         OnboardingStep.LibraryRoot,
+        OnboardingStep.Publishing,
         OnboardingStep.Complete,
     ];
 
@@ -47,6 +48,13 @@ public static class OnboardingPath
     /// is still a tool that holds a library, and one that has no library root
     /// has nowhere to put anything.
     /// </summary>
+    /// <remarks>
+    /// ADR 0064's step is mandatory for a different reason from the other two
+    /// mandatory ones. Nothing is missing without it — the switch has a shipped
+    /// default and the tool works either way — but it gates publication, and a
+    /// skip would be somebody passing by the one explanation that has to happen
+    /// before content leaves. Answering it either way is what opens the gate.
+    /// </remarks>
     public static bool IsSkippable(OnboardingStep step) =>
         step is OnboardingStep.Sabnzbd or OnboardingStep.Indexers;
 

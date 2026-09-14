@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
@@ -6,10 +6,11 @@ import {
   saveReportingSettings,
   type ReportingSettingsState,
 } from '../api/client.ts'
-import { Fieldset, Switch, formStyles } from '../ui/Form.tsx'
+import { Fieldset, Sends, Switch, formStyles } from '../ui/Form.tsx'
 import { Loaded } from '../ui/Loaded.tsx'
 import { SaveBar } from '../ui/SaveBar.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
+import { PublicationChannel } from '../onboarding/PublishingForm.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 import styles from './Settings.module.css'
 
@@ -19,7 +20,7 @@ export function ReportingScreen() {
   return (
     <SettingsPage
       title="Reporting"
-      lede="What may leave this installation. Two independent channels, both on by default, sharing one governed background routine — opting into one is not opting into the other."
+      lede="What may leave this installation. Three independent channels, all on by default — opting into one is not opting into the other, and the third one publishes in public."
     >
       <Loaded query={settings} of="the Reporting settings">
         {(held) => <ReportingForm held={held} />}
@@ -32,20 +33,29 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
   const queries = useQueryClient()
   const [fulfilments, setFulfilments] = useState(held.reportFulfilments)
   const [assignments, setAssignments] = useState(held.reportConfirmedAssignments)
+  const [publish, setPublish] = useState(held.publishGeneratedPreviews)
   const [stored, setStored] = useState({
     fulfilments: held.reportFulfilments,
     assignments: held.reportConfirmedAssignments,
+    publish: held.publishGeneratedPreviews,
   })
   const [saved, setSaved] = useState(false)
 
+  const changed =
+    fulfilments !== stored.fulfilments
+    || assignments !== stored.assignments
+    || publish !== stored.publish
+
   const save = useMutation({
-    mutationFn: () => saveReportingSettings(fulfilments, assignments),
+    mutationFn: () => saveReportingSettings(fulfilments, assignments, publish),
     onSuccess: (answer) => {
       setFulfilments(answer.reportFulfilments)
       setAssignments(answer.reportConfirmedAssignments)
+      setPublish(answer.publishGeneratedPreviews)
       setStored({
         fulfilments: answer.reportFulfilments,
         assignments: answer.reportConfirmedAssignments,
+        publish: answer.publishGeneratedPreviews,
       })
       setSaved(true)
       void queries.invalidateQueries({ queryKey: ['reporting-settings'] })
@@ -130,10 +140,23 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         </Sends>
       </Fieldset>
 
+      <Fieldset legend="Published previews">
+        <PublicationChannel
+          checked={publish}
+          onChange={(checked) => { setPublish(checked); setSaved(false) }}
+          explained={held.previewPublicationExplained}
+        />
+      </Fieldset>
+
       <SaveBar
         label="Save Reporting settings"
-        dirty={fulfilments !== stored.fulfilments || assignments !== stored.assignments}
+        dirty={changed || !held.previewPublicationExplained}
         pending={save.isPending}
+        // ADR 0064: an installation that has never saved has something to save
+        // even when every switch is exactly as it shipped, and saying a change
+        // was made would be a small lie in the one place this is asking to be
+        // believed.
+        unsaved={changed ? undefined : 'Publishing is waiting to be answered.'}
       >
         {save.isError && (
           <Verdict tone="refusal">
@@ -162,21 +185,5 @@ function Backlog({
     <p className={styles.backlog}>
       {count === 0 ? none : <><strong>{count}</strong> {count === 1 ? one : many}</>}
     </p>
-  )
-}
-
-/**
- * What a channel sends: available, and out of the way.
- *
- * It was a wall of prose at exactly the moment somebody is deciding, which is
- * the moment they will not read it. Folded, the sentence that matters is the
- * one at the switch.
- */
-function Sends({ summary, children }: { summary: string; children: ReactNode }) {
-  return (
-    <details className={styles.sends}>
-      <summary>{summary}</summary>
-      <ul>{children}</ul>
-    </details>
   )
 }

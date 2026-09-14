@@ -20,6 +20,7 @@ public sealed class OnboardingPathTests
                 OnboardingStep.Sabnzbd,
                 OnboardingStep.Indexers,
                 OnboardingStep.LibraryRoot,
+                OnboardingStep.Publishing,
                 OnboardingStep.Complete,
             ],
             OnboardingPath.Steps);
@@ -44,7 +45,8 @@ public sealed class OnboardingPathTests
         Assert.Equal(OnboardingStep.Sabnzbd, OnboardingPath.After(OnboardingStep.PrdbKey));
         Assert.Equal(OnboardingStep.Indexers, OnboardingPath.After(OnboardingStep.Sabnzbd));
         Assert.Equal(OnboardingStep.LibraryRoot, OnboardingPath.After(OnboardingStep.Indexers));
-        Assert.Equal(OnboardingStep.Complete, OnboardingPath.After(OnboardingStep.LibraryRoot));
+        Assert.Equal(OnboardingStep.Publishing, OnboardingPath.After(OnboardingStep.LibraryRoot));
+        Assert.Equal(OnboardingStep.Complete, OnboardingPath.After(OnboardingStep.Publishing));
     }
 
     /// <summary>ADR 0010: the wizard is finished, and does not return.</summary>

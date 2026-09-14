@@ -19,6 +19,7 @@ export function SaveBar({
   pending,
   disabled = false,
   blocked,
+  unsaved,
   children,
 }: {
   label: string
@@ -29,6 +30,16 @@ export function SaveBar({
   disabled?: boolean
   /** What to say when `disabled` is true and it is not obvious. */
   blocked?: ReactNode
+  /**
+   * What to say while there is something to save, where *there are unsaved
+   * changes* is not it.
+   *
+   * ADR 0064's step is the case: leaving the switch exactly as it arrived is an
+   * answer, so the form has something to save without anything having been
+   * edited, and announcing a change nobody made would be a small lie in the one
+   * place the tool is asking to be believed.
+   */
+  unsaved?: ReactNode
   /** The verdict, where there is one. */
   children?: ReactNode
 }) {
@@ -48,7 +59,7 @@ export function SaveBar({
           : disabled
             ? blocked ?? 'Something above is not answered yet.'
             : dirty
-              ? 'There are unsaved changes.'
+              ? unsaved ?? 'There are unsaved changes.'
               : 'Nothing has changed.'}
       </p>
 

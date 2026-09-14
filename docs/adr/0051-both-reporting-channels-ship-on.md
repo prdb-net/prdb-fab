@@ -11,3 +11,10 @@ This confirms ADR 0019's default for Fulfilments and supersedes only ADR 0022's
 requirement that Confirmed Assignment reporting be opt-in and off by default.
 Existing installations retain their saved choices: changing the shipped default
 does not reinterpret a decision already stored in the installation.
+
+*[ADR 0064](0064-a-preview-is-published-only-after-it-has-been-explained-and-an-uncertain-upload-is-never-sent-twice.md)
+adds a third channel on the same argument, and one clause these two did not
+need. Fulfilments and Confirmed Assignments are statements to prdb's own
+machinery; a published preview is a picture strangers see, with no retraction.
+So it ships on and it is gated: nothing is published until the explanation has
+been in front of somebody.*

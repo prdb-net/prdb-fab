@@ -73,3 +73,69 @@ uses only the bindings this installation has already been given by
 never asks the by-hash endpoint to identify anything. That is correct and much
 narrower than the capability would be: a file is resolvable only if its Video
 happened to have been looked at already.
+
+## Let a submitter find out whether a submission arrived
+
+**Status**: open, not worked around — the gap is carried as an explicit
+uncertain state.
+**Raised by**: [ADR 0064](adr/0064-a-preview-is-published-only-after-it-has-been-explained-and-an-uncertain-upload-is-never-sent-twice.md).
+
+### What is missing
+
+`POST /video-user-images` takes a `multipart/form-data` body and returns `201`
+with the new `videoUserImageId`. There is no idempotency key on the request, and
+no way afterwards to ask whether a given submission landed.
+
+Both halves matter together. A client whose request times out, whose connection
+drops, or which is restarted mid-flight does not know whether prdb accepted the
+upload. It cannot make the question safe in advance, because there is no key
+prdb could recognise a repeat by; and it cannot answer it afterwards, because
+the three read endpoints — by Video, by osHash, and by id — all return only
+**publicly visible** rows, and a submission that has just arrived is in
+moderation and therefore not publicly visible. So absence from every readable
+endpoint is the ordinary state of a submission that arrived perfectly.
+
+### Why it matters
+
+The safe reading of an ambiguous outcome is *it may have arrived*, and the only
+action compatible with it is to stop. A duplicate published picture cannot be
+withdrawn by the client — there is no retraction in the API — so a retry risks a
+permanent, visible, moderated duplicate under somebody's account in exchange for
+saving one manual step.
+
+That asymmetry makes an automatic retry indefensible, which means every
+interrupted upload becomes a row a person has to decide about by hand. For one
+installation that is a nuisance. For a client publishing a library's worth of
+previews over a slow connection it is the difference between a background
+channel and a chore.
+
+### What could be asked for
+
+Either of these, in descending order of preference:
+
+1. **An idempotency key on the submission.** A client-generated value — a header
+   or a form field — that prdb stores with the row and answers the second
+   request with the first request's `201`. It makes a retry provably safe rather
+   than probably safe, and it is the only shape that also covers the case where
+   the duplicate request arrives while the first is still being processed.
+
+2. **A way to see one's own submissions.** For example an
+   `includeNotYetVisible` parameter on the by-hash list, or a
+   `GET /video-user-images/mine`, scoped to the calling account and returning
+   rows whatever their moderation state. It answers the question after the fact
+   rather than preventing it, and it also gives a submitter somewhere to see
+   what became of what they sent — which the API currently reports only for as
+   long as a row happens to be public.
+
+Neither needs a change to `VideoUserImageDto`, and the second one is additive to
+an endpoint that already exists.
+
+### What is done meanwhile
+
+ADR 0064 records an interrupted upload as **uncertain**, keeps the generated
+bytes, and never resubmits it automatically. The row is shown as a Brake on the
+Status page, and sending it again is a person's explicit act. Where a later
+ordinary read happens to bring the row back — once moderation has made it
+public, `GET /videos/{id}/user-images` carries this installation's `osHash` for
+that Video — the uncertainty resolves itself, but nothing waits on that: it
+depends on a moderation queue with no promised timescale.

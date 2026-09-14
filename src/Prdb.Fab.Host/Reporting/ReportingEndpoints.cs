@@ -20,6 +20,7 @@ public static class ReportingEndpoints
             TypedResults.Ok(await reporting.SaveAsync(
                 request.ReportFulfilments,
                 request.ReportConfirmedAssignments,
+                request.PublishGeneratedPreviews,
                 cancellationToken)));
 
         return endpoints;
@@ -28,4 +29,5 @@ public static class ReportingEndpoints
 
 public sealed record ReportingSettingsRequest(
     bool ReportFulfilments,
-    bool ReportConfirmedAssignments);
+    bool ReportConfirmedAssignments,
+    bool PublishGeneratedPreviews);

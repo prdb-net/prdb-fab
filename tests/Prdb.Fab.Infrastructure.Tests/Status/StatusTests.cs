@@ -250,6 +250,51 @@ public sealed class StatusTests
         Assert.Equal("/settings/reporting?from=/status", brake.Route);
     }
 
+    /// <summary>
+    /// ADR 0064: the only Brake raised while a channel is switched <em>on</em>.
+    /// Nothing is broken — the tool is working exactly as configured and
+    /// deliberately not publishing until somebody has read what would leave.
+    /// </summary>
+    [Fact]
+    public async Task Publication_waiting_to_be_explained_is_a_brake_not_a_gap()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, status.GapCount);
+        var brake = Assert.Single(
+            status.Stages.Single(stage => stage.Id == "file").Brakes,
+            item => item.Title == "Preview publication is waiting to be explained");
+        Assert.Equal("/settings/reporting?from=/status", brake.Route);
+    }
+
+    /// <summary>And once it has been explained, the Brake is gone.</summary>
+    [Fact]
+    public async Task An_explained_publication_raises_nothing()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+                .Installation.ExecuteUpdateAsync(
+                    update => update.SetProperty(
+                        row => row.PreviewPublicationExplainedAt,
+                        database.Time.GetUtcNow()),
+                    TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain(
+            status.Stages.SelectMany(stage => stage.Brakes),
+            item => item.Title == "Preview publication is waiting to be explained");
+    }
+
     [Fact]
     public async Task Run_now_refuses_an_empty_work_set_without_changing_due_time()
     {

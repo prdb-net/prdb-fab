@@ -89,6 +89,38 @@ public sealed class PrdbBudgetTests
         Assert.False(betweenTheTwo.Admits(PrdbWork.UserFeeds));
     }
 
+    /// <summary>
+    /// ADR 0064: an upload is a queued obligation and is nothing like a small
+    /// one to send, so it gives up long before a Fulfilment does and below
+    /// every feed — which is the whole argument for taking it out of
+    /// <c>Writes</c>, held as a number rather than as prose.
+    /// </summary>
+    [Fact]
+    public void A_publication_gives_up_long_before_a_fulfilment_does()
+    {
+        var limit = 1000;
+
+        Assert.True(new PrdbBudget(limit, 401, TimeSpan.Zero).Admits(PrdbWork.Publications));
+        Assert.False(new PrdbBudget(limit, 400, TimeSpan.Zero).Admits(PrdbWork.Publications));
+
+        // A backlog of uploads has stopped here; the small queued obligations
+        // the reserve at five per cent exists for are untouched, and so is
+        // everything a person notices.
+        var short_ = new PrdbBudget(limit, 380, TimeSpan.Zero);
+
+        Assert.False(short_.Admits(PrdbWork.Publications));
+        Assert.True(short_.Admits(PrdbWork.Writes));
+        Assert.True(short_.Admits(PrdbWork.Preview));
+        Assert.True(short_.Admits(PrdbWork.UserPreviews));
+
+        // And it still outranks the repair pass, which spends only what is left
+        // above half.
+        var half = new PrdbBudget(limit, 450, TimeSpan.Zero);
+
+        Assert.True(half.Admits(PrdbWork.Publications));
+        Assert.False(half.Admits(PrdbWork.Repair));
+    }
+
     /// <summary>And a spent one admits nothing at all.</summary>
     [Fact]
     public void A_spent_budget_admits_nothing()

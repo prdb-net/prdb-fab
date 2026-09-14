@@ -132,6 +132,31 @@ public sealed class InstallationRow
     /// <summary>Whether a person's Confirmed Assignments may be sent to prdb.</summary>
     public bool ReportConfirmedAssignments { get; set; } = true;
 
+    /// <summary>Whether generated previews may be published to prdb.</summary>
+    public bool PublishGeneratedPreviews { get; set; } = true;
+
+    /// <summary>
+    /// When somebody was last shown what publishing generated previews sends
+    /// and where it goes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ADR 0064's gate. Null means nobody has been told yet, and while it is
+    /// null nothing is generated for publication and nothing is uploaded — a
+    /// Brake rather than a Gap, because the tool is working exactly as
+    /// configured and deliberately not acting.
+    /// </para>
+    /// <para>
+    /// A stamp rather than a flag for the same reason
+    /// <see cref="PlanShortSince"/> is one: <em>since when</em> is what makes
+    /// the state readable, and an installation that has sat unexplained for a
+    /// fortnight is a different sentence from one that came up a minute ago. It
+    /// is set by an explicit act — the onboarding step, or a save on the
+    /// Reporting form — and never by a page having been fetched.
+    /// </para>
+    /// </remarks>
+    public DateTimeOffset? PreviewPublicationExplainedAt { get; set; }
+
     /// <summary>
     /// The newest What's New row observed by a loaded page, as a stable tuple
     /// because several Videos may share prdb's creation timestamp.

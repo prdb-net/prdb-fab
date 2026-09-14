@@ -250,6 +250,8 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 installation.DeleteLeftovers,
                 installation.ReportFulfilments,
                 installation.ReportConfirmedAssignments,
+                installation.PublishGeneratedPreviews,
+                installation.PreviewPublicationExplainedAt,
                 installation.WhatsNewObservedAt,
                 observedVideo),
             gateAdmissions,

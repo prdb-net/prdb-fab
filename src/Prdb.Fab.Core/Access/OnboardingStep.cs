@@ -32,6 +32,20 @@ public enum OnboardingStep
     LibraryRoot,
 
     /// <summary>
+    /// ADR 0064: what this installation will publish to prdb, said before it
+    /// publishes anything.
+    /// </summary>
+    /// <remarks>
+    /// The one step that configures no Connection, and it is here because the
+    /// loop starts the moment the path ends: the first Video File a fresh
+    /// installation files is eligible work, so an installation that finished
+    /// setting up without having been told would publish before anybody had the
+    /// chance to say no. Mandatory, not because anything breaks without it, but
+    /// because skipping is the one answer it must not accept silently.
+    /// </remarks>
+    Publishing,
+
+    /// <summary>
     /// The path is finished and does not return. What a skipped step left
     /// behind is a Gap, carried on the connection rather than here.
     /// </summary>

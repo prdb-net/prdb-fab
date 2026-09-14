@@ -33,10 +33,11 @@ public sealed class BackupContractTests : IDisposable
     /// stays, because what this asserts is that a document written before the
     /// change still restores.
     /// </summary>
-    public static TheoryData<string> SupportedFormats() => ["format-1.json", "format-2.json"];
+    public static TheoryData<string> SupportedFormats() =>
+        ["format-1.json", "format-2.json", "format-3.json"];
 
     /// <summary>The newest of them, which is the shape this build writes.</summary>
-    private const string TheCurrentFormat = "format-2.json";
+    private const string TheCurrentFormat = "format-3.json";
 
     private readonly string library = NewDirectory();
     private readonly string downloads = NewDirectory();
@@ -103,6 +104,63 @@ public sealed class BackupContractTests : IDisposable
 
         Assert.Equal(BackupFormat.Version, written.RootElement.GetProperty("formatVersion").GetInt32());
         Assert.Equal(Shape(recorded.RootElement), Shape(written.RootElement));
+    }
+
+    /// <summary>
+    /// ADR 0064: a document written before the third Reporting channel existed
+    /// restores with it switched on and <em>unexplained</em>.
+    /// </summary>
+    /// <remarks>
+    /// Both halves are the decision. On, because that is the shipped default
+    /// and an absent boolean would otherwise deserialise as <c>false</c> — a
+    /// value nobody chose. Unexplained, because the person restoring has never
+    /// been shown what this channel publishes, which puts them exactly where an
+    /// installation that upgraded stands: nothing is sent until they have.
+    /// </remarks>
+    [Fact]
+    public async Task A_document_from_before_the_third_channel_restores_it_on_and_unexplained()
+    {
+        var recorded = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "Backup", "Recorded", "format-2.json"),
+            TestContext.Current.CancellationToken);
+
+        await using var target = await TestDatabase.CreateAsync();
+        await using var scope = target.Scope();
+
+        var act = await scope.ServiceProvider.GetRequiredService<Restores>().ApplyAsync(
+            recorded, new RestoreRoots(library, downloads), TestContext.Current.CancellationToken);
+
+        Assert.Equal(RestoreOutcome.Restored, act.Outcome);
+
+        var installation = await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .Installation.SingleAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(installation.PublishGeneratedPreviews);
+        Assert.Null(installation.PreviewPublicationExplainedAt);
+    }
+
+    /// <summary>
+    /// And a document that <em>was</em> written by a build with the channel
+    /// carries the stamp over, because the person restoring is the person it
+    /// was explained to.
+    /// </summary>
+    [Fact]
+    public async Task A_document_that_carries_the_stamp_restores_already_explained()
+    {
+        var recorded = await File.ReadAllTextAsync(
+            Path.Combine(AppContext.BaseDirectory, "Backup", "Recorded", TheCurrentFormat),
+            TestContext.Current.CancellationToken);
+
+        await using var target = await TestDatabase.CreateAsync();
+        await using var scope = target.Scope();
+
+        await scope.ServiceProvider.GetRequiredService<Restores>().ApplyAsync(
+            recorded, new RestoreRoots(library, downloads), TestContext.Current.CancellationToken);
+
+        var installation = await scope.ServiceProvider.GetRequiredService<FabDbContext>()
+            .Installation.SingleAsync(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(installation.PreviewPublicationExplainedAt);
     }
 
     /// <summary>

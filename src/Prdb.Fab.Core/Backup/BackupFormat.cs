@@ -24,11 +24,21 @@ public static class BackupFormat
     /// Raised when the document changes shape, never when the database does.
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// <strong>3</strong> adds ADR 0064's two installation fields: the third
+    /// Reporting switch and the stamp saying the explanation behind it has been
+    /// in front of somebody. A document written by version 2 has neither, and
+    /// an absent boolean would deserialise as <c>false</c> — which is neither
+    /// the shipped default nor a decision anybody took — so this one needs a
+    /// step rather than only tolerating the absence.
+    /// </para>
+    /// <para>
     /// <strong>2</strong> adds ADR 0062's <c>identificationFlags</c>: filed
     /// Video Files whose Video was named from evidence prdb has since
     /// withdrawn. A document written by version 1 still restores — the section
     /// is simply absent, which is the same state as an installation that has
     /// never flagged anything — so nothing here refuses one.
+    /// </para>
     /// </remarks>
-    public const int Version = 2;
+    public const int Version = 3;
 }

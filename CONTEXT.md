@@ -89,6 +89,17 @@ becomes usable again under the same id. Distinct from a dead image URL, which is
 about the bytes and, for the images prdb publishes itself, permanent.
 _Avoid_: Approval, Status, Visibility flag, Deleted
 
+**Preview Publication**:
+A Sprite Sheet this tool made from one Video File, submitted to prdb as a User
+Preview, and what became of that submission. The only thing the tool sends that
+strangers see, and the only one prdb offers no retraction for — so *submitted*
+is as far as it ever claims until a read endpoint shows the row back. A
+submission whose outcome never arrived is **uncertain** rather than failed, and
+an uncertain one is never sent again by itself: prdb publishes no idempotency
+key, and a row in moderation is invisible to every endpoint that could be asked
+about it.
+_Avoid_: Upload, Contribution, Share, Sync
+
 ### Indexers and acquisition
 
 **Indexer**:

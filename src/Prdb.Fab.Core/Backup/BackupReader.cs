@@ -81,7 +81,29 @@ public static class BackupReader
             [1] = envelope =>
             {
                 envelope["identificationFlags"] = new JsonArray();
-                envelope["formatVersion"] = BackupFormat.Version;
+
+                // Its own target rather than the current version: a step knows
+                // where it leaves the document, and reading the constant here
+                // would have made this step claim to be the next one the moment
+                // a second step was added below it.
+                envelope["formatVersion"] = 2;
+            },
+
+            // 2 -> 3: ADR 0064's third Reporting channel. A document written
+            // before it existed says nothing about it, and an absent boolean
+            // deserialises as false — which is neither the shipped default nor
+            // a decision anybody took. So the switch takes the shipped default
+            // and the stamp stays null, which puts the restored installation
+            // where an upgraded one stands: explained before it publishes.
+            [2] = envelope =>
+            {
+                if (envelope["installation"] is JsonObject installation)
+                {
+                    installation["publishGeneratedPreviews"] = true;
+                    installation["previewPublicationExplainedAt"] = null;
+                }
+
+                envelope["formatVersion"] = 3;
             },
         };
 

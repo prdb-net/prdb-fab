@@ -110,6 +110,8 @@ public sealed record BackupInstallation(
     bool DeleteLeftovers,
     bool ReportFulfilments,
     bool ReportConfirmedAssignments,
+    bool PublishGeneratedPreviews,
+    DateTimeOffset? PreviewPublicationExplainedAt,
     DateTimeOffset? WhatsNewObservedAt,
     Guid? WhatsNewObservedVideo);
 

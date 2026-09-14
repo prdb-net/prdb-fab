@@ -105,6 +105,24 @@ export function Choice<T extends string>({
   )
 }
 
+/**
+ * What a channel sends: available, and out of the way.
+ *
+ * It was a wall of prose at exactly the moment somebody is deciding, which is
+ * the moment they will not read it. Folded, the sentence that matters is the
+ * one at the switch. Part of ADR 0058's kit rather than of one screen, because
+ * the third Reporting channel is explained in onboarding as well as in the
+ * settings and both say the same thing.
+ */
+export function Sends({ summary, children }: { summary: string; children: ReactNode }) {
+  return (
+    <details className={styles.sends}>
+      <summary>{summary}</summary>
+      <ul>{children}</ul>
+    </details>
+  )
+}
+
 /** One checkbox with its label and its hint. */
 export function Switch({
   checked,

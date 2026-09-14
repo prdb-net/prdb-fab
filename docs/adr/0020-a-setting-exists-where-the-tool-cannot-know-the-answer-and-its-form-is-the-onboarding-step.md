@@ -44,7 +44,7 @@ The eight groups:
 | **Library** | the library root; the leftover deletion switch of [ADR 0005](0005-the-first-release-files-into-the-jellyfin-layout.md) |
 | **Downloads** | the Preferred Download Quality ceiling of [ADR 0052](0052-catalogue-downloads-use-a-named-quality-ceiling.md) |
 | **Automation** | the rules of [ADR 0007](0007-automation-is-a-set-of-permissions-over-the-wanted-list.md); the cap on unfinished automatic downloads; the retry budget |
-| **Reporting** | the fulfilment switch of [ADR 0019](0019-fulfilment-understates-the-quality-and-is-retracted-only-by-a-person.md), and a named place for the second channel |
+| **Reporting** | the fulfilment switch of [ADR 0019](0019-fulfilment-understates-the-quality-and-is-retracted-only-by-a-person.md), a named place for the second channel, and [ADR 0064](0064-a-preview-is-published-only-after-it-has-been-explained-and-an-uncertain-upload-is-never-sent-twice.md)'s third |
 | **Account** | the password change of [ADR 0010](0010-one-password-and-an-onboarding-that-requires-prdb-and-a-library.md) |
 | **Backup** | export, per [ADR 0009](0009-a-backup-is-a-readable-document-with-encrypted-secrets.md) — restore stays in onboarding |
 

@@ -6140,6 +6140,7 @@
           "Sabnzbd",
           "Indexers",
           "LibraryRoot",
+          "Publishing",
           "Complete",
           null
         ]
@@ -7040,7 +7041,8 @@
       "ReportingSettingsRequest": {
         "required": [
           "reportFulfilments",
-          "reportConfirmedAssignments"
+          "reportConfirmedAssignments",
+          "publishGeneratedPreviews"
         ],
         "type": "object",
         "properties": {
@@ -7048,6 +7050,9 @@
             "type": "boolean"
           },
           "reportConfirmedAssignments": {
+            "type": "boolean"
+          },
+          "publishGeneratedPreviews": {
             "type": "boolean"
           }
         }
@@ -7057,7 +7062,9 @@
           "reportFulfilments",
           "fulfilmentBacklog",
           "reportConfirmedAssignments",
-          "confirmedAssignmentBacklog"
+          "confirmedAssignmentBacklog",
+          "publishGeneratedPreviews",
+          "previewPublicationExplained"
         ],
         "type": "object",
         "properties": {
@@ -7082,6 +7089,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "publishGeneratedPreviews": {
+            "type": "boolean"
+          },
+          "previewPublicationExplained": {
+            "type": "boolean"
           }
         }
       },

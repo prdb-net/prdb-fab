@@ -17,6 +17,7 @@ import { IndexerForm } from './IndexerForm.tsx'
 import { IndexerList } from './IndexerList.tsx'
 import { LibraryRootForm } from './LibraryRootForm.tsx'
 import { PrdbForm } from './PrdbForm.tsx'
+import { PublishingForm } from './PublishingForm.tsx'
 import { SabnzbdForm } from './SabnzbdForm.tsx'
 import { formStyles } from '../ui/Form.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
@@ -143,6 +144,11 @@ function isAnswered(step: OnboardingStep, connections: ConnectionsState | undefi
       return Number(connections?.indexerCount ?? 0) > 0
     case 'LibraryRoot':
       return Boolean(connections?.libraryRoot)
+    case 'Publishing':
+      // Answered by saving, and the form continues itself when it does. The
+      // backend is the one that knows, so the button below is never the way
+      // past this step.
+      return false
     default:
       return false
   }
@@ -232,6 +238,15 @@ export const steps: ReadonlyArray<{
     title: 'The library root',
     description: 'Mandatory. It is where filing puts what arrives.',
     form: (taken) => <LibraryRootForm onSaved={taken} />,
+  },
+  {
+    step: 'Publishing',
+    slug: 'publishing',
+    title: 'Publishing previews',
+    description:
+      'The one thing this tool sends out in public. It is on, it can be turned off here, and '
+      + 'nothing is published until this step is answered either way.',
+    form: (taken) => <PublishingForm onSaved={taken} />,
   },
 ]
 
