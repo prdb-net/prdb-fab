@@ -77,12 +77,42 @@ before changing the tag — the backup file is deliberately not the whole of it.
 - Nothing is decoded twice over. A file whose bytes changed since it was filed,
   one that has left the library, and one prdb already shows a sheet of are each
   passed over with the reason recorded.
+- **And they are now sent.** One sheet per minute leaves for prdb, in the
+  background, from a share of the request budget of its own — so a publication
+  backlog never holds up identifying a file that has just arrived. What leaves
+  is the picture, its list of times, the hash of the file it was made from and
+  the Video it is filed under, and nothing else: not the file, not its name,
+  not the path it sits at.
+- prdb's answer decides what the tool says. Accepted means *submitted* and
+  never *published* — the picture is in moderation, and the tool only says it
+  is public once prdb shows it back. A refusal is the end of it: the picture is
+  discarded and nothing tries again, because a second identical upload does not
+  answer whatever a moderator objected to.
+- **An upload nobody can account for is left alone.** If a request leaves and
+  no answer comes back — a timeout, a dropped connection, a container that
+  stopped mid-upload — the tool cannot find out whether it arrived: prdb
+  publishes no way to ask about a picture still in moderation. So it says so on
+  Status, keeps the picture, and does **not** send it again. Sending it twice
+  would put a duplicate in a public gallery that nobody can take down, and the
+  cost of waiting is a line on a page.
+- Where prdb later shows a picture made from that same file, the doubt settles
+  itself and the upload is recorded as having arrived. Nothing waits on it.
+- Changing your prdb key drops whatever was waiting to be sent rather than
+  sending one account's queue under another's. What was already sent is kept,
+  so nothing is published twice.
 
 ### Changed
 
-- The backup file's format is now **3**. A file written by an older build still
+- The backup file's format is now **4**. A file written by an older build still
   restores: it arrives with the new channel switched on and not yet explained,
-  which is the same position an installation that upgraded is in.
+  which is the same position an installation that upgraded is in, and with no
+  record of anything published — which is the truth about it, because no build
+  that wrote an older file could send one.
+- The backup file now carries which previews have been submitted to prdb. It
+  has to: a submitted picture cannot be looked up while it is in moderation, so
+  a restore without that record would publish the whole library a second time.
+  The pictures themselves are not in the file — they are made again from the
+  files.
 
 ## [0.21.0] - 2026-09-13
 

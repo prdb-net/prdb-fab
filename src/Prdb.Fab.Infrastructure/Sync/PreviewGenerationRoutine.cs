@@ -178,16 +178,27 @@ public sealed class PreviewGenerationRoutine(
     /// Takes back the bytes of every decode that did not finish.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// A cancelled or timed-out decode wrote nothing, a restart mid-write left
     /// a part file, and a row that has been dropped or sent owns nothing any
     /// more. What is claimed is exactly the rows that have committed a pair and
     /// not yet finished with it — which is a query rather than a bookkeeping
     /// note, so there is nothing to keep in step.
+    /// </para>
+    /// <para>
+    /// The three claiming states are the three that can hold bytes: a pair
+    /// waiting to be sent, one whose request has left, and one whose outcome
+    /// nobody could establish. The middle one exists only between two writes of
+    /// the uploading routine, and it is in the query because a sweep that
+    /// deleted the bytes under a request in flight would leave nothing for the
+    /// person who has to decide about it.
+    /// </para>
     /// </remarks>
     private async Task ReclaimAsync(CancellationToken cancellationToken)
     {
         var claimed = await context.PreviewPublications
             .Where(row => row.State == PreviewPublicationState.Ready
+                          || row.State == PreviewPublicationState.Sending
                           || row.State == PreviewPublicationState.Uncertain)
             .Select(row => row.Id)
             .ToListAsync(cancellationToken);

@@ -105,6 +105,7 @@ public static class SyncServiceCollectionExtensions
         Routine<CatalogueRepairRoutine>(services);
         Routine<ArtworkRoutine>(services);
         Routine<PreviewGenerationRoutine>(services);
+        Routine<PreviewUploadRoutine>(services);
         Routine<AccountPreferenceRoutine>(services);
 
         return services;

@@ -12,6 +12,7 @@ using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Reporting;
+using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Backup;
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -37,7 +38,7 @@ public sealed class BackupTests
     public void Every_exported_table_has_a_section_and_every_section_a_table()
     {
         Assert.Empty(BackupSections.Unaccounted(TheModel()));
-        Assert.Equal(16, BackupSections.Carried.Count);
+        Assert.Equal(17, BackupSections.Carried.Count);
     }
 
     /// <summary>
@@ -118,6 +119,9 @@ public sealed class BackupTests
         Assert.Equal(
             APopulatedInstallation.VideoFile,
             Assert.Single(document.IdentificationFlags).VideoFileId);
+        Assert.Equal(
+            PreviewPublicationState.Sent,
+            Assert.Single(document.PreviewPublications).State);
 
         // Nothing from a cache table has a section of its own, which is the
         // other half of ADR 0033's boundary: the Catalogue, the APopulatedInstallation.Indexer Cache,
@@ -147,6 +151,7 @@ public sealed class BackupTests
                 "operationLog",
                 "accountPreferenceWrites",
                 "identificationFlags",
+                "previewPublications",
             ],
             sections);
     }

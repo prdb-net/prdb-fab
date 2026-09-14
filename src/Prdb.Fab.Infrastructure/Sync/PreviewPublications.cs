@@ -124,22 +124,91 @@ public sealed class PreviewPublications(FabDbContext context, TimeProvider time)
     /// to the file it was made from.
     /// </para>
     /// </remarks>
-    public async Task<bool> AlreadyShownAsync(string osHash, CancellationToken cancellationToken)
+    public async Task<bool> AlreadyShownAsync(string osHash, CancellationToken cancellationToken) =>
+        await ShownSpriteAsync(osHash, cancellationToken) is not null;
+
+    /// <summary>
+    /// The publicly visible Sprite Sheet prdb holds for these exact bytes, or
+    /// null where it holds none.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The same question <see cref="AlreadyShownAsync"/> asks, answered with
+    /// the row rather than with a yes — because the two callers want different
+    /// halves of the same fact. Generation wants to know whether to decode at
+    /// all; delivery wants prdb's own id, which is what turns an upload nobody
+    /// could account for into one that plainly arrived.
+    /// </para>
+    /// <para>
+    /// <strong>What it is not is a lookup of a submission.</strong> ADR 0064 is
+    /// explicit that no endpoint here can be asked about a row in moderation,
+    /// so this proves a submission landed and never that one did not. Absence
+    /// is the ordinary state of everything recently sent.
+    /// </para>
+    /// </remarks>
+    public async Task<ShownSprite?> ShownSpriteAsync(string osHash, CancellationToken cancellationToken) =>
+        (await ShownSpritesAsync([osHash], cancellationToken)).Values.FirstOrDefault();
+
+    /// <summary>
+    /// The same answer for a set of hashes, in one query.
+    /// </summary>
+    /// <remarks>
+    /// One query rather than one per hash, which is what lets the delivering
+    /// routine look at every uncertain upload it holds on every run without
+    /// that being a cost worth thinking about. Hashes are normalised on the way
+    /// in and the keys of the answer are the normalised spelling, so a caller
+    /// comparing against a stored osHash finds it.
+    /// </remarks>
+    public async Task<IReadOnlyDictionary<string, ShownSprite>> ShownSpritesAsync(
+        IReadOnlyCollection<string> osHashes,
+        CancellationToken cancellationToken)
     {
-        var hash = UserPreviewHash.Normalise(osHash);
+        var hashes = osHashes
+            .Select(UserPreviewHash.Normalise)
+            .OfType<string>()
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (hashes.Count == 0)
+        {
+            return new Dictionary<string, ShownSprite>(StringComparer.Ordinal);
+        }
 
         // The kind is quoted from prdb rather than parsed (ADR 0061), and its
         // own form says the two words are matched case-insensitively — which
         // SQLite's `=` is not. There are a handful of previews per hash, so the
-        // kinds are read and the one comparison this tool has is used on them.
-        var kinds = await context.UserPreviews
-            .Where(row => row.OsHash == hash
+        // candidates are read and the one comparison this tool has is used on
+        // them.
+        var candidates = await context.UserPreviews
+            .Where(row => hashes.Contains(row.OsHash)
                           && row.Shown
                           && !row.Deleted
                           && row.TileCount >= PreviewPublicationContract.FewestTiles)
-            .Select(row => row.Kind)
+            .Select(row => new
+            {
+                row.OsHash,
+                row.Kind,
+                row.PrdbId,
+                row.ModerationStatus,
+                row.ModerationVisibility,
+            })
             .ToListAsync(cancellationToken);
 
-        return kinds.Any(UserPreviewAsset.IsSprite);
+        return candidates
+            .Where(row => UserPreviewAsset.IsSprite(row.Kind))
+            .GroupBy(row => row.OsHash, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => new ShownSprite(
+                    group.First().PrdbId,
+                    UserPreviewModeration.Signature(
+                        group.First().ModerationStatus,
+                        group.First().ModerationVisibility)),
+                StringComparer.Ordinal);
     }
 }
+
+/// <summary>
+/// A Sprite Sheet prdb is publicly showing for one file's bytes: its id, and
+/// the moderation signature it was last seen under.
+/// </summary>
+public sealed record ShownSprite(Guid PrdbId, string Signature);

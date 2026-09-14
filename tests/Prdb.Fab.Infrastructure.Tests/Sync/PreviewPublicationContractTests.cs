@@ -3,12 +3,11 @@ using System.Text;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Kiota.Abstractions;
-using Microsoft.Kiota.Abstractions.Authentication;
 using Microsoft.Kiota.Abstractions.Serialization;
-using Microsoft.Kiota.Http.HttpClientLibrary;
 
 using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
+using Prdb.Fab.Infrastructure.Sync;
 using Prdb.Sdk.Generated.Models;
 
 using Xunit;
@@ -230,46 +229,22 @@ public sealed class PreviewPublicationContractTests
     }
 
     /// <summary>
-    /// The body ADR 0064 enumerates, built the way the delivering routine will
-    /// build it. The bytes are a token rather than a real sheet: what is being
-    /// asserted is the shape of the request, and a real JPEG would only make
-    /// the fixture heavier.
+    /// The body ADR 0064 enumerates, built by the code that builds the real
+    /// one.
     /// </summary>
-    private static MultipartBody ABody()
-    {
-        var body = new MultipartBody { RequestAdapter = Adapter() };
-
-        body.AddOrReplacePart(
-            "File",
-            "image/jpeg",
-            new MemoryStream(Encoding.ASCII.GetBytes("a sprite sheet")),
-            PreviewPublicationContract.SheetFilename);
-        body.AddOrReplacePart(
-            "VttFile",
-            "text/vtt",
-            new MemoryStream(Encoding.ASCII.GetBytes("WEBVTT")),
-            PreviewPublicationContract.VttFilename);
-        body.AddOrReplacePart("VideoId", "text/plain", AVideo.ToString("D"));
-        body.AddOrReplacePart("BasedOnFileWithOsHash", "text/plain", Hash);
-        body.AddOrReplacePart(
-            "PreviewImageType",
-            "text/plain",
-            PreviewPublicationContract.PreviewImageType);
-        body.AddOrReplacePart(
-            "DisplayOrder",
-            "text/plain",
-            PreviewPublicationContract.DisplayOrder.ToString());
-
-        return body;
-    }
-
-    /// <summary>
-    /// A <see cref="MultipartBody"/> needs an adapter to reach a serialization
-    /// writer, and nothing else. It never sends: the request under test goes
-    /// through the gateway's own client, on the transport the governor is on.
-    /// </summary>
-    private static IRequestAdapter Adapter() =>
-        new HttpClientRequestAdapter(new AnonymousAuthenticationProvider());
+    /// <remarks>
+    /// <see cref="PreviewPublicationBody"/> rather than a copy of it, which is
+    /// what makes these fixtures worth anything: a part added or renamed there
+    /// is caught here, and a fixture asserting a reconstruction would only
+    /// assert that the reconstruction still matched itself. The bytes are a
+    /// token rather than a real sheet — what is under test is the shape of the
+    /// request.
+    /// </remarks>
+    private static MultipartBody ABody() => PreviewPublicationBody.For(
+        AVideo,
+        Hash,
+        new MemoryStream(Encoding.ASCII.GetBytes("a sprite sheet")),
+        new MemoryStream(Encoding.ASCII.GetBytes("WEBVTT")));
 
     private static string Accepted() =>
         $$"""
