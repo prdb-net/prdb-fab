@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 
 using Microsoft.EntityFrameworkCore;
@@ -18,9 +17,23 @@ public interface IContactSheetProcess
 }
 
 /// <summary>Produces ADR 0053's one five-frame JPEG without exposing the Video File.</summary>
+/// <remarks>
+/// Five frames at fixed positions, forty-five seconds, one thread: ADR 0053's
+/// contact sheet is unchanged by ADR 0064 having a second decode of its own.
+/// What the two share is <see cref="FfmpegCapture"/> — how a subprocess is
+/// started, bounded and killed — and nothing about what either asks ffmpeg for.
+/// </remarks>
 public sealed class FfmpegContactSheetProcess : IContactSheetProcess
 {
     private const int FrameCount = 5;
+
+    /// <summary>
+    /// Far more than five tiles can weigh, and there so that a decode cannot
+    /// produce unbounded output down the pipe whatever the input turns out to
+    /// be. The sheet this makes is 1600 by 180 pixels.
+    /// </summary>
+    private const long MostBytes = 8L * 1024 * 1024;
+
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(45);
     private static readonly double[] Positions = [0.1, 0.3, 0.5, 0.7, 0.9];
 
@@ -29,28 +42,16 @@ public sealed class FfmpegContactSheetProcess : IContactSheetProcess
         long runtimeSeconds,
         CancellationToken cancellationToken)
     {
-        using var process = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "ffmpeg",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-            },
-        };
+        var arguments = new List<string> { "-hide_banner", "-loglevel", "error" };
 
-        process.StartInfo.ArgumentList.Add("-hide_banner");
-        process.StartInfo.ArgumentList.Add("-loglevel");
-        process.StartInfo.ArgumentList.Add("error");
         foreach (var position in Positions)
         {
             var latest = Math.Max(0, runtimeSeconds - 1);
             var second = Math.Min(runtimeSeconds * position, latest);
-            process.StartInfo.ArgumentList.Add("-ss");
-            process.StartInfo.ArgumentList.Add(second.ToString("0.###", CultureInfo.InvariantCulture));
-            process.StartInfo.ArgumentList.Add("-i");
-            process.StartInfo.ArgumentList.Add(path);
+            arguments.Add("-ss");
+            arguments.Add(second.ToString("0.###", CultureInfo.InvariantCulture));
+            arguments.Add("-i");
+            arguments.Add(path);
         }
 
         var frames = string.Join(
@@ -58,52 +59,21 @@ public sealed class FfmpegContactSheetProcess : IContactSheetProcess
             Enumerable.Range(0, FrameCount).Select(index =>
                 $"[{index}:v:0]scale=320:180:force_original_aspect_ratio=increase,crop=320:180,setsar=1[frame{index}]"));
         var stack = string.Concat(Enumerable.Range(0, FrameCount).Select(index => $"[frame{index}]"));
-        process.StartInfo.ArgumentList.Add("-filter_complex");
-        process.StartInfo.ArgumentList.Add($"{frames};{stack}hstack=inputs={FrameCount}[sheet]");
-        process.StartInfo.ArgumentList.Add("-map");
-        process.StartInfo.ArgumentList.Add("[sheet]");
-        process.StartInfo.ArgumentList.Add("-frames:v");
-        process.StartInfo.ArgumentList.Add("1");
-        process.StartInfo.ArgumentList.Add("-q:v");
-        process.StartInfo.ArgumentList.Add("4");
-        process.StartInfo.ArgumentList.Add("-threads");
-        process.StartInfo.ArgumentList.Add("1");
-        process.StartInfo.ArgumentList.Add("-f");
-        process.StartInfo.ArgumentList.Add("image2pipe");
-        process.StartInfo.ArgumentList.Add("-vcodec");
-        process.StartInfo.ArgumentList.Add("mjpeg");
-        process.StartInfo.ArgumentList.Add("pipe:1");
 
-        process.Start();
-        await using var bytes = new MemoryStream();
-        var output = process.StandardOutput.BaseStream.CopyToAsync(bytes, cancellationToken);
-        var error = process.StandardError.ReadToEndAsync(cancellationToken);
+        arguments.AddRange([
+            "-filter_complex", $"{frames};{stack}hstack=inputs={FrameCount}[sheet]",
+            "-map", "[sheet]",
+            "-frames:v", "1",
+            "-q:v", "4",
+            "-threads", "1",
+            "-f", "image2pipe",
+            "-vcodec", "mjpeg",
+            "pipe:1",
+        ]);
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(Timeout);
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-            await Task.WhenAll(output, error);
-            return new ContactSheetProcessResult(process.ExitCode, bytes.ToArray(), false);
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            process.Kill(entireProcessTree: true);
-            await process.WaitForExitAsync(CancellationToken.None);
-            await Task.WhenAll(output, error);
-            return new ContactSheetProcessResult(-1, [], true);
-        }
-        catch (OperationCanceledException)
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-                await process.WaitForExitAsync(CancellationToken.None);
-            }
+        var run = await FfmpegCapture.RunAsync(arguments, Timeout, MostBytes, cancellationToken);
 
-            throw;
-        }
+        return new ContactSheetProcessResult(run.ExitCode, run.Bytes, run.TimedOut || run.TooLarge);
     }
 }
 

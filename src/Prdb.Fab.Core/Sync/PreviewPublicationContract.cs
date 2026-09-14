@@ -97,6 +97,21 @@ public static class PreviewPublicationContract
     /// </remarks>
     public static readonly TimeSpan Generation = TimeSpan.FromMinutes(20);
 
+    /// <summary>
+    /// How many times a generation may fail before the intent is given up.
+    /// </summary>
+    /// <remarks>
+    /// Three, and it is the one number here the ADR does not fix — it says what
+    /// happens when a file is missing or changed, and nothing about a decode
+    /// that simply did not work. A limit is needed rather than optional: the
+    /// timeout above is twenty minutes, the cadence is five, and a file that
+    /// times out every time would otherwise decode for twenty minutes out of
+    /// every twenty-five until the intent expired a month later. Three attempts
+    /// covers a file locked by a copy or a container restarted mid-decode, and
+    /// stops short of a file this build cannot read at all.
+    /// </remarks>
+    public const int MostAttempts = 3;
+
     /// <summary>How often the generating routine looks for work.</summary>
     /// <remarks>
     /// Five minutes, in the <c>Bulk</c> lane, one file per run. It is a routine

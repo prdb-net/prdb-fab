@@ -69,6 +69,9 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     /// <summary>Which Videos' user previews this installation holds (ADR 0061).</summary>
     public DbSet<UserPreviewInterestRow> UserPreviewInterests => Set<UserPreviewInterestRow>();
 
+    /// <summary>The previews this installation generates and sends (ADR 0064).</summary>
+    public DbSet<PreviewPublicationRow> PreviewPublications => Set<PreviewPublicationRow>();
+
     /// <summary>One row per feed. See <see cref="FeedCursorRow"/>.</summary>
     public DbSet<FeedCursorRow> FeedCursors => Set<FeedCursorRow>();
 
@@ -534,6 +537,35 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             // What the expiry pass reads, and what says whether a read is due.
             interest.HasIndex(row => row.TouchedAt);
             interest.HasIndex(row => row.LastReadAt);
+        });
+
+        builder.Entity<PreviewPublicationRow>(publication =>
+        {
+            publication.ToTable("preview_publication");
+            publication.HasKey(row => row.Id);
+
+            // It carries the account it was made under and is never handed to
+            // another one, which is what ADR 0019 and ADR 0022 need of anything
+            // that leaves under a key.
+            publication.Declares(AccountClass.AccountStamped);
+
+            publication.Property(row => row.OsHash).IsRequired();
+            publication.Property(row => row.UserHash).IsRequired();
+            publication.Property(row => row.State).HasConversion<string>();
+            publication.Property(row => row.Attempts).HasDefaultValue(0);
+
+            // ADR 0064's one output per eligible file, hash and output version,
+            // as a constraint rather than as a query anybody has to remember to
+            // ask. Two Library entries holding the same bytes are one
+            // publication.
+            publication.HasIndex(row => new { row.UserHash, row.OsHash, row.OutputVersion }).IsUnique();
+
+            // What the generating routine asks — the oldest thing still owed —
+            // and what the delivery and the surfaces ask after it.
+            publication.HasIndex(row => new { row.State, row.IntendedAt });
+
+            // The Library's question, asked of one file.
+            publication.HasIndex(row => row.VideoFileId);
         });
 
         builder.Entity<FeedCursorRow>(cursor =>

@@ -65,6 +65,18 @@ before changing the tag — the backup file is deliberately not the whole of it.
   one it has accepted, and neither does this.
 - Only files filed from now on, and only ones prdb identified. What the library
   already holds is left alone.
+- **The sheets themselves are now made.** Once a file has been filed and the
+  channel has been explained, a scrubbing sheet for it is generated in the
+  background — a grid of 320x180 tiles cut from the runtime already measured,
+  ten seconds a tile between two dozen and four hundred of them, with the
+  WebVTT that says which tile is when. One file at a time, never while
+  collecting or filing, and never inside a request.
+- The tool checks its own output the way it checks somebody else's: the sheet
+  has to be the grid that was asked for and the cues have to read back against
+  it, or the pair is discarded rather than kept.
+- Nothing is decoded twice over. A file whose bytes changed since it was filed,
+  one that has left the library, and one prdb already shows a sheet of are each
+  passed over with the reason recorded.
 
 ### Changed
 

@@ -282,6 +282,16 @@ public sealed class StatusService(
             return cataloguePins.Pinned(context.CatalogueVideos)
                 .CountAsync(video => pendingImages.Any(image => image.VideoId == video.Id), cancellationToken);
         });
+
+
+        // ADR 0064: what is owed but not yet generated. A count rather than a
+        // silence, because this routine is paced by its work set and a person
+        // reading the page is owed the difference between nothing to do and
+        // nothing being done.
+        await SetAsync(PreviewGenerationRoutine.RoutineName,
+            () => context.PreviewPublications.CountAsync(
+                row => row.State == PreviewPublicationState.Intended,
+                cancellationToken));
         return answer;
     }
 
@@ -757,7 +767,8 @@ public sealed class StatusService(
         or DownloadFollowingRoutine.RoutineName
         or ReportingRoutine.RoutineName
         or AutomaticDecisionRoutine.RoutineName
-        or CatalogueRepairRoutine.RoutineName;
+        or CatalogueRepairRoutine.RoutineName
+        or PreviewGenerationRoutine.RoutineName;
 
     private static string StageOf(string name) => name switch
     {

@@ -15,6 +15,7 @@ public sealed class FilingRoutine(
     EntryFiles entryFiles,
     VideoFileMover mover,
     UserPreviews userPreviews,
+    PreviewPublications publications,
     TimeProvider time,
     ILogger<FilingRoutine> logger) : IRoutine
 {
@@ -446,6 +447,18 @@ public sealed class FilingRoutine(
         // waits on prdb, and this is inside the transaction so that a crash
         // between the two cannot leave a filed file nothing will enrich.
         await userPreviews.AskAsync(videoId, UserPreviewDemand.Library, cancellationToken);
+
+        // ADR 0064: a newly filed, identified Video File is the one thing that
+        // is automatically eligible for a generated preview. Inside the
+        // transaction for the same reason the interest above is, and it decodes
+        // nothing — what it writes is an intent the Bulk lane comes back for,
+        // so Filing neither waits on it nor fails because of it.
+        await publications.IntendAsync(
+            fileId,
+            videoId,
+            arrival.OsHash,
+            arrival.RuntimeSeconds,
+            cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
