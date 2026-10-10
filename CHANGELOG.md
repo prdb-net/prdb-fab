@@ -19,6 +19,15 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Fixed
+
+- Completed Downloads whose SABnzbd storage path was missing are queried again
+  by their job identity, so collecting resumes when SABnzbd supplies the path.
+  Missing or failed history reads do not reopen or fail a completed Download.
+- Indexer Cache overflow caused by the protected Recent Window and pinned
+  Releases is logged as normal retention. Older unexamined Releases still raise
+  a warning when they prevent eviction; no protected Release is discarded.
+
 ## [0.23.0] - 2026-10-10
 
 Catalogue changes now arrive incrementally from prdb, including corrections to

@@ -6,6 +6,7 @@ using System.Web;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.Connections;
@@ -321,8 +322,12 @@ public sealed class IdentificationCutTests
         Assert.Equal(["unexamined", "wanted", "recent-disposable"], left);
     }
 
-    [Fact]
-    public async Task An_unexamined_backlog_over_the_ceiling_is_reported_and_loses_nothing()
+    [Theory]
+    [InlineData(true, LogLevel.Information)]
+    [InlineData(false, LogLevel.Warning)]
+    public async Task Recent_window_overflow_is_expected_but_an_older_unexamined_backlog_warns(
+        bool recent,
+        LogLevel expectedLevel)
     {
         await using var database = await TestDatabase.CreateAsync();
         await SeedIndexerAsync(database, IndexerId);
@@ -330,16 +335,34 @@ public sealed class IdentificationCutTests
         await using (var scope = database.Scope())
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var postedAt = recent
+                ? RecentWindow.BeginsAt(database.Time.GetUtcNow())
+                : RecentWindow.BeginsAt(database.Time.GetUtcNow()).AddSeconds(-1);
             context.Releases.AddRange(Enumerable.Range(1, 4).Select(index =>
-                Release($"held-{index}", $"Held {index}", IdentificationState.Unexamined, database.Time.GetUtcNow())));
+                Release($"held-{index}", $"Held {index}", IdentificationState.Unexamined, postedAt)));
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            var result = await scope.ServiceProvider.GetRequiredService<ReleaseEviction>()
+            var logger = new EvictionLog();
+            var result = await new ReleaseEviction(
+                    context,
+                    scope.ServiceProvider.GetRequiredService<ReleasePins>(),
+                    database.Time,
+                    logger)
                 .EvictAsync(IndexerId, ceiling: 2, TestContext.Current.CancellationToken);
             Assert.Equal(0, result.Removed);
             Assert.Equal(2, result.OverBy);
             Assert.Equal(4, await context.Releases.CountAsync(TestContext.Current.CancellationToken));
+            Assert.Equal(expectedLevel, Assert.Single(logger.Levels));
         }
+    }
+
+    private sealed class EvictionLog : ILogger<ReleaseEviction>
+    {
+        public List<LogLevel> Levels { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter) => Levels.Add(logLevel);
     }
 
     [Fact]

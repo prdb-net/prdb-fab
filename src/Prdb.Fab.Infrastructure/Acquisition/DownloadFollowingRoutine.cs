@@ -27,8 +27,11 @@ public sealed class DownloadFollowingRoutine(
         var outstanding = await context.Downloads
             .AsNoTracking()
             .Where(row => row.State == DownloadState.Outstanding
-                && row.SubmissionState != DownloadSubmissionState.Pending)
-            .OrderBy(row => row.CreatedAt)
+                    && row.SubmissionState != DownloadSubmissionState.Pending
+                || row.State == DownloadState.Completed
+                    && (row.Storage == null || row.Storage.Trim() == ""))
+            .OrderBy(row => row.State != DownloadState.Outstanding)
+            .ThenBy(row => row.CreatedAt)
             .ThenBy(row => row.Id)
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
@@ -44,7 +47,7 @@ public sealed class DownloadFollowingRoutine(
 
             if (installation.SabnzbdUrl is null || installation.SabnzbdApiKey is null)
             {
-                return RunResult.Failed("SABnzbd is not configured, so outstanding Downloads cannot be followed.");
+                return RunResult.Failed("SABnzbd is not configured, so Downloads awaiting its details cannot be followed.");
             }
 
             var knownIds = outstanding
@@ -82,6 +85,26 @@ public sealed class DownloadFollowingRoutine(
                 var job = download.NzoId is { Length: > 0 } nzoId
                     ? byId.GetValueOrDefault(nzoId)
                     : UniqueExactName(jobs, download.SubmittedName);
+
+                // Completion can have been recorded before SABnzbd supplied a
+                // storage path. Recover that missing fact by the same job id;
+                // neither an absent job nor a failed read undoes completion.
+                if (download.State == DownloadState.Completed)
+                {
+                    if (job is { Location: SabnzbdJobLocation.History }
+                        && SignalOf(job) == DownloadSignal.Completed
+                        && !string.IsNullOrWhiteSpace(job.Storage))
+                    {
+                        handled += await context.Downloads
+                            .Where(row => row.Id == download.Id
+                                && row.State == DownloadState.Completed
+                                && (row.Storage == null || row.Storage.Trim() == ""))
+                            .ExecuteUpdateAsync(update => update
+                                .SetProperty(row => row.Storage, job.Storage)
+                                .SetProperty(row => row.NzoId, job.NzoId), cancellationToken);
+                    }
+                    continue;
+                }
 
                 if (job is null)
                 {
