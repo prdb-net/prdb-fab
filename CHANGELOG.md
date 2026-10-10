@@ -19,6 +19,62 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-10
+
+Catalogue changes now arrive incrementally from prdb, including corrections to
+older Videos you still hold or want. Ignored Sites, removed Videos and withdrawn
+user previews are reflected locally while your Library files and history stay
+under their original identity.
+
+### Added
+
+- Site and Video change feeds with resumable progress and a bounded baseline
+  for the Recent Window and pinned Videos. Status shows baseline completion,
+  feed freshness and lag; fallback repair covers missing progress and shutdowns
+  longer than the guaranteed deletion history.
+- Availability explanations in the Library, Review Queue, Downloads and Video
+  Preview when prdb removes a Video or merges it into another. Local files,
+  confirmed assignments and historical reports are retained without merging
+  Library Entries or changing Filed Paths.
+- Video descriptions and Site website links in the existing Preview and Site
+  views. Creator Platform and Account information is shown separately from the
+  studio Network where prdb supplies it. External links are validated and
+  descriptions are displayed as text.
+
+### Changed
+
+- Site updates use an incremental feed after their baseline completes, and a
+  caught-up Video feed replaces repeated detail reads for unchanged Catalogue
+  data. Discovery and the Recent Window sweeps continue.
+- Ignored Sites are read from your prdb account. Known ignores prevent new
+  Favourite/Wanted intent and automatic acquisition; unignoring does not restore
+  old intent. Manual Downloads and held Library content remain intact, and
+  observing an ignore does not alter SABnzbd's queue.
+- The prdb client now uses Prdb.Sdk 0.17.0 through the existing request governor.
+
+### Fixed
+
+- Change feeds keep the exact timestamp and UUID cursor on nonempty final pages
+  and advance empty pages to prdb's settled server time, including when every
+  received row is discarded locally.
+- Account preference refusals distinguish an ignored Site from a Wanted Video
+  limit. Rate-limited manual intent remains pending, while permanent refusals
+  explain what needs to change.
+- Explicit deletion events and missing media links withdraw user previews even
+  when moderation labels are unchanged. Cached JPEG/VTT pairs and Identification
+  evidence stop being used together; older snapshots cannot restore them.
+- Schema upgrades preserve the availability of existing Catalogue Videos until
+  prdb supplies an actual removal.
+
+### Upgrading
+
+- **Copy `/data` before updating.** Database migrations only go forward; the
+  application Backup file is not a full copy of the data directory and cannot
+  make an older image understand the upgraded database.
+- The first sync establishes its baseline in bounded background turns. Ordinary
+  browsing reads local Catalogue data throughout. The Backup format and filed
+  Library layout are unchanged.
+
 ## [0.22.0] - 2026-09-14
 
 prdb shows a second kind of picture beside its own: sprite sheets its users made,
