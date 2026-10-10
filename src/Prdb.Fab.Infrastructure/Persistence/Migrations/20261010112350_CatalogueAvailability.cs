@@ -16,7 +16,7 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                 table: "catalogue_video",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "DeletedAtUtc",

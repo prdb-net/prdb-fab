@@ -16,6 +16,33 @@ public sealed class RetirementMigrationTests
     private const string BeforeCompleteActorProfiles = "PreferredDownloadQuality";
 
     [Fact]
+    public async Task Catalogue_upgrade_does_not_invent_unavailability_for_existing_videos()
+    {
+        await using var database = await TestDatabase.CreateAsync(migratedTo: "SiteChangeStates");
+        var id = Guid.NewGuid();
+        const string title = "Previously known";
+        var at = new DateTime(2026, 8, 29, 12, 0, 0, DateTimeKind.Utc);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO catalogue_video (PrdbId, Title, NormalisedTitle, CreatedAtUtc, UpdatedAtUtc, LastReadAt)
+                VALUES ({id}, {title}, {title}, {at}, {at}, {at})
+                """, TestContext.Current.CancellationToken);
+            await context.Database.MigrateAsync(TestContext.Current.CancellationToken);
+        }
+        await using var reading = database.Scope();
+        var video = await reading.ServiceProvider.GetRequiredService<FabDbContext>().CatalogueVideos.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.True(video.Available);
+        Assert.Null(video.DeletedAtUtc);
+        Assert.Null(video.MergedIntoId);
+        Assert.Null(video.Description);
+        Assert.Null(video.StashdbSceneId);
+        Assert.Equal(id, video.PrdbId);
+        Assert.Equal(title, video.Title);
+    }
+
+    [Fact]
     public async Task The_walking_skeleton_table_routine_and_run_are_removed()
     {
         await using var database = await TestDatabase.CreateAsync(migratedTo: BeforeRetirement);
