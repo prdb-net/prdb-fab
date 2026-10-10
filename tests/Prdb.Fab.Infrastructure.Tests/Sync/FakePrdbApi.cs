@@ -93,6 +93,9 @@ internal sealed class FakePrdbApi : HttpMessageHandler
     public FakePrdbApi AnswersCreated(string path, string json) =>
         Queue(path, new Answer(HttpStatusCode.Created, json, null));
 
+    public FakePrdbApi RefusesWithBody(string path, HttpStatusCode status, string json) =>
+        Queue(path, new Answer(status, json, null));
+
     /// <summary>Queues a refusal prdb considered and gave.</summary>
     public FakePrdbApi Refuses(string path, HttpStatusCode status, string title) =>
         Queue(path, new Answer(status, $$"""{"type":"about:blank","title":"{{title}}","status":{{(int)status}}}""", null));
