@@ -77,7 +77,8 @@ public sealed class VideoImageFeed(FabDbContext context, PrdbGateway prdb, Catal
             page.HasMore ?? false,
             page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id,
-            page.ServerTimeUtc);
+            page.ServerTimeUtc,
+            page.Items?.Count ?? 0);
     }
 
     private async Task<int> ApplyAsync(List<VideoImageChangeDto>? items, CancellationToken cancellationToken)

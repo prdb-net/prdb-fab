@@ -18,11 +18,12 @@ public sealed class FeedPositionTests
     /// precisely what a bulk import produces.
     /// </summary>
     [Fact]
-    public void A_settled_position_is_asked_from_before_itself()
+    public void A_server_bound_is_asked_from_exactly_itself()
     {
         var position = FeedPosition.CaughtUpAt(Noon);
 
-        Assert.Equal(Noon - FeedPosition.Overlap, position.Since);
+        Assert.Equal(Noon, position.Since);
+        Assert.Equal(Noon - FeedPosition.Overlap, position.DiscoverySince);
         Assert.Null(position.SinceId);
     }
 

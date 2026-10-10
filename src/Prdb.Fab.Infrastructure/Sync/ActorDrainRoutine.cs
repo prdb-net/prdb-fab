@@ -60,9 +60,9 @@ public sealed class ActorDrainRoutine(
     public async Task<bool> StartsAsync(CancellationToken cancellationToken) =>
         !await Cursors.StartedAsync(Source.Feed, cancellationToken);
 
-    protected override async Task ReachedAsync(FeedPosition position, CancellationToken cancellationToken)
+    protected override async Task ReachedAsync(FeedPosition position, FeedPage page, CancellationToken cancellationToken)
     {
-        if (position.Unfinished is not null)
+        if (page.HasMore)
         {
             return;
         }

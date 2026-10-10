@@ -148,16 +148,18 @@ public abstract class ChangeFeedRoutine(
             page.Applied,
             next.At);
 
-        await ReachedAsync(next, cancellationToken);
+        await ReachedAsync(next, page, cancellationToken);
 
-        return RunResult.Handled(page.Applied);
+        return page.HasMore
+            ? RunResult.Handled(page.Applied, TimeSpan.FromSeconds(10))
+            : RunResult.Handled(page.Applied);
     }
 
     /// <summary>
     /// What this routine does once a page has been applied and the position
     /// saved. Nothing, for a routine that recurs.
     /// </summary>
-    protected virtual Task ReachedAsync(FeedPosition position, CancellationToken cancellationToken) =>
+    protected virtual Task ReachedAsync(FeedPosition position, FeedPage page, CancellationToken cancellationToken) =>
         Task.CompletedTask;
 
     /// <summary>

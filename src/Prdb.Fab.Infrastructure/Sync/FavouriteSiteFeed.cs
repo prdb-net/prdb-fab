@@ -53,7 +53,8 @@ public sealed class FavouriteSiteFeed(FabDbContext context, PrdbGateway prdb, Ca
             page.HasMore ?? false,
             page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id,
-            page.ServerTimeUtc);
+            page.ServerTimeUtc,
+            page.Items?.Count ?? 0);
     }
 
     private async Task<int> ApplyAsync(List<FavoriteSiteChangeDto>? items, CancellationToken cancellationToken)

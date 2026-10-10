@@ -2,42 +2,16 @@ using System.Globalization;
 
 namespace Prdb.Fab.Core.Catalogue;
 
-/// <summary>
-/// How far the sync has come with one feed, and the rule that reads it back
-/// out: what to ask prdb for next.
-/// </summary>
+/// <summary>A durable server timestamp and optional row tie-breaker.</summary>
 /// <remarks>
-/// <para>
-/// ADR 0013's overlap, as a value. A cursor advanced to exactly the last value
-/// seen loses every row sharing it, because prdb's <c>since</c> is a lower
-/// bound over a timestamp several rows can carry — and a bulk import is
-/// precisely the case where they do. So the stored position is set back by
-/// <see cref="Overlap"/> before it is used, and every result is applied as an
-/// idempotent upsert. That is one rule and this is the one place it lives; the
-/// change feeds and What's New both read it here.
-/// </para>
-/// <para>
-/// The tie-breaker is what keeps the overlap from being a trap. Setting a
-/// position back a minute and asking again is safe only for as long as the tool
-/// gets <em>past</em> that minute: a feed handing back a full page of rows
-/// inside it would be replayed from the same place forever. So a position knows
-/// whether the walk it came from was finished, and an unfinished one resumes
-/// from the exact row it stopped at — no overlap, no ambiguity, and progress
-/// guaranteed. The presence of the id is what says which of the two this is,
-/// rather than a second field saying it again.
-/// </para>
+/// Change feeds resume exactly. The server supplies its two-minute settle bound;
+/// adding a client overlap repeats pages and can stall progress. Discovery uses
+/// <see cref="DiscoverySince"/> because CreatedAfter has no UUID tie-breaker.
+/// Existing timestamp and timestamp|UUID strings remain readable.
 /// </remarks>
 public sealed record FeedPosition
 {
-    /// <summary>
-    /// How far back a settled position is set before it is used.
-    /// </summary>
-    /// <remarks>
-    /// One minute, the number ADR 0013 left to the ticket that owns polling.
-    /// It is a bound on how far prdb's own clock and its commit order may
-    /// disagree, not a bound on how late a row may be — a row is found by its
-    /// <c>updatedAtUtc</c>, whenever the tool gets round to asking.
-    /// </remarks>
+    /// <summary>Discovery's overlap for exclusive CreatedAfter reads.</summary>
     public static readonly TimeSpan Overlap = TimeSpan.FromMinutes(1);
 
     private FeedPosition(DateTimeOffset at, Guid? unfinished)
@@ -50,15 +24,13 @@ public sealed record FeedPosition
     public DateTimeOffset At { get; }
 
     /// <summary>
-    /// The row the walk stopped at, when it stopped in the middle of one. Null
-    /// once the feed has said there is nothing more, which is the ordinary
-    /// state and the one the overlap applies to.
+    /// The last received row, including on a nonempty final page. Null after
+    /// an empty page advances to the server bound.
     /// </summary>
     public Guid? Unfinished { get; }
 
     /// <summary>
-    /// The feed said there is nothing more. The next request sets this back by
-    /// <see cref="Overlap"/>.
+    /// A server bound without a row tie-breaker.
     /// </summary>
     public static FeedPosition CaughtUpAt(DateTimeOffset at) => new(at, unfinished: null);
 
@@ -89,17 +61,11 @@ public sealed record FeedPosition
     /// </remarks>
     public static FeedPosition TheBeginning { get; } = new(DateTimeOffset.MinValue, unfinished: null);
 
-    /// <summary>What to send as <c>since</c>.</summary>
-    /// <remarks>
-    /// The overlap is not applied below the beginning of time: a settled
-    /// position at <see cref="DateTimeOffset.MinValue"/> is
-    /// <see cref="TheBeginning"/>, which has nothing before it to be
-    /// conservative about.
-    /// </remarks>
-    public DateTimeOffset Since =>
-        Unfinished is not null || At - DateTimeOffset.MinValue < Overlap
-            ? At
-            : At - Overlap;
+    /// <summary>The exact change-feed timestamp.</summary>
+    public DateTimeOffset Since => At;
+
+    /// <summary>Discovery retains its separate exclusive-bound overlap.</summary>
+    public DateTimeOffset DiscoverySince => At - DateTimeOffset.MinValue < Overlap ? At : At - Overlap;
 
     /// <summary>
     /// What to send as <c>sinceId</c>. Never set together with a timestamp that

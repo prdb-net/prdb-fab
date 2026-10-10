@@ -61,7 +61,8 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
             page.HasMore ?? false,
             page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id,
-            page.ServerTimeUtc);
+            page.ServerTimeUtc,
+            page.Items?.Count ?? 0);
     }
 
     private async Task<int> ApplyAsync(List<WantedVideoChangeDto>? items, CancellationToken cancellationToken)

@@ -6,6 +6,27 @@ because something looked at them, rows stay because something local points at
 them, and the rest is dropped. What is pinned is kept correct by re-reading it
 on a request budget, because there is no feed to be told by.
 
+## Amendment: exact change-feed progress
+
+With Prdb.Sdk 0.17.0, every nonempty change page resumes from both returned
+`nextCursor.updatedAtUtc` and `nextCursor.id`, even when `hasMore` is false.
+Received items and locally applied rows are separate counts: a page discarded
+for lack of local interest still advances. An empty page ignores any echoed
+legacy cursor, stores `serverTimeUtc` and clears the UUID. Missing or invalid
+bounds leave the position untouched. Application finishes before cursor storage;
+interruption replays idempotent writes rather than skipping them.
+
+The supplied bound already trails the server clock by two minutes. No client
+clock, additional settle delay or overlap is applied to change feeds. An old
+cursor ahead of that bound sees empty pages until the bound catches up; reading
+from an earlier supplied bound is safe replay. Timestamp precision and server
+UUID order are preserved. Existing stored timestamp and timestamp|UUID formats
+remain readable. `hasMore` schedules another bounded lane turn after ten seconds;
+bootstrap retirement uses the page flag, never the presence of a UUID.
+
+What's New discovery remains separate: its exclusive `CreatedAfter` mark keeps
+the one-minute overlap because it has no row tie-breaker.
+
 ## Why a cache and not a mirror
 
 A mirror is the obvious shape and the API refuses it twice over. There is no
@@ -120,8 +141,7 @@ window of pages has a stated ceiling.
 - `CreatedAfter` is documented as strictly exclusive, so a high-water mark set
   to the last `createdAtUtc` seen would permanently lose every video sharing
   that timestamp — precisely the bulk-import case. The mark is set back by an
-  overlap window and every result is applied as an idempotent upsert, the same
-  rule the change-feed cursors already need.
+  overlap window and every result is applied as an idempotent upsert, separately from exact change-feed cursors above.
 - Pinning is not a stored column. (*Amended by
   [ADR 0033](0033-the-schema-is-the-glossary-made-physical-and-the-export-boundary-runs-between-tables.md):
   this decision speaks of a pin reason per video row, and the schema stores

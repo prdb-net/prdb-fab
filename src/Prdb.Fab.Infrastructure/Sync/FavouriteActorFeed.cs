@@ -54,7 +54,8 @@ public sealed class FavouriteActorFeed(FabDbContext context, PrdbGateway prdb, C
             page.HasMore ?? false,
             page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id,
-            page.ServerTimeUtc);
+            page.ServerTimeUtc,
+            page.Items?.Count ?? 0);
     }
 
     private async Task<int> ApplyAsync(List<FavoriteActorChangeDto>? items, CancellationToken cancellationToken)
