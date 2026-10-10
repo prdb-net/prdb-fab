@@ -354,6 +354,8 @@ public sealed class CatalogueBrowse(
             return null;
         }
 
+        var siteRow = await context.CatalogueSites.AsNoTracking().SingleAsync(row => row.PrdbId == prdbId, cancellationToken);
+        site = site with { Metadata = SiteMetadata.Of(siteRow) };
         var videos = context.CatalogueVideos
             .AsNoTracking()
             .Where(row => row.Site != null && row.Site.PrdbId == prdbId);
@@ -482,6 +484,9 @@ public sealed class CatalogueBrowse(
                 row.DurationMs,
                 row.DurationSpreadMs,
                 row.DurationFileCount,
+                row.Description,
+                row.StashdbSceneId,
+                SiteRow = row.Site,
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -556,7 +561,10 @@ public sealed class CatalogueBrowse(
                     preview.TileWidth,
                     preview.TileHeight,
                     preview.TileCount))],
-            previewsComing);
+            previewsComing,
+            video.Description,
+            video.StashdbSceneId,
+            video.SiteRow is null ? null : SiteMetadata.Of(video.SiteRow));
     }
 
     /// <summary>
@@ -888,7 +896,7 @@ public sealed record WantedList(
     bool FeedHasRun,
     bool RecentWindowFilling);
 
-public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite, bool Ignored = false);
+public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite, bool Ignored = false, SiteMetadata? Metadata = null);
 
 public sealed record SiteCard(
     Guid PrdbId,
@@ -999,7 +1007,10 @@ public sealed record VideoPreview(
     IReadOnlyList<PreviewActor> Actors,
     IReadOnlyList<PreviewImage> Images,
     IReadOnlyList<UserPreviewCard> UserPreviews,
-    bool UserPreviewsComing);
+    bool UserPreviewsComing,
+    string? Description = null,
+    Guid? StashdbSceneId = null,
+    SiteMetadata? SiteMetadata = null);
 
 /// <summary>One credit on a Preview, and the Actor page it leads to.</summary>
 public sealed record PreviewActor(Guid PrdbId, string Name);

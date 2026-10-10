@@ -12,12 +12,13 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The only way a catalogue row is created. ADR 0013 rests an argument on that
+/// Full detail and current Video changes share this writer. ADR 0013 rests an argument on that
 /// — <c>VideoSummaryDto</c> carries no image field, so a row born from a
 /// summary would be a row with no artwork and no way to know it was missing —
-/// and both routes that produce a <c>VideoDetailDto</c> come through here:
+/// and all routes that produce a <c>VideoDetailDto</c> come through here:
 /// What's New, discovering ids and reading them back at fifty a request, and
-/// ADR 0013's repair pass doing the same thing in the other direction.
+/// ADR 0013's repair pass doing the same thing in the other direction, and
+/// current Video changes mapped into the same full detail contract.
 /// </para>
 /// <para>
 /// A write is a reconcile rather than an insert, because the payload is the
@@ -90,6 +91,9 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             }
         }
 
+        video.Description = detail.Description;
+        video.StashdbSceneId = detail.StashdbSceneId;
+
         video.ReleaseDate = detail.ReleaseDate is { } released
             ? DateOnly.FromDateTime(released.DateTime)
             : null;
@@ -104,13 +108,9 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
         video.UpdatedAtUtc = detail.UpdatedAtUtc ?? default;
         video.LastReadAt = time.GetUtcNow();
 
-        if (detail.Site?.Id is { } siteId)
+        if (detail.Site?.Id is not null)
         {
-            video.SiteId = await catalogue.SiteAsync(
-                siteId,
-                detail.Site.Title,
-                detail.Site.Network?.Title,
-                cancellationToken);
+            video.SiteId = await catalogue.SiteDetailAsync(detail.Site, detail.UpdatedAtUtc, cancellationToken);
         }
         else video.SiteId = null;
 

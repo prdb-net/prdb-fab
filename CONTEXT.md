@@ -410,7 +410,11 @@ _Avoid_: Refresh, Poll, Update, Crawl
 The copy of prdb's videos, sites and actors the tool holds locally. A cache of
 all Actors and Sites, and of Videos in the Recent Window plus those otherwise
 looked at or pinned, rather than a complete Video copy; never the library, which
-is what the tool writes to disk.
+is what the tool writes to disk. Video descriptions and StashDB scene IDs are
+prdb-supplied metadata and external identity, not a second Identification
+source. Site URL/links and optional Platform/Account context are retained;
+Platform is the hosting service, distinct from the studio Network. No account
+owner is inferred from a Video's Actor credits.
 _Avoid_: Mirror, Corpus, Metadata store, Cache
 
 **Actor Catalogue Fill**:

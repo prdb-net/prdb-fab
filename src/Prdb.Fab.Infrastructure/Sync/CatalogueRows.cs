@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Sdk.Generated.Models;
 
 namespace Prdb.Fab.Infrastructure.Sync;
 
@@ -137,4 +138,24 @@ public sealed class CatalogueRows(FabDbContext context)
 
         return row.Id;
     }
+    /// <summary>Reconcile a full nested Site without making its Video stamp a Site-feed cursor.</summary>
+    public async Task<long> SiteDetailAsync(VideoDetailSiteDto detail, DateTimeOffset? videoStamp, CancellationToken cancellationToken)
+    {
+        var id = await SiteAsync(detail.Id!.Value, detail.Title, detail.Network?.Title, cancellationToken);
+        var row = await context.CatalogueSites.AsTracking().SingleAsync(s => s.Id == id, cancellationToken);
+        if (!row.StillOffered || (row.UpdatedAtUtc is { } siteStamp && (videoStamp is null || videoStamp < siteStamp))
+            || (row.DetailUpdatedAtUtc is { } prior && (videoStamp is null || videoStamp < prior))) return id;
+        row.Title = detail.Title ?? string.Empty;
+        row.Network = detail.Network?.Title;
+        row.Url = detail.Url;
+        row.PlatformId = detail.PlatformId;
+        row.PlatformKey = detail.PlatformKey;
+        row.PlatformTitle = detail.PlatformTitle;
+        row.AccountHandle = detail.AccountHandle;
+        row.DetailUpdatedAtUtc = videoStamp;
+        // The nested payload has no links array, so it cannot withdraw Site-feed links.
+        await context.SaveChangesAsync(cancellationToken);
+        return id;
+    }
+
 }

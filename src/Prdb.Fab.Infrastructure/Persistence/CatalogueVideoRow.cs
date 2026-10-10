@@ -24,6 +24,9 @@ public sealed class CatalogueVideoRow
 
     public required string Title { get; set; }
 
+    public string? Description { get; set; }
+    public Guid? StashdbSceneId { get; set; }
+
     public DateTimeOffset? ChangesBaselineAt { get; set; }
 
     public bool Available { get; set; } = true;

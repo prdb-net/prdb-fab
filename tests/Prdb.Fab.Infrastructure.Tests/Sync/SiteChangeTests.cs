@@ -55,6 +55,9 @@ public sealed class SiteChangeTests
             local = site.Id;
             Assert.Equal("Network", site.Network);
             Assert.Equal("Platform", site.PlatformTitle);
+            var metadata = SiteMetadata.Of(site);
+            Assert.Equal("https://example.test/creator", metadata.Url);
+            Assert.Equal("Home", Assert.Single(metadata.Links).Label);
             context.FavouriteSites.Add(new FavouriteSiteRow { SiteId = local });
             await context.SaveChangesAsync(Token);
         }
@@ -90,6 +93,6 @@ public sealed class SiteChangeTests
         if (result.DueIn is not null) Assert.Equal(TimeSpan.FromSeconds(10), result.DueIn);
     }
     private static string Page(string? title, DateTimeOffset at, bool more = false, bool deleted = false) => $$$"""
-        {"items":[{"eventType":"{{{(deleted ? "deleted" : "updated")}}}","site":{"id":"{{{Site}}}","title":{{{System.Text.Json.JsonSerializer.Serialize(title)}}},"networkTitle":"Network","platformTitle":"Platform","accountHandle":"creator","isDeleted":{{{(deleted ? "true" : "false")}}},"updatedAtUtc":"{{{at:O}}}"}}],"hasMore":{{{(more ? "true" : "false")}}},"serverTimeUtc":"{{{at:O}}}","nextCursor":{"id":"{{{Site}}}","updatedAtUtc":"{{{at:O}}}"}}
+        {"items":[{"eventType":"{{{(deleted ? "deleted" : "updated")}}}","site":{"id":"{{{Site}}}","title":{{{System.Text.Json.JsonSerializer.Serialize(title)}}},"url":"https://example.test/creator","links":[{"label":"Home","url":"https://example.test/home"},{"label":"Bad","url":"javascript:alert(1)"}],"networkTitle":"Network","platformTitle":"Platform","accountHandle":"creator","isDeleted":{{{(deleted ? "true" : "false")}}},"updatedAtUtc":"{{{at:O}}}"}}],"hasMore":{{{(more ? "true" : "false")}}},"serverTimeUtc":"{{{at:O}}}","nextCursor":{"id":"{{{Site}}}","updatedAtUtc":"{{{at:O}}}"}}
         """;
 }

@@ -599,6 +599,12 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<string>("AccountHandle")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DetailUpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinksJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Network")
                         .HasColumnType("TEXT");
 
@@ -714,6 +720,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeletedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("DurationFileCount")
                         .HasColumnType("INTEGER");
 
@@ -741,6 +750,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.Property<long?>("SiteId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("StashdbSceneId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()

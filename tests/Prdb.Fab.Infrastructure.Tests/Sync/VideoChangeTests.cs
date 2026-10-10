@@ -43,7 +43,7 @@ public sealed class VideoChangeTests
         var actor = Guid.NewGuid();
         var api = new FakePrdbApi().Answers("/videos/changes", Empty(Stamp))
             .Answers("/videos/changes", $$$"""
-            {"items":[{"eventType":"updated","video":{"id":"{{{Video}}}","title":"Corrected","createdAtUtc":"{{{Stamp.AddYears(-1):O}}}","updatedAtUtc":"{{{Stamp.AddMinutes(1):O}}}","durationMs":123000,"site":{"id":"{{{site}}}","title":"New Site"},"preNames":[{"title":"New needle"}],"actors":[{"id":"{{{actor}}}","name":"Credit"}],"images":[]}}],"hasMore":false,"serverTimeUtc":"{{{Stamp.AddMinutes(2):O}}}","nextCursor":{"id":"{{{Video}}}","updatedAtUtc":"{{{Stamp.AddMinutes(1):O}}}"}}
+            {"items":[{"eventType":"updated","video":{"id":"{{{Video}}}","title":"Corrected","createdAtUtc":"{{{Stamp.AddYears(-1):O}}}","updatedAtUtc":"{{{Stamp.AddMinutes(1):O}}}","durationMs":123000,"description":"From the change feed","stashdbSceneId":"00000000-0000-4000-8000-000000000001","site":{"id":"{{{site}}}","title":"New Site","url":"https://example.test/creator","platformTitle":"Creator Platform","accountHandle":"creator"},"preNames":[{"title":"New needle"}],"actors":[{"id":"{{{actor}}}","name":"Credit"}],"images":[]}}],"hasMore":false,"serverTimeUtc":"{{{Stamp.AddMinutes(2):O}}}","nextCursor":{"id":"{{{Video}}}","updatedAtUtc":"{{{Stamp.AddMinutes(1):O}}}"}}
             """);
         await using var db = await CreateAsync(api);
         await RunAsync<VideoFeedRoutine>(db);
@@ -54,6 +54,9 @@ public sealed class VideoChangeTests
         Assert.Equal("Corrected", video.Title);
         Assert.False(video.TitleSearchedBackwards);
         Assert.Equal(123000, video.DurationMs);
+        Assert.Equal("From the change feed", video.Description);
+        Assert.Equal(Guid.Parse("00000000-0000-4000-8000-000000000001"), video.StashdbSceneId);
+        Assert.Equal("Creator Platform", (await context.CatalogueSites.SingleAsync(Token)).PlatformTitle);
         Assert.Equal(site, (await context.CatalogueSites.SingleAsync(Token)).PrdbId);
         Assert.Equal("New needle", (await context.CatalogueVideoPreNames.SingleAsync(Token)).PreName);
         Assert.Single(await context.CatalogueVideoActors.ToListAsync(Token));

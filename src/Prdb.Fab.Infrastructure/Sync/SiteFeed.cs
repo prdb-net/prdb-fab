@@ -43,6 +43,7 @@ public sealed class SiteFeed(FabDbContext context, PrdbGateway prdb, CatalogueRo
                 row.Title = site.Title ?? string.Empty;
                 row.Network = site.NetworkTitle;
                 row.Url = site.Url;
+                row.LinksJson = System.Text.Json.JsonSerializer.Serialize((site.Links ?? []).Select(link => new CatalogueLink(link.Label, link.Url)));
                 row.PlatformId = site.PlatformId;
                 row.PlatformKey = site.PlatformKey;
                 row.PlatformTitle = site.PlatformTitle;

@@ -4291,6 +4291,37 @@
           "ignored": {
             "type": "boolean",
             "default": false
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SiteMetadata"
+              }
+            ]
+          }
+        }
+      },
+      "CatalogueLink": {
+        "required": [
+          "label",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8552,6 +8583,63 @@
           }
         }
       },
+      "SiteMetadata": {
+        "required": [
+          "network",
+          "url",
+          "platformId",
+          "platformKey",
+          "platformTitle",
+          "accountHandle",
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platformId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "platformKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platformTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountHandle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogueLink"
+            }
+          }
+        }
+      },
       "SiteOnlyMatch": {
         "required": [
           "prdbId",
@@ -9474,6 +9562,29 @@
           },
           "userPreviewsComing": {
             "type": "boolean"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stashdbSceneId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "siteMetadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SiteMetadata"
+              }
+            ]
           }
         }
       },

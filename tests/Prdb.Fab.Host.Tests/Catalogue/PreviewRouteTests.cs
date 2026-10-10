@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 using Prdb.Fab.Infrastructure.Persistence;
 
@@ -134,6 +136,39 @@ public sealed class PreviewRouteTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, answer.StatusCode);
+    }
+
+    [Fact]
+    public async Task Optional_metadata_is_read_locally_and_unsafe_links_are_filtered()
+    {
+        await using var application = new FabApplication().AtPrdb("http://127.0.0.1:1");
+        using var client = await application.SignedInClientAsync();
+        var id = await SeedAsync(application, images: 1);
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var video = await context.CatalogueVideos.AsTracking().SingleAsync(TestContext.Current.CancellationToken);
+            video.Description = "<script>alert('upstream')</script>";
+            video.StashdbSceneId = Guid.Parse("00000000-0000-4000-8000-000000000001");
+            var site = await context.CatalogueSites.AsTracking().SingleAsync(TestContext.Current.CancellationToken);
+            site.Url = "javascript:alert(1)";
+            site.Network = "Studio Network";
+            site.PlatformTitle = "Creator Platform";
+            site.AccountHandle = "creator";
+            site.LinksJson = "[{\"Label\":\"Home\",\"Url\":\"https://example.test/creator\"},{\"Label\":\"Bad\",\"Url\":\"data:text/html,unsafe\"}]";
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        using var answer = await client.GetAsync($"/api/catalogue/videos/{id}", TestContext.Current.CancellationToken);
+        answer.EnsureSuccessStatusCode();
+        using var json = JsonDocument.Parse(await answer.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        var root = json.RootElement;
+        Assert.Equal("<script>alert('upstream')</script>", root.GetProperty("description").GetString());
+        var metadata = root.GetProperty("siteMetadata");
+        Assert.Equal(JsonValueKind.Null, metadata.GetProperty("url").ValueKind);
+        Assert.Equal("Studio Network", metadata.GetProperty("network").GetString());
+        Assert.Equal("Creator Platform", metadata.GetProperty("platformTitle").GetString());
+        Assert.Single(metadata.GetProperty("links").EnumerateArray());
+
     }
 
     private static async Task<Answer> ReadAsync(HttpClient client, Guid video)

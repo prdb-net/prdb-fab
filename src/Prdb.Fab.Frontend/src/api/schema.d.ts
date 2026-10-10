@@ -4101,6 +4101,11 @@ export interface components {
             favourite: boolean;
             /** @default false */
             ignored: boolean;
+            metadata?: null | components["schemas"]["SiteMetadata"];
+        };
+        CatalogueLink: {
+            label: null | string;
+            url: null | string;
         };
         /** @enum {unknown} */
         CatalogueScope: "Favourites" | "All";
@@ -5078,6 +5083,16 @@ export interface components {
             /** @default false */
             ignored: boolean;
         };
+        SiteMetadata: {
+            network: null | string;
+            url: null | string;
+            /** Format: uuid */
+            platformId: null | string;
+            platformKey: null | string;
+            platformTitle: null | string;
+            accountHandle: null | string;
+            links: components["schemas"]["CatalogueLink"][];
+        };
         SiteOnlyMatch: {
             /** Format: uuid */
             prdbId: string;
@@ -5293,6 +5308,10 @@ export interface components {
             images: components["schemas"]["PreviewImage"][];
             userPreviews: components["schemas"]["UserPreviewCard"][];
             userPreviewsComing: boolean;
+            description?: null | string;
+            /** Format: uuid */
+            stashdbSceneId?: null | string;
+            siteMetadata?: null | components["schemas"]["SiteMetadata"];
         };
         WantedList: {
             videos: components["schemas"]["VideoCard"][];

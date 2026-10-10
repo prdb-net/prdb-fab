@@ -31,6 +31,9 @@ public sealed class CatalogueSiteRow
 
     public DateTimeOffset? UpdatedAtUtc { get; set; }
     public string? Url { get; set; }
+    public string? LinksJson { get; set; }
+    // Nested Video details have no Site stamp; keep their ordering separate.
+    public DateTimeOffset? DetailUpdatedAtUtc { get; set; }
     public Guid? PlatformId { get; set; }
     public string? PlatformKey { get; set; }
     public string? PlatformTitle { get; set; }
