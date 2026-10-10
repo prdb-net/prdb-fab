@@ -6,6 +6,7 @@ using System.Web;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Host.Tests.Connections;
@@ -32,6 +33,10 @@ public sealed class ManualSearchRouteTests
             .Answering(FabTransports.Prdb, prdb)
             .Answering(FabTransports.Sabnzbd, sabnzbd);
         using var client = await application.SignedInClientAsync();
+        // This test drives the real routines directly. Stop their hosted lane
+        // workers first so the same search cannot be run concurrently by both.
+        foreach (var worker in application.Services.GetServices<IHostedService>().OfType<BackgroundService>())
+            await worker.StopAsync(TestContext.Current.CancellationToken);
         await SeedAsync(application, videoId, configureRemotePath: true);
 
         var local = await client.GetFromJsonAsync<VideoPage>(
