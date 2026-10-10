@@ -23,7 +23,9 @@ public sealed class SabnzbdRoutine(FabDbContext context, SabnzbdGateway sabnzbd)
         // work is outstanding. This slower check exists only for an idle
         // installation, so the same client is never asked twice for liveness.
         if (await context.Downloads.AnyAsync(
-                row => row.State == DownloadState.Outstanding,
+                row => row.State == DownloadState.Outstanding
+                    || row.State == DownloadState.Completed
+                        && (row.Storage == null || row.Storage.Trim() == ""),
                 cancellationToken))
         {
             return RunResult.NothingToDo;

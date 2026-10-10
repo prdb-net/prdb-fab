@@ -205,8 +205,10 @@ public sealed class AcquisitionTests
         }
     }
 
-    [Fact]
-    public async Task The_five_minute_reachability_check_is_idle_while_following_is_active()
+    [Theory]
+    [InlineData(DownloadState.Outstanding)]
+    [InlineData(DownloadState.Completed)]
+    public async Task The_five_minute_reachability_check_is_idle_while_following_is_active(DownloadState state)
     {
         var sabnzbd = new CategoriesHandler();
         await using var database = await TestDatabase.CreateAsync(also: services =>
@@ -218,7 +220,9 @@ public sealed class AcquisitionTests
         await context.Installation.ExecuteUpdateAsync(update => update
             .SetProperty(row => row.SabnzbdUrl, "http://sabnzbd.invalid")
             .SetProperty(row => row.SabnzbdApiKey, "fixture"), TestContext.Current.CancellationToken);
-        context.Downloads.Add(Download(database, seeded.VideoId, seeded.IndexerId, "active", "nzo-active"));
+        var active = Download(database, seeded.VideoId, seeded.IndexerId, "active", "nzo-active");
+        active.State = state;
+        context.Downloads.Add(active);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await scope.ServiceProvider.GetRequiredService<SabnzbdRoutine>()
@@ -226,6 +230,83 @@ public sealed class AcquisitionTests
 
         Assert.Null(result.Outcome);
         Assert.Empty(sabnzbd.Modes);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(" ")]
+    public async Task Following_recovers_a_completed_downloads_missing_storage_without_reopening_it(string? storage)
+    {
+        var sabnzbd = new FollowingHandler
+        {
+            History = """
+                {"history":{"slots":[
+                  {"nzo_id":"complete","name":"Complete","status":"Completed","storage":"/remote/Complete"}
+                ]}}
+                """,
+        };
+        await using var database = await FollowingDatabaseAsync(sabnzbd);
+        var seeded = await SeedAsync(database);
+        Guid id;
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var row = Download(database, seeded.VideoId, seeded.IndexerId, "Complete", "complete");
+            row.State = DownloadState.Completed;
+            row.Storage = storage;
+            id = row.Id;
+            context.Downloads.Add(row);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var scope = database.Scope())
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<DownloadFollowingRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+            Assert.Equal(1, result.ItemsHandled);
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var row = await context.Downloads.SingleAsync(item => item.Id == id, TestContext.Current.CancellationToken);
+            Assert.Equal(DownloadState.Completed, row.State);
+            Assert.Null(row.Cause);
+            Assert.Equal("/remote/Complete", row.Storage);
+            Assert.Equal(0, row.ConsecutiveAbsences);
+        }
+
+        sabnzbd.Modes.Clear();
+        await using var resumed = database.Scope();
+        await resumed.ServiceProvider.GetRequiredService<DownloadFollowingRoutine>()
+            .RunAsync(null, TestContext.Current.CancellationToken);
+        Assert.Empty(sabnzbd.Modes);
+    }
+
+    [Theory]
+    [InlineData(false, "{\"history\":{\"slots\":[]}}")]
+    [InlineData(false, "{\"history\":{\"slots\":[{\"nzo_id\":\"complete\",\"name\":\"Complete\",\"status\":\"Failed\",\"storage\":\"/remote/Complete\"}]}}")]
+    [InlineData(true, "")]
+    public async Task Missing_or_failed_history_does_not_undo_a_completed_download(bool throws, string history)
+    {
+        var sabnzbd = new FollowingHandler { History = history, HistoryThrows = throws };
+        await using var database = await FollowingDatabaseAsync(sabnzbd);
+        var seeded = await SeedAsync(database);
+        await using var scope = database.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        var row = Download(database, seeded.VideoId, seeded.IndexerId, "Complete", "complete");
+        row.State = DownloadState.Completed;
+        context.Downloads.Add(row);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        for (var attempt = 0; attempt < DownloadFollowing.AbsencesBeforeVanished + 1; attempt++)
+        {
+            await scope.ServiceProvider.GetRequiredService<DownloadFollowingRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+        }
+
+        await context.Entry(row).ReloadAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(DownloadState.Completed, row.State);
+        Assert.Null(row.Cause);
+        Assert.Null(row.Storage);
+        Assert.Equal(0, row.ConsecutiveAbsences);
+        Assert.Single(await context.Downloads.ToListAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]

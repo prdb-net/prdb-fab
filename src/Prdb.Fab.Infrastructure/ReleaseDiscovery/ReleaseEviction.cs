@@ -51,10 +51,29 @@ public sealed class ReleaseEviction(
 
         if (remainingOver > 0)
         {
-            logger.LogWarning(
-                "The Indexer Cache holds {Held} Release(s), {Over} over its ceiling, and no safe disposal can hold the bound.",
-                held - removed,
-                remainingOver);
+            var unexaminedOlder = await pins.Unpinned(context.Releases.Where(release =>
+                    release.IndexerId == indexerId
+                    && release.PostDate < recentSince
+                    && release.IdentificationState == IdentificationState.Unexamined))
+                .CountAsync(cancellationToken);
+            if (unexaminedOlder > 0)
+            {
+                logger.LogWarning(
+                    "The Indexer Cache holds {Held} Release(s), {Over} over its ceiling; {Unexamined} older unexamined Release(s) still prevent safe disposal.",
+                    held - removed,
+                    remainingOver,
+                    unexaminedOlder);
+            }
+            else
+            {
+                // ADR 0050 explicitly lets the Recent Window exceed the row
+                // ceiling. Pins also protect deliberate local obligations;
+                // neither is an Identification backlog or a failed eviction.
+                logger.LogInformation(
+                    "The Indexer Cache retains {Held} Release(s), {Over} over its ceiling, to preserve the Recent Window and pinned Releases.",
+                    held - removed,
+                    remainingOver);
+            }
         }
         else
         {

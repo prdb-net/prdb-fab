@@ -264,7 +264,9 @@ public sealed class StatusService(
         await SetAsync(DownloadFollowingRoutine.RoutineName, async () =>
         {
             var outstanding = await context.Downloads.CountAsync(
-                row => row.State == DownloadState.Outstanding,
+                row => row.State == DownloadState.Outstanding
+                    || row.State == DownloadState.Completed
+                        && (row.Storage == null || row.Storage.Trim() == ""),
                 cancellationToken);
             var retryBudget = await context.Installation
                 .Select(row => row.RetryBudget)
