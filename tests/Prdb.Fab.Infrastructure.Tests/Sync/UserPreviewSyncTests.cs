@@ -458,6 +458,58 @@ public sealed class UserPreviewSyncTests
         }
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Explicit_deletion_or_blank_media_overrides_visible_signature_and_restores_only_when_newer(bool deletedEvent)
+    {
+        var removed = deletedEvent
+            ? Sprite(at: Noon.AddHours(1))
+            : Sprite(at: Noon.AddHours(1)).Replace("https://cdn.invalid/previews/sprite.jpg", "");
+        var prdb = new FakePrdbApi()
+            .Answers(Changes, EmptyPage(Noon))
+            .Answers(ByVideo(Video), $"[{Sprite()}]")
+            .Answers(Changes, ChangePage(removed, Noon.AddHours(1), deletedEvent ? "deleted" : "updated"))
+            .Answers(ByVideo(Video), $"[{Sprite(at: Noon.AddHours(1))}]")
+            .Answers(Changes, ChangePage(Sprite(at: Noon.AddHours(2)), Noon.AddHours(2)));
+        await using var database = await CreateAsync(prdb);
+        await AskAsync(database, UserPreviewDemand.Preview);
+        await RunAsync<PreviewUserPreviewRoutine>(database, Video);
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<FabDbContext>().UserPreviews
+                .ExecuteUpdateAsync(row => row.SetProperty(preview => preview.CachedVersion, "previous-pair"), TestContext.Current.CancellationToken);
+        }
+        await RunAsync<UserPreviewFeedRoutine>(database);
+        await using (var scope = database.Scope())
+        {
+            var row = await scope.ServiceProvider.GetRequiredService<FabDbContext>().UserPreviews.SingleAsync(TestContext.Current.CancellationToken);
+            Assert.False(row.Shown);
+            Assert.True(row.Deleted);
+            Assert.Null(row.CachedVersion);
+        }
+        database.Time.Advance(UserPreviewContract.Freshness + TimeSpan.FromMinutes(1));
+        await AskAsync(database, UserPreviewDemand.Preview);
+        await RunAsync<PreviewUserPreviewRoutine>(database, Video);
+        Assert.False(await ShownAsync(database));
+        await RunAsync<UserPreviewFeedRoutine>(database);
+        Assert.True(await ShownAsync(database));
+    }
+
+    [Fact]
+    public async Task Minimal_deleted_event_with_no_hash_withdraws_known_preview()
+    {
+        var prdb = new FakePrdbApi()
+            .Answers(Changes, EmptyPage(Noon))
+            .Answers(ByVideo(Video), $"[{Sprite()}]")
+            .Answers(Changes, ChangePage($"{{\"id\":\"{Preview:D}\",\"updatedAtUtc\":\"{Stamp(Noon.AddHours(1))}\"}}", Noon.AddHours(1), "deleted"));
+        await using var database = await CreateAsync(prdb);
+        await AskAsync(database, UserPreviewDemand.Preview);
+        await RunAsync<PreviewUserPreviewRoutine>(database, Video);
+        await RunAsync<UserPreviewFeedRoutine>(database);
+        Assert.False(await ShownAsync(database));
+    }
+
     private static async Task<bool> ShownAsync(TestDatabase database)
     {
         await using var scope = database.Scope();
@@ -513,10 +565,10 @@ public sealed class UserPreviewSyncTests
         {"items":[],"pageSize":1,"hasMore":false,"serverTimeUtc":"{{Stamp(at)}}","nextCursor":null}
         """;
 
-    private static string ChangePage(string row, DateTimeOffset at) =>
+    private static string ChangePage(string row, DateTimeOffset at, string eventType = "Updated") =>
         $$"""
         {
-          "items": [{"eventType":"Updated","videoUserImage":{{row}}}],
+          "items": [{"eventType":"{{eventType}}","videoUserImage":{{row}}}],
           "pageSize": 1000,
           "hasMore": false,
           "serverTimeUtc": "{{Stamp(at)}}",

@@ -13,6 +13,7 @@ import {
   type VideoCard,
   type VideoPreview,
 } from '../api/client.ts'
+import { SiteMetadataView, VideoDescription } from './SiteMetadata.tsx'
 import { CardActions } from './CardActions.tsx'
 import { CachedArtwork } from './Grid.tsx'
 import { usePreview } from './preview.ts'
@@ -221,7 +222,9 @@ function Preview({
             title={title}
           />
 
+          <VideoDescription description={preview.data?.description} />
           <People preview={preview.data} video={video} />
+          <SiteMetadataView metadata={preview.data?.siteMetadata} />
 
           {preview.isError && (
             <p className={styles.problem} role="alert">
@@ -805,6 +808,8 @@ function facts(video: VideoCard, preview?: VideoPreview): string {
     downloading,
     held,
     video.wanted ? 'Wanted' : null,
+    video.catalogueNotice,
+    video.siteIgnored ? 'Site is ignored in prdb; unignore there to add new Wanted intent' : null,
   ]
     .filter(Boolean)
     .join(' · ')

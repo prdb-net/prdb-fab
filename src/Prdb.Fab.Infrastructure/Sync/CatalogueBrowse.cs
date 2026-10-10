@@ -268,7 +268,8 @@ public sealed class CatalogueBrowse(
                     .OrderByDescending(video => video.CreatedAtUtc)
                     .ThenBy(video => video.Id)
                     .Select(video => (long?)video.Id)
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                context.IgnoredSites.Any(ignored => ignored.SitePrdbId == row.PrdbId && ignored.Ignored)))
             .ToListAsync(cancellationToken);
 
         return new SitePage(sites, wanted, APage, total, scope);
@@ -344,7 +345,8 @@ public sealed class CatalogueBrowse(
             .Select(row => new BrowseContext(
                 row.PrdbId,
                 row.Title,
-                context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id)))
+                context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id),
+                context.IgnoredSites.Any(ignored => ignored.SitePrdbId == row.PrdbId && ignored.Ignored)))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (site is null)
@@ -352,6 +354,8 @@ public sealed class CatalogueBrowse(
             return null;
         }
 
+        var siteRow = await context.CatalogueSites.AsNoTracking().SingleAsync(row => row.PrdbId == prdbId, cancellationToken);
+        site = site with { Metadata = SiteMetadata.Of(siteRow) };
         var videos = context.CatalogueVideos
             .AsNoTracking()
             .Where(row => row.Site != null && row.Site.PrdbId == prdbId);
@@ -480,6 +484,9 @@ public sealed class CatalogueBrowse(
                 row.DurationMs,
                 row.DurationSpreadMs,
                 row.DurationFileCount,
+                row.Description,
+                row.StashdbSceneId,
+                SiteRow = row.Site,
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -554,7 +561,10 @@ public sealed class CatalogueBrowse(
                     preview.TileWidth,
                     preview.TileHeight,
                     preview.TileCount))],
-            previewsComing);
+            previewsComing,
+            video.Description,
+            video.StashdbSceneId,
+            video.SiteRow is null ? null : SiteMetadata.Of(video.SiteRow));
     }
 
     /// <summary>
@@ -753,6 +763,12 @@ public sealed class CatalogueBrowse(
 
         var wantedSet = wanted.ToHashSet();
         var matchedSet = matched.ToHashSet();
+        var states = await context.CatalogueVideos.Where(v => ids.Contains(v.PrdbId))
+            .Select(v => new { v.PrdbId, v.Available, v.MergedIntoId }).ToDictionaryAsync(v => v.PrdbId, cancellationToken);
+
+        var ignoredSites = await context.IgnoredSites.Where(s => s.Ignored)
+            .Select(s => s.SitePrdbId).ToHashSetAsync(cancellationToken);
+
         return [.. videos.Select(video => video with
         {
             DownloadReady = ready.Contains(video.PrdbId),
@@ -766,6 +782,8 @@ public sealed class CatalogueBrowse(
                 : matchedSet.Contains(video.Id)
                     ? VideoAvailability.ReleasesNeedInspection
                     : VideoAvailability.NoIdentifiedRelease,
+            CatalogueNotice = states.TryGetValue(video.PrdbId, out var state) ? CatalogueAvailability.Notice(state.Available, state.MergedIntoId) : null,
+            SiteIgnored = video.SitePrdbId is { } siteId && ignoredSites.Contains(siteId),
             ActiveDownloadId = activeDownloads.GetValueOrDefault(video.PrdbId)?.Id,
             ActiveDownloadState = activeDownloads.GetValueOrDefault(video.PrdbId)?.State,
         })];
@@ -811,7 +829,9 @@ public sealed record VideoCard(
     IReadOnlyList<string>? HeldQualities = null,
     VideoAvailability Availability = VideoAvailability.NoIdentifiedRelease,
     Guid? ActiveDownloadId = null,
-    DownloadState? ActiveDownloadState = null);
+    DownloadState? ActiveDownloadState = null,
+    bool SiteIgnored = false,
+    string? CatalogueNotice = null);
 
 public enum VideoAvailability
 {
@@ -876,7 +896,7 @@ public sealed record WantedList(
     bool FeedHasRun,
     bool RecentWindowFilling);
 
-public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite);
+public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite, bool Ignored = false, SiteMetadata? Metadata = null);
 
 public sealed record SiteCard(
     Guid PrdbId,
@@ -885,7 +905,8 @@ public sealed record SiteCard(
     int VideoCount,
     int HeldVideoCount,
     bool Favourite,
-    long? RepresentativeVideoId);
+    long? RepresentativeVideoId,
+    bool Ignored = false);
 
 public sealed record ActorCard(Guid PrdbId, string Name, int VideoCount, bool Favourite, bool HasArtwork);
 
@@ -986,7 +1007,10 @@ public sealed record VideoPreview(
     IReadOnlyList<PreviewActor> Actors,
     IReadOnlyList<PreviewImage> Images,
     IReadOnlyList<UserPreviewCard> UserPreviews,
-    bool UserPreviewsComing);
+    bool UserPreviewsComing,
+    string? Description = null,
+    Guid? StashdbSceneId = null,
+    SiteMetadata? SiteMetadata = null);
 
 /// <summary>One credit on a Preview, and the Actor page it leads to.</summary>
 public sealed record PreviewActor(Guid PrdbId, string Name);

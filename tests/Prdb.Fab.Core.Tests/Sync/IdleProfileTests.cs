@@ -16,9 +16,9 @@ public sealed class IdleProfileTests
     /// is the constant they are added up against.
     /// </summary>
     [Fact]
-    public void The_idle_profile_is_about_nine_requests_an_hour()
+    public void The_idle_profile_includes_the_hourly_ignored_site_feed()
     {
-        Assert.InRange(IdleProfile.RequestsAnHour, 9, 10);
+        Assert.InRange(IdleProfile.RequestsAnHour, 13, 14);
     }
 
     /// <summary>
@@ -30,7 +30,8 @@ public sealed class IdleProfileTests
     [Theory]
     [InlineData(6, false)]
     [InlineData(18, false)]
-    [InlineData(19, true)]
+    [InlineData(26, false)]
+    [InlineData(27, true)]
     [InlineData(1000, true)]
     public void A_plan_carries_the_schedule_when_half_of_it_covers_the_profile(int limit, bool carries)
     {

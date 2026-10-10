@@ -596,7 +596,25 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AccountHandle")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DetailUpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LinksJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Network")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PlatformId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlatformKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlatformTitle")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("PrdbId")
@@ -609,6 +627,12 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -684,7 +708,19 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Available")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ChangesBaselineAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("DurationFileCount")
@@ -699,6 +735,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("LastReadAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("MergedIntoId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("NormalisedTitle")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -711,6 +750,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.Property<long?>("SiteId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("StashdbSceneId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1051,6 +1093,27 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IgnoredSiteRow", b =>
+                {
+                    b.Property<Guid>("SitePrdbId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Ignored")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SitePrdbId");
+
+                    b.ToTable("ignored_site", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountScoped")
                         .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
                 });
 
@@ -2094,6 +2157,33 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("VideoPrdbId", "OsHash", "DisplayOrder", "PrdbId");
 
                     b.ToTable("user_preview", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.VideoChangeStateRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("BaselineCompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CaughtUpAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CaughtUpObservedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LowerBoundAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("video_change_state", (string)null);
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")

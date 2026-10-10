@@ -9,6 +9,7 @@ using Prdb.Fab.Core.Reporting;
 using Prdb.Fab.Core.Sync;
 using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Sdk.Generated.Models;
 
 namespace Prdb.Fab.Infrastructure.Sync;
 
@@ -19,7 +20,8 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public sealed class AccountPreferences(
     FabDbContext context,
     PrdbGateway prdb,
-    TimeProvider time)
+    TimeProvider time,
+    IgnoredSites ignores)
 {
     public async Task<AccountPreferenceVerdict> SetAsync(
         AccountPreferenceKind kind,
@@ -41,6 +43,9 @@ public sealed class AccountPreferences(
                 desired,
                 "The prdb connection is not configured. Check it and retry.");
         }
+
+        if (desired && await ignores.RestrictsAsync(kind, entityId, cancellationToken))
+            return AccountPreferenceVerdict.Rejected(desired, IgnoredSites.Explanation);
 
         var sent = await SendAsync(apiKey, kind, entityId, desired, cancellationToken);
         if (!sent.Updated)
@@ -88,6 +93,15 @@ public sealed class AccountPreferences(
             pending.Blocked = false;
         }
 
+        if (await ignores.RestrictsAsync(AccountPreferenceKind.WantedVideo, videoId, cancellationToken))
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            var blockedWrite = await context.AccountPreferenceWrites.AsNoTracking().SingleAsync(
+                w => w.Kind == AccountPreferenceKind.WantedVideo && w.EntityId == videoId, cancellationToken);
+            await RecordFailureAsync(blockedWrite, IgnoredSites.Explanation, true, cancellationToken);
+            return;
+        }
+
         await ApplyAsync(
             AccountPreferenceKind.WantedVideo,
             videoId,
@@ -113,6 +127,9 @@ public sealed class AccountPreferences(
                 cancellationToken);
         }
 
+        if (write.Desired && await ignores.RestrictsAsync(write.Kind, write.EntityId, cancellationToken))
+            return await RecordFailureAsync(write, IgnoredSites.Explanation, true, cancellationToken);
+
         var verdict = await SendAsync(
             apiKey,
             write.Kind,
@@ -121,6 +138,7 @@ public sealed class AccountPreferences(
             cancellationToken);
         if (!verdict.Updated)
         {
+            if (verdict.Outcome == AccountPreferenceOutcome.Deferred) return verdict;
             var blocked = verdict.Outcome is AccountPreferenceOutcome.Rejected
                 or AccountPreferenceOutcome.NotFound;
             return await RecordFailureAsync(write, verdict.Detail, blocked, cancellationToken);
@@ -186,7 +204,10 @@ public sealed class AccountPreferences(
                 401 => AccountPreferenceVerdict.Rejected(desired, "The prdb API key was rejected. Check the connection and retry."),
                 403 => AccountPreferenceVerdict.Rejected(desired, "The connected prdb account cannot write this preference."),
                 404 => AccountPreferenceVerdict.NotFound(desired),
-                409 => AccountPreferenceVerdict.Rejected(desired, "prdb refused this preference because the account limit was reached."),
+                409 => AccountPreferenceVerdict.Rejected(desired, ConflictReason(refused)),
+                429 => new(AccountPreferenceOutcome.Deferred, desired,
+                    "prdb is rate-limited. Retry when its request budget is available.",
+                    RetryAfter(refused)),
                 _ => AccountPreferenceVerdict.Failed(desired, "prdb could not update the preference. Retry shortly."),
             };
         }
@@ -198,6 +219,22 @@ public sealed class AccountPreferences(
                 "prdb did not answer. The previous state is unchanged; retry shortly.");
         }
     }
+
+    private static string ConflictReason(ApiException refused) => (refused switch
+    {
+        SiteIgnoredProblemDetails ignored => ignored.Code,
+        WantedVideoLimitProblemDetails limit => limit.Code,
+        _ => null,
+    }) switch
+    {
+        "site_ignored" => "This Site is ignored in your prdb account. Unignore it in prdb before adding a Favourite or Wanted Video.",
+        "wanted_video_limit_exceeded" => "The Wanted Video limit for your prdb account was reached. Remove a Wanted Video in prdb before adding another.",
+        _ => "prdb refused this preference because it conflicts with the account's current state.",
+    };
+
+    private static int? RetryAfter(ApiException refused) =>
+        refused.ResponseHeaders?.TryGetValue("Retry-After", out var values) is true
+            && int.TryParse(values.FirstOrDefault(), out var seconds) ? seconds : null;
 
     private async Task<AccountPreferenceVerdict> RecordFailureAsync(
         AccountPreferenceWriteRow write,

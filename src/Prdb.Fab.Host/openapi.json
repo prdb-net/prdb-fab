@@ -3862,6 +3862,8 @@
           "RetryBudgetSpent",
           "NoReleasesLeft",
           "DownloadInFlight",
+          "SiteIgnored",
+          "VideoUnavailable",
           null
         ]
       },
@@ -4285,6 +4287,41 @@
           },
           "favourite": {
             "type": "boolean"
+          },
+          "ignored": {
+            "type": "boolean",
+            "default": false
+          },
+          "metadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SiteMetadata"
+              }
+            ]
+          }
+        }
+      },
+      "CatalogueLink": {
+        "required": [
+          "label",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5145,6 +5182,12 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5584,6 +5627,12 @@
               "string"
             ],
             "format": "int64"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5672,6 +5721,12 @@
           },
           "operations": {
             "$ref": "#/components/schemas/OperationLogPage"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6957,6 +7012,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "videoChanges": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoChangeProgress"
+              }
+            ]
           }
         }
       },
@@ -8162,6 +8227,12 @@
               "string"
             ],
             "format": "int64"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8505,6 +8576,67 @@
               "string"
             ],
             "format": "int64"
+          },
+          "ignored": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "SiteMetadata": {
+        "required": [
+          "network",
+          "url",
+          "platformId",
+          "platformKey",
+          "platformTitle",
+          "accountHandle",
+          "links"
+        ],
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platformId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "platformKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platformTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountHandle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogueLink"
+            }
           }
         }
       },
@@ -9272,6 +9404,53 @@
                 "$ref": "#/components/schemas/DownloadState"
               }
             ]
+          },
+          "siteIgnored": {
+            "type": "boolean",
+            "default": false
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "VideoChangeProgress": {
+        "required": [
+          "baselineCompletedAt",
+          "caughtUpAt",
+          "lagSeconds",
+          "fresh"
+        ],
+        "type": "object",
+        "properties": {
+          "baselineCompletedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "caughtUpAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lagSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fresh": {
+            "type": "boolean"
           }
         }
       },
@@ -9383,6 +9562,29 @@
           },
           "userPreviewsComing": {
             "type": "boolean"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stashdbSceneId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "siteMetadata": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SiteMetadata"
+              }
+            ]
           }
         }
       },

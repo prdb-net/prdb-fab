@@ -45,6 +45,61 @@ public sealed class ChangeFeedTests
     private static readonly Guid AVideo = Guid.Parse("22222222-2222-4222-8222-222222222222");
     private static readonly Guid AnImage = Guid.Parse("33333333-3333-4333-8333-333333333333");
 
+    [Fact]
+    public async Task Equal_timestamps_keep_server_UUID_order_and_precision_across_scopes()
+    {
+        var first = Guid.Parse("ffffffff-ffff-4fff-8fff-ffffffffffff");
+        var second = Guid.Parse("00000000-0000-4000-8000-000000000001");
+        var stamp = Noon.AddTicks(1234567);
+        var prdb = new FakePrdbApi().Answers(Actors, ActorPage(first, "First", true, stamp))
+            .Answers(Actors, ActorPage(second, "Second", false, stamp));
+        await using var database = await CreateAsync(prdb);
+        await RunAsync<ActorFeedRoutine>(database);
+        await RunAsync<ActorFeedRoutine>(database);
+        await RunAsync<ActorFeedRoutine>(database);
+        var asked = prdb.AskedFor(Actors);
+        Assert.Equal(stamp, Time(Query(asked[1], "Since")));
+        Assert.Equal(first.ToString(), Query(asked[1], "SinceId"));
+        Assert.Equal(stamp, Time(Query(asked[2], "Since")));
+        Assert.Equal(second.ToString(), Query(asked[2], "SinceId"));
+    }
+
+    [Fact]
+    public void An_invalid_nonempty_envelope_does_not_manufacture_cursor_progress()
+    {
+        Assert.Null(new FeedPage(0, false, null, null, Noon, 1).Next());
+        Assert.Null(FeedPage.Nothing.Next());
+        Assert.Null(new FeedPage(0, true, null, null, Noon, 0).Next());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Empty_pages_use_the_server_settle_bound_even_when_a_cursor_is_echoed(bool echoed)
+    {
+        var cursor = echoed ? $$"""{"updatedAtUtc":"{{Stamp(Noon)}}","id":"{{JaneDoe}}"}""" : "null";
+        var prdb = new FakePrdbApi().Answers(Actors, ActorPage(JaneDoe, "Jane", false, Noon))
+            .Answers(Actors, $$"""{"items":[],"hasMore":false,"serverTimeUtc":"{{Stamp(Noon.AddMinutes(2))}}","nextCursor":{{cursor}}}""");
+        await using var database = await CreateAsync(prdb);
+        await RunAsync<ActorFeedRoutine>(database);
+        await RunAsync<ActorFeedRoutine>(database);
+        await RunAsync<ActorFeedRoutine>(database);
+        var asked = prdb.AskedFor(Actors);
+        Assert.Equal(Noon.AddMinutes(2), Time(Query(asked[2], "Since")));
+        Assert.Null(Query(asked[2], "SinceId"));
+    }
+
+    [Fact]
+    public async Task Globally_received_images_advance_the_row_cursor_even_when_none_are_applied()
+    {
+        var prdb = new FakePrdbApi().Answers(Images, ImagePage(AnImage, AVideo, "https://example.invalid/a.jpg", at: Noon));
+        await using var database = await CreateAsync(prdb);
+        await RunAsync<VideoImageFeedRoutine>(database);
+        await RunAsync<VideoImageFeedRoutine>(database);
+        await RunAsync<VideoImageFeedRoutine>(database);
+        Assert.Equal(AnImage.ToString(), Query(prdb.AskedFor(Images)[2], "SinceId"));
+    }
+
     /// <summary>
     /// ADR 0013's overlap, through the whole stack: a feed sitting at the last
     /// value it saw asks from before it, and the row sharing that timestamp is
@@ -52,7 +107,7 @@ public sealed class ChangeFeedTests
     /// landed in the same second as the boundary, permanently and silently.
     /// </summary>
     [Fact]
-    public async Task A_feed_is_replayed_from_before_its_own_cursor()
+    public async Task A_final_nonempty_page_preserves_the_exact_row_cursor()
     {
         var prdb = new FakePrdbApi().Answers(Actors, ActorPage(JaneDoe, "Jane Doe", hasMore: false, at: Noon));
 
@@ -72,11 +127,9 @@ public sealed class ChangeFeedTests
         // way the service does.
         Assert.Equal(DateTimeOffset.MinValue, Time(Query(asked[0], "Since")));
 
-        // The second asked from a minute before where the first left off, and
-        // without the tie-breaker, which only means anything at the exact
-        // timestamp it came from.
-        Assert.Equal(Noon - FeedPosition.Overlap, Time(Query(asked[1], "Since")));
-        Assert.Null(Query(asked[1], "SinceId"));
+        // A final nonempty page keeps the exact row cursor for the next run.
+        Assert.Equal(Noon, Time(Query(asked[1], "Since")));
+        Assert.Equal(JaneDoe.ToString(), Query(asked[1], "SinceId"));
 
         // And the row that was there at the boundary is still there.
         await using var scope = database.Scope();

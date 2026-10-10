@@ -69,6 +69,7 @@ public sealed record PrdbBudget(int Limit, int Remaining, TimeSpan ResetIn)
 
         PrdbWork.UserFeeds => 0.10,
         PrdbWork.WhatsNew => 0.15,
+        PrdbWork.CatalogueChanges => 0.18,
         PrdbWork.Images => 0.20,
         PrdbWork.Actors => 0.25,
         PrdbWork.Sites => 0.30,

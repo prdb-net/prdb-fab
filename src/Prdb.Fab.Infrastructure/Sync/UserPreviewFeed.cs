@@ -76,7 +76,8 @@ public sealed class UserPreviewFeed(
             page.HasMore ?? false,
             page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id,
-            page.ServerTimeUtc);
+            page.ServerTimeUtc,
+            page.Items?.Count ?? 0);
     }
 }
 
@@ -122,7 +123,7 @@ public sealed class UserPreviewFeedRoutine(
     protected override Task<bool> AnythingToFollowAsync(CancellationToken cancellationToken) =>
         previews.AnythingFollowedAsync(cancellationToken);
 
-    protected override async Task ReachedAsync(FeedPosition position, CancellationToken cancellationToken)
+    protected override async Task ReachedAsync(FeedPosition position, FeedPage page, CancellationToken cancellationToken)
     {
         var expired = await previews.ExpireAsync(cancellationToken);
 

@@ -5,11 +5,13 @@ using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Sync;
+using Prdb.Fab.Core.Catalogue;
 
 namespace Prdb.Fab.Infrastructure.Automation;
 
 /// <summary>Reads every current fact ADR 0007 requires before Ranking.</summary>
-public sealed class AutomaticEligibility(FabDbContext context)
+public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites ignores)
 {
     public async Task<IReadOnlyDictionary<long, AutomaticReleaseEligibility>> ForVideoAsync(
         Guid videoId,
@@ -25,6 +27,12 @@ public sealed class AutomaticEligibility(FabDbContext context)
         if (localVideoId is null) return releases.ToDictionary(
             release => release.Id,
             _ => AutomaticReleaseEligibility.Refused(AutomationDecisionReason.NotWanted));
+
+        if (await context.CatalogueVideos.AnyAsync(v => v.PrdbId == videoId && !v.Available, cancellationToken))
+            return releases.ToDictionary(r => r.Id, _ => AutomaticReleaseEligibility.Refused(AutomationDecisionReason.VideoUnavailable));
+
+        if (await ignores.RestrictsAsync(AccountPreferenceKind.WantedVideo, videoId, cancellationToken))
+            return releases.ToDictionary(r => r.Id, _ => AutomaticReleaseEligibility.Refused(AutomationDecisionReason.SiteIgnored));
 
         var wanted = await context.WantedVideos.AnyAsync(row => row.VideoId == localVideoId, cancellationToken);
         var held = await context.LibraryEntries.AnyAsync(row => row.VideoId == videoId, cancellationToken);

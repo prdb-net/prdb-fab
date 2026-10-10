@@ -13,6 +13,8 @@ public static class AcquisitionServiceCollectionExtensions
         services.AddScoped<ReleaseRankings>();
         services.AddScoped<DownloadSettings>();
         services.AddScoped<AccountPreferences>();
+        services.AddScoped<IgnoredSites>();
+        services.AddScoped<VideoChangeCoverage>();
         services.AddScoped<PersonDownloads>();
         services.AddScoped<DownloadSubmissionRoutine>();
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<DownloadSubmissionRoutine>());

@@ -16,10 +16,9 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The only thing that keeps the catalogue correct, because videos are the one
-/// entity with no feed. <strong>Two holes, one read.</strong> Video metadata
-/// edits have no feed at all; video image rows are hard-deleted upstream and
-/// simply stop being returned, so a removal is invisible to the images feed.
+/// The bounded baseline and fallback when Video change coverage is absent.
+/// Metadata edits and image removals share this full reconciliation; an image
+/// removed upstream simply stops being returned by the images feed.
 /// <c>VideoDetailDto</c> carries the authoritative <c>images[]</c>, so diffing
 /// that against the local copy finds the removed artwork and the rest of the
 /// payload finds the correction — which is why this is one pass and not two,
@@ -53,6 +52,8 @@ public sealed class CatalogueRepairRoutine(
     PrdbGateway prdb,
     PrdbGovernor governor,
     VideoDetails details,
+    CatalogueAvailability availability,
+    VideoChangeCoverage coverage,
     EntryFiles entryFiles,
     TimeProvider time,
     ILogger<CatalogueRepairRoutine> logger) : IRoutine
@@ -95,10 +96,16 @@ public sealed class CatalogueRepairRoutine(
         // id breaks the tie so that a catalogue whose rows were all written in
         // one import is walked in a stable order rather than in whatever
         // order SQLite finds them.
+        var state = await context.VideoChangeState.SingleOrDefaultAsync(cancellationToken);
+        var baselinePending = state is not null && state.BaselineCompletedAt is null;
+        var feedFresh = await coverage.FreshAsync(cancellationToken);
+        var lowerBound = state?.LowerBoundAt;
         var pinnedIds = pins.Pinned(context.CatalogueVideos).Select(row => row.Id);
         var due = await context.CatalogueVideos
-            .Where(row => row.LastReadAt <= staleBefore
-                && (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id)))
+            .Where(row => (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id))
+                && (baselinePending || feedFresh
+                    ? row.ChangesBaselineAt != lowerBound || row.LastReadAt == default
+                    : row.LastReadAt <= staleBefore))
             .OrderBy(row => row.LastReadAt)
             .ThenBy(row => row.Id)
             .Select(row => new Due(row.Id, row.PrdbId))
@@ -107,6 +114,7 @@ public sealed class CatalogueRepairRoutine(
 
         if (due.Count == 0)
         {
+            if (baselinePending) await coverage.CompleteBaselineAsync(cancellationToken);
             // Nothing current or pinned is due. ADR 0032: an empty work set is
             // not a run, so this is not recorded and moves no counter.
             return RunResult.NothingToDo;
@@ -149,6 +157,8 @@ public sealed class CatalogueRepairRoutine(
                 cancellationToken: token),
             cancellationToken);
 
+        if (read is null) return 0;
+
         var answered = new HashSet<Guid>();
 
         foreach (var detail in read ?? [])
@@ -179,7 +189,7 @@ public sealed class CatalogueRepairRoutine(
     }
 
     /// <summary>
-    /// Moves <em>last re-read</em> on the rows prdb did not answer for.
+    /// Records observed unavailability and the successful check for omitted ids.
     /// </summary>
     /// <remarks>
     /// The endpoint omits ids that do not exist rather than refusing them,
@@ -189,8 +199,8 @@ public sealed class CatalogueRepairRoutine(
     /// row prdb has stopped knowing about would sit at the front of it forever
     /// and repair would ask about the same fifty until somebody noticed. The
     /// stamp says when the row was last asked about, and that is what is
-    /// written here; the row itself is left exactly as it was, because nothing
-    /// was learned about it.
+    /// written here. Absence marks the Catalogue unavailable, retaining its last
+    /// metadata and all Library identity; it supplies no deletion or merge stamp.
     /// </remarks>
     private async Task MissedAsync(
         IReadOnlyList<Due> batch,
@@ -207,17 +217,9 @@ public sealed class CatalogueRepairRoutine(
             return;
         }
 
-        var asked = time.GetUtcNow();
+        foreach (var video in batch.Where(v => !answered.Contains(v.PrdbId)))
+            await availability.UnavailableAsync(video.PrdbId, null, null, null, cancellationToken);
 
-        await context.CatalogueVideos
-            .Where(row => missed.Contains(row.Id))
-            .ExecuteUpdateAsync(
-                row => row.SetProperty(video => video.LastReadAt, asked),
-                cancellationToken);
-
-        logger.LogWarning(
-            "prdb did not answer for {Count} pinned video(s) the repair pass asked about.",
-            missed.Count);
     }
 
     /// <summary>A row the pass is about to ask about, by both of its names.</summary>

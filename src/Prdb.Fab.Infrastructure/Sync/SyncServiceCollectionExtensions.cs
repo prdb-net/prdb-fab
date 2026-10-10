@@ -48,6 +48,8 @@ public static class SyncServiceCollectionExtensions
         // it holds no state and reaches nothing.
         services.AddScoped<CatalogueBrowse>();
         services.AddScoped<AccountPreferences>();
+        services.AddScoped<IgnoredSites>();
+        services.AddScoped<IgnoredSiteFeed>();
         services.AddScoped<ActorDetails>();
         services.AddScoped<ActorVideoLoads>();
         services.AddScoped<PreviewPictures>();
@@ -77,6 +79,8 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<PreviewBackfill>();
         services.TryAddScoped<PublicationProgress>();
 
+        services.AddScoped<SiteFeed>();
+        Routine<SiteFeedRoutine>(services);
         services.AddScoped<ActorFeed>();
         services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();
@@ -84,9 +88,13 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<FavouriteSiteFeed>();
         services.AddScoped<FavouriteActorFeed>();
 
-        // The one entity with no change feed, and the write every route into
+        // Discovery beside the change feed, and the write every route into
         // the catalogue goes through.
         services.TryAddScoped<VideoDetails>();
+        services.AddScoped<CatalogueAvailability>();
+        services.AddScoped<VideoChangeCoverage>();
+        services.AddScoped<VideoFeed>();
+        Routine<VideoFeedRoutine>(services);
         services.AddScoped<WhatsNew>();
 
         // The concrete type as well as the interface, so that a routine can be
@@ -101,6 +109,7 @@ public static class SyncServiceCollectionExtensions
         Routine<LibraryUserPreviewRoutine>(services);
         Routine<UserPreviewFeedRoutine>(services);
         Routine<VideoImageFeedRoutine>(services);
+        Routine<IgnoredSiteFeedRoutine>(services);
         Routine<WantedVideoFeedRoutine>(services);
         Routine<FavouriteSiteFeedRoutine>(services);
         Routine<FavouriteActorFeedRoutine>(services);

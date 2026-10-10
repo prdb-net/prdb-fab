@@ -410,7 +410,11 @@ _Avoid_: Refresh, Poll, Update, Crawl
 The copy of prdb's videos, sites and actors the tool holds locally. A cache of
 all Actors and Sites, and of Videos in the Recent Window plus those otherwise
 looked at or pinned, rather than a complete Video copy; never the library, which
-is what the tool writes to disk.
+is what the tool writes to disk. Video descriptions and StashDB scene IDs are
+prdb-supplied metadata and external identity, not a second Identification
+source. Site URL/links and optional Platform/Account context are retained;
+Platform is the hosting service, distinct from the studio Network. No account
+owner is inferred from a Video's Actor credits.
 _Avoid_: Mirror, Corpus, Metadata store, Cache
 
 **Actor Catalogue Fill**:
@@ -454,10 +458,11 @@ not pinned may be dropped to keep the catalogue and the indexer cache bounded.
 _Avoid_: Locked, Retained, Held, Kept
 
 **Repair**:
-The part of the sync that stands in for a change feed that does not exist:
-re-reading videos in the Recent Window and pinned older videos to learn about
-corrections prdb published and artwork it removed, neither of which is announced
-anywhere.
+The bounded baseline and recovery part of Sync: re-reading Videos in the
+Recent Window and pinned older Videos when coverage by the Video change feed
+has not been established or is no longer current. The change feed carries
+ordinary corrections and removed artwork; Repair proves local coverage rather
+than mirroring the global corpus.
 _Avoid_: Reconcile, Backfill, Re-sync, Refresh
 
 **Routine**:
@@ -516,6 +521,14 @@ indexer — together with the credential it is reached by and the verdict of the
 last check against it. What a Gap names when one is missing or no longer
 verifies.
 _Avoid_: Integration, Endpoint, Service
+
+**Ignored Site**:
+An account restriction owned by prdb. Its observed state prevents new Favourite
+and Wanted intent and automatic acquisition. Ignoring removes earlier intent;
+unignoring removes only the restriction, never recreating it. Local files and
+manual Downloads survive. The projection and its cursor belong to the account
+and are refetched on Restore rather than exported.
+_Avoid_: Blocked Site, Blacklist
 
 **Password**:
 The single secret the user signs in with, set during onboarding and belonging

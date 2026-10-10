@@ -47,14 +47,14 @@ public sealed class ThePlanTests
             .Cast<IRoutine>()
             .ToList();
 
-        Assert.Equal(7, onAClock.Count);
+        Assert.Equal(9, onAClock.Count);
 
         var anHour = onAClock.Sum(routine => 1 / routine.Cadence.TotalHours);
 
         Assert.Equal(IdleProfile.RequestsAnHour, anHour, precision: 6);
 
         // And it really is about nine, which is the sentence ADR 0014 uses.
-        Assert.InRange(anHour, 9, 10);
+        Assert.InRange(anHour, 13, 14);
     }
 
     /// <summary>

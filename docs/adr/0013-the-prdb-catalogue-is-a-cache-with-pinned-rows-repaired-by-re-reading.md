@@ -1,10 +1,32 @@
 # The prdb catalogue is a cache with pinned rows, repaired by re-reading
 
-Videos and sites are the only prdb entities with no change feed. Rather than
+The original API had no Video or Site change feed. The amendments below
+supersede that constraint for the current API. Rather than
 mirroring prdb's corpus, the tool holds a catalogue that is a cache: rows arrive
 because something looked at them, rows stay because something local points at
 them, and the rest is dropped. What is pinned is kept correct by re-reading it
 on a request budget, because there is no feed to be told by.
+
+## Amendment: exact change-feed progress
+
+With Prdb.Sdk 0.17.0, every nonempty change page resumes from both returned
+`nextCursor.updatedAtUtc` and `nextCursor.id`, even when `hasMore` is false.
+Received items and locally applied rows are separate counts: a page discarded
+for lack of local interest still advances. An empty page ignores any echoed
+legacy cursor, stores `serverTimeUtc` and clears the UUID. Missing or invalid
+bounds leave the position untouched. Application finishes before cursor storage;
+interruption replays idempotent writes rather than skipping them.
+
+The supplied bound already trails the server clock by two minutes. No client
+clock, additional settle delay or overlap is applied to change feeds. An old
+cursor ahead of that bound sees empty pages until the bound catches up; reading
+from an earlier supplied bound is safe replay. Timestamp precision and server
+UUID order are preserved. Existing stored timestamp and timestamp|UUID formats
+remain readable. `hasMore` schedules another bounded lane turn after ten seconds;
+bootstrap retirement uses the page flag, never the presence of a UUID.
+
+What's New discovery remains separate: its exclusive `CreatedAfter` mark keeps
+the one-minute overlap because it has no row tie-breaker.
 
 ## Why a cache and not a mirror
 
@@ -120,8 +142,7 @@ window of pages has a stated ceiling.
 - `CreatedAfter` is documented as strictly exclusive, so a high-water mark set
   to the last `createdAtUtc` seen would permanently lose every video sharing
   that timestamp — precisely the bulk-import case. The mark is set back by an
-  overlap window and every result is applied as an idempotent upsert, the same
-  rule the change-feed cursors already need.
+  overlap window and every result is applied as an idempotent upsert, separately from exact change-feed cursors above.
 - Pinning is not a stored column. (*Amended by
   [ADR 0033](0033-the-schema-is-the-glossary-made-physical-and-the-export-boundary-runs-between-tables.md):
   this decision speaks of a pin reason per video row, and the schema stores
@@ -159,3 +180,95 @@ window of pages has a stated ceiling.
 - Ticket 13 sets the numbers. This decision fixes the shapes — a budget for
   repair, a page ceiling for backfill, an overlap for the high-water mark — and
   leaves every value to the ticket that owns polling.
+
+## Amendment: account-owned Ignored Sites
+
+The SDK Ignore change feed joins Wanted and Favourite feeds, with an independent
+account-scoped cursor and a disposable observed projection. Each UUID retains
+its last upstream timestamp even after unignore, rejecting stale replay. A key
+change drops the projection and cursor; Restore fetches both again. A known
+Ignore prevents new additions locally, while `site_ignored` remains authoritative
+for races and unknown state. Reconciliation blocks pending additions with a
+visible reason, removes Favourite/Wanted projections and applies ADR 0045's
+local abandonment to unfinished automatic Downloads. It neither deletes files
+nor calls SABnzbd. Manual Downloads and reporting history remain.
+
+Unignore clears only the restriction; stale Favourite/Wanted reads do not
+resurrect old intent. A later genuine preference can be learned normally. During
+an outage automation continues from the last observed restrictions and intent,
+with the existing sync Gap naming stale state. Ordinary browsing stays local.
+
+## Amendment: Site changes replace the full list after handoff
+
+`GET /sites/changes` now exists. Sites retain a dedicated timestamp/UUID cursor,
+separate from the legacy Site-list ETag. A complete feed baseline starts at the
+beginning, applies explicit live states and tombstones, and records completion
+only after the final valid page has been applied and its cursor stored. Until
+then the legacy full-list routine remains as a one-shot safety net; it cannot
+overwrite Site rows already stamped by the feed. A completed baseline retires
+that routine, including across restart. An interrupted baseline continues from
+its cursor. New installations and restores follow the same path.
+
+Site UUIDs remain stable local identities. Newer states correct title, Network
+and nullable platform/account metadata. Tombstones retain useful metadata and
+mark the Site no longer offered; they never rename a Filed Path. Newer live
+states restore the same row. Platform is distinct from Network. A missing Site
+on one page means nothing about availability. The baseline marker, cursor and
+Site rows are disposable and refetched after Restore.
+
+## Amendment: unavailable and merged Videos keep local identity
+
+A remote tombstone is an upstream fact, distinct from a missing Video File. It
+sets Catalogue availability and an optional `mergedIntoId`, ordered by the
+upstream update stamp, while preserving the last useful metadata. Older detail
+reads cannot revive it. A newer live state can restore the same UUID. A missing
+batch result marks an observed unavailability without inventing a deletion
+stamp or merge target; a failed/absent response proves nothing.
+
+Library Entries, Filed Paths, Confirmed Assignments and historical reports keep
+the original UUID. Even when both sides of a remote merge are held locally,
+entries and qualities remain separate: merge provenance never authorizes a
+local merge, reassignment or report against the survivor. This preserves ADRs
+0017, 0019 and 0047. A tombstone never deletes or renames a file or empties an
+entry. Referenced cache rows remain pinned; ordinary eviction can drop
+unreferenced unavailable rows. New automatic acquisition is barred, and Library,
+Download and Review surfaces explain the upstream state and survivor UUID.
+
+Availability is disposable Catalogue state, refetched on Restore. Backup keeps
+Library and historical identity and Restore's existing repair obligations
+rehydrate those UUIDs, never substitute a survivor or mistake upstream absence
+for a locally missing file.
+
+## Amendment: Video changes cover bounded Catalogue correction
+
+The ordinary correction path is now `GET /videos/changes`. Its first request
+asks only for the already settled server bound and applies no historical row.
+That lower bound is stored before baseline reads. The existing Bulk repair
+routine reconciles only currently recent or pinned Videos, at its governed
+batch budget, recording per-row coverage of that bound. Completion is durable
+and requires the work set to empty. Discovery and recurring Recent Window
+sweeps continue throughout; no historical global Video corpus is drained.
+
+Live changes use the shared detail reconcile for recent or locally pinned
+Videos. Unrelated historical live states are discarded while their received
+cursor advances. Known deletions go to the availability policy; their minimal
+payload never overwrites metadata. Upstream stamps reject stale snapshots and
+feed replay. Title/pre-name changes reopen backwards Screening, Site and credit
+corrections replace joins, and authoritative `images[]` removes deleted images.
+Held entries refresh Sidecar and Entry Image without changing Filed Paths.
+
+After baseline completion, a recent post-apply caught-up feed proves unchanged
+rows current without moving each row's LastReadAt. New incomplete rows still
+need details. Missing, malformed or lost cursors invalidate this proof and start
+another bounded local baseline after taking a new server bound. Long idle or
+stalled feeds leave fallback repair active until caught-up coverage returns.
+Feed, baseline and per-row proof are disposable and recreated after Restore.
+The image feed still supplies additive artwork; discovery still finds older
+rows whose creation predates the feed bound; Recent Window sweeps still prove
+membership independently of correction freshness.
+
+A Video cursor older than the guaranteed ninety-day tombstone retention is
+restarted from a newly acquired server bound, followed by the same bounded
+recent/pinned baseline. Otherwise an empty response after a long shutdown
+could silently skip a deletion already removed from the feed. A shorter idle
+period resumes its exact cursor without forcing unchanged per-Video reads.

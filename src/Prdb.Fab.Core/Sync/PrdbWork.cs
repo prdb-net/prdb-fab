@@ -69,13 +69,16 @@ public enum PrdbWork
     /// <summary>The newest videos, and the pass reading backwards from them.</summary>
     WhatsNew,
 
+    /// <summary>Bounded Catalogue correction through Video changes.</summary>
+    CatalogueChanges,
+
     /// <summary>The video images feed.</summary>
     Images,
 
     /// <summary>The actors feed.</summary>
     Actors,
 
-    /// <summary>The site list, under its ETag.</summary>
+    /// <summary>The Site change feed and its legacy baseline safety net.</summary>
     Sites,
 
     /// <summary>

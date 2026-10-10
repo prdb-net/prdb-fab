@@ -41,7 +41,7 @@ public sealed class SiteListRoutine(
     FabDbContext context,
     FeedCursors cursors,
     PrdbGateway prdb,
-    ILogger<SiteListRoutine> logger) : IRoutine, ISpendsPrdbBudget
+    ILogger<SiteListRoutine> logger) : IRoutine, ISpendsPrdbBudget, IOneShot
 {
     public const string RoutineName = "prdb.sites";
 
@@ -63,8 +63,13 @@ public sealed class SiteListRoutine(
     /// </summary>
     public PrdbWork Spends => PrdbWork.Sites;
 
+    public async Task<bool> StartsAsync(CancellationToken cancellationToken) =>
+        !await cursors.StartedAsync(Feed.SiteChangesBaseline, cancellationToken);
+
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
+        if (!await StartsAsync(cancellationToken)) return RunResult.NothingToDo;
+
         var apiKey = await context.Installation
             .Select(row => row.PrdbApiKey)
             .SingleAsync(cancellationToken);
@@ -183,6 +188,8 @@ public sealed class SiteListRoutine(
                 continue;
             }
 
+            if (row.UpdatedAtUtc is not null) continue;
+
             if (string.Equals(row.Title, title, StringComparison.Ordinal)
                 && string.Equals(row.Network, site.NetworkTitle, StringComparison.Ordinal)
                 && row.StillOffered)
@@ -200,7 +207,7 @@ public sealed class SiteListRoutine(
             changed++;
         }
 
-        foreach (var gone in held.Values.Where(row => row.StillOffered && !ids.Contains(row.PrdbId)))
+        foreach (var gone in held.Values.Where(row => row.StillOffered && row.UpdatedAtUtc == null && !ids.Contains(row.PrdbId)))
         {
             gone.StillOffered = false;
             changed++;

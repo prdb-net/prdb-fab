@@ -4,6 +4,7 @@ import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { listSites, readSite, setFavouriteSite, type SitePage, type SiteVideos } from '../api/client.ts'
 import { releasePath, videoReleasePath } from '../release/routes.ts'
 import { DirectoryView, VideoContextView } from './ContextBrowse.tsx'
+import { SiteMetadataView } from './SiteMetadata.tsx'
 import { sitesKey } from './state.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { PreferenceButton } from './PreferenceButton.tsx'
@@ -50,12 +51,16 @@ export function SitesScreen() {
           </Link>
         )}
         contextAction={(
+          <>
+          <SiteMetadataView metadata={selected.site.metadata} />
+          {selected.site.ignored && <span>Ignored in prdb. Unignore there to add new Favourites or Wanted Videos.</span>}
           <PreferenceButton
             active={selected.site.favourite}
             activeLabel="Unfavourite"
             inactiveLabel="Favourite"
             write={(desired) => setFavouriteSite(selected.site.prdbId, desired)}
           />
+          </>
         )}
       />
     )
@@ -70,7 +75,7 @@ export function SitesScreen() {
       items={directory.sites.map((site) => ({
         prdbId: site.prdbId,
         title: site.title,
-        detail: site.network,
+        detail: site.ignored ? "Ignored in prdb — unignore there to add new Favourites or Wanted Videos" : site.network,
         videoCount: Number(site.videoCount),
         heldVideoCount: Number(site.heldVideoCount),
         favourite: site.favourite,

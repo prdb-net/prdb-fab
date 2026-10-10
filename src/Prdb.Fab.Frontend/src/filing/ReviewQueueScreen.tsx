@@ -304,6 +304,7 @@ function ReviewDetail({
       <div>
         <span className={styles.comparisonLabel}>What prdb proposes</span>
         <h2>{entry.video?.title ?? 'No Video identified'}</h2>
+        {entry.video?.catalogueNotice && <p>{entry.video.catalogueNotice}</p>}
         <dl className={styles.comparisonFacts}>
           <ComparisonFact label="Site">{entry.video?.site ?? 'Unknown'}</ComparisonFact>
           <ComparisonFact label="Released">{entry.video?.releaseDate ? formatDate(entry.video.releaseDate) : 'Unknown'}</ComparisonFact>

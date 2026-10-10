@@ -455,3 +455,18 @@ re-rooting from a bulk update into an invisible global behaviour change.
 - Ticket 33 inherits one fact from here: what grows on the data volume is the
   exported acquisition record above, the artwork cache under its ceiling, and
   the indexer cache under ADR 0015's hundred thousand rows per indexer.
+
+## Current descriptive Catalogue fields (October 2026)
+
+`CatalogueVideo` also retains nullable `description` and `stashdbSceneId` from
+current detail and change payloads. `CatalogueSite` retains nullable URL, links
+and Platform/Account metadata. Platform and studio Network are separate facts;
+Actor credits do not confirm ownership. Nested full Site details reconcile the
+same UUID, preserving Site-feed links that are absent from the nested contract.
+Their ordering stamp is separate from the authoritative Site change stamp.
+
+Preview and Site browsing read these fields locally. Descriptions render as
+text; external links admit only absolute HTTP(S) URLs without credentials or
+control characters. Classic nullable payloads need no special workflow. These
+fields remain disposable, account-free Catalogue data, excluded from Backup.
+No StashDB calls, file renames or Identification changes follow from them.

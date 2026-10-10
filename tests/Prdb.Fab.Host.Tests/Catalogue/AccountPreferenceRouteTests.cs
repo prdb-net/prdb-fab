@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Infrastructure.Sync;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +59,72 @@ public sealed class AccountPreferenceRouteTests
             .FavouriteActors.AnyAsync(TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData("site_ignored", "ignored", true)]
+    [InlineData("site_ignored", "ignored", false)]
+    [InlineData("wanted_video_limit_exceeded", "limit", true)]
+    [InlineData("unknown", "current state", true)]
+    [InlineData(null, "current state", false)]
+    public async Task Conflict_codes_explain_the_actual_refusal_without_projecting_success(string? code, string expected, bool wanted)
+    {
+        var prdb = new PreferenceApi { PostStatus = HttpStatusCode.Conflict, Code = code };
+        await using var application = new FabApplication().Answering(FabTransports.Prdb, prdb);
+        using var client = await application.SignedInClientAsync();
+        var ids = await SeedAsync(application);
+        var verdict = await WriteAsync(client, wanted ? $"/api/catalogue/wanted/{ids.Video}" : $"/api/catalogue/sites/{ids.Site}/favourite");
+        Assert.Equal("Rejected", verdict.Outcome);
+        Assert.Contains(expected, verdict.Detail);
+        await using var scope = application.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        Assert.False(await context.WantedVideos.AnyAsync(TestContext.Current.CancellationToken));
+        Assert.False(await context.FavouriteSites.AnyAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task A_permanent_pending_Wanted_refusal_is_blocked_with_its_reason_and_does_not_retry()
+    {
+        var prdb = new PreferenceApi { PostStatus = HttpStatusCode.Conflict, Code = "site_ignored" };
+        await using var application = new FabApplication().Answering(FabTransports.Prdb, prdb);
+        using var client = await application.SignedInClientAsync();
+        var ids = await SeedAsync(application);
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<AccountPreferences>().StageWantedAsync(
+                ids.Video, scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow(), TestContext.Current.CancellationToken);
+        }
+        await using (var scope = application.Services.CreateAsyncScope())
+        {
+            var routine = scope.ServiceProvider.GetRequiredService<AccountPreferenceRoutine>();
+            await routine.RunAsync(null, TestContext.Current.CancellationToken);
+            await routine.RunAsync(null, TestContext.Current.CancellationToken);
+        }
+        await using var after = application.Services.CreateAsyncScope();
+        var context = after.ServiceProvider.GetRequiredService<FabDbContext>();
+        var write = await context.AccountPreferenceWrites.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.True(write.Blocked);
+        Assert.Contains("ignored", write.LastFailure);
+        Assert.False(await context.WantedVideos.AnyAsync(TestContext.Current.CancellationToken));
+        Assert.Single(prdb.Writes);
+    }
+
+    [Fact]
+    public async Task A_rate_limited_pending_intent_remains_pending_and_keeps_the_deferred_outcome()
+    {
+        var prdb = new PreferenceApi { PostStatus = HttpStatusCode.TooManyRequests };
+        await using var application = new FabApplication().Answering(FabTransports.Prdb, prdb);
+        using var client = await application.SignedInClientAsync();
+        var ids = await SeedAsync(application);
+        await using var scope = application.Services.CreateAsyncScope();
+        var preferences = scope.ServiceProvider.GetRequiredService<AccountPreferences>();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        await preferences.StageWantedAsync(ids.Video, scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow(), TestContext.Current.CancellationToken);
+        var write = await context.AccountPreferenceWrites.SingleAsync(TestContext.Current.CancellationToken);
+        var verdict = await preferences.CompleteAsync(write, TestContext.Current.CancellationToken);
+        Assert.Equal(AccountPreferenceOutcome.Deferred, verdict.Outcome);
+        Assert.False((await context.AccountPreferenceWrites.SingleAsync(TestContext.Current.CancellationToken)).Blocked);
+        Assert.True(await context.WantedVideos.AnyAsync(TestContext.Current.CancellationToken));
+    }
+
     private static async Task<Ids> SeedAsync(FabApplication application)
     {
         await using var scope = application.Services.CreateAsyncScope();
@@ -82,6 +151,7 @@ public sealed class AccountPreferenceRouteTests
     {
         public List<(HttpMethod Method, string Path)> Writes { get; } = [];
         public HttpStatusCode PostStatus { get; set; } = HttpStatusCode.NoContent;
+        public string? Code { get; set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -89,7 +159,11 @@ public sealed class AccountPreferenceRouteTests
         {
             Writes.Add((request.Method, request.RequestUri!.AbsolutePath));
             return Task.FromResult(new HttpResponseMessage(
-                request.Method == HttpMethod.Delete ? HttpStatusCode.NotFound : PostStatus));
+                request.Method == HttpMethod.Delete ? HttpStatusCode.NotFound : PostStatus)
+            {
+                Content = PostStatus == HttpStatusCode.Conflict
+                    ? new StringContent(System.Text.Json.JsonSerializer.Serialize(new { status = 409, code = Code }), Encoding.UTF8, "application/problem+json") : null,
+            });
         }
     }
 

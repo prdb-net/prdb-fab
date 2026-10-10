@@ -3997,7 +3997,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | null;
+        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
         AutomationIndexer: {
             /** Format: uuid */
             id: string;
@@ -4099,6 +4099,13 @@ export interface components {
             prdbId: string;
             title: string;
             favourite: boolean;
+            /** @default false */
+            ignored: boolean;
+            metadata?: null | components["schemas"]["SiteMetadata"];
+        };
+        CatalogueLink: {
+            label: null | string;
+            url: null | string;
         };
         /** @enum {unknown} */
         CatalogueScope: "Favourites" | "All";
@@ -4299,6 +4306,7 @@ export interface components {
             origin: components["schemas"]["DownloadOriginView"];
             /** Format: date-time */
             createdAt: string;
+            catalogueNotice?: null | string;
         };
         FileAsRequest: {
             /** Format: uuid */
@@ -4406,6 +4414,7 @@ export interface components {
             qualities: string[];
             /** Format: int64 */
             runtimeSeconds: null | number | string;
+            catalogueNotice?: null | string;
         };
         LibraryEntry: {
             /** Format: uuid */
@@ -4426,6 +4435,7 @@ export interface components {
             actors: components["schemas"]["LibraryActor"][];
             files: components["schemas"]["LibraryFile"][];
             operations: components["schemas"]["OperationLogPage"];
+            catalogueNotice?: null | string;
         };
         LibraryEntryDeleteFile: {
             /** Format: uuid */
@@ -4731,6 +4741,7 @@ export interface components {
             catalogueDetailsDue: number | string;
             /** Format: int32 */
             identificationsDue: number | string;
+            videoChanges?: null | components["schemas"]["VideoChangeProgress"];
         };
         RecentWindowIndexer: {
             /** Format: uuid */
@@ -4992,6 +5003,7 @@ export interface components {
             consensusRuntimeFileCount?: null | number | string;
             /** Format: int64 */
             artworkId?: null | number | string;
+            catalogueNotice?: null | string;
         };
         ReviewVideoSearchPage: {
             videos: components["schemas"]["ReviewVideo"][];
@@ -5068,6 +5080,18 @@ export interface components {
             favourite: boolean;
             /** Format: int64 */
             representativeVideoId: null | number | string;
+            /** @default false */
+            ignored: boolean;
+        };
+        SiteMetadata: {
+            network: null | string;
+            url: null | string;
+            /** Format: uuid */
+            platformId: null | string;
+            platformKey: null | string;
+            platformTitle: null | string;
+            accountHandle: null | string;
+            links: components["schemas"]["CatalogueLink"][];
         };
         SiteOnlyMatch: {
             /** Format: uuid */
@@ -5249,6 +5273,18 @@ export interface components {
             /** Format: uuid */
             activeDownloadId?: null | string;
             activeDownloadState?: null | components["schemas"]["DownloadState"];
+            /** @default false */
+            siteIgnored: boolean;
+            catalogueNotice?: null | string;
+        };
+        VideoChangeProgress: {
+            /** Format: date-time */
+            baselineCompletedAt: null | string;
+            /** Format: date-time */
+            caughtUpAt: null | string;
+            /** Format: double */
+            lagSeconds: null | number | string;
+            fresh: boolean;
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];
@@ -5272,6 +5308,10 @@ export interface components {
             images: components["schemas"]["PreviewImage"][];
             userPreviews: components["schemas"]["UserPreviewCard"][];
             userPreviewsComing: boolean;
+            description?: null | string;
+            /** Format: uuid */
+            stashdbSceneId?: null | string;
+            siteMetadata?: null | components["schemas"]["SiteMetadata"];
         };
         WantedList: {
             videos: components["schemas"]["VideoCard"][];

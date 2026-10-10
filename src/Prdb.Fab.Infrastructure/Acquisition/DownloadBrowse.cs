@@ -59,6 +59,8 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
             {
                 row.Id,
                 row.VideoId,
+                Available = context.CatalogueVideos.Where(v => v.PrdbId == row.VideoId).Select(v => (bool?)v.Available).SingleOrDefault(),
+                MergedIntoId = context.CatalogueVideos.Where(v => v.PrdbId == row.VideoId).Select(v => v.MergedIntoId).SingleOrDefault(),
                 VideoTitle = context.CatalogueVideos
                     .Where(video => video.PrdbId == row.VideoId)
                     .Select(video => video.Title)
@@ -110,7 +112,8 @@ public sealed class DownloadBrowse(FabDbContext context, DownloadOrigins origins
                 row.StageLog,
                 row.OutstandingSince,
                 resolvedOrigins[row.Id],
-                row.CreatedAt))],
+                row.CreatedAt,
+                Sync.CatalogueAvailability.Notice(row.Available ?? true, row.MergedIntoId)))],
             indexers,
             wanted,
             APage,
@@ -328,7 +331,8 @@ public sealed record DownloadViewRow(
     string? StageLog,
     DateTimeOffset OutstandingSince,
     DownloadOriginView Origin,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? CatalogueNotice = null);
 public sealed record DownloadPage(
     IReadOnlyList<DownloadViewRow> Downloads,
     IReadOnlyList<DownloadIndexer> Indexers,

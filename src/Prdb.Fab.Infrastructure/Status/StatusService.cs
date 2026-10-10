@@ -24,6 +24,7 @@ public sealed class StatusService(
     ReportingSettings reporting,
     CataloguePins cataloguePins,
     RecentWindowCoverage recentWindow,
+    VideoChangeCoverage videoChanges,
     IRoutineStore routineStore,
     TimeProvider time)
 {
@@ -284,14 +285,20 @@ public sealed class StatusService(
                 .ToListAsync(cancellationToken))
             .Count(title => WantedSearchTitle.IsSearchable(WantedSearchTitle.Of(title))));
         await SetAsync(CatalogueRepairRoutine.RoutineName,
-            () =>
+            async () =>
             {
                 var now = time.GetUtcNow();
                 var recentSince = RecentWindow.BeginsAt(now);
                 var staleBefore = now - RecentWindow.RevalidateAfter;
                 var pinnedIds = cataloguePins.Pinned(context.CatalogueVideos).Select(row => row.Id);
-                return context.CatalogueVideos.CountAsync(row => row.LastReadAt <= staleBefore
-                    && (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id)), cancellationToken);
+                var state = await context.VideoChangeState.SingleOrDefaultAsync(cancellationToken);
+                var baselinePending = state is not null && state.BaselineCompletedAt is null;
+                var fresh = await videoChanges.FreshAsync(cancellationToken);
+                var lowerBound = state?.LowerBoundAt;
+                return await context.CatalogueVideos.CountAsync(row =>
+                    (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id))
+                    && (baselinePending || fresh ? row.ChangesBaselineAt != lowerBound || row.LastReadAt == default
+                        : row.LastReadAt <= staleBefore), cancellationToken);
             });
         await SetAsync(ArtworkRoutine.RoutineName, () =>
         {
@@ -716,6 +723,8 @@ public sealed class StatusService(
         {
             var (title, detail, route) = decision.Reason switch
             {
+                AutomationDecisionReason.VideoUnavailable => ("Unavailable Catalogue Videos held automatic Downloads", "prdb deleted or no longer returns these Videos. Held files and historic identities are retained.", "/library"),
+                AutomationDecisionReason.SiteIgnored => ("Ignored Sites held automatic Downloads", "Unignore the Site in prdb to allow new Favourite or Wanted intent. Existing files and manual Downloads are kept.", "/sites"),
                 AutomationDecisionReason.ConfidenceGate => ("The BeforeDownload Gate held Releases", "Change the fixed named confidence set to reconsider them.", "/settings/identification"),
                 AutomationDecisionReason.Size => ("Automation Rule size bounds held Releases", "No enabled rule accepting the Indexer also accepted the Release size.", "/settings/automation"),
                 AutomationDecisionReason.IndexerNotAllowed => ("No enabled Automation Rule allowed an Indexer", "Enable or change a rule to permit Releases from that Indexer.", "/settings/automation"),
@@ -837,6 +846,14 @@ public sealed class StatusService(
                     : $"Catalogue last proved complete at {recentWindow.Catalogue.CompletedAt:u}; "
                         + $"{recentWindow.CatalogueDetailsDue} detail revalidation(s) due",
                 "/status"));
+        }
+        if (id == "sync-prdb" && recentWindow.VideoChanges is { } videoFeed)
+        {
+            facts.Add(new("Video change coverage",
+                videoFeed.BaselineCompletedAt is null ? "Local Catalogue baseline in progress"
+                    : videoFeed.CaughtUpAt is null ? "Baseline complete; change feed is catching up"
+                    : $"Caught up through {videoFeed.CaughtUpAt:u}; lag {videoFeed.LagSeconds:F0} seconds; "
+                        + (videoFeed.Fresh ? "details covered" : "fallback repair active"), "/status"));
         }
         if (id == "sync-indexers")
         {

@@ -23,6 +23,7 @@ namespace Prdb.Fab.Core.Sync;
 /// signature that can be compared against later.
 /// </para>
 /// <para>
+/// Explicit deletion events, deleted payloads and absent media override this proof.
 /// The change feed is the other half. It carries every row, visible or not, so
 /// a page reporting a signature that differs from the one a filtered endpoint
 /// last delivered is a moderation change away from visible, and one reporting
@@ -58,7 +59,7 @@ public static class UserPreviewModeration
     /// Whether a row in this state may be served, shown, cached or written into
     /// the Library.
     /// </summary>
-    /// <param name="deleted">prdb's <c>isDeleted</c>, which overrides everything.</param>
+    /// <param name="deleted">An explicit deletion or absent media, which overrides everything.</param>
     /// <param name="signature">The state prdb reports now.</param>
     /// <param name="shownUnder">
     /// The state the row carried the last time a filtered endpoint delivered it,

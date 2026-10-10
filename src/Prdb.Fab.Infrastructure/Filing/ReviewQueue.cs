@@ -297,7 +297,8 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
                 row.ReleaseDate,
                 row.DurationMs,
                 row.DurationFileCount,
-                row.Id))
+                row.Id,
+                Sync.CatalogueAvailability.Notice(row.Available, row.MergedIntoId)))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -357,7 +358,8 @@ public sealed record ReviewVideo(
     DateOnly? ReleaseDate,
     long? ConsensusRuntimeMs = null,
     int? ConsensusRuntimeFileCount = null,
-    long? ArtworkId = null);
+    long? ArtworkId = null,
+    string? CatalogueNotice = null);
 
 public sealed record ReviewQueueEntry(
     Guid Id,

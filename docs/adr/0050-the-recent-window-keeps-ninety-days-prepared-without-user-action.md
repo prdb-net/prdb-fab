@@ -67,3 +67,15 @@ silently breaking the ninety-day promise.
 - The fixed interval is product policy, not an installation setting. Making it
   adjustable would make page semantics and resource guarantees differ between
   installations.
+
+## Amendment: a caught-up Video feed also proves detail freshness
+
+Catalogue membership is still proved by recurring Recent Window discovery. Its
+completion alone does not claim current details. Detail freshness can now be
+proved by a completed local baseline plus a Video change feed caught up within
+the revalidation interval, even when unchanged rows have old LastReadAt values.
+Each relevant row must be covered by that baseline or a later detail/feed write;
+new summary placeholders remain due. Indexer and Identification proofs remain
+independent. A missing/lost cursor, incomplete baseline or old caught-up proof
+keeps bounded fallback repair due; it never declares the window complete merely
+because the feed made a request.

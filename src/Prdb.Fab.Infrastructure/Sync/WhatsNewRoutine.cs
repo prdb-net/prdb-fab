@@ -52,7 +52,7 @@ public sealed class WhatsNewRoutine(
 
         var mark = await cursors.PositionAsync(Feed.WhatsNew, cancellationToken);
 
-        var page = await whatsNew.ReadAsync(apiKey, mark?.Since, page: null, cancellationToken);
+        var page = await whatsNew.ReadAsync(apiKey, mark?.DiscoverySince, page: null, cancellationToken);
 
         var written = await whatsNew.FetchAsync(apiKey, page.Unknown, cancellationToken);
 

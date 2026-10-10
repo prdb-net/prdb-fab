@@ -57,7 +57,8 @@ public sealed class ActorFeed(
             page.HasMore ?? false,
             page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id,
-            page.ServerTimeUtc);
+            page.ServerTimeUtc,
+            page.Items?.Count ?? 0);
     }
 
     private Task<int> ApplyAsync(List<ActorChangeDto>? items, CancellationToken cancellationToken)
