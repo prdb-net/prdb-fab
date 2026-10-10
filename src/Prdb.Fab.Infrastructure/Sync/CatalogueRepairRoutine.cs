@@ -16,9 +16,9 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The bounded baseline and fallback when Video change coverage is absent. <strong>Two holes, one read.</strong> Video metadata
-/// edits have no feed at all; video image rows are hard-deleted upstream and
-/// simply stop being returned, so a removal is invisible to the images feed.
+/// The bounded baseline and fallback when Video change coverage is absent.
+/// Metadata edits and image removals share this full reconciliation; an image
+/// removed upstream simply stops being returned by the images feed.
 /// <c>VideoDetailDto</c> carries the authoritative <c>images[]</c>, so diffing
 /// that against the local copy finds the removed artwork and the rest of the
 /// payload finds the correction — which is why this is one pass and not two,
@@ -189,7 +189,7 @@ public sealed class CatalogueRepairRoutine(
     }
 
     /// <summary>
-    /// Moves <em>last re-read</em> on the rows prdb did not answer for.
+    /// Records observed unavailability and the successful check for omitted ids.
     /// </summary>
     /// <remarks>
     /// The endpoint omits ids that do not exist rather than refusing them,
@@ -199,8 +199,8 @@ public sealed class CatalogueRepairRoutine(
     /// row prdb has stopped knowing about would sit at the front of it forever
     /// and repair would ask about the same fifty until somebody noticed. The
     /// stamp says when the row was last asked about, and that is what is
-    /// written here; the row itself is left exactly as it was, because nothing
-    /// was learned about it.
+    /// written here. Absence marks the Catalogue unavailable, retaining its last
+    /// metadata and all Library identity; it supplies no deletion or merge stamp.
     /// </remarks>
     private async Task MissedAsync(
         IReadOnlyList<Due> batch,

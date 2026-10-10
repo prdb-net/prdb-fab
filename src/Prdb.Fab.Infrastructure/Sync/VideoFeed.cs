@@ -74,7 +74,7 @@ public sealed class VideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
     };
 }
 
-public sealed class VideoFeedRoutine(VideoFeed feed, FeedCursors cursors, VideoChangeCoverage coverage, FabDbContext context)
+public sealed class VideoFeedRoutine(VideoFeed feed, FeedCursors cursors, VideoChangeCoverage coverage, FabDbContext context, TimeProvider time)
     : IRoutine, ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.videos.changes";
@@ -88,7 +88,10 @@ public sealed class VideoFeedRoutine(VideoFeed feed, FeedCursors cursors, VideoC
         var key = await context.Installation.Select(i => i.PrdbApiKey).SingleAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(key)) return RunResult.NothingToDo;
         var stored = await cursors.PositionAsync(Feed.VideoChanges, cancellationToken);
-        if (stored is null || !await context.VideoChangeState.AnyAsync(cancellationToken))
+        // Tombstones are guaranteed for at least ninety days. Beyond that,
+        // an empty resumed page cannot prove the intervening history complete.
+        if (stored is null || stored.At < time.GetUtcNow() - TimeSpan.FromDays(90)
+            || !await context.VideoChangeState.AnyAsync(cancellationToken))
         {
             var clock = await feed.ReadAsync(key, FeedPosition.TheBeginning, 1, cancellationToken);
             if (clock.ServerTimeUtc is not { } bound) return RunResult.Handled(0);

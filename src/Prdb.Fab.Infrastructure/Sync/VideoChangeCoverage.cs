@@ -14,8 +14,7 @@ public sealed class VideoChangeCoverage(FabDbContext context, TimeProvider time)
         var cursor = FeedPosition.Read(await context.FeedCursors.Where(c => c.Feed == Feed.VideoChanges).Select(c => c.Cursor).SingleOrDefaultAsync(token));
         return cursor is not null && cursor.At >= state?.LowerBoundAt
             && state?.BaselineCompletedAt is not null
-            && state.CaughtUpObservedAt >= time.GetUtcNow() - RecentWindow.RevalidateAfter
-;
+            && state.CaughtUpObservedAt >= time.GetUtcNow() - RecentWindow.RevalidateAfter;
     }
 
     public async Task StartAsync(DateTimeOffset bound, CancellationToken token)

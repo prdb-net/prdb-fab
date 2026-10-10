@@ -126,6 +126,26 @@ public sealed class VideoChangeTests
         Assert.Contains("PageSize=1", api.AskedFor("/videos/changes")[1].Query, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Resume_beyond_tombstone_retention_takes_a_new_bound_and_reconciles_local_pins()
+    {
+        var resumed = Stamp.AddDays(91);
+        var api = new FakePrdbApi().Answers("/videos/changes", Empty(Stamp))
+            .Answers("/videos/changes", Empty(resumed))
+            .Answers("/videos/batch", "[]");
+        await using var db = await CreateAsync(api);
+        await RunAsync<VideoFeedRoutine>(db);
+        db.Time.Advance(TimeSpan.FromDays(91));
+        await RunAsync<VideoFeedRoutine>(db);
+        await RunAsync<CatalogueRepairRoutine>(db);
+        await using var scope = db.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        Assert.Equal(resumed, (await context.VideoChangeState.SingleAsync(Token)).LowerBoundAt);
+        Assert.False((await context.CatalogueVideos.SingleAsync(Token)).Available);
+        Assert.Contains("PageSize=1", api.AskedFor("/videos/changes")[1].Query, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(api.AskedFor("/videos/batch"));
+    }
+
     private static async Task<TestDatabase> CreateAsync(FakePrdbApi api)
     {
         var db = await TestDatabase.CreateAsync(prdb: api, also: s => s.AddFabSync());

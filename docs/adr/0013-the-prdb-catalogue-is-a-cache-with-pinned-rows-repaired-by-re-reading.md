@@ -266,3 +266,9 @@ Feed, baseline and per-row proof are disposable and recreated after Restore.
 The image feed still supplies additive artwork; discovery still finds older
 rows whose creation predates the feed bound; Recent Window sweeps still prove
 membership independently of correction freshness.
+
+A Video cursor older than the guaranteed ninety-day tombstone retention is
+restarted from a newly acquired server bound, followed by the same bounded
+recent/pinned baseline. Otherwise an empty response after a long shutdown
+could silently skip a deletion already removed from the feed. A shorter idle
+period resumes its exact cursor without forcing unchanged per-Video reads.

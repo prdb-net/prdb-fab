@@ -36,10 +36,10 @@ public static class IdleProfile
     /// </summary>
     /// <remarks>
     /// <para>
-    /// About nine, which is ADR 0014's table added up: What's New four times an
-    /// hour, the images feed twice, the wanted list and the two favourites
-    /// feeds once each, the actors feed every six hours and the site list every
-    /// twenty-four. A test adds the cadences of the routines actually
+    /// About thirteen, which is ADR 0014's amended table added up: What's New
+    /// four times an hour, Video changes and images twice each, Wanted and the
+    /// two favourites plus ignored Sites and Site changes once each, and Actors
+    /// every six hours. A test adds the cadences of the routines actually
     /// registered and fails the build if they stop agreeing with this, which is
     /// what keeps a routine added later from quietly moving the number every
     /// later routine is judged against.
