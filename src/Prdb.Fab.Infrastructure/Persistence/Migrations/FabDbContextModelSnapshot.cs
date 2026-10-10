@@ -705,6 +705,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Available")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("ChangesBaselineAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
@@ -2142,6 +2145,33 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("VideoPrdbId", "OsHash", "DisplayOrder", "PrdbId");
 
                     b.ToTable("user_preview", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.VideoChangeStateRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("BaselineCompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CaughtUpAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CaughtUpObservedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LowerBoundAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("video_change_state", (string)null);
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")

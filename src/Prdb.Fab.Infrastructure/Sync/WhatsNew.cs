@@ -10,7 +10,7 @@ using Prdb.Sdk.Generated.Videos;
 namespace Prdb.Fab.Infrastructure.Sync;
 
 /// <summary>
-/// The one prdb entity with no change feed, read forwards from a high-water
+/// Video discovery, read forwards from a high-water
 /// mark and newest-first across the Recent Window.
 /// </summary>
 /// <remarks>

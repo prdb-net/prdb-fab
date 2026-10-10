@@ -16,8 +16,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The only thing that keeps the catalogue correct, because videos are the one
-/// entity with no feed. <strong>Two holes, one read.</strong> Video metadata
+/// The bounded baseline and fallback when Video change coverage is absent. <strong>Two holes, one read.</strong> Video metadata
 /// edits have no feed at all; video image rows are hard-deleted upstream and
 /// simply stop being returned, so a removal is invisible to the images feed.
 /// <c>VideoDetailDto</c> carries the authoritative <c>images[]</c>, so diffing
@@ -54,6 +53,7 @@ public sealed class CatalogueRepairRoutine(
     PrdbGovernor governor,
     VideoDetails details,
     CatalogueAvailability availability,
+    VideoChangeCoverage coverage,
     EntryFiles entryFiles,
     TimeProvider time,
     ILogger<CatalogueRepairRoutine> logger) : IRoutine
@@ -96,10 +96,16 @@ public sealed class CatalogueRepairRoutine(
         // id breaks the tie so that a catalogue whose rows were all written in
         // one import is walked in a stable order rather than in whatever
         // order SQLite finds them.
+        var state = await context.VideoChangeState.SingleOrDefaultAsync(cancellationToken);
+        var baselinePending = state is not null && state.BaselineCompletedAt is null;
+        var feedFresh = await coverage.FreshAsync(cancellationToken);
+        var lowerBound = state?.LowerBoundAt;
         var pinnedIds = pins.Pinned(context.CatalogueVideos).Select(row => row.Id);
         var due = await context.CatalogueVideos
-            .Where(row => row.LastReadAt <= staleBefore
-                && (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id)))
+            .Where(row => (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id))
+                && (baselinePending || feedFresh
+                    ? row.ChangesBaselineAt != lowerBound || row.LastReadAt == default
+                    : row.LastReadAt <= staleBefore))
             .OrderBy(row => row.LastReadAt)
             .ThenBy(row => row.Id)
             .Select(row => new Due(row.Id, row.PrdbId))
@@ -108,6 +114,7 @@ public sealed class CatalogueRepairRoutine(
 
         if (due.Count == 0)
         {
+            if (baselinePending) await coverage.CompleteBaselineAsync(cancellationToken);
             // Nothing current or pinned is due. ADR 0032: an empty work set is
             // not a run, so this is not recorded and moves no counter.
             return RunResult.NothingToDo;

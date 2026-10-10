@@ -45,6 +45,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<CatalogueVideoActorRow> CatalogueVideoActors => Set<CatalogueVideoActorRow>();
 
+    public DbSet<VideoChangeStateRow> VideoChangeState => Set<VideoChangeStateRow>();
+
     public DbSet<CatalogueSiteRow> CatalogueSites => Set<CatalogueSiteRow>();
 
     public DbSet<CatalogueActorRow> CatalogueActors => Set<CatalogueActorRow>();
@@ -349,6 +351,13 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(row => row.ActorId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<VideoChangeStateRow>(state =>
+        {
+            state.ToTable("video_change_state");
+            state.HasKey(row => row.Id);
+            state.Declares(AccountClass.AccountFree);
         });
 
         builder.Entity<CatalogueSiteRow>(site =>

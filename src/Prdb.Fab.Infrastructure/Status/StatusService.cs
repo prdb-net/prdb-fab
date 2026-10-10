@@ -24,6 +24,7 @@ public sealed class StatusService(
     ReportingSettings reporting,
     CataloguePins cataloguePins,
     RecentWindowCoverage recentWindow,
+    VideoChangeCoverage videoChanges,
     IRoutineStore routineStore,
     TimeProvider time)
 {
@@ -284,14 +285,20 @@ public sealed class StatusService(
                 .ToListAsync(cancellationToken))
             .Count(title => WantedSearchTitle.IsSearchable(WantedSearchTitle.Of(title))));
         await SetAsync(CatalogueRepairRoutine.RoutineName,
-            () =>
+            async () =>
             {
                 var now = time.GetUtcNow();
                 var recentSince = RecentWindow.BeginsAt(now);
                 var staleBefore = now - RecentWindow.RevalidateAfter;
                 var pinnedIds = cataloguePins.Pinned(context.CatalogueVideos).Select(row => row.Id);
-                return context.CatalogueVideos.CountAsync(row => row.LastReadAt <= staleBefore
-                    && (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id)), cancellationToken);
+                var state = await context.VideoChangeState.SingleOrDefaultAsync(cancellationToken);
+                var baselinePending = state is not null && state.BaselineCompletedAt is null;
+                var fresh = await videoChanges.FreshAsync(cancellationToken);
+                var lowerBound = state?.LowerBoundAt;
+                return await context.CatalogueVideos.CountAsync(row =>
+                    (row.CreatedAtUtc >= recentSince || pinnedIds.Contains(row.Id))
+                    && (baselinePending || fresh ? row.ChangesBaselineAt != lowerBound || row.LastReadAt == default
+                        : row.LastReadAt <= staleBefore), cancellationToken);
             });
         await SetAsync(ArtworkRoutine.RoutineName, () =>
         {
@@ -839,6 +846,14 @@ public sealed class StatusService(
                     : $"Catalogue last proved complete at {recentWindow.Catalogue.CompletedAt:u}; "
                         + $"{recentWindow.CatalogueDetailsDue} detail revalidation(s) due",
                 "/status"));
+        }
+        if (id == "sync-prdb" && recentWindow.VideoChanges is { } videoFeed)
+        {
+            facts.Add(new("Video change coverage",
+                videoFeed.BaselineCompletedAt is null ? "Local Catalogue baseline in progress"
+                    : videoFeed.CaughtUpAt is null ? "Baseline complete; change feed is catching up"
+                    : $"Caught up through {videoFeed.CaughtUpAt:u}; lag {videoFeed.LagSeconds:F0} seconds; "
+                        + (videoFeed.Fresh ? "details covered" : "fallback repair active"), "/status"));
         }
         if (id == "sync-indexers")
         {

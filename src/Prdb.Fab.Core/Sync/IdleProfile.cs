@@ -53,7 +53,7 @@ public static class IdleProfile
     /// slack rather than adding to the demand.
     /// </para>
     /// </remarks>
-    public const double RequestsAnHour = 4 + 2 + 1 + 1 + 1 + 1 + (1.0 / 6) + 1;
+    public const double RequestsAnHour = 4 + 2 + 2 + 1 + 1 + 1 + 1 + (1.0 / 6) + 1;
 
     /// <summary>
     /// The share of an hourly limit the recurring schedule may occupy.
@@ -106,7 +106,7 @@ public static class IdleProfile
     public static TimeSpan? ShedCadenceFor(PrdbWork work) => work switch
     {
         PrdbWork.Actors => TimeSpan.FromHours(24),
-        PrdbWork.Images or PrdbWork.WhatsNew => TimeSpan.FromMinutes(60),
+        PrdbWork.Images or PrdbWork.WhatsNew or PrdbWork.CatalogueChanges => TimeSpan.FromMinutes(60),
         _ => null,
     };
 

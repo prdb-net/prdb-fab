@@ -43,10 +43,16 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             .AsTracking()
             .SingleOrDefaultAsync(row => row.PrdbId == prdbId, cancellationToken);
 
+        var baseline = await context.VideoChangeState.Select(s => (DateTimeOffset?)s.LowerBoundAt).SingleOrDefaultAsync(cancellationToken);
         if (video is not null && (detail.UpdatedAtUtc < video.UpdatedAtUtc
                 || (!video.Available && video.DeletedAtUtc != null
                     && (detail.UpdatedAtUtc is null || detail.UpdatedAtUtc <= video.UpdatedAtUtc))))
+        {
+            video.LastReadAt = time.GetUtcNow();
+            video.ChangesBaselineAt = baseline;
+            await context.SaveChangesAsync(cancellationToken);
             return false;
+        }
 
         var arrived = video is null;
 
@@ -56,6 +62,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             context.CatalogueVideos.Add(video);
         }
 
+        video.ChangesBaselineAt = baseline;
         video.Available = true;
         video.DeletedAtUtc = null;
         video.MergedIntoId = null;
@@ -105,6 +112,7 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
                 detail.Site.Network?.Title,
                 cancellationToken);
         }
+        else video.SiteId = null;
 
         await context.SaveChangesAsync(cancellationToken);
 

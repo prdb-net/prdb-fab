@@ -454,10 +454,11 @@ not pinned may be dropped to keep the catalogue and the indexer cache bounded.
 _Avoid_: Locked, Retained, Held, Kept
 
 **Repair**:
-The part of the sync that stands in for a change feed that does not exist:
-re-reading videos in the Recent Window and pinned older videos to learn about
-corrections prdb published and artwork it removed, neither of which is announced
-anywhere.
+The bounded baseline and recovery part of Sync: re-reading Videos in the
+Recent Window and pinned older Videos when coverage by the Video change feed
+has not been established or is no longer current. The change feed carries
+ordinary corrections and removed artwork; Repair proves local coverage rather
+than mirroring the global corpus.
 _Avoid_: Reconcile, Backfill, Re-sync, Refresh
 
 **Routine**:

@@ -24,6 +24,8 @@ public sealed class CatalogueVideoRow
 
     public required string Title { get; set; }
 
+    public DateTimeOffset? ChangesBaselineAt { get; set; }
+
     public bool Available { get; set; } = true;
     public DateTimeOffset? DeletedAtUtc { get; set; }
     public Guid? MergedIntoId { get; set; }

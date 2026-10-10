@@ -88,10 +88,13 @@ public static class SyncServiceCollectionExtensions
         services.AddScoped<FavouriteSiteFeed>();
         services.AddScoped<FavouriteActorFeed>();
 
-        // The one entity with no change feed, and the write every route into
+        // Discovery beside the change feed, and the write every route into
         // the catalogue goes through.
         services.TryAddScoped<VideoDetails>();
         services.AddScoped<CatalogueAvailability>();
+        services.AddScoped<VideoChangeCoverage>();
+        services.AddScoped<VideoFeed>();
+        Routine<VideoFeedRoutine>(services);
         services.AddScoped<WhatsNew>();
 
         // The concrete type as well as the interface, so that a routine can be

@@ -6981,6 +6981,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "videoChanges": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VideoChangeProgress"
+              }
+            ]
           }
         }
       },
@@ -9316,6 +9326,43 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "VideoChangeProgress": {
+        "required": [
+          "baselineCompletedAt",
+          "caughtUpAt",
+          "lagSeconds",
+          "fresh"
+        ],
+        "type": "object",
+        "properties": {
+          "baselineCompletedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "caughtUpAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lagSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fresh": {
+            "type": "boolean"
           }
         }
       },

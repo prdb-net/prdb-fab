@@ -69,4 +69,5 @@ public enum Feed
 
     SiteChanges,
     SiteChangesBaseline,
+    VideoChanges,
 }

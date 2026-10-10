@@ -1,6 +1,7 @@
 # The prdb catalogue is a cache with pinned rows, repaired by re-reading
 
-Videos and sites are the only prdb entities with no change feed. Rather than
+The original API had no Video or Site change feed. The amendments below
+supersede that constraint for the current API. Rather than
 mirroring prdb's corpus, the tool holds a catalogue that is a cache: rows arrive
 because something looked at them, rows stay because something local points at
 them, and the rest is dropped. What is pinned is kept correct by re-reading it
@@ -237,3 +238,31 @@ Availability is disposable Catalogue state, refetched on Restore. Backup keeps
 Library and historical identity and Restore's existing repair obligations
 rehydrate those UUIDs, never substitute a survivor or mistake upstream absence
 for a locally missing file.
+
+## Amendment: Video changes cover bounded Catalogue correction
+
+The ordinary correction path is now `GET /videos/changes`. Its first request
+asks only for the already settled server bound and applies no historical row.
+That lower bound is stored before baseline reads. The existing Bulk repair
+routine reconciles only currently recent or pinned Videos, at its governed
+batch budget, recording per-row coverage of that bound. Completion is durable
+and requires the work set to empty. Discovery and recurring Recent Window
+sweeps continue throughout; no historical global Video corpus is drained.
+
+Live changes use the shared detail reconcile for recent or locally pinned
+Videos. Unrelated historical live states are discarded while their received
+cursor advances. Known deletions go to the availability policy; their minimal
+payload never overwrites metadata. Upstream stamps reject stale snapshots and
+feed replay. Title/pre-name changes reopen backwards Screening, Site and credit
+corrections replace joins, and authoritative `images[]` removes deleted images.
+Held entries refresh Sidecar and Entry Image without changing Filed Paths.
+
+After baseline completion, a recent post-apply caught-up feed proves unchanged
+rows current without moving each row's LastReadAt. New incomplete rows still
+need details. Missing, malformed or lost cursors invalidate this proof and start
+another bounded local baseline after taking a new server bound. Long idle or
+stalled feeds leave fallback repair active until caught-up coverage returns.
+Feed, baseline and per-row proof are disposable and recreated after Restore.
+The image feed still supplies additive artwork; discovery still finds older
+rows whose creation predates the feed bound; Recent Window sweeps still prove
+membership independently of correction freshness.

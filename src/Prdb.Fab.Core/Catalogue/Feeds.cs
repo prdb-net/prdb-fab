@@ -27,7 +27,7 @@ public static class Feeds
         // what it carries is what prdb shows everybody, so a cursor into it
         // says nothing about whose key read it (ADR 0061).
         Feed.Actors or Feed.VideoImages or Feed.VideoUserImages or Feed.WhatsNew
-            or Feed.WhatsNewBackfill or Feed.Sites or Feed.SiteChanges or Feed.SiteChangesBaseline => AccountClass.AccountFree,
+            or Feed.WhatsNewBackfill or Feed.Sites or Feed.SiteChanges or Feed.SiteChangesBaseline or Feed.VideoChanges => AccountClass.AccountFree,
         _ => throw new ArgumentOutOfRangeException(
             nameof(feed),
             feed,

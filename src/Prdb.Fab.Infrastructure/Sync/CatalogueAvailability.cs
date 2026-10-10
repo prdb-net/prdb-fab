@@ -11,6 +11,7 @@ public sealed class CatalogueAvailability(FabDbContext context, TimeProvider tim
     {
         var row = await context.CatalogueVideos.AsTracking().SingleOrDefaultAsync(v => v.PrdbId == prdbId, token);
         if (row is null || (updatedAt is { } stamp && row.UpdatedAtUtc > stamp)) return;
+        row.ChangesBaselineAt = await context.VideoChangeState.Select(s => (DateTimeOffset?)s.LowerBoundAt).SingleOrDefaultAsync(token);
         row.Available = false;
         row.LastReadAt = time.GetUtcNow();
         if (updatedAt is { } newer)

@@ -4736,6 +4736,7 @@ export interface components {
             catalogueDetailsDue: number | string;
             /** Format: int32 */
             identificationsDue: number | string;
+            videoChanges?: null | components["schemas"]["VideoChangeProgress"];
         };
         RecentWindowIndexer: {
             /** Format: uuid */
@@ -5260,6 +5261,15 @@ export interface components {
             /** @default false */
             siteIgnored: boolean;
             catalogueNotice?: null | string;
+        };
+        VideoChangeProgress: {
+            /** Format: date-time */
+            baselineCompletedAt: null | string;
+            /** Format: date-time */
+            caughtUpAt: null | string;
+            /** Format: double */
+            lagSeconds: null | number | string;
+            fresh: boolean;
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];

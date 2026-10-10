@@ -166,3 +166,18 @@ it. The profile replaces its 1/24 request per hour with one, totaling roughly
 11.17 requests/hour. Status exposes the change routine and durable cursor while
 baseline is underway. Deferral and failure preserve applied progress without
 claiming a complete baseline.
+
+## Amendment: Video change schedule and budget
+
+Video changes run every thirty minutes in Sync, below discovery and above the
+image feed, with an 18% hourly reserve (`CatalogueChanges`). One turn applies
+at most 1,000 received rows, then yields; a backlog resumes after ten seconds.
+Baseline reconciliation remains in Bulk at the existing repair budget. On a
+small plan, Video changes shed to hourly alongside images and discovery. The
+steady profile adds two requests/hour, approximately 13.17 in total; baseline,
+recovery and historical backlog are work rather than idle demand.
+
+Status reports baseline completion, the post-apply server bound, observed lag
+and whether fallback repair is active. Cursor progress commits after application;
+a Governor deferral changes neither cursor nor coverage. Missing envelopes do
+not manufacture freshness.
