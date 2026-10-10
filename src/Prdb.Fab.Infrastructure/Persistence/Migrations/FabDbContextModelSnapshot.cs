@@ -596,7 +596,19 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AccountHandle")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Network")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PlatformId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlatformKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlatformTitle")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("PrdbId")
@@ -609,6 +621,12 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

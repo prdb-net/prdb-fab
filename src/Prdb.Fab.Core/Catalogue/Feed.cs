@@ -66,4 +66,7 @@ public enum Feed
 
     /// <summary>The account-owned Site restrictions.</summary>
     IgnoredSites,
+
+    SiteChanges,
+    SiteChangesBaseline,
 }

@@ -196,3 +196,21 @@ Unignore clears only the restriction; stale Favourite/Wanted reads do not
 resurrect old intent. A later genuine preference can be learned normally. During
 an outage automation continues from the last observed restrictions and intent,
 with the existing sync Gap naming stale state. Ordinary browsing stays local.
+
+## Amendment: Site changes replace the full list after handoff
+
+`GET /sites/changes` now exists. Sites retain a dedicated timestamp/UUID cursor,
+separate from the legacy Site-list ETag. A complete feed baseline starts at the
+beginning, applies explicit live states and tombstones, and records completion
+only after the final valid page has been applied and its cursor stored. Until
+then the legacy full-list routine remains as a one-shot safety net; it cannot
+overwrite Site rows already stamped by the feed. A completed baseline retires
+that routine, including across restart. An interrupted baseline continues from
+its cursor. New installations and restores follow the same path.
+
+Site UUIDs remain stable local identities. Newer states correct title, Network
+and nullable platform/account metadata. Tombstones retain useful metadata and
+mark the Site no longer offered; they never rename a Filed Path. Newer live
+states restore the same row. Platform is distinct from Network. A missing Site
+on one page means nothing about availability. The baseline marker, cursor and
+Site rows are disposable and refetched after Restore.

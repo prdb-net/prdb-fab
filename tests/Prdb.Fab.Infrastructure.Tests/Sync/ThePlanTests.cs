@@ -54,7 +54,7 @@ public sealed class ThePlanTests
         Assert.Equal(IdleProfile.RequestsAnHour, anHour, precision: 6);
 
         // And it really is about nine, which is the sentence ADR 0014 uses.
-        Assert.InRange(anHour, 10, 11);
+        Assert.InRange(anHour, 11, 12);
     }
 
     /// <summary>

@@ -79,6 +79,8 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<PreviewBackfill>();
         services.TryAddScoped<PublicationProgress>();
 
+        services.AddScoped<SiteFeed>();
+        Routine<SiteFeedRoutine>(services);
         services.AddScoped<ActorFeed>();
         services.AddScoped<UserPreviewFeed>();
         services.AddScoped<VideoImageFeed>();

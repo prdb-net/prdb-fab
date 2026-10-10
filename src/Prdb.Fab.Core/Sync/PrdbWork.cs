@@ -75,7 +75,7 @@ public enum PrdbWork
     /// <summary>The actors feed.</summary>
     Actors,
 
-    /// <summary>The site list, under its ETag.</summary>
+    /// <summary>The Site change feed and its legacy baseline safety net.</summary>
     Sites,
 
     /// <summary>

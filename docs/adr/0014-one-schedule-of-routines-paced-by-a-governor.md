@@ -155,3 +155,14 @@ adds one request per hour, approximately 10.21 requests/hour; the account feeds
 are not shed. Status includes `prdb.ignored-sites` alongside other prdb routines
 and shows its last success/failure/deferral. Site and Video surfaces explain a
 known restriction; the Ignore list itself is managed at prdb.
+
+## Amendment: Site change cadence and handoff
+
+The Site change feed runs hourly at Sites precedence in the Sync lane, with one
+page of up to 1,000 items per turn. `hasMore` schedules the next turn in ten
+seconds for both baseline and backlog. The legacy daily Site list is a one-shot
+handoff routine and is excluded from the steady idle profile; completion retires
+it. The profile replaces its 1/24 request per hour with one, totaling roughly
+11.17 requests/hour. Status exposes the change routine and durable cursor while
+baseline is underway. Deferral and failure preserve applied progress without
+claiming a complete baseline.

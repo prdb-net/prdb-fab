@@ -4,11 +4,8 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// ADR 0033's <c>CatalogueSite</c>: the producer a video was released by.
 /// </summary>
 /// <remarks>
-/// The one catalogue table with a deletion rule of its own: ADR 0013 never
-/// deletes a site row, only marks it as no longer offered, because ADR 0005
-/// builds a filed path out of the site title and a library entry must still be
-/// able to name the site its path came from. The whole list arrives in one
-/// request under an ETag, so this table is replaced rather than paged.
+/// The change feed marks explicit tombstones without discarding historical
+/// identity. Its stamp prevents stale snapshots reviving a deleted Site.
 /// </remarks>
 public sealed class CatalogueSiteRow
 {
@@ -31,4 +28,11 @@ public sealed class CatalogueSiteRow
     /// this is what says it is history.
     /// </summary>
     public bool StillOffered { get; set; } = true;
+
+    public DateTimeOffset? UpdatedAtUtc { get; set; }
+    public string? Url { get; set; }
+    public Guid? PlatformId { get; set; }
+    public string? PlatformKey { get; set; }
+    public string? PlatformTitle { get; set; }
+    public string? AccountHandle { get; set; }
 }
