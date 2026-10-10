@@ -99,19 +99,15 @@ public sealed class UserPreviewWrites(FabDbContext context, TimeProvider time)
         IReadOnlyList<VideoUserImageChangeItemDto> items,
         CancellationToken cancellationToken)
     {
-        var rows = items
-            .Select(item => item.VideoUserImage)
-            .Where(row => row?.Id is not null)
-            .Select(row => row!)
-            .ToList();
+        var rows = items.Where(item => item.VideoUserImage?.Id is not null).ToList();
 
         if (rows.Count == 0)
         {
             return 0;
         }
 
-        var ids = rows.Select(row => row.Id!.Value).ToList();
-        var videos = rows.Select(row => row.VideoId).OfType<Guid>().Distinct().ToList();
+        var ids = rows.Select(item => item.VideoUserImage!.Id!.Value).ToList();
+        var videos = rows.Select(item => item.VideoUserImage!.VideoId).OfType<Guid>().Distinct().ToList();
 
         var held = await context.UserPreviews
             .AsTracking()
@@ -129,8 +125,9 @@ public sealed class UserPreviewWrites(FabDbContext context, TimeProvider time)
 
         var applied = 0;
 
-        foreach (var dto in rows)
+        foreach (var item in rows)
         {
+            var dto = item.VideoUserImage!;
             var known = held.ContainsKey(dto.Id!.Value);
             var interesting = dto.VideoId is { } video && wanted.Contains(video);
 
@@ -139,7 +136,7 @@ public sealed class UserPreviewWrites(FabDbContext context, TimeProvider time)
                 continue;
             }
 
-            if (Write(dto, held, delivered: false))
+            if (Write(dto, held, delivered: false, deletedEvent: string.Equals(item.EventType, "deleted", StringComparison.OrdinalIgnoreCase)))
             {
                 applied++;
             }
@@ -177,10 +174,29 @@ public sealed class UserPreviewWrites(FabDbContext context, TimeProvider time)
     private bool Write(
         VideoUserImageDto dto,
         Dictionary<Guid, UserPreviewRow> held,
-        bool delivered)
+        bool delivered,
+        bool deletedEvent = false)
     {
         var id = dto.Id!.Value;
-        var stamp = dto.UpdatedAtUtc ?? time.GetUtcNow();
+        held.TryGetValue(id, out var row);
+        var withdrawn = deletedEvent || dto.IsDeleted == true || string.IsNullOrWhiteSpace(dto.Url);
+        // An undated live answer cannot prove it is newer than a withdrawal.
+        var stamp = dto.UpdatedAtUtc ?? (row?.UpdatedAtUtc ?? time.GetUtcNow());
+        if (row is not null && (stamp < row.UpdatedAtUtc
+            || (stamp == row.UpdatedAtUtc && row.Deleted && !withdrawn)))
+        {
+            return false;
+        }
+
+        if (withdrawn && row is not null)
+        {
+            // Tombstones need only identity and ordering. They may omit the
+            // hash, geometry and media entirely; retain the last useful payload.
+            row.UpdatedAtUtc = stamp;
+            row.Deleted = true;
+            Withdraw(row);
+            return true;
+        }
         var signature = UserPreviewModeration.Signature(dto.ModerationStatus, dto.ModerationVisibility);
 
         if (UserPreviewHash.Normalise(dto.BasedOnFileWithOsHash) is not { } hash)
@@ -191,7 +207,7 @@ public sealed class UserPreviewWrites(FabDbContext context, TimeProvider time)
             return false;
         }
 
-        if (!held.TryGetValue(id, out var row))
+        if (row is null)
         {
             row = new UserPreviewRow
             {
@@ -242,7 +258,7 @@ public sealed class UserPreviewWrites(FabDbContext context, TimeProvider time)
         row.Rows = dto.SpriteRows;
         row.ModerationStatus = dto.ModerationStatus;
         row.ModerationVisibility = dto.ModerationVisibility;
-        row.Deleted = dto.IsDeleted ?? false;
+        row.Deleted = withdrawn;
         row.UpdatedAtUtc = stamp;
 
         if (delivered && !row.Deleted)

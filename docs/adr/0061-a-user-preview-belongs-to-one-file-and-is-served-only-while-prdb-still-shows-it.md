@@ -407,3 +407,18 @@ Everything else here stands unchanged. The interest a filed Video File registers
 the lane it reads in, the share it spends and the fact that it never expires are
 all still right — ADR 0063 only replaces the reason, which is now that those
 bindings are ADR 0062's evidence rather than an asset to reconcile.
+
+## Current change contract (October 2026)
+
+The SDK now carries an explicit `eventType=deleted`; it withdraws the preview
+even when `isDeleted=false` and the moderation signature has not changed. A
+blank media URL also withdraws it. This overrides the filtered endpoint's
+visibility proof and removes the cache claim for the JPEG/VTT pair together.
+Minimal tombstones may omit the file hash and geometry: a known UUID still
+withdraws, retaining its last useful payload. Identification evidence and
+asset serving apply the same withdrawal.
+
+Only a newer live payload with usable media can restore the same UUID. An
+older, equally stamped or undated snapshot cannot undo an explicit withdrawal.
+Live feed rows still require the moderation signature previously established
+by a filtered endpoint; the feed alone does not establish public visibility.

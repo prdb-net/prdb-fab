@@ -141,7 +141,7 @@ public sealed class PreviewHashEvidence(
 
         var rows = await context.UserPreviews
             .AsNoTracking()
-            .Where(row => row.Shown && row.VideoPrdbId != null && wanted.Contains(row.OsHash))
+            .Where(row => row.Shown && !row.Deleted && row.Url.Trim() != "" && row.VideoPrdbId != null && wanted.Contains(row.OsHash))
             .Select(row => new { row.OsHash, VideoId = row.VideoPrdbId!.Value })
             .Distinct()
             .ToListAsync(cancellationToken);

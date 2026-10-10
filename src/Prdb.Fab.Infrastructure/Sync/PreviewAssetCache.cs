@@ -70,7 +70,7 @@ public sealed class PreviewAssetCache(
 
         // Withdrawn, never held, or a kind this build does not show. All three
         // are the same answer to a browser and none of them is retried.
-        if (row is null || !row.Shown || !UserPreviewAsset.IsKnown(row.Kind))
+        if (row is null || !row.Shown || row.Deleted || string.IsNullOrWhiteSpace(row.Url) || !UserPreviewAsset.IsKnown(row.Kind))
         {
             return PreviewAssetAnswer.Absent;
         }
@@ -247,6 +247,8 @@ public sealed class PreviewAssetCache(
 
         if (row is null
             || !row.Shown
+            || row.Deleted
+            || string.IsNullOrWhiteSpace(row.Url)
             || !Paired(row)
             || !string.Equals(version, VersionOf(row), StringComparison.Ordinal))
         {
