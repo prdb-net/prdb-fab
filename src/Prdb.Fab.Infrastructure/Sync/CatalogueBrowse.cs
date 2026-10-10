@@ -755,6 +755,9 @@ public sealed class CatalogueBrowse(
 
         var wantedSet = wanted.ToHashSet();
         var matchedSet = matched.ToHashSet();
+        var states = await context.CatalogueVideos.Where(v => ids.Contains(v.PrdbId))
+            .Select(v => new { v.PrdbId, v.Available, v.MergedIntoId }).ToDictionaryAsync(v => v.PrdbId, cancellationToken);
+
         var ignoredSites = await context.IgnoredSites.Where(s => s.Ignored)
             .Select(s => s.SitePrdbId).ToHashSetAsync(cancellationToken);
 
@@ -771,6 +774,7 @@ public sealed class CatalogueBrowse(
                 : matchedSet.Contains(video.Id)
                     ? VideoAvailability.ReleasesNeedInspection
                     : VideoAvailability.NoIdentifiedRelease,
+            CatalogueNotice = states.TryGetValue(video.PrdbId, out var state) ? CatalogueAvailability.Notice(state.Available, state.MergedIntoId) : null,
             SiteIgnored = video.SitePrdbId is { } siteId && ignoredSites.Contains(siteId),
             ActiveDownloadId = activeDownloads.GetValueOrDefault(video.PrdbId)?.Id,
             ActiveDownloadState = activeDownloads.GetValueOrDefault(video.PrdbId)?.State,
@@ -818,7 +822,8 @@ public sealed record VideoCard(
     VideoAvailability Availability = VideoAvailability.NoIdentifiedRelease,
     Guid? ActiveDownloadId = null,
     DownloadState? ActiveDownloadState = null,
-    bool SiteIgnored = false);
+    bool SiteIgnored = false,
+    string? CatalogueNotice = null);
 
 public enum VideoAvailability
 {

@@ -805,6 +805,7 @@ function facts(video: VideoCard, preview?: VideoPreview): string {
     downloading,
     held,
     video.wanted ? 'Wanted' : null,
+    video.catalogueNotice,
     video.siteIgnored ? 'Site is ignored in prdb; unignore there to add new Wanted intent' : null,
   ]
     .filter(Boolean)

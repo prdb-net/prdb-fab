@@ -27,7 +27,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// has been removed — and this is where that is noticed.
 /// </para>
 /// </remarks>
-public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, TimeProvider time)
+public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, TimeProvider time, IgnoredSites ignores)
 {
     /// <summary>
     /// Writes one video whole, and says whether the catalogue had it before.
@@ -43,6 +43,11 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             .AsTracking()
             .SingleOrDefaultAsync(row => row.PrdbId == prdbId, cancellationToken);
 
+        if (video is not null && (detail.UpdatedAtUtc < video.UpdatedAtUtc
+                || (!video.Available && video.DeletedAtUtc != null
+                    && (detail.UpdatedAtUtc is null || detail.UpdatedAtUtc <= video.UpdatedAtUtc))))
+            return false;
+
         var arrived = video is null;
 
         if (video is null)
@@ -50,6 +55,10 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
             video = new CatalogueVideoRow { PrdbId = prdbId, Title = string.Empty };
             context.CatalogueVideos.Add(video);
         }
+
+        video.Available = true;
+        video.DeletedAtUtc = null;
+        video.MergedIntoId = null;
 
         var title = detail.Title ?? string.Empty;
 
@@ -104,6 +113,13 @@ public sealed class VideoDetails(FabDbContext context, CatalogueRows catalogue, 
         await WriteImagesAsync(video.Id, detail.Images, cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        if (video.SiteId is { } localSite)
+        {
+            var sitePrdbId = await context.CatalogueSites.Where(s => s.Id == localSite).Select(s => s.PrdbId).SingleAsync(cancellationToken);
+            if (await ignores.RestrictsAsync(AccountPreferenceKind.FavouriteSite, sitePrdbId, cancellationToken))
+                await ignores.ReconcileAsync(sitePrdbId, cancellationToken);
+        }
 
         return arrived;
     }

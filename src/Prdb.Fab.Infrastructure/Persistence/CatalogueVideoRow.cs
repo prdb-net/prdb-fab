@@ -24,6 +24,10 @@ public sealed class CatalogueVideoRow
 
     public required string Title { get; set; }
 
+    public bool Available { get; set; } = true;
+    public DateTimeOffset? DeletedAtUtc { get; set; }
+    public Guid? MergedIntoId { get; set; }
+
     /// <summary>
     /// ADR 0023's comparison form of <see cref="Title"/>, stored so that the
     /// same function writes the needle and the haystack and the two cannot

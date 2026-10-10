@@ -25,6 +25,7 @@ export function LibraryEntryScreen() {
       <dl className={styles.definition}><dt>Actors</dt><dd>{data.actors.map((actor) => actor.name).join(', ') || 'None recorded'}</dd><dt>Directory</dt><dd><code>{data.entryDirectory}</code></dd><dt>Filed</dt><dd>{new Date(data.filedAt).toLocaleString()}</dd><dt>prdb runtime consensus</dt><dd>{consensus == null ? 'Not available' : `${consensus} min from ${data.consensusRuntimeFileCount ?? 0} file(s), spread ${Math.round(Number(data.consensusRuntimeSpreadMs ?? 0) / 1000)} s`}</dd></dl>
     </section>
     <h2>Video Files</h2>
+    {data.catalogueNotice && <p>{data.catalogueNotice}</p>}
     <div className={styles.tableFrame}><table className={styles.table}><thead><tr><th>Quality</th><th>Runtime</th><th>Size</th><th>Probe</th><th>Path</th></tr></thead><tbody>{data.files.map((file) => <tr key={file.id}><td>{file.quality}</td><td>{duration(file.runtimeSeconds)}</td><td>{size(file.sizeBytes)}</td><td>{file.width && file.height ? `${file.width}×${file.height}` : '—'} {file.videoCodec}</td><td><code>{file.filedPath}</code></td></tr>)}</tbody></table></div>
     <h2>Operation Log</h2>
     <OperationList entries={data.operations.entries} />

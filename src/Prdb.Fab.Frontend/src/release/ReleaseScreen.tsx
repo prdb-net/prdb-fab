@@ -675,6 +675,7 @@ function automationExplanation(release: ReleasePage['releases'][number]) {
   const reasons: Record<string, string> = {
     NotWanted: 'Video is not Wanted',
     SiteIgnored: 'Site is ignored in prdb',
+    VideoUnavailable: 'Video is unavailable at prdb',
     ConfidenceGate: 'Held by the before-download gate',
     Size: 'Outside every allowed size range',
     IndexerNotAllowed: 'No enabled rule allows this Indexer',

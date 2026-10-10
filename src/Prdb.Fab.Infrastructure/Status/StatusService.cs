@@ -716,6 +716,7 @@ public sealed class StatusService(
         {
             var (title, detail, route) = decision.Reason switch
             {
+                AutomationDecisionReason.VideoUnavailable => ("Unavailable Catalogue Videos held automatic Downloads", "prdb deleted or no longer returns these Videos. Held files and historic identities are retained.", "/library"),
                 AutomationDecisionReason.SiteIgnored => ("Ignored Sites held automatic Downloads", "Unignore the Site in prdb to allow new Favourite or Wanted intent. Existing files and manual Downloads are kept.", "/sites"),
                 AutomationDecisionReason.ConfidenceGate => ("The BeforeDownload Gate held Releases", "Change the fixed named confidence set to reconsider them.", "/settings/identification"),
                 AutomationDecisionReason.Size => ("Automation Rule size bounds held Releases", "No enabled rule accepting the Indexer also accepted the Release size.", "/settings/automation"),

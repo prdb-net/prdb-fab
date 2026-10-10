@@ -214,3 +214,26 @@ mark the Site no longer offered; they never rename a Filed Path. Newer live
 states restore the same row. Platform is distinct from Network. A missing Site
 on one page means nothing about availability. The baseline marker, cursor and
 Site rows are disposable and refetched after Restore.
+
+## Amendment: unavailable and merged Videos keep local identity
+
+A remote tombstone is an upstream fact, distinct from a missing Video File. It
+sets Catalogue availability and an optional `mergedIntoId`, ordered by the
+upstream update stamp, while preserving the last useful metadata. Older detail
+reads cannot revive it. A newer live state can restore the same UUID. A missing
+batch result marks an observed unavailability without inventing a deletion
+stamp or merge target; a failed/absent response proves nothing.
+
+Library Entries, Filed Paths, Confirmed Assignments and historical reports keep
+the original UUID. Even when both sides of a remote merge are held locally,
+entries and qualities remain separate: merge provenance never authorizes a
+local merge, reassignment or report against the survivor. This preserves ADRs
+0017, 0019 and 0047. A tombstone never deletes or renames a file or empties an
+entry. Referenced cache rows remain pinned; ordinary eviction can drop
+unreferenced unavailable rows. New automatic acquisition is barred, and Library,
+Download and Review surfaces explain the upstream state and survivor UUID.
+
+Availability is disposable Catalogue state, refetched on Restore. Backup keeps
+Library and historical identity and Restore's existing repair obligations
+rehydrate those UUIDs, never substitute a survivor or mistake upstream absence
+for a locally missing file.

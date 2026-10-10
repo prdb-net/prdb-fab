@@ -3997,7 +3997,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | null;
+        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
         AutomationIndexer: {
             /** Format: uuid */
             id: string;
@@ -4301,6 +4301,7 @@ export interface components {
             origin: components["schemas"]["DownloadOriginView"];
             /** Format: date-time */
             createdAt: string;
+            catalogueNotice?: null | string;
         };
         FileAsRequest: {
             /** Format: uuid */
@@ -4408,6 +4409,7 @@ export interface components {
             qualities: string[];
             /** Format: int64 */
             runtimeSeconds: null | number | string;
+            catalogueNotice?: null | string;
         };
         LibraryEntry: {
             /** Format: uuid */
@@ -4428,6 +4430,7 @@ export interface components {
             actors: components["schemas"]["LibraryActor"][];
             files: components["schemas"]["LibraryFile"][];
             operations: components["schemas"]["OperationLogPage"];
+            catalogueNotice?: null | string;
         };
         LibraryEntryDeleteFile: {
             /** Format: uuid */
@@ -4994,6 +4997,7 @@ export interface components {
             consensusRuntimeFileCount?: null | number | string;
             /** Format: int64 */
             artworkId?: null | number | string;
+            catalogueNotice?: null | string;
         };
         ReviewVideoSearchPage: {
             videos: components["schemas"]["ReviewVideo"][];
@@ -5255,6 +5259,7 @@ export interface components {
             activeDownloadState?: null | components["schemas"]["DownloadState"];
             /** @default false */
             siteIgnored: boolean;
+            catalogueNotice?: null | string;
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];

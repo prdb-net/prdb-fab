@@ -314,6 +314,7 @@ function Row({
             <span className={styles.rowSeparator} aria-hidden="true">&rsaquo;</span>
           </>}
           <span className={styles.rowTitle}>{download.videoTitle}</span>
+          {download.catalogueNotice && <span>{download.catalogueNotice}</span>}
         </span>
         <span className={styles.rowSize}>{size(download.size)}</span>
         <span className={styles.rowWhen}>{shortDate(download.createdAt)}</span>
@@ -366,6 +367,7 @@ function DownloadDetail({
         <div className={styles.detailName}>
           {download.site && <span className={styles.detailSite}>{download.site}</span>}
           <h2>{download.videoTitle}</h2>
+          {download.catalogueNotice && <p>{download.catalogueNotice}</p>}
         </div>
         <span className={`${styles.state} ${stateClass(download.state)}`}>{download.state}</span>
       </header>

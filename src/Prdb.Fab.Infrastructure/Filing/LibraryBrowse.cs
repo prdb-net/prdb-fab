@@ -80,6 +80,8 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
                 ArtworkId = row.Video.Id,
                 row.Video.PrdbId,
                 row.Video.Title,
+                row.Video.Available,
+                row.Video.MergedIntoId,
                 Site = row.Video.Site == null ? null : row.Video.Site.Title,
                 row.Video.ReleaseDate,
                 Files = context.VideoFiles
@@ -95,7 +97,8 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             row.Site,
             row.ReleaseDate,
             row.Files.Select(file => file.QualityLabel).Distinct().Order(VideoQuality.BestFirst).ToArray(),
-            row.Files.OrderBy(file => file.QualityLabel, VideoQuality.BestFirst).Select(file => file.RuntimeSeconds).FirstOrDefault()))
+            row.Files.OrderBy(file => file.QualityLabel, VideoQuality.BestFirst).Select(file => file.RuntimeSeconds).FirstOrDefault(),
+            Sync.CatalogueAvailability.Notice(row.Available, row.MergedIntoId)))
             .ToList();
 
         return new LibraryPage(
@@ -176,7 +179,8 @@ public sealed class LibraryBrowse(FabDbContext context, OperationLogBrowse opera
             // a history beside the files, not browsed. The page carries its
             // total, so the surface says how many of them it is showing rather
             // than dropping the rest in silence.
-            await operations.ReadAsync(null, null, videoId, 1, cancellationToken));
+            await operations.ReadAsync(null, null, videoId, 1, cancellationToken),
+            Sync.CatalogueAvailability.Notice(row.Video.Available, row.Video.MergedIntoId));
     }
 
     /// <summary>
@@ -278,7 +282,8 @@ public sealed record LibraryCard(
     string? Site,
     DateOnly? ReleaseDate,
     IReadOnlyList<string> Qualities,
-    long? RuntimeSeconds);
+    long? RuntimeSeconds,
+    string? CatalogueNotice = null);
 public sealed record LibraryPage(
     IReadOnlyList<LibraryCard> Entries,
     LibraryFilters Filters,
@@ -307,4 +312,5 @@ public sealed record LibraryEntry(
     DateTimeOffset FiledAt,
     IReadOnlyList<LibraryActor> Actors,
     IReadOnlyList<LibraryFile> Files,
-    OperationLogPage Operations);
+    OperationLogPage Operations,
+    string? CatalogueNotice = null);

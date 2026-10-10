@@ -702,7 +702,13 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Available")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("DurationFileCount")
@@ -715,6 +721,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("LastReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("MergedIntoId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("NormalisedTitle")

@@ -53,6 +53,7 @@ public sealed class CatalogueRepairRoutine(
     PrdbGateway prdb,
     PrdbGovernor governor,
     VideoDetails details,
+    CatalogueAvailability availability,
     EntryFiles entryFiles,
     TimeProvider time,
     ILogger<CatalogueRepairRoutine> logger) : IRoutine
@@ -149,6 +150,8 @@ public sealed class CatalogueRepairRoutine(
                 cancellationToken: token),
             cancellationToken);
 
+        if (read is null) return 0;
+
         var answered = new HashSet<Guid>();
 
         foreach (var detail in read ?? [])
@@ -207,17 +210,9 @@ public sealed class CatalogueRepairRoutine(
             return;
         }
 
-        var asked = time.GetUtcNow();
+        foreach (var video in batch.Where(v => !answered.Contains(v.PrdbId)))
+            await availability.UnavailableAsync(video.PrdbId, null, null, null, cancellationToken);
 
-        await context.CatalogueVideos
-            .Where(row => missed.Contains(row.Id))
-            .ExecuteUpdateAsync(
-                row => row.SetProperty(video => video.LastReadAt, asked),
-                cancellationToken);
-
-        logger.LogWarning(
-            "prdb did not answer for {Count} pinned video(s) the repair pass asked about.",
-            missed.Count);
     }
 
     /// <summary>A row the pass is about to ask about, by both of its names.</summary>

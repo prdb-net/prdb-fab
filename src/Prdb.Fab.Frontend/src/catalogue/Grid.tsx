@@ -95,7 +95,7 @@ function HeldCard({ entry, action }: { entry: LibraryCard; action?: ReactNode })
     artworkId={entry.artworkId}
     title={entry.title}
     detail={[entry.site, entry.releaseDate].filter(Boolean).join(' · ')}
-    status={[describeCopies(entry.qualities), describeRuntime(entry.runtimeSeconds)].filter(Boolean).join(' · ')}
+    status={[describeCopies(entry.qualities), describeRuntime(entry.runtimeSeconds), entry.catalogueNotice].filter(Boolean).join(' · ')}
     badge={qualities.length > 0 && <span className={styles.held}>In Library · {qualities.join(', ')}</span>}
     to={`/library/${entry.id}`}
     action={action}

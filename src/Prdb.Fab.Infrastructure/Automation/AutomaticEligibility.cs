@@ -28,6 +28,9 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
             release => release.Id,
             _ => AutomaticReleaseEligibility.Refused(AutomationDecisionReason.NotWanted));
 
+        if (await context.CatalogueVideos.AnyAsync(v => v.PrdbId == videoId && !v.Available, cancellationToken))
+            return releases.ToDictionary(r => r.Id, _ => AutomaticReleaseEligibility.Refused(AutomationDecisionReason.VideoUnavailable));
+
         if (await ignores.RestrictsAsync(AccountPreferenceKind.WantedVideo, videoId, cancellationToken))
             return releases.ToDictionary(r => r.Id, _ => AutomaticReleaseEligibility.Refused(AutomationDecisionReason.SiteIgnored));
 

@@ -3863,6 +3863,7 @@
           "NoReleasesLeft",
           "DownloadInFlight",
           "SiteIgnored",
+          "VideoUnavailable",
           null
         ]
       },
@@ -5150,6 +5151,12 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5589,6 +5596,12 @@
               "string"
             ],
             "format": "int64"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5677,6 +5690,12 @@
           },
           "operations": {
             "$ref": "#/components/schemas/OperationLogPage"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8167,6 +8186,12 @@
               "string"
             ],
             "format": "int64"
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9285,6 +9310,12 @@
           "siteIgnored": {
             "type": "boolean",
             "default": false
+          },
+          "catalogueNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
