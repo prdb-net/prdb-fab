@@ -20,7 +20,8 @@ namespace Prdb.Fab.Infrastructure.Sync;
 public sealed class AccountPreferences(
     FabDbContext context,
     PrdbGateway prdb,
-    TimeProvider time)
+    TimeProvider time,
+    IgnoredSites ignores)
 {
     public async Task<AccountPreferenceVerdict> SetAsync(
         AccountPreferenceKind kind,
@@ -42,6 +43,9 @@ public sealed class AccountPreferences(
                 desired,
                 "The prdb connection is not configured. Check it and retry.");
         }
+
+        if (desired && await ignores.RestrictsAsync(kind, entityId, cancellationToken))
+            return AccountPreferenceVerdict.Rejected(desired, IgnoredSites.Explanation);
 
         var sent = await SendAsync(apiKey, kind, entityId, desired, cancellationToken);
         if (!sent.Updated)
@@ -89,6 +93,15 @@ public sealed class AccountPreferences(
             pending.Blocked = false;
         }
 
+        if (await ignores.RestrictsAsync(AccountPreferenceKind.WantedVideo, videoId, cancellationToken))
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            var blockedWrite = await context.AccountPreferenceWrites.AsNoTracking().SingleAsync(
+                w => w.Kind == AccountPreferenceKind.WantedVideo && w.EntityId == videoId, cancellationToken);
+            await RecordFailureAsync(blockedWrite, IgnoredSites.Explanation, true, cancellationToken);
+            return;
+        }
+
         await ApplyAsync(
             AccountPreferenceKind.WantedVideo,
             videoId,
@@ -113,6 +126,9 @@ public sealed class AccountPreferences(
                 blocked: true,
                 cancellationToken);
         }
+
+        if (write.Desired && await ignores.RestrictsAsync(write.Kind, write.EntityId, cancellationToken))
+            return await RecordFailureAsync(write, IgnoredSites.Explanation, true, cancellationToken);
 
         var verdict = await SendAsync(
             apiKey,

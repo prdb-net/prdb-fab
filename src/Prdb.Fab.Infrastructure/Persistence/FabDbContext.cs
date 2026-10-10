@@ -86,6 +86,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
     /// <summary>The user's half, and the three tables a key change drops.</summary>
     public DbSet<WantedVideoRow> WantedVideos => Set<WantedVideoRow>();
 
+    public DbSet<IgnoredSiteRow> IgnoredSites => Set<IgnoredSiteRow>();
+
     public DbSet<FavouriteSiteRow> FavouriteSites => Set<FavouriteSiteRow>();
 
     public DbSet<FavouriteActorRow> FavouriteActors => Set<FavouriteActorRow>();
@@ -642,6 +644,13 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(row => row.VideoId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<IgnoredSiteRow>(ignored =>
+        {
+            ignored.ToTable("ignored_site");
+            ignored.HasKey(row => row.SitePrdbId);
+            ignored.Declares(AccountClass.AccountScoped);
         });
 
         builder.Entity<FavouriteSiteRow>(favourite =>

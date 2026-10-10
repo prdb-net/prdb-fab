@@ -20,7 +20,7 @@ public sealed class FeedTests
         var scoped = Feeds.All.Where(feed => feed.AccountClassOf() == AccountClass.AccountScoped);
 
         Assert.Equal(
-            [Feed.WantedVideos, Feed.FavouriteSites, Feed.FavouriteActors],
+            [Feed.WantedVideos, Feed.FavouriteSites, Feed.FavouriteActors, Feed.IgnoredSites],
             scoped);
     }
 

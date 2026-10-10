@@ -268,7 +268,8 @@ public sealed class CatalogueBrowse(
                     .OrderByDescending(video => video.CreatedAtUtc)
                     .ThenBy(video => video.Id)
                     .Select(video => (long?)video.Id)
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                context.IgnoredSites.Any(ignored => ignored.SitePrdbId == row.PrdbId && ignored.Ignored)))
             .ToListAsync(cancellationToken);
 
         return new SitePage(sites, wanted, APage, total, scope);
@@ -344,7 +345,8 @@ public sealed class CatalogueBrowse(
             .Select(row => new BrowseContext(
                 row.PrdbId,
                 row.Title,
-                context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id)))
+                context.FavouriteSites.Any(favourite => favourite.SiteId == row.Id),
+                context.IgnoredSites.Any(ignored => ignored.SitePrdbId == row.PrdbId && ignored.Ignored)))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (site is null)
@@ -753,6 +755,9 @@ public sealed class CatalogueBrowse(
 
         var wantedSet = wanted.ToHashSet();
         var matchedSet = matched.ToHashSet();
+        var ignoredSites = await context.IgnoredSites.Where(s => s.Ignored)
+            .Select(s => s.SitePrdbId).ToHashSetAsync(cancellationToken);
+
         return [.. videos.Select(video => video with
         {
             DownloadReady = ready.Contains(video.PrdbId),
@@ -766,6 +771,7 @@ public sealed class CatalogueBrowse(
                 : matchedSet.Contains(video.Id)
                     ? VideoAvailability.ReleasesNeedInspection
                     : VideoAvailability.NoIdentifiedRelease,
+            SiteIgnored = video.SitePrdbId is { } siteId && ignoredSites.Contains(siteId),
             ActiveDownloadId = activeDownloads.GetValueOrDefault(video.PrdbId)?.Id,
             ActiveDownloadState = activeDownloads.GetValueOrDefault(video.PrdbId)?.State,
         })];
@@ -811,7 +817,8 @@ public sealed record VideoCard(
     IReadOnlyList<string>? HeldQualities = null,
     VideoAvailability Availability = VideoAvailability.NoIdentifiedRelease,
     Guid? ActiveDownloadId = null,
-    DownloadState? ActiveDownloadState = null);
+    DownloadState? ActiveDownloadState = null,
+    bool SiteIgnored = false);
 
 public enum VideoAvailability
 {
@@ -876,7 +883,7 @@ public sealed record WantedList(
     bool FeedHasRun,
     bool RecentWindowFilling);
 
-public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite);
+public sealed record BrowseContext(Guid PrdbId, string Title, bool Favourite, bool Ignored = false);
 
 public sealed record SiteCard(
     Guid PrdbId,
@@ -885,7 +892,8 @@ public sealed record SiteCard(
     int VideoCount,
     int HeldVideoCount,
     bool Favourite,
-    long? RepresentativeVideoId);
+    long? RepresentativeVideoId,
+    bool Ignored = false);
 
 public sealed record ActorCard(Guid PrdbId, string Name, int VideoCount, bool Favourite, bool HasArtwork);
 

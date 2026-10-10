@@ -179,3 +179,20 @@ window of pages has a stated ceiling.
 - Ticket 13 sets the numbers. This decision fixes the shapes — a budget for
   repair, a page ceiling for backfill, an overlap for the high-water mark — and
   leaves every value to the ticket that owns polling.
+
+## Amendment: account-owned Ignored Sites
+
+The SDK Ignore change feed joins Wanted and Favourite feeds, with an independent
+account-scoped cursor and a disposable observed projection. Each UUID retains
+its last upstream timestamp even after unignore, rejecting stale replay. A key
+change drops the projection and cursor; Restore fetches both again. A known
+Ignore prevents new additions locally, while `site_ignored` remains authoritative
+for races and unknown state. Reconciliation blocks pending additions with a
+visible reason, removes Favourite/Wanted projections and applies ADR 0045's
+local abandonment to unfinished automatic Downloads. It neither deletes files
+nor calls SABnzbd. Manual Downloads and reporting history remain.
+
+Unignore clears only the restriction; stale Favourite/Wanted reads do not
+resurrect old intent. A later genuine preference can be learned normally. During
+an outage automation continues from the last observed restrictions and intent,
+with the existing sync Gap naming stale state. Ordinary browsing stays local.

@@ -517,6 +517,14 @@ last check against it. What a Gap names when one is missing or no longer
 verifies.
 _Avoid_: Integration, Endpoint, Service
 
+**Ignored Site**:
+An account restriction owned by prdb. Its observed state prevents new Favourite
+and Wanted intent and automatic acquisition. Ignoring removes earlier intent;
+unignoring removes only the restriction, never recreating it. Local files and
+manual Downloads survive. The projection and its cursor belong to the account
+and are refetched on Restore rather than exported.
+_Avoid_: Blocked Site, Blacklist
+
 **Password**:
 The single secret the user signs in with, set during onboarding and belonging
 to the installation rather than to an account. The only secret this tool asks a

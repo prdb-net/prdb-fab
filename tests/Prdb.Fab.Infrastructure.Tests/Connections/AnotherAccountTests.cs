@@ -230,6 +230,7 @@ public sealed class AnotherAccountTests
                 "account_preference_write",
                 "favourite_actor",
                 "favourite_site",
+                "ignored_site",
                 "wanted_video",
                 "wanted_video_sweep_state",
             ],

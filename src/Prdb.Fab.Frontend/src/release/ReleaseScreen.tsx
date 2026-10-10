@@ -674,6 +674,7 @@ function automationExplanation(release: ReleasePage['releases'][number]) {
   if (!release.automaticDecisionReason) return 'Not evaluated'
   const reasons: Record<string, string> = {
     NotWanted: 'Video is not Wanted',
+    SiteIgnored: 'Site is ignored in prdb',
     ConfidenceGate: 'Held by the before-download gate',
     Size: 'Outside every allowed size range',
     IndexerNotAllowed: 'No enabled rule allows this Indexer',

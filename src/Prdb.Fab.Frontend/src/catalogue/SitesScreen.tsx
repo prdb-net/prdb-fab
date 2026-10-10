@@ -50,12 +50,15 @@ export function SitesScreen() {
           </Link>
         )}
         contextAction={(
+          <>
+          {selected.site.ignored && <span>Ignored in prdb. Unignore there to add new Favourites or Wanted Videos.</span>}
           <PreferenceButton
             active={selected.site.favourite}
             activeLabel="Unfavourite"
             inactiveLabel="Favourite"
             write={(desired) => setFavouriteSite(selected.site.prdbId, desired)}
           />
+          </>
         )}
       />
     )
@@ -70,7 +73,7 @@ export function SitesScreen() {
       items={directory.sites.map((site) => ({
         prdbId: site.prdbId,
         title: site.title,
-        detail: site.network,
+        detail: site.ignored ? "Ignored in prdb — unignore there to add new Favourites or Wanted Videos" : site.network,
         videoCount: Number(site.videoCount),
         heldVideoCount: Number(site.heldVideoCount),
         favourite: site.favourite,

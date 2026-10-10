@@ -25,7 +25,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// its write converges; otherwise this feed remains the account authority.
 /// </para>
 /// </remarks>
-public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueRows catalogue)
+public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueRows catalogue, IgnoredSites ignores)
     : ChangeFeed(context, prdb, catalogue)
 {
     public override Feed Feed => Feed.WantedVideos;
@@ -85,6 +85,9 @@ public sealed class WantedVideoFeed(FabDbContext context, PrdbGateway prdb, Cata
         foreach (var entry in wanted)
         {
             var prdbId = entry!.VideoId!.Value;
+
+            if (entry.IsDeleted is not true && await ignores.RejectsWantedFeedAsync(
+                    prdbId, entry.UpdatedAtUtc ?? default, cancellationToken)) continue;
 
             if (entry.IsDeleted is true)
             {

@@ -1054,6 +1054,27 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
                 });
 
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IgnoredSiteRow", b =>
+                {
+                    b.Property<Guid>("SitePrdbId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Ignored")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("SitePrdbId");
+
+                    b.ToTable("ignored_site", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountScoped")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
             modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IndexerRow", b =>
                 {
                     b.Property<Guid>("Id")

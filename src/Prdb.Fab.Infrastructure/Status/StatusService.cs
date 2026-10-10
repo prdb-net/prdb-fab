@@ -716,6 +716,7 @@ public sealed class StatusService(
         {
             var (title, detail, route) = decision.Reason switch
             {
+                AutomationDecisionReason.SiteIgnored => ("Ignored Sites held automatic Downloads", "Unignore the Site in prdb to allow new Favourite or Wanted intent. Existing files and manual Downloads are kept.", "/sites"),
                 AutomationDecisionReason.ConfidenceGate => ("The BeforeDownload Gate held Releases", "Change the fixed named confidence set to reconsider them.", "/settings/identification"),
                 AutomationDecisionReason.Size => ("Automation Rule size bounds held Releases", "No enabled rule accepting the Indexer also accepted the Release size.", "/settings/automation"),
                 AutomationDecisionReason.IndexerNotAllowed => ("No enabled Automation Rule allowed an Indexer", "Enable or change a rule to permit Releases from that Indexer.", "/settings/automation"),

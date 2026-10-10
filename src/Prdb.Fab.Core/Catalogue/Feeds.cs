@@ -22,7 +22,7 @@ public static class Feeds
     /// </remarks>
     public static AccountClass AccountClassOf(this Feed feed) => feed switch
     {
-        Feed.WantedVideos or Feed.FavouriteSites or Feed.FavouriteActors => AccountClass.AccountScoped,
+        Feed.WantedVideos or Feed.FavouriteSites or Feed.FavouriteActors or Feed.IgnoredSites => AccountClass.AccountScoped,
         // The user previews feed is global and moderated rather than personal:
         // what it carries is what prdb shows everybody, so a cursor into it
         // says nothing about whose key read it (ADR 0061).

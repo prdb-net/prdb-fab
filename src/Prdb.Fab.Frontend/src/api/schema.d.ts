@@ -3997,7 +3997,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | null;
+        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | null;
         AutomationIndexer: {
             /** Format: uuid */
             id: string;
@@ -4099,6 +4099,8 @@ export interface components {
             prdbId: string;
             title: string;
             favourite: boolean;
+            /** @default false */
+            ignored: boolean;
         };
         /** @enum {unknown} */
         CatalogueScope: "Favourites" | "All";
@@ -5068,6 +5070,8 @@ export interface components {
             favourite: boolean;
             /** Format: int64 */
             representativeVideoId: null | number | string;
+            /** @default false */
+            ignored: boolean;
         };
         SiteOnlyMatch: {
             /** Format: uuid */
@@ -5249,6 +5253,8 @@ export interface components {
             /** Format: uuid */
             activeDownloadId?: null | string;
             activeDownloadState?: null | components["schemas"]["DownloadState"];
+            /** @default false */
+            siteIgnored: boolean;
         };
         VideoPage: {
             videos: components["schemas"]["VideoCard"][];

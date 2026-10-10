@@ -13,4 +13,5 @@ public enum AutomationDecisionReason
     RetryBudgetSpent,
     NoReleasesLeft,
     DownloadInFlight,
+    SiteIgnored,
 }

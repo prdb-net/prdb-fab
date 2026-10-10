@@ -63,4 +63,7 @@ public enum Feed
     /// the installation row would be a sync position kept among the settings.
     /// </remarks>
     Sites,
+
+    /// <summary>The account-owned Site restrictions.</summary>
+    IgnoredSites,
 }

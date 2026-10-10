@@ -3862,6 +3862,7 @@
           "RetryBudgetSpent",
           "NoReleasesLeft",
           "DownloadInFlight",
+          "SiteIgnored",
           null
         ]
       },
@@ -4285,6 +4286,10 @@
           },
           "favourite": {
             "type": "boolean"
+          },
+          "ignored": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -8505,6 +8510,10 @@
               "string"
             ],
             "format": "int64"
+          },
+          "ignored": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -9272,6 +9281,10 @@
                 "$ref": "#/components/schemas/DownloadState"
               }
             ]
+          },
+          "siteIgnored": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

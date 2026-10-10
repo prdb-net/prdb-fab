@@ -17,7 +17,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// to it, which is the matching slice's — so this feed is synced now so that the
 /// grid has something to read on the day it is written.
 /// </remarks>
-public sealed class FavouriteSiteFeed(FabDbContext context, PrdbGateway prdb, CatalogueRows catalogue)
+public sealed class FavouriteSiteFeed(FabDbContext context, PrdbGateway prdb, CatalogueRows catalogue, IgnoredSites ignores)
     : ChangeFeed(context, prdb, catalogue)
 {
     public override Feed Feed => Feed.FavouriteSites;
@@ -85,6 +85,9 @@ public sealed class FavouriteSiteFeed(FabDbContext context, PrdbGateway prdb, Ca
                 applied++;
                 continue;
             }
+
+            if (await ignores.RejectsSiteFeedAsync(prdbId, favourite.UpdatedAtUtc ?? default, cancellationToken))
+                continue;
 
             var siteId = await Catalogue.SiteAsync(
                 prdbId,

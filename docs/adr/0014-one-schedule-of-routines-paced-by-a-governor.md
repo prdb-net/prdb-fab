@@ -146,3 +146,12 @@ unchanged.*)
   last success, last failure and consecutive failures; and a run log capped at
   the last fifty runs per routine. Neither is exported — ADR 0009 takes only
   what cannot be fetched again, and a run log refetches itself by running.
+
+## Amendment: Ignore cadence
+
+Ignored Sites use UserFeeds precedence and the same hourly cadence as Wanted and
+Favourites. Backlog pages yield and resume after ten seconds. The idle profile
+adds one request per hour, approximately 10.21 requests/hour; the account feeds
+are not shed. Status includes `prdb.ignored-sites` alongside other prdb routines
+and shows its last success/failure/deferral. Site and Video surfaces explain a
+known restriction; the Ignore list itself is managed at prdb.
