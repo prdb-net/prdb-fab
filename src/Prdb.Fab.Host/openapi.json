@@ -1470,6 +1470,14 @@
               "default": "ReleaseDateDescending",
               "$ref": "#/components/schemas/CatalogueVideoSort"
             }
+          },
+          {
+            "name": "favouritesOnly",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {

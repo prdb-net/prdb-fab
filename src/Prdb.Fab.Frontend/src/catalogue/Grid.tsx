@@ -74,12 +74,17 @@ function Card({
   ) : held ? (
     <span className={styles.held}>In Library · {held}</span>
   ) : video.downloadReady ? (
-    <span className={styles.ready}>Ready to download</span>
+    <span className={styles.ready} role="img" aria-label="Ready to download" title="Ready to download">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m6 12 4 4 8-8" />
+      </svg>
+    </span>
   ) : null
 
   return <GridCard
     artworkId={video.id}
     title={video.title}
+    artworkLabel={video.site ?? undefined}
     detail={describe(video)}
     status={statusOf(video).join(' · ')}
     badge={badge}
@@ -94,6 +99,7 @@ function HeldCard({ entry, action }: { entry: LibraryCard; action?: ReactNode })
   return <GridCard
     artworkId={entry.artworkId}
     title={entry.title}
+    artworkLabel={entry.site ?? undefined}
     detail={[entry.site, entry.releaseDate].filter(Boolean).join(' · ')}
     status={[describeCopies(entry.qualities), describeRuntime(entry.runtimeSeconds), entry.catalogueNotice].filter(Boolean).join(' · ')}
     badge={qualities.length > 0 && <span className={styles.held}>In Library · {qualities.join(', ')}</span>}
@@ -112,6 +118,7 @@ function HeldCard({ entry, action }: { entry: LibraryCard; action?: ReactNode })
  */
 function GridCard({
   artworkId,
+  artworkLabel,
   title,
   detail,
   status,
@@ -122,6 +129,7 @@ function GridCard({
   prdbId,
 }: {
   artworkId: VideoCard['id']
+  artworkLabel?: string
   title: string
   detail: string
   status: string
@@ -133,7 +141,7 @@ function GridCard({
   prdbId?: string
 }) {
   const artwork = <span className={styles.artwork}>
-    <Artwork videoId={artworkId} title={title} />
+    <Artwork videoId={artworkId} title={title} fallbackLabel={artworkLabel} />
     {badge}
   </span>
 
@@ -164,8 +172,8 @@ function GridCard({
             </button>
           : <span className={styles.title}>{title}</span>}
       <span className={styles.detail}>{detail}</span>
-      <span className={styles.status}>{status}</span>
-      {action}
+      {status && <span className={styles.status}>{status}</span>}
+      {action && <div className={styles.cardActions}>{action}</div>}
     </li>
   )
 }
@@ -180,12 +188,14 @@ function GridCard({
 export function Artwork({
   videoId,
   title,
+  fallbackLabel,
   frameClassName = styles.frame,
   imageClassName = styles.image,
   absentClassName = styles.absent,
 }: {
   videoId: VideoCard['id']
   title: string
+  fallbackLabel?: string
   frameClassName?: string
   imageClassName?: string
   absentClassName?: string
@@ -194,6 +204,7 @@ export function Artwork({
     <CachedArtwork
       path={`/api/artwork/${videoId}`}
       title={title}
+      fallbackLabel={fallbackLabel}
       frameClassName={frameClassName}
       imageClassName={imageClassName}
       absentClassName={absentClassName}
@@ -201,15 +212,28 @@ export function Artwork({
   )
 }
 
-export function CachedArtwork({
+export function CachedArtwork(props: {
+  path: string
+  title: string
+  fallbackLabel?: string
+  frameClassName?: string
+  imageClassName?: string
+  absentClassName?: string
+}) {
+  return <ArtworkResource key={props.path} {...props} />
+}
+
+function ArtworkResource({
   path,
   title,
+  fallbackLabel,
   frameClassName = styles.frame,
   imageClassName = styles.image,
   absentClassName = styles.absent,
 }: {
   path: string
   title: string
+  fallbackLabel?: string
   frameClassName?: string
   imageClassName?: string
   absentClassName?: string
@@ -226,12 +250,14 @@ export function CachedArtwork({
       try {
         const answer = await fetch(path, { signal: controller.signal })
         if (answer.status === 204 || !answer.ok) {
-          setAbsent(true)
+          if (!controller.signal.aborted) setAbsent(true)
           return
         }
 
-        objectUrl = URL.createObjectURL(await answer.blob())
-        if (!controller.signal.aborted) setSource(objectUrl)
+        const blob = await answer.blob()
+        if (controller.signal.aborted) return
+        objectUrl = URL.createObjectURL(blob)
+        setSource(objectUrl)
       } catch (error) {
         if (!(error instanceof DOMException && error.name === 'AbortError')) setAbsent(true)
       }
@@ -267,8 +293,10 @@ export function CachedArtwork({
   return (
     <span className={frameClassName} ref={frame}>
       {absent ? (
-        <span className={absentClassName} aria-hidden="true">
-          ▤
+        <span className={`${absentClassName} ${styles.fallback}`} role="img" aria-label={`No artwork available for ${title}`}>
+          <span className={styles.monogram} aria-hidden="true">{(fallbackLabel ?? title).trim().slice(0, 2).toUpperCase()}</span>
+          {title && <span className={styles.fallbackName}>{fallbackLabel ?? 'Artwork unavailable'}</span>}
+          {fallbackLabel && <span className={styles.fallbackCaption}>No artwork available</span>}
         </span>
       ) : source ? (
         <img
@@ -277,7 +305,7 @@ export function CachedArtwork({
           alt={title}
           onError={() => setAbsent(true)}
         />
-      ) : null}
+      ) : <span className={styles.artworkLoading} aria-label="Loading artwork"><span /></span>}
     </span>
   )
 }
@@ -294,24 +322,13 @@ function describe(video: VideoCard): string {
 }
 
 function statusOf(video: VideoCard): string[] {
-  const held = video.heldQualities?.length
-    ? `In Library: ${video.heldQualities.join(', ')}`
-    : null
-  const available = video.availability === 'Ready'
-    ? 'Best Release ready'
-    : video.availability === 'ReleasesNeedInspection'
-      ? 'Releases need inspection'
-      : 'No identified Release'
-  const wanted = video.wantedSyncFailure
-    ? `Wanted sync blocked: ${video.wantedSyncFailure}`
-    : video.wantedSyncPending
-      ? 'Wanted sync pending'
-      : video.wanted ? 'Wanted' : 'Not wanted'
-  const activeDownload = video.activeDownloadId
-    ? video.activeDownloadState === 'Completed' ? 'Processing download' : 'Downloading'
-    : null
-  return [wanted, activeDownload, held, available]
-    .filter((value): value is string => Boolean(value))
+  if (video.wantedSyncFailure) return [`Wanted sync blocked: ${video.wantedSyncFailure}`]
+  if (video.wantedSyncPending) return ['Wanted sync pending']
+  if (video.catalogueNotice) return [video.catalogueNotice]
+  if (!video.activeDownloadId && !video.heldQualities?.length && !video.downloadReady) {
+    return [video.availability === 'ReleasesNeedInspection' ? 'Releases need inspection' : 'No identified Release yet']
+  }
+  return []
 }
 
 function compactQualities(qualities: readonly string[]): string[] {

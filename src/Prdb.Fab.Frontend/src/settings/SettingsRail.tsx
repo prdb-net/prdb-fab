@@ -155,12 +155,12 @@ function Group({
   icon?: SettingsIconName
   label: string
   /** The settings routes Status is currently pointing a Gap or a Brake at. */
-  marks: ReadonlySet<string>
+  marks: ReadonlyMap<string, 'Gap' | 'Brake'>
   nested?: boolean
   children?: React.ReactNode
 }) {
   const location = useLocation()
-  const marked = marks.has(to)
+  const marked = marks.get(to)
 
   return (
     <NavLink
@@ -176,8 +176,8 @@ function Group({
       <span className={styles.railLabel}>
         {label}
         {marked && (
-          <span className={styles.railMark} title="Status is pointing at this">
-            !
+          <span className={`${styles.railMark} ${marked === 'Brake' ? styles.railBrake : ''}`} title={marked === 'Gap' ? 'Gap: needs a repair' : 'Brake: deliberate limit or wait'}>
+            {marked === 'Gap' ? '!' : 'Ⅱ'}
           </span>
         )}
       </span>
@@ -204,8 +204,8 @@ function from(pathname: string, search: string): string {
  * rail matches the path, and the `from` the route carries is not part of what
  * it identifies.
  */
-function conditionRoutes(status: StatusState | undefined): ReadonlySet<string> {
-  const routes = new Set<string>()
+function conditionRoutes(status: StatusState | undefined): ReadonlyMap<string, 'Gap' | 'Brake'> {
+  const routes = new Map<string, 'Gap' | 'Brake'>()
 
   for (const stage of status?.stages ?? []) {
     for (const condition of [...stage.gaps, ...stage.brakes]) {
@@ -213,7 +213,7 @@ function conditionRoutes(status: StatusState | undefined): ReadonlySet<string> {
 
       const path = condition.route.split('?')[0]
 
-      if (path.startsWith('/settings')) routes.add(path)
+      if (path.startsWith('/settings') && routes.get(path) !== 'Gap') routes.set(path, condition.kind)
     }
   }
 

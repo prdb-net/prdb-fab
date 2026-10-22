@@ -17,10 +17,12 @@ export function CardActions({
   video,
   returnTo,
   includeSite = false,
+  menuAbove = false,
 }: {
   video: VideoCard
   returnTo: string
   includeSite?: boolean
+  menuAbove?: boolean
 }) {
   const cache = useQueryClient()
   const preference = useMutation({
@@ -113,7 +115,7 @@ export function CardActions({
           <Icon active={video.wanted} name="wanted" />
         </button>
 
-        <MoreActions includeSite={includeSite} video={video} returnTo={returnTo} />
+        <MoreActions menuAbove={menuAbove} includeSite={includeSite} video={video} returnTo={returnTo} />
       </span>
 
       {problem && (
@@ -134,10 +136,12 @@ export function CardActions({
 
 function MoreActions({
   includeSite,
+  menuAbove,
   video,
   returnTo,
 }: {
   includeSite: boolean
+  menuAbove: boolean
   video: VideoCard
   returnTo: string
 }) {
@@ -154,24 +158,22 @@ function MoreActions({
         setOpen(false)
       }
     }
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false)
-        trigger.current?.focus()
-      }
-    }
-
     document.addEventListener('pointerdown', closeOutside)
-    window.addEventListener('keydown', closeOnEscape)
     return () => {
       document.removeEventListener('pointerdown', closeOutside)
-      window.removeEventListener('keydown', closeOnEscape)
     }
   }, [open])
 
   return (
     <span
       className={styles.more}
+      onKeyDown={(event) => {
+        if (open && event.key === 'Escape') {
+          event.stopPropagation()
+          setOpen(false)
+          trigger.current?.focus()
+        }
+      }}
       onBlur={(event) => {
         if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) {
           setOpen(false)
@@ -194,7 +196,7 @@ function MoreActions({
       </button>
 
       {open && (
-        <span className={styles.menu} id={menuId}>
+        <span className={`${styles.menu} ${menuAbove ? styles.menuAbove : ''}`} id={menuId}>
           <Link
             to={videoReleasePath(video.prdbId, returnTo)}
             onClick={() => setOpen(false)}

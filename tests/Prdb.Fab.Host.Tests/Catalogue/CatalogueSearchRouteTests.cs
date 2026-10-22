@@ -91,6 +91,47 @@ public sealed class CatalogueSearchRouteTests
             descending.Videos.Select(video => video.Title));
     }
 
+    [Fact]
+    public async Task Favourites_combine_sites_and_actors_before_counting_and_paging_without_duplicates()
+    {
+        await using var application = new FabApplication();
+        using var client = await application.SignedInClientAsync();
+        await SeedAsync(application);
+        await using var scope = application.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        var site = new CatalogueSiteRow { PrdbId = Guid.NewGuid(), Title = "Favourite Site" };
+        var actor = new CatalogueActorRow { PrdbId = Guid.NewGuid(), Name = "Favourite Actor" };
+        context.CatalogueSites.Add(site);
+        context.CatalogueActors.Add(actor);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        context.FavouriteSites.Add(new FavouriteSiteRow { SiteId = site.Id, SinceAt = Noon });
+        context.FavouriteActors.Add(new FavouriteActorRow { ActorId = actor.Id, SinceAt = Noon });
+        var ready = await context.CatalogueVideos.SingleAsync(v => v.Title == "Ready scene", TestContext.Current.CancellationToken);
+        var old = await context.CatalogueVideos.SingleAsync(v => v.Title == "Old available", TestContext.Current.CancellationToken);
+        ready.SiteId = site.Id;
+        context.CatalogueVideoActors.AddRange(
+            new CatalogueVideoActorRow { VideoId = ready.Id, ActorId = actor.Id },
+            new CatalogueVideoActorRow { VideoId = old.Id, ActorId = actor.Id });
+        for (var index = 0; index < 24; index++)
+        {
+            var video = Video($"Favourite {index:00}", null, 1);
+            video.SiteId = site.Id;
+            context.CatalogueVideos.Add(video);
+        }
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var first = await ReadAsync(client, "filter=All&favouritesOnly=true&sort=TitleAscending");
+        var second = await ReadAsync(client, "filter=All&favouritesOnly=true&sort=TitleAscending&page=2");
+        var available = await ReadAsync(client, "filter=DownloadReady&favouritesOnly=true");
+        var search = await ReadAsync(client, "filter=All&favouritesOnly=true&search=Old");
+
+        Assert.Equal(26, first.Total);
+        Assert.Equal(24, first.Videos.Count);
+        Assert.Equal(["Old available", "Ready scene"], second.Videos.Select(video => video.Title));
+        Assert.Equal(["Ready scene"], available.Videos.Select(video => video.Title));
+        Assert.Equal(["Old available"], search.Videos.Select(video => video.Title));
+    }
+
     private static async Task<Page> ReadAsync(HttpClient client, string query) =>
         (await client.GetFromJsonAsync<Page>(
             "/api/catalogue/videos" + (query.Length > 0 ? $"?{query}" : string.Empty),
@@ -185,5 +226,5 @@ public sealed class CatalogueSearchRouteTests
     };
 
     private sealed record Card(string Title);
-    private sealed record Page(IReadOnlyList<Card> Videos);
+    private sealed record Page(IReadOnlyList<Card> Videos, int Total);
 }

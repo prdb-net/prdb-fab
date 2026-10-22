@@ -99,10 +99,9 @@ export function LibraryScreen() {
         {total > 0 && <span className={browseStyles.count}>{total} videos</span>}
       </div>
       <p className={browseStyles.lede}>
-        Browse the Videos held by this installation. Open an entry to see its files,
-        qualities and where they are filed.
+        Your Videos, organised and ready for your media server.
       </p>
-      <div className={styles.filters}>
+      {(hasHeldEntries || filtered) && <div className={styles.filters}>
         <label className={styles.searchLabel}>
           Title
           <input id="library-title" name="search" type="search" autoComplete="off" className={`${styles.field} ${styles.searchField}`} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
@@ -143,15 +142,15 @@ export function LibraryScreen() {
             {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
           </select>
         </label>
-      </div>
+      </div>}
       <Loaded query={library} of="the Library">{() => null}</Loaded>
       <PageNotice page={page} pages={pages} pending={library.isFetching} previousPage={library.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
       {unavailable ? null : data?.entries.length === 0
         ? <div className={browseStyles.empty}>
-          <strong>{hasHeldEntries ? 'No held Library Entries match these filters.' : 'No Library Entries yet.'}</strong>
+          <strong>{hasHeldEntries ? 'No held Library Entries match these filters.' : 'Your Library starts here.'}</strong>
           <p>{hasHeldEntries
             ? 'Clear the filters to see what the Library holds.'
-            : 'Identified video files are filed here after a Download completes.'}</p>
+            : 'Download a Video to start your Library. Its files and artwork will appear here after filing.'}</p>
           {filtered && <p><Link to={{ pathname: '/library', search: cleared.toString() }}>Clear filters</Link></p>}
           {!hasHeldEntries && <>
             <p><Link to="/">Browse Videos</Link> · <Link to="/downloads">View Downloads</Link></p>

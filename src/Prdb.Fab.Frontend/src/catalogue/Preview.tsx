@@ -162,7 +162,7 @@ function Preview({
       if (event.key !== 'Tab') return
 
       const focusable = sheet.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled])',
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary',
       )
       const first = focusable?.item(0)
       const last = focusable?.item((focusable?.length ?? 1) - 1)
@@ -228,11 +228,6 @@ function Preview({
             video={video}
           />
 
-          {video && (
-            <div className={styles.actions}>
-              <CardActions includeSite video={video} returnTo={returnTo} />
-            </div>
-          )}
 
           <Contributed
             coming={preview.data?.userPreviewsComing}
@@ -252,6 +247,9 @@ function Preview({
             </p>
           )}
         </div>
+        {video && <footer className={styles.actions}>
+          <CardActions menuAbove includeSite video={video} returnTo={returnTo} />
+        </footer>}
       </div>
     </div>
   )
@@ -318,7 +316,7 @@ function Gallery({
     return (
       <div className={styles.gallery}>
         <span aria-label={`No pictures for ${title}`} className={styles.frame} role="img">
-          <span aria-hidden="true" className={styles.absent}>▤</span>
+          <span className={styles.absent}>{coming ? 'Looking for pictures…' : 'No pictures available'}</span>
         </span>
         {coming && (
           <p className={styles.looking}>

@@ -426,9 +426,10 @@ export async function listVideos(
   page: number,
   filter: CatalogueVideoFilter,
   sort: CatalogueVideoSort,
+  favouritesOnly = false,
 ): Promise<VideoPage> {
   return json<VideoPage>(
-    await fetch(`/api/catalogue/videos?${parameters({ search, page: String(page), filter, sort })}`),
+    await fetch(`/api/catalogue/videos?${parameters({ search, page: String(page), filter, sort, favouritesOnly: favouritesOnly ? 'true' : undefined })}`),
   )
 }
 

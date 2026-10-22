@@ -95,10 +95,10 @@ export function DirectoryView({
           )}
         </div>
       ) : (
-        <ul className={styles.directory}>
+        <ul className={`${styles.directory} ${noun === 'Actor' ? styles.actorDirectory : ''}`}>
           {items.map((item) => (
             <li key={item.prdbId}>
-              <div className={styles.directoryVisual}>
+              <Link className={styles.directoryVisual} to={selectPath(item)} aria-label={`Browse ${item.title}`}>
                 {item.artworkPath ? (
                   <CachedArtwork
                     path={item.artworkPath}
@@ -112,7 +112,7 @@ export function DirectoryView({
                     <span className={styles.directoryAbsent}>▤</span>
                   </span>
                 )}
-              </div>
+              </Link>
               <div>
                 <Link className={styles.itemTitle} to={selectPath(item)}>
                   {item.title}

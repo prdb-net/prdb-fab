@@ -47,8 +47,10 @@ export function SignInScreen() {
   })
 
   return (
-    <main className={styles.screen}>
+    <main className={`${styles.screen} ${styles.signInScreen}`}>
+      <span className={styles.brandMark} aria-hidden="true">pf</span>
       <h1>prdb-fab</h1>
+      <p className={styles.lede}>Your next find. Your own Library.</p>
 
       <form
         className={styles.form}
@@ -71,10 +73,10 @@ export function SignInScreen() {
           onChange={(event) => setTyped(event.target.value)}
         />
 
-        {refusal && <p className={styles.refusal}>{refusal}</p>}
+        {refusal && <p className={styles.refusal} role="alert">{refusal}</p>}
 
         <button className={styles.button} type="submit" disabled={submit.isPending}>
-          Sign in
+          {submit.isPending ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
     </main>

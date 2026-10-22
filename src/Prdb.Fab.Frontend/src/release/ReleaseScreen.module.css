@@ -260,7 +260,7 @@
 
 .release {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  min-width: 18rem;
+  display: block;
   overflow-wrap: anywhere;
 }
 
@@ -333,7 +333,7 @@
 .action {
   display: grid;
   gap: 0.35rem;
-  min-width: 10rem;
+  min-width: 0;
 }
 
 .action button {
@@ -367,4 +367,34 @@
   .acquisitionActions {
     align-items: stretch;
   }
+}
+
+/* Keep the decision and its action together, even on a narrow screen. */
+.tableFrame table { table-layout: fixed; }
+.tableFrame th:first-child { width: 48%; }
+.tableFrame th:nth-child(2) { width: 12%; }
+.tableFrame th:nth-child(3) { width: 20%; }
+.actionColumn { width: 20%; overflow-wrap: anywhere; }
+.action button { min-height: 2.75rem; }
+.releaseDetails { margin-top: .6rem; }
+.releaseDetails summary { color: var(--text-quiet); cursor: pointer; font-size: .8rem; }
+.releaseDetails dl { display: grid; gap: .6rem; margin: .75rem 0 0; }
+.releaseDetails dt { color: var(--text-quiet); font-size: .75rem; }
+.releaseDetails dd { margin: 0; overflow-wrap: anywhere; }
+.manualSearch { background: transparent; border-color: var(--border); }
+.manualSearchHeading h2 { font-size: 1rem; }
+.manualSearchHeading p { color: var(--text-quiet); font-size: .88rem; }
+.manualSearchHeading button { background: var(--surface-raised); color: var(--text); border-color: var(--border); }
+.acquisitionHeading > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.acquisitionHeading h2 { font-size: 1.25rem; }
+.boundary { background: transparent; padding: 0; border: 0; color: var(--text-quiet); font-size: .88rem; }
+@media (max-width: 700px) {
+  .tableFrame table, .tableFrame tbody, .tableFrame tr, .tableFrame td { display: block; width: 100%; }
+  .tableFrame thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .tableFrame tr { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: .85rem; padding: .8rem; }
+  .tableFrame td { border: 0; padding: .35rem 0; }
+  .tableFrame td:not(:first-child)::before { content: attr(data-label); color: var(--text-quiet); display: block; font-size: .72rem; margin-bottom: .2rem; }
+  .action { margin-top: .25rem; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+  .filters select { min-width: 0; width: 100%; }
 }

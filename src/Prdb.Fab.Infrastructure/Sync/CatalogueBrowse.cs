@@ -184,9 +184,19 @@ public sealed class CatalogueBrowse(
         int page,
         CatalogueVideoFilter filter,
         CatalogueVideoSort sort,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool favouritesOnly = false)
     {
         var query = context.CatalogueVideos.AsNoTracking();
+        if (favouritesOnly)
+        {
+            // Filter the complete local population before counting and paging.
+            // A favourite Site OR a credited favourite Actor includes a Video.
+            query = query.Where(video =>
+                context.FavouriteSites.Any(favourite => favourite.SiteId == video.SiteId)
+                || context.CatalogueVideoActors.Any(credit => credit.VideoId == video.Id
+                    && context.FavouriteActors.Any(favourite => favourite.ActorId == credit.ActorId)));
+        }
         var readyVideoIds = filter is CatalogueVideoFilter.DownloadReady or CatalogueVideoFilter.NeedsSearch
             ? ReadyVideoIds(await context.Installation
                 .Select(row => row.RetryBudget)

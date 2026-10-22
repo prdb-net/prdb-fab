@@ -68,3 +68,18 @@
   color: var(--text-quiet);
   font-size: 0.9rem;
 }
+
+.heading { flex-wrap: wrap; }
+.discoveryControls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .85rem; margin: 1.5rem 0; }
+.segmented, .quickFilters { display: flex; flex-wrap: wrap; gap: .4rem; }
+.segmented { padding: .25rem; background: var(--surface-raised); border-radius: 12px; }
+.discoveryControls button, .empty button { border: 1px solid transparent; background: transparent; color: var(--text-quiet); border-radius: 9px; padding: .55rem .8rem; cursor: pointer; font-size: .88rem; min-height: 2.75rem; }
+.segmented button[aria-pressed='true'] { background: var(--surface-soft); color: var(--text); box-shadow: 0 2px 5px #0002; }
+.quickFilters button { border-color: var(--border); border-radius: 999px; }
+.quickFilters button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.filterHint { color: var(--text-quiet); font-size: .85rem; margin: -.75rem 0 1.25rem; }
+.empty { background: var(--surface-raised); border: 0; padding: 3rem 2rem; text-align: center; }
+.empty strong { color: var(--text); font-size: 1.25rem; }
+.empty p { margin: .65rem auto 1rem; max-width: 46ch; }
+.empty button { background: var(--accent-soft); color: var(--accent); }
+@media(max-width:600px) { .discoveryControls { margin: 1rem 0; gap: .65rem; } .heading { gap: .35rem .75rem; } .count { font-size: .8rem; } }
