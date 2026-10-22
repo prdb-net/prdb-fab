@@ -1,0 +1,46 @@
+[
+  {
+    "proofLifetimeHours": 6,
+    "inputs": 40,
+    "turns": 7,
+    "intervalHours": 23,
+    "changingInputsPerTurn": 1,
+    "competingClientRequestsPerDay": 4000,
+    "previous": {
+      "Requests": 7,
+      "Identified": 280,
+      "Unchanged": 0,
+      "Bytes": 367868,
+      "MonthlyRemaining": 159993
+    },
+    "current": {
+      "Requests": 7,
+      "Identified": 280,
+      "Unchanged": 0,
+      "Bytes": 367868,
+      "MonthlyRemaining": 159993
+    }
+  },
+  {
+    "proofLifetimeHours": 24,
+    "inputs": 40,
+    "turns": 7,
+    "intervalHours": 23,
+    "changingInputsPerTurn": 1,
+    "competingClientRequestsPerDay": 4000,
+    "previous": {
+      "Requests": 7,
+      "Identified": 280,
+      "Unchanged": 0,
+      "Bytes": 367868,
+      "MonthlyRemaining": 159993
+    },
+    "current": {
+      "Requests": 7,
+      "Identified": 160,
+      "Unchanged": 120,
+      "Bytes": 221189,
+      "MonthlyRemaining": 159993
+    }
+  }
+]

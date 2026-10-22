@@ -156,8 +156,8 @@ public sealed class WhatsNewRouteTests
             };
             context.Indexers.Add(indexer);
             context.Releases.AddRange(
-                Release(videos["Ready"].Id, indexer.Id, "ready", password: null),
-                Release(videos["Needs inspection"].Id, indexer.Id, "blocked", password: "1"));
+                Release(videos["Ready"].Id, indexer.Id, "ready", password: null, scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow()),
+                Release(videos["Needs inspection"].Id, indexer.Id, "blocked", password: "1", scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow()));
             context.WantedVideos.Add(new WantedVideoRow { VideoId = videos["Held"].Id, SinceAt = Noon });
             context.Downloads.Add(new DownloadRow
             {
@@ -291,7 +291,7 @@ public sealed class WhatsNewRouteTests
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private static ReleaseRow Release(long videoId, Guid indexerId, string identity, string? password) => new()
+    private static ReleaseRow Release(long videoId, Guid indexerId, string identity, string? password, DateTimeOffset identifiedAt) => new()
     {
         IndexerId = indexerId,
         DerivedReleaseId = identity,
@@ -302,6 +302,7 @@ public sealed class WhatsNewRouteTests
         DownloadUrl = "https://indexer.invalid/nzb",
         FirstSeenAt = Noon,
         IdentificationState = IdentificationState.Matched,
+            LastIdentifiedAt = identifiedAt,
         VideoId = videoId,
         Confidence = IdentificationConfidence.Exact,
         MatchedBy = IdentificationRung.ReleaseName,

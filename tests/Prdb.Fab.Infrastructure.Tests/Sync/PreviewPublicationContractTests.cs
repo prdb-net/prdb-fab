@@ -153,7 +153,9 @@ public sealed class PreviewPublicationContractTests
         var refused = await Assert.ThrowsAnyAsync<ApiException>(() => SubmitAsync(database, ABody()));
 
         Assert.Equal((int)status, refused.ResponseStatusCode);
-        Assert.IsType<ProblemDetails>(refused);
+        if (status == HttpStatusCode.Conflict)
+            Assert.Equal("Refused.", Assert.IsType<SubmitVideoUserImageConflictProblemDetails>(refused).Title);
+        else Assert.Equal("Refused.", Assert.IsType<ProblemDetails>(refused).Title);
     }
 
     /// <summary>

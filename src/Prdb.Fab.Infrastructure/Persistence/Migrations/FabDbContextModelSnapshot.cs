@@ -1740,6 +1740,33 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("BaselineBefore")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("BaselineChangesSince")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BaselineCursor")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BaselineDocuments")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BaselineExceptionalCursor")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("BaselineExceptionalVideoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("BaselineFrom")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("BaselinePages")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BaselinePhase")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("CatalogueCompletedAt")
                         .HasColumnType("TEXT");
 
@@ -1769,6 +1796,8 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = 1,
+                            BaselineDocuments = 0,
+                            BaselinePages = 0,
                             CatalogueResumePage = 1
                         });
                 });
@@ -1867,6 +1896,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("IdentificationState")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("IdentificationValidatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("IndexerId")

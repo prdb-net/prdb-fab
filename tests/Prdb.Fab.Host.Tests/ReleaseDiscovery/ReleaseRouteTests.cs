@@ -203,6 +203,7 @@ public sealed class ReleaseRouteTests
         matched.VideoId = video.Id;
         matched.Confidence = IdentificationConfidence.Exact;
         matched.MatchedBy = IdentificationRung.ReleaseName;
+        matched.LastIdentifiedAt = scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow();
         var ambiguous = Release("Ambiguous.Release", indexer.Id, now.AddMinutes(-2), IdentificationState.Ambiguous);
         var siteOnly = Release("SiteOnly.Release", indexer.Id, now.AddMinutes(-1), IdentificationState.SiteOnly);
         siteOnly.SiteId = site.Id;

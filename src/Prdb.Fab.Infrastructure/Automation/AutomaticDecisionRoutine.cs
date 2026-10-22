@@ -6,6 +6,7 @@ using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Acquisition;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Automation;
 
@@ -26,7 +27,7 @@ public sealed class AutomaticDecisionRoutine(
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
-        var videoIds = await context.Releases
+        var videoIds = await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
             .Where(row => row.AutomationPending
                 && row.VideoId != null
                 && row.IdentificationState == IdentificationState.Matched)
@@ -56,7 +57,7 @@ public sealed class AutomaticDecisionRoutine(
                 .Where(row => row.Id == localVideoId)
                 .Select(row => row.PrdbId)
                 .SingleAsync(cancellationToken);
-            var pending = await context.Releases
+            var pending = await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
                 .AsTracking()
                 .Where(row => row.VideoId == localVideoId
                     && row.AutomationPending

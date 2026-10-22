@@ -6,6 +6,8 @@ using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Automation;
 using Prdb.Fab.Infrastructure.Sync;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
+using Prdb.Fab.Core.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Acquisition;
 
@@ -142,18 +144,15 @@ public sealed class PersonDownloads(
             return DownloadVerdict.Connection(downloadId, "SABnzbd is not configured.");
         }
 
-        var storedRelease = await context.Releases
-            .AsNoTracking()
-            .Where(row => row.IndexerId == download.IndexerId
-                && row.DerivedReleaseId == download.DerivedReleaseId
-                && row.Video != null
-                && row.Video.PrdbId == download.VideoId)
-            .Select(row => new { row.DownloadUrl, IndexerUrl = row.Indexer!.Url })
+        var storedRelease = await context.Releases.AsNoTracking()
+            .Where(row => row.IndexerId == download.IndexerId && row.DerivedReleaseId == download.DerivedReleaseId)
+            .Select(row => new { row.Id, row.DownloadUrl, IndexerUrl = row.Indexer!.Url })
             .SingleOrDefaultAsync(cancellationToken);
         if (storedRelease is null)
-        {
             return DownloadVerdict.Indexer(downloadId, "The reserved Release is no longer in the local cache.");
-        }
+        if (!await PendingAuthority(download, storedRelease.Id).AnyAsync(cancellationToken))
+            return DownloadVerdict.Planning(downloadId, DownloadPlanOutcome.ReleaseNotEligible,
+                "The reserved Release needs fresh matching prdb authority before submission.");
 
         var categories = await sabnzbd.CategoryNamesAsync(
             installation.SabnzbdUrl,
@@ -174,12 +173,21 @@ public sealed class PersonDownloads(
             return DownloadVerdict.Indexer(downloadId, "The NZB could not be fetched from the indexer.");
         }
 
+        var authorityAtSubmission = PendingAuthority(download, storedRelease.Id);
         var claimed = await context.Downloads
-            .Where(row => row.Id == downloadId && row.SubmissionState == DownloadSubmissionState.Pending)
+            .Where(row => row.Id == downloadId && row.SubmissionState == DownloadSubmissionState.Pending
+                && authorityAtSubmission.Any())
             .ExecuteUpdateAsync(
                 update => update.SetProperty(row => row.SubmissionState, DownloadSubmissionState.Submitting),
                 cancellationToken);
-        if (claimed == 0) return VerdictOf((await ExistingAsync(downloadId, cancellationToken))!);
+        if (claimed == 0)
+        {
+            var current = (await ExistingAsync(downloadId, cancellationToken))!;
+            return current.SubmissionState == DownloadSubmissionState.Pending
+                ? DownloadVerdict.Planning(downloadId, DownloadPlanOutcome.ReleaseNotEligible,
+                    "Identification changed or became stale before submission; the reservation is waiting.")
+                : VerdictOf(current);
+        }
 
         var submission = await sabnzbd.SubmitAsync(
             installation.SabnzbdUrl,
@@ -221,6 +229,11 @@ public sealed class PersonDownloads(
         return VerdictOf((await ExistingAsync(downloadId, cancellationToken))!);
     }
 
+    private IQueryable<ReleaseRow> PendingAuthority(DownloadRow download, long releaseId) =>
+        ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow()).Where(row => row.Id == releaseId
+            && row.IdentificationState == IdentificationState.Matched && row.Video!.PrdbId == download.VideoId
+            && row.Title == download.SubmittedName);
+
     private async Task<DownloadVerdict?> DownloadCoreAsync(
         Guid downloadId,
         Guid videoId,
@@ -232,6 +245,15 @@ public sealed class PersonDownloads(
         if (await ExistingAsync(downloadId, cancellationToken) is { } existing)
         {
             return VerdictOf(existing);
+        }
+
+        var known = await context.Releases.AnyAsync(r => r.Id == releaseId && r.Video!.PrdbId == videoId, cancellationToken);
+        if (known && !await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
+                .AnyAsync(r => r.Id == releaseId && r.IdentificationState == IdentificationState.Matched, cancellationToken))
+        {
+            if (!automatic) await PersistWantedIntentAsync(videoId, cancellationToken);
+            return DownloadVerdict.Planning(downloadId, DownloadPlanOutcome.ReleaseNotEligible,
+                "Identification needs fresh prdb authority; the ordinary schedule will validate it before acquisition.");
         }
 
         var ranking = await rankings.ForVideoAsync(videoId, observeDecision: true, cancellationToken);
@@ -329,6 +351,15 @@ public sealed class PersonDownloads(
                     downloadId,
                     DownloadPlanOutcome.ReleaseNotEligible,
                     "Another Download for this Video is already active; no automatic retry was submitted.");
+            }
+
+            if (!await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow()).AnyAsync(
+                r => r.Id == releaseId && r.Video!.PrdbId == videoId && r.Title == release.Title
+                    && r.IdentificationState == IdentificationState.Matched && r.Confidence == release.Confidence, cancellationToken))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return DownloadVerdict.Planning(downloadId, DownloadPlanOutcome.ReleaseNotEligible,
+                    "Identification changed or became stale before the Download was reserved; nothing was submitted.");
             }
 
             IReadOnlyList<PermittingAutomationRule> originRules = [];

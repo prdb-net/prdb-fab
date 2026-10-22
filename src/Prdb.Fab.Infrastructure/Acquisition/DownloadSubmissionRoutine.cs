@@ -27,6 +27,8 @@ public sealed class DownloadSubmissionRoutine(
         if (next is null) return RunResult.NothingToDo;
 
         var verdict = await downloads.SubmitPendingAsync(next.Value, cancellationToken);
+        if (verdict?.Outcome == DownloadOutcome.ReleaseNotEligible)
+            return RunResult.Deferred(TimeSpan.FromSeconds(30), verdict.Detail);
         return verdict?.Outcome is DownloadOutcome.Submitted or DownloadOutcome.Rejected
             ? RunResult.Handled(1)
             : RunResult.Failed(verdict?.Detail ?? "The pending Download disappeared.");

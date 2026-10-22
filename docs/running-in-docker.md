@@ -248,7 +248,11 @@ and extends optionally up to **90 days** only when Indexer and downstream prdb
 capacity allow it. Each range has its own durable coverage proof. A resumed page
 overlaps ten results and must rediscover its stored identity anchor; excessive
 offset drift restarts the proof while retaining cached Releases. Older cache
-rows are retained. The prdb Catalogue still covers ninety days.
+rows are retained. The prdb Catalogue still covers ninety days. SDK 0.22 reads a
+resumable full-document baseline and catches up from its server watermark through
+Video changes. Status reports scan/catch-up/live and actual document/page counts.
+A current feed carries that coverage forward; a lost cursor requests a new
+baseline. Older servers retain bounded summary/detail discovery and repair.
 
 Status shows 14/30/90-day freshness separately, the last successful head poll,
 protected remaining demand and a measured shortfall if the budget cannot sustain
@@ -259,6 +263,14 @@ Background work is paced against sustainable monthly demand while essential
 account state and arrived files retain capacity. Diagnostics expose counts and
 HTTP bytes/time, never API keys, URLs or Identify payloads. They restart their
 measurement interval when the process restarts; routine history remains durable.
+
+Identification requests opt into the server's optional freshness proofs. Usable
+proofs validate retained answers; expired/missing proofs and older servers fall
+back conservatively. Validation does not extend proof expiry or change Confidence.
+It spends ordinary quota. The server's six-hour default provides no saving at the
+23-hour daily interval; FaB does not increase polling to keep tokens alive. Status
+reports validated, unchanged and re-identified input counts. Stale authority
+waits for the ordinary schedule before Ranking or Download submission.
 
 The Wanted Sweep searches older Wanted Videos directly by title, which is why
 the two routines need separate shares of the same budget. Both write the same

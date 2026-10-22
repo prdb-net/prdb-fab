@@ -16,6 +16,9 @@ public sealed class SyncCosts(TimeProvider time)
     private long identified;
     private long reused;
     private long avoidedDetails;
+    private long validatedInputs;
+    private long unchangedInputs;
+    private long reidentifiedInputs;
 
     public void Request(PrdbWork work, string? path, int status, TimeSpan elapsed, long bytes)
     {
@@ -24,6 +27,8 @@ public sealed class SyncCosts(TimeProvider time)
         var endpoint = path switch
         {
             "/videos/identify" => "Identify",
+            "/videos/baseline" => "VideoBaseline",
+            "/videos/identify/validate" => "IdentifyValidation",
             "/videos/batch" => "VideoDetails",
             "/rate-limit" => "RateLimit",
             "/user-identity" => "Verification",
@@ -62,11 +67,21 @@ public sealed class SyncCosts(TimeProvider time)
         }
     }
 
+    public void Freshness(int validated, int unchanged, int reidentified)
+    {
+        lock (gate)
+        {
+            validatedInputs += validated;
+            unchangedInputs += unchanged;
+            reidentifiedInputs += reidentified;
+        }
+    }
+
     public SyncCostSnapshot Snapshot()
     {
         lock (gate)
         {
-            return new(since, [.. requests.Values], [.. waits.Values], identified, reused, avoidedDetails);
+            return new(since, [.. requests.Values], [.. waits.Values], identified, reused, avoidedDetails, validatedInputs, unchangedInputs, reidentifiedInputs);
         }
     }
 }
@@ -75,4 +90,4 @@ public sealed record RequestCost(PrdbWork Work, string Endpoint, int StatusClass
     long Requests, double ElapsedMilliseconds, long PayloadBytes);
 public sealed record QuotaWait(PrdbWork Work, long Deferrals, double ScheduledWaitSeconds);
 public sealed record SyncCostSnapshot(DateTimeOffset Since, IReadOnlyList<RequestCost> Requests,
-    IReadOnlyList<QuotaWait> Waits, long IdentifiedInputs, long ReusedAnswers, long DetailFetchesAvoided);
+    IReadOnlyList<QuotaWait> Waits, long IdentifiedInputs, long ReusedAnswers, long DetailFetchesAvoided, long ValidatedInputs = 0, long UnchangedInputs = 0, long ReidentifiedInputs = 0);

@@ -91,3 +91,62 @@ The final migration is one additive upgrade from the released schema. The
 intermediate development migrations were consolidated before publication;
 existing cached Releases and completed legacy proofs survive. An unfinished
 legacy offset lacks an identity anchor and restarts its coverage proof once.
+
+## Published full-document baseline
+
+```
+dotnet test --project tests/Prdb.Fab.Infrastructure.Tests -- --filter-class '*VideoBaselineTests'
+```
+
+The generated SDK 0.22 request builders, real Governor/transport and SQLite
+writers receive 1,000 complete synthetic documents in **one baseline request**,
+then one empty change page establishes live coverage. Summary discovery at 100
+rows/page plus hydration at 50 IDs/request needs **30 requests** for those same
+1,000 new documents, before its equivalent change-feed proof. With a fixed
+100 ms transport latency, those document-transfer round trips alone represent
+100 ms versus 3,000 ms; this is a request-latency model, not a production or SQL
+wall-clock speed claim. The document payload remains complete on both paths.
+
+The fixture also checks lost responses and scope/cursor replay after restart,
+transaction rollback after a partially written page, edits/inserts/deletions and
+merge survivors during catch-up, typed 413 escapes across quota pauses and 404,
+backwards server bounds, stale replay against a tombstone, and lost live cursors.
+No immediate repair duplicates documents covered by the finished inventory.
+The compatibility reader's existing tests still prove the ninety-day boundary
+and bounded resumption when an older server lacks the operation.
+
+## Identification freshness under ordinary churn
+
+```
+FAB_FRESHNESS_REPORT="$PWD/TestResults/identification-freshness.json" \
+  dotnet test --project tests/Prdb.Fab.Infrastructure.Tests -- \
+  --filter-class '*IdentificationFreshnessWorkloadTests'
+```
+
+The [committed report](fixtures/identification-freshness-report.json) runs actual
+SDK/Governor/SQLite turns for 40 complete distinct tuples. Seven turns are
+23 hours apart; one input's matching evidence changes each turn, including a
+positive becoming a negative. Complete match documents contain a 1 KiB synthetic
+description. Another client consumes 4,000 requests/day against the same reported
+1,000/hour and 200,000/month windows. Both paths keep the existing bounded turn
+and cadence; no production credentials or network latency are involved.
+
+| Server proof lifetime | Ordinary Identify inputs | Inputs identified with proofs | Unchanged reused | Response bytes before / after | Metered batches before / after |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 6 hours (published default) | 280 | 280 | 0 | 367,868 / 367,868 | 7 / 7 |
+| 24 hours (published configurable maximum) | 280 | 160 | 120 | 367,868 / 221,189 | 7 / 7 |
+
+The default provides **no daily re-identification or quota saving**: all handles
+have expired by that work's next turn, so FaB uses ordinary Identify directly.
+With 24-hour server-issued handles, this changing fixture avoids 43% of ladder
+inputs and 40% of response bytes. Validation spends ordinary quota, so request
+counts remain equal. Neither setting is selected or changed by FaB, and these
+figures do not predict production churn, payload size or wall-clock speed.
+Earlier coalescing/inline-detail savings and the 30-to-1 Catalogue baseline are
+independent of this result.
+
+The real integration cases also cover all four answer classes, mixed statuses
+and refs, a missing-proof input, bounded fallback, expired and unsupported
+operations, quota deferral after a replacement checkpoint, restart, unknown
+statuses, account changes during a response, stale acquisition gates and
+preservation of automatic decisions and Candidate edges on an unchanged answer.
