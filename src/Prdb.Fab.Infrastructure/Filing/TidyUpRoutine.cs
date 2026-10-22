@@ -150,16 +150,18 @@ public sealed class TidyUpRoutine(
 
     private static IEnumerable<string> DescendantsAndSelf(string directory)
     {
+        var info = new DirectoryInfo(directory);
+        if (!VideoFiles.IsWorthWalking(info.Name)
+            || info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        {
+            yield break;
+        }
+
         foreach (var child in Directory.EnumerateDirectories(directory))
         {
-            var info = new DirectoryInfo(child);
-            if (VideoFiles.IsWorthWalking(info.Name)
-                && !info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            foreach (var descendant in DescendantsAndSelf(child))
             {
-                foreach (var descendant in DescendantsAndSelf(child))
-                {
-                    yield return descendant;
-                }
+                yield return descendant;
             }
         }
 

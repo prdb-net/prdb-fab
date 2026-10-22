@@ -316,6 +316,64 @@ public sealed class ReviewAndTidyTests
     }
 
     [Fact]
+    public async Task Tidy_never_walks_a_top_level_directory_link_when_removing_empty_directories()
+    {
+        var root = TemporaryDirectory();
+        var external = TemporaryDirectory();
+        var job = Path.Combine(root, "job");
+        Directory.CreateDirectory(job);
+        var externalEmpty = Directory.CreateDirectory(Path.Combine(external, "empty")).FullName;
+        var link = Path.Combine(job, "linked");
+        Directory.CreateSymbolicLink(link, external);
+
+        try
+        {
+            await using var database = await TestDatabase.CreateAsync();
+            await SeedDownloadAndArrivalsAsync(database, Guid.NewGuid());
+            await ConfigureTidyAsync(database, root);
+            await using var scope = database.Scope();
+            await scope.ServiceProvider.GetRequiredService<TidyUpRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+
+            Assert.True(Directory.Exists(externalEmpty));
+            Assert.True(Directory.Exists(link));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+            Directory.Delete(external, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(".hidden")]
+    [InlineData("#snapshot")]
+    public async Task Tidy_leaves_ignored_top_level_directories_and_their_children_untouched(string name)
+    {
+        var root = TemporaryDirectory();
+        var job = Path.Combine(root, "job");
+        var ignored = Directory.CreateDirectory(Path.Combine(job, name, "empty")).FullName;
+        var ordinary = Directory.CreateDirectory(Path.Combine(job, "ordinary", "empty")).FullName;
+
+        try
+        {
+            await using var database = await TestDatabase.CreateAsync();
+            await SeedDownloadAndArrivalsAsync(database, Guid.NewGuid());
+            await ConfigureTidyAsync(database, root);
+            await using var scope = database.Scope();
+            await scope.ServiceProvider.GetRequiredService<TidyUpRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+
+            Assert.True(Directory.Exists(ignored));
+            Assert.False(Directory.Exists(ordinary));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Tidy_never_uses_the_parent_of_single_file_storage()
     {
         var root = TemporaryDirectory();

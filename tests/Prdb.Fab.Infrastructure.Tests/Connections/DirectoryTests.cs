@@ -55,7 +55,16 @@ public sealed class DirectoryTests : IDisposable
         var second = Path.Combine(directory, "second");
         Directory.CreateDirectory(second);
 
-        Assert.True(Directories.OnTheSameFilesystem(directory, second));
+        if (OperatingSystem.IsLinux())
+        {
+            Assert.True(Directories.OnTheSameFilesystem(directory, second));
+        }
+        else
+        {
+            // MountTable deliberately reads Linux mountinfo only. Elsewhere,
+            // the supported answer is unknown, never an inferred device.
+            Assert.Null(Directories.OnTheSameFilesystem(directory, second));
+        }
     }
 
     public void Dispose()

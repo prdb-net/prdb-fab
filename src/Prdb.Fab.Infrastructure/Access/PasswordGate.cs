@@ -45,27 +45,30 @@ public sealed class PasswordGate(
 
         if (installation.PasswordHash is not null)
         {
-            // Setting one closes the window for good. Nothing here is a race
-            // worth guarding beyond this: the row is one row, and the write
-            // below is one statement against it.
             return (SetPasswordOutcome.AlreadySet, null);
         }
 
-        installation.PasswordHash = Hasher.HashPassword(installation, password!);
+        var hash = Hasher.HashPassword(installation, password!);
 
-        // The marker stays where it is. A fresh installation is already sitting
-        // on OnboardingStep.Password and moves to the next step by being read
-        // (see Installations.NextStepAsync); one whose password was cleared by
-        // FAB_RESET_PASSWORD returns to wherever it had got to.
-        if (installation.OnboardingStep == OnboardingStep.Password)
+        // Advance fresh onboarding only. FAB_RESET_PASSWORD preserves how far
+        // setup had progressed, so setting its replacement resumes that step.
+        var nextStep = OnboardingPath.After(OnboardingStep.Password);
+        // The predicate belongs on the write: another request can claim the
+        // installation while this one hashes its password.
+        var changed = await context.Installation
+            .Where(row => row.PasswordHash == null)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(row => row.PasswordHash, hash)
+                .SetProperty(row => row.OnboardingStep, row =>
+                    row.OnboardingStep == OnboardingStep.Password ? nextStep : row.OnboardingStep),
+                cancellationToken);
+        if (changed == 0)
         {
-            installation.OnboardingStep = OnboardingPath.After(OnboardingStep.Password);
+            return (SetPasswordOutcome.AlreadySet, null);
         }
 
-        context.Installation.Update(installation);
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("The password has been set. Onboarding continues at {Step}.", installation.OnboardingStep);
+        logger.LogInformation("The password has been set. Onboarding continues at {Step}.",
+            installation.OnboardingStep == OnboardingStep.Password ? nextStep : installation.OnboardingStep);
 
         return (SetPasswordOutcome.Set, null);
     }
@@ -105,12 +108,21 @@ public sealed class PasswordGate(
             return (ChangePasswordOutcome.Refused, refusal, 0);
         }
 
-        installation.PasswordHash = Hasher.HashPassword(installation, next!);
+        var hash = Hasher.HashPassword(installation, next!);
 
-        context.Installation.Update(installation);
-        await context.SaveChangesAsync(cancellationToken);
+        // Hash outside the transaction; commit the credential and revocation
+        // together, and never overwrite another request's newer password.
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var changed = await context.Installation
+            .Where(row => row.PasswordHash == installation.PasswordHash)
+            .ExecuteUpdateAsync(update => update.SetProperty(row => row.PasswordHash, hash), cancellationToken);
+        if (changed == 0)
+        {
+            return (ChangePasswordOutcome.WrongPassword, null, 0);
+        }
 
         var ended = await sessions.RevokeAllExceptAsync(currentSessionId, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "The password has been changed, and {Count} other session(s) ended with it.",
@@ -144,9 +156,14 @@ public sealed class PasswordGate(
             // The whole reason ADR 0010 named this hasher: it is versioned, and
             // the version moves under an installation that has been running for
             // years.
-            installation.PasswordHash = Hasher.HashPassword(installation, password!);
-            context.Installation.Update(installation);
-            await context.SaveChangesAsync(cancellationToken);
+            var hash = Hasher.HashPassword(installation, password!);
+            var changed = await context.Installation
+                .Where(row => row.PasswordHash == installation.PasswordHash)
+                .ExecuteUpdateAsync(update => update.SetProperty(row => row.PasswordHash, hash), cancellationToken);
+            if (changed == 0)
+            {
+                return false;
+            }
 
             logger.LogInformation("The stored password hash has been upgraded to the current format.");
         }
@@ -180,16 +197,11 @@ public sealed class PasswordGate(
     /// </remarks>
     public async Task ClearAsync(CancellationToken cancellationToken = default)
     {
-        var installation = await context.Installation.SingleAsync(cancellationToken);
-
-        if (installation.PasswordHash is not null)
-        {
-            installation.PasswordHash = null;
-            context.Installation.Update(installation);
-            await context.SaveChangesAsync(cancellationToken);
-        }
-
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        await context.Installation.ExecuteUpdateAsync(
+            update => update.SetProperty(row => row.PasswordHash, (string?)null), cancellationToken);
         await context.Sessions.ExecuteDeleteAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogWarning(
             "FAB_RESET_PASSWORD cleared the password and ended every session. Remove the variable "
