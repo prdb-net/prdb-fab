@@ -1800,6 +1800,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IdentificationDetailsPending")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("IdentificationInputKey")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("IdentificationState")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1860,6 +1863,8 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("VideoId");
 
                     b.HasIndex("IdentificationDetailsPending", "DetailRetryAt");
+
+                    b.HasIndex("IdentificationInputKey", "LastIdentifiedAt");
 
                     b.HasIndex("IndexerId", "DerivedReleaseId")
                         .IsUnique();

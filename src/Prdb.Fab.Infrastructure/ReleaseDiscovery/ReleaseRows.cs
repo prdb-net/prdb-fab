@@ -52,6 +52,20 @@ public sealed class ReleaseRows(
             // provenance is never evidence, and settled answers are not asked
             // again merely because a title search found the row again.
 
+            if (!string.Equals(row.Title, release.Title, StringComparison.Ordinal) && row.Title.Length > 0)
+            {
+                row.IdentificationAnswerJson = null;
+                row.IdentificationInputKey = null;
+                row.IdentificationDetailsPending = false;
+                row.DetailRetryAt = null;
+                row.LastIdentifiedAt = null;
+                row.IdentificationState = IdentificationState.Awaiting;
+                row.AutomationPending = false;
+                row.VideoId = null;
+                row.Confidence = null;
+                row.MatchedBy = null;
+                await context.ReleaseCandidates.Where(candidate => candidate.ReleaseId == row.Id).ExecuteDeleteAsync(cancellationToken);
+            }
             row.RawGuid = release.RawGuid;
             row.Title = release.Title;
             row.NormalisedTitle = release.NormalisedTitle;

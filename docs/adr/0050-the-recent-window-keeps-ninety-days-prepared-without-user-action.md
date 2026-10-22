@@ -89,3 +89,17 @@ successful detail batches are reused, so a deferred/lost later request cannot
 force another metered Identify call. Omitted match documents retain their saved
 answer and retry details hourly. Candidate identity stubs stay repairable and
 pinned. The JSON checkpoint is disposable cache state and is never exported.
+
+## Amendment: exact-input reuse
+
+Filename-only Release Identification coalesces the complete exact input tuple,
+including all absent hashes and size. Neither normalisation nor punctuation
+removal establishes equality. A versioned SHA-256 key over that tuple and the
+account scope indexes the authoritative answer retained on bounded cached
+Release rows. Independent Release identities, candidate edges and acquisition
+history remain independent. At most 200 distinct inputs and 2,000 row updates
+are considered in a turn; excess duplicates reuse the saved answer next turn.
+Reuse retains the original answer timestamp and expires at the existing
+revalidation lifetime. It never extends authority by copying an old answer.
+Changed titles clear the checkpoint; changed account scope cannot reuse it.
+Inline documents are projected once and removed from completed checkpoints.
