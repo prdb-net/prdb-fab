@@ -1,13 +1,16 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
+import styles from './SiteMetadata.module.css'
 import type { VideoPreview } from '../api/client.ts'
 
 /** Optional upstream facts: platform and studio Network are separate relationships. */
 export function SiteMetadataView({ metadata }: { metadata?: VideoPreview['siteMetadata'] }) {
   if (!metadata) return null
   const links = [...(metadata.url ? [{ label: 'Site website', url: metadata.url }] : []), ...(metadata.links ?? [])]
+  if (!metadata.network && !metadata.platformTitle && !metadata.accountHandle && links.length === 0) return null
   return (
-    <div>
+    <InfoHelp label="Site details">
       {(metadata.network || metadata.platformTitle || metadata.accountHandle) && (
-        <dl>
+        <dl className={styles.facts}>
           {metadata.network && <><dt>Network</dt><dd>{metadata.network}</dd></>}
           {metadata.platformTitle && <><dt>Platform</dt><dd>{metadata.platformTitle}</dd></>}
           {metadata.accountHandle && <><dt>Account</dt><dd>{metadata.accountHandle}</dd></>}
@@ -22,11 +25,11 @@ export function SiteMetadataView({ metadata }: { metadata?: VideoPreview['siteMe
           ))}
         </nav>
       )}
-    </div>
+    </InfoHelp>
   )
 }
 
 /** Descriptions are text, including when upstream supplies markup. */
 export function VideoDescription({ description }: { description?: string | null }) {
-  return description?.trim() ? <p style={{ whiteSpace: 'pre-wrap' }}>{description}</p> : null
+  return description?.trim() ? <InfoHelp label="Video description"><p className={styles.description}>{description}</p></InfoHelp> : null
 }

@@ -80,8 +80,14 @@ export function OperationLogScreen() {
     </div>
     <Loaded query={log} of="the Operation Log">{() => null}</Loaded>
     {data && <PageNotice page={page} pages={pages} pending={log.isFetching} previousPage={log.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />}
-    {data && !unavailable && <OperationList entries={data.entries} />}
-    {data && !unavailable && <div className={styles.operationPager}>
+    {data && !unavailable && (data.entries.length > 0 ? <OperationList entries={data.entries} /> : (
+      <div className={styles.empty}>
+        <strong>{search || act ? 'No matching operations.' : 'No operations yet.'}</strong>
+        <p>{search || act ? 'Try another file name or action.' : 'Filing, replacements and deletions will appear here.'}</p>
+        {(search || act) && <button type="button" className={styles.button} onClick={() => { setSearchInput(''); setParameters(new URLSearchParams()) }}>Clear filters</button>}
+      </div>
+    ))}
+    {data && !unavailable && total > 0 && <div className={styles.operationPager}>
       <span>{total === 0 ? 'No matching operations' : `${first}–${last} of ${total}`}</span>
       {hasMultiplePages && <div>
         <button className={styles.button} disabled={log.isFetching || shownPage <= 1} onClick={() => goTo(page - 1)}>Previous</button>

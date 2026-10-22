@@ -1,3 +1,4 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
@@ -165,12 +166,7 @@ function ActorProfileDetails({ actor }: { actor: ActorVideos['actor'] }) {
         absentClassName={styles.directoryAbsent}
       />
       <div className={styles.actorProfileBody}>
-        {facts.length > 0 && (
-          <dl className={styles.actorFacts}>
-            {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-          </dl>
-        )}
-        {actor.bios?.map((bio) => <p className={styles.actorBio} key={bio.prdbId}>{bio.text}</p>)}
+        <p className={styles.actorSummary}>{[actor.nationality, describeCareer(actor.careerStart, actor.careerEnd)].filter(Boolean).join(' · ')}</p>
         {actor.links && actor.links.length > 0 && (
           <nav className={styles.actorLinks} aria-label="Actor links">
             {actor.links.map((link) => (
@@ -189,6 +185,16 @@ function ActorProfileDetails({ actor }: { actor: ActorVideos['actor'] }) {
           {load.isError && <span role="alert">{load.error.message}</span>}
         </div>
       </div>
+      {(facts.length > 0 || Boolean(actor.bios?.length)) && <div className={styles.actorDetails}>
+        <InfoHelp label="About this Actor">
+        {facts.length > 0 && (
+          <dl className={styles.actorFacts}>
+            {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+          </dl>
+        )}
+        {actor.bios?.map((bio) => <p className={styles.actorBio} key={bio.prdbId}>{bio.text}</p>)}
+        </InfoHelp>
+      </div>}
     </section>
   )
 }

@@ -52,17 +52,17 @@ export function SitesScreen() {
           </Link>
         )}
         contextAction={(
-          <>
-          <SiteMetadataView metadata={selected.site.metadata} />
-          {selected.site.ignored && <span>Ignored in prdb. Unignore there to add new Favourites or Wanted Videos.</span>}
           <PreferenceButton
             active={selected.site.favourite}
             activeLabel="Unfavourite"
             inactiveLabel="Favourite"
             write={(desired) => setFavouriteSite(selected.site.prdbId, desired)}
           />
-          </>
         )}
+        contextDetail={<>
+          {selected.site.ignored && <p>Ignored in prdb. Unignore there to add new Favourites or Wanted Videos.</p>}
+          <SiteMetadataView metadata={selected.site.metadata} />
+        </>}
       />
     )
   }

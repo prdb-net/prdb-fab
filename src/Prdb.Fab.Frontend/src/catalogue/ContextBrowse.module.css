@@ -340,3 +340,17 @@
   .directoryActions { gap: .4rem; }
   .directoryActions > * { flex-shrink: 0; }
 }
+
+.actorProfile { grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; }
+.actorProfileBody { min-width: 0; }
+.actorSummary { color: var(--text-quiet); margin: 0; }
+.actorSummary:empty { display: none; }
+.actorDetails { grid-column: 1 / -1; min-width: 0; }
+.actorFacts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.actorBio, .actorFacts dd { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .actorProfile { grid-template-columns: 5.5rem minmax(0, 1fr); } .actorLoad button { white-space: normal; } }
+
+.contextHeading { gap: .75rem; margin-bottom: 1rem; }
+.contextHeading .heading { min-width: 0; flex-wrap: wrap; }
+.contextHeading h1 { overflow-wrap: anywhere; }
+.contextHeading .directoryActions { flex-wrap: wrap; min-width: 0; }

@@ -1,3 +1,4 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -80,10 +81,14 @@ export function RestoreScreen({ onBack }: { onBack: () => void }) {
     <main className={styles.screen}>
       <h1>prdb-fab</h1>
       <p className={styles.lede}>
-        Restore settings, API keys, the login password and Download and Library
-        records into an empty installation. Video files are not included:
-        mount your existing files at the paths you confirm below. Caches are rebuilt.
+        Restore your settings and records into an empty installation.
+        Video files must be mounted separately.
       </p>
+
+      <InfoHelp label="What gets restored">
+        The backup contains settings, API keys, the login password, and Download and Library records.
+        Confirm where your existing video files are mounted before restoring. Caches are rebuilt.
+      </InfoHelp>
 
       <form
         className={styles.form}

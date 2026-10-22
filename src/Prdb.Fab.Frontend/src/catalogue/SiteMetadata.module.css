@@ -1,0 +1,5 @@
+.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .4rem 1rem; margin: 0; }
+.facts dt { color: var(--text-quiet); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 400px) { .facts { grid-template-columns: 1fr; } .facts dd { margin-bottom: .4rem; } }

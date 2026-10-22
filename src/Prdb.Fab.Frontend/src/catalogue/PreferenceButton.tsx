@@ -35,7 +35,7 @@ export function PreferenceButton({
         aria-label={active ? activeLabel : inactiveLabel}
         aria-busy={mutation.isPending}
         aria-pressed={active}
-        className={iconOnly ? styles.iconButton : undefined}
+        className={iconOnly ? styles.iconButton : styles.textButton}
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
         title={active ? activeLabel : inactiveLabel}
