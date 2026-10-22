@@ -2,7 +2,7 @@ import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import {
   deleteReviewEntries,
@@ -180,7 +180,14 @@ export function ReviewQueueScreen() {
     {feedback && <p className={feedback.tone === 'error' ? styles.error : styles.notice} role="status">{feedback.text}</p>}
     {queue.isError && <p className={styles.error} role="alert">The Review Queue could not be read.</p>}
     {data && <PageNotice page={page} pages={pages} pending={queue.isFetching} />}
-    {page <= pages && data?.entries.length === 0 && <p className={styles.empty}>Nothing needs review.</p>}
+    {page <= pages && data?.entries.length === 0 && <div className={styles.empty}>
+      <strong>{globalCount > 0 ? 'No Arriving Files match this reason.' : 'Nothing needs review.'}</strong>
+      <p>{globalCount > 0
+        ? 'Choose another reason to see the files waiting for a decision.'
+        : 'Files that cannot be filed automatically appear here. Nothing needs a decision now.'}</p>
+      {reason && <p><button className={styles.button} type="button" onClick={() => setReason('')}>Clear reason filter</button></p>}
+      {globalCount === 0 && <p><Link to="/library">View Library</Link> · <Link to="/status">Check Status</Link></p>}
+    </div>}
     {activeEntry && data && <div className={styles.reviewWorkspace}>
       <nav className={styles.reviewRail} aria-label="Review Queue entries">
         {data.entries.map((entry, index) => <div className={`${styles.reviewRailItem} ${entry.id === activeEntry.id ? styles.reviewRailItemActive : ''}`} key={entry.id}>

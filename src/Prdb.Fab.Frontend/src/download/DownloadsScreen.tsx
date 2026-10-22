@@ -233,9 +233,10 @@ function DownloadList({
             <p>
               {filtered
                 ? 'Clear the filters to see the complete local history.'
-                : 'Open a wanted Video, then use the Download button on its Release page.'}
+                : 'Downloads appear here after a Release is sent to SABnzbd. Browse Videos to choose a Download.'}
             </p>
-            <Link to={filtered ? '/downloads' : '/wanted'}>{filtered ? 'Clear filters' : 'Go to Wanted'}</Link>
+            <Link to={filtered ? '/downloads' : '/'}>{filtered ? 'Clear filters' : 'Browse Videos'}</Link>
+            {!filtered && <p>Expected a Download? <Link to="/status">Check Status</Link>.</p>}
           </div>
         ) : (
           <ul className={styles.list}>

@@ -3,7 +3,7 @@ import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useLocation, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 
 import { type LibraryEntrySort, readLibrary } from '../api/client.ts'
 import browseStyles from '../catalogue/BrowseScreen.module.css'
@@ -46,6 +46,11 @@ export function LibraryScreen() {
   })
   const data = library.data
   const total = Number(data?.total ?? 0)
+  const filtered = Boolean(search || site || actor || quality || confirmed)
+  // These filter options describe the whole held Library, not just this page.
+  const hasHeldEntries = total > 0 || (data?.filters.qualities.length ?? 0) > 0
+  const cleared = new URLSearchParams(parameters)
+  for (const key of ['search', 'site', 'actor', 'quality', 'confirmed', 'page']) cleared.delete(key)
   const pageSize = Number(data?.pageSize ?? 48)
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const shownPage = Number(library.data?.page ?? page)
@@ -142,7 +147,17 @@ export function LibraryScreen() {
       <Loaded query={library} of="the Library">{() => null}</Loaded>
       <PageNotice page={page} pages={pages} pending={library.isFetching} previousPage={library.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
       {unavailable ? null : data?.entries.length === 0
-        ? <p className={browseStyles.empty}>No held Library Entries match these filters.</p>
+        ? <div className={browseStyles.empty}>
+          <strong>{hasHeldEntries ? 'No held Library Entries match these filters.' : 'No Library Entries yet.'}</strong>
+          <p>{hasHeldEntries
+            ? 'Clear the filters to see what the Library holds.'
+            : 'Identified video files are filed here after a Download completes.'}</p>
+          {filtered && <p><Link to={{ pathname: '/library', search: cleared.toString() }}>Clear filters</Link></p>}
+          {!hasHeldEntries && <>
+            <p><Link to="/">Browse Videos</Link> · <Link to="/downloads">View Downloads</Link></p>
+            <p>Expected something here? <Link to="/status">Check Status</Link>.</p>
+          </>}
+        </div>
         : <LibraryGrid
           entries={data?.entries ?? []}
           action={(entry) => <LibraryCardActions entry={entry} returnTo={location.pathname + location.search} />}
