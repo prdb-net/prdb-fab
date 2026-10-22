@@ -54,7 +54,7 @@ public sealed class IndexerRecentWindowRoutine(
             indexerId,
             page,
             RecentWindow.Days,
-            IndexerQueryPurpose.Walk,
+            IndexerQueryPurpose.MinimumWindow,
             query: null,
             cancellationToken);
         if (searched.DeferredFor is { } wait) return RunResult.Deferred(wait);
@@ -84,6 +84,7 @@ public sealed class IndexerRecentWindowRoutine(
         if (reachedBoundary)
         {
             state.RecentWindowCompletedAt = now;
+            state.MinimumPassQueries = page + 1;
             state.RecentWindowResumePage = 0;
             state.RecentWindowPassStartedAt = null;
             dueIn = RecentWindow.NextPassIn(started, now);

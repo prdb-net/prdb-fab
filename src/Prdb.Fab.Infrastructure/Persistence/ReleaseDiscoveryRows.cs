@@ -16,6 +16,12 @@ public sealed class IndexerWalkStateRow
     public DateTimeOffset QueryDay { get; set; }
     public int QueriesSpentToday { get; set; }
     public int SweepQueriesSpentToday { get; set; }
+    public int HeadPagesPerPoll { get; set; } = 1;
+    public int MinimumPassQueries { get; set; }
+    public int MinimumQueriesSpentToday { get; set; }
+    public int HeadQueriesSpentToday { get; set; }
+    public int HistoryQueriesSpentToday { get; set; }
+    public DateTimeOffset? HeadLastSucceededAt { get; set; }
     public int? ResumePage { get; set; }
     public DateTimeOffset? CatchUpFrom { get; set; }
     public DateTimeOffset? CatchUpTo { get; set; }

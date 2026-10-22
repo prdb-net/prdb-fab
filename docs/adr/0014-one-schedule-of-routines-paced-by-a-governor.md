@@ -211,3 +211,17 @@ capacity protected for account feeds, writes, direct acquisition and arrived
 files. Every bounded turn still yields its lane. On first successful key save,
 and a confirmed account change, account feeds are made due immediately through
 the normal schedule; ordinary settings saves preserve feed cursors and due times.
+
+## Amendment: protected Indexer demand
+
+The Daily Query Budget is now divided by purpose: head polling, minimum-window
+repair, Wanted/Manual Search, and working/optional history. Remaining head calls
+are forecast from measured pages per poll and the remaining fifteen-minute
+slots before UTC midnight. Minimum repair is protected next, from observed pass
+cost; searchable Wanted demand is bounded by five per remaining poll and Manual
+Search by unfinished requests. Optional history yields first. Unknown minimum
+cost is explicitly a lower bound, not proof that the configured budget fits.
+Counters and admission update atomically across lanes, reset at UTC midnight,
+and survive restart. Refusals still spend the admitted query. Very small plans
+retain head polling and report a minimum-capacity shortfall instead of reserving
+every request for an impossible complete pass.

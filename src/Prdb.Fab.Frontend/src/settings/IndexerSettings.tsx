@@ -161,10 +161,9 @@ function RowSettings({ indexer }: { indexer: ConfiguredIndexer }) {
         hint={
           <>
             The window is <strong>UTC midnight</strong>, not local midnight and not
-            a rolling day. Half of it, up to 480 requests, is reserved for the
-            Wanted Sweep — the only route by which an older wanted Video is ever
-            found — and the rest is shared by Manual Search and the continuous
-            walk. Empty means unbounded.{' '}
+            a rolling day. Head polling and minimum recent coverage take priority;
+            Wanted Sweep and Manual Search share the remaining capacity before
+            optional history. Empty means unbounded.{' '}
             {storedBudget >= unbounded
               ? 'This indexer is currently unbounded.'
               : `This indexer currently allows ${storedBudget} requests a day.`}

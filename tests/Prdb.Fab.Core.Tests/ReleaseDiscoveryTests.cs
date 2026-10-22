@@ -39,39 +39,27 @@ public sealed class ReleaseDiscoveryTests
             Enum.GetNames<IdentificationState>());
     }
 
-    [Theory]
-    [InlineData(1000, 480)]
-    [InlineData(100, 50)]
-    [InlineData(1, 1)]
-    [InlineData(0, 0)]
-    public void The_wanted_sweep_reserves_half_the_daily_budget_up_to_its_cadence(
-        int dailyBudget,
-        int reserved)
+    [Fact]
+    public void Historical_work_preserves_measured_head_and_minimum_capacity()
     {
-        Assert.Equal(reserved, IndexerQueryBudget.ReservedForSweep(dailyBudget));
+        var plan = IndexerQueryBudget.Plan(1000, 0, new(2026, 10, 22, 0, 0, 0, TimeSpan.Zero),
+            measuredHeadPages: 1, minimumRemaining: 373, searchableWanted: 1, manualRemaining: 2);
+        Assert.Equal(96, plan.HeadReserve);
+        Assert.Equal(373, plan.MinimumReserve);
+        Assert.Equal(98, plan.SearchReserve);
+        Assert.Equal(433, plan.AvailableFor(IndexerQueryPurpose.OptionalHistory));
+        Assert.Equal(531, plan.AvailableFor(IndexerQueryPurpose.ManualSearch));
+        Assert.Equal(904, plan.AvailableFor(IndexerQueryPurpose.MinimumWindow));
     }
 
     [Fact]
-    public void A_walk_cannot_spend_the_wanted_sweeps_reservation()
+    public void A_small_plan_reports_the_shortfall_and_still_allows_head_polling()
     {
-        Assert.True(IndexerQueryBudget.Admits(10, spent: 4, spentBySweep: 0, purpose: IndexerQueryPurpose.Walk));
-        Assert.False(IndexerQueryBudget.Admits(10, spent: 5, spentBySweep: 0, purpose: IndexerQueryPurpose.Walk));
-        Assert.True(IndexerQueryBudget.Admits(10, spent: 5, spentBySweep: 0, purpose: IndexerQueryPurpose.WantedSweep));
-        Assert.True(IndexerQueryBudget.Admits(
-            10,
-            spent: 5,
-            spentBySweep: 0,
-            purpose: IndexerQueryPurpose.Walk,
-            sweepHasWork: false));
-    }
-
-    [Fact]
-    public void A_manual_search_can_preempt_a_walk_but_not_the_wanted_sweeps_reservation()
-    {
-        Assert.True(IndexerQueryBudget.Admits(
-            10, spent: 4, spentBySweep: 0, purpose: IndexerQueryPurpose.ManualSearch));
-        Assert.False(IndexerQueryBudget.Admits(
-            10, spent: 5, spentBySweep: 0, purpose: IndexerQueryPurpose.ManualSearch));
+        var plan = new IndexerBudgetPlan(10, 0, 96, 373, 0);
+        Assert.Equal(459, plan.RequiredShortfall);
+        Assert.Equal(0, plan.AvailableFor(IndexerQueryPurpose.OptionalHistory));
+        Assert.Equal(0, plan.AvailableFor(IndexerQueryPurpose.ManualSearch));
+        Assert.Equal(10, plan.AvailableFor(IndexerQueryPurpose.Walk));
     }
 
     [Theory]

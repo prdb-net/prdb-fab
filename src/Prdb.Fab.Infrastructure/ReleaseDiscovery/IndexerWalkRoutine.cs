@@ -38,6 +38,7 @@ public sealed class IndexerWalkRoutine(
         var added = 0;
         DateTimeOffset? oldest = null;
         var stopped = false;
+        var pagesRead = 0;
 
         for (var page = 0; page < PageCeiling; page++)
         {
@@ -50,6 +51,7 @@ public sealed class IndexerWalkRoutine(
                 cancellationToken: cancellationToken);
             if (searched.DeferredFor is { } wait) return RunResult.Deferred(wait);
             var read = searched.Read!;
+            pagesRead++;
             if (read.Refusal is not null) return RunResult.Failed("The indexer refused a release search.", read.RetryAfter);
 
             var known = await context.Releases.AnyAsync(
@@ -84,6 +86,9 @@ public sealed class IndexerWalkRoutine(
             await discovery.OpenCatchUpAsync(indexerId, oldDate.Value, time.GetUtcNow(), "missed paging window", cancellationToken);
         }
 
+        state.HeadPagesPerPoll = Math.Max(1, pagesRead);
+        state.HeadLastSucceededAt = time.GetUtcNow();
+        await context.SaveChangesAsync(cancellationToken);
         logger.LogInformation("The indexer walk saw {Seen} result(s) and added {Added} release(s).", seen, added);
         return RunResult.Discovered(seen, added);
     }

@@ -1192,6 +1192,24 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("CatchUpTo")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("HeadLastSucceededAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HeadPagesPerPoll")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("HeadQueriesSpentToday")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("HistoryQueriesSpentToday")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinimumPassQueries")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinimumQueriesSpentToday")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MissingCategoryNames")
                         .IsRequired()
                         .HasColumnType("TEXT");

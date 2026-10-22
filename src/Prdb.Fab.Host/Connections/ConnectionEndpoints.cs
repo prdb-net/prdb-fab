@@ -282,10 +282,8 @@ public sealed record SabnzbdConnectionVerdict(
 public sealed record IndexerConnectionRequest(string? Name, string? Url, string? ApiKey);
 
 /// <param name="DailyQueryBudget">
-/// Null is ADR 0020's unbounded. The window is UTC midnight, and half of it —
-/// up to <c>IndexerQueryBudget.SweepRequestsPerDay</c> — is reserved for the
-/// Wanted Sweep, which is the only route by which an older wanted Video is ever
-/// found.
+/// Null is ADR 0020's unbounded. The window is UTC midnight. Measured head
+/// polling and minimum coverage are protected before search and optional history.
 /// </param>
 public sealed record IndexerSettingsRequest(bool Enabled, int? DailyQueryBudget);
 

@@ -32,41 +32,24 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
                 update => update
                     .SetProperty(state => state.QueryDay, today)
                     .SetProperty(state => state.QueriesSpentToday, 0)
-                    .SetProperty(state => state.SweepQueriesSpentToday, 0),
+                    .SetProperty(state => state.SweepQueriesSpentToday, 0)
+                    .SetProperty(state => state.HeadQueriesSpentToday, 0)
+                    .SetProperty(state => state.MinimumQueriesSpentToday, 0)
+                    .SetProperty(state => state.HistoryQueriesSpentToday, 0),
                 cancellationToken);
 
-        var wantedTitles = purpose is IndexerQueryPurpose.Walk or IndexerQueryPurpose.ManualSearch
-            ? await context.WantedVideos.Select(row => row.Video!.Title).ToListAsync(cancellationToken)
-            : [];
-        var sweepHasWork = purpose == IndexerQueryPurpose.WantedSweep
-            || wantedTitles.Select(WantedSearchTitle.Of).Any(WantedSearchTitle.IsSearchable);
-
-        var reserve = sweepHasWork
-            ? IndexerQueryBudget.ReservedForSweep(indexer.DailyQueryBudget)
-            : 0;
-        var admitted = purpose switch
-        {
-            IndexerQueryPurpose.WantedSweep => await context.IndexerWalkStates
-                .Where(state => state.IndexerId == indexerId
-                                && state.QueriesSpentToday < indexer.DailyQueryBudget
-                                && state.SweepQueriesSpentToday < reserve)
-                .ExecuteUpdateAsync(
-                    update => update
-                        .SetProperty(state => state.QueriesSpentToday, state => state.QueriesSpentToday + 1)
-                        .SetProperty(state => state.SweepQueriesSpentToday, state => state.SweepQueriesSpentToday + 1),
-                    cancellationToken),
-            IndexerQueryPurpose.Walk or IndexerQueryPurpose.ManualSearch => await context.IndexerWalkStates
-                .Where(state => state.IndexerId == indexerId
-                                && state.QueriesSpentToday < indexer.DailyQueryBudget
-                                && state.QueriesSpentToday - state.SweepQueriesSpentToday
-                                < indexer.DailyQueryBudget - reserve)
-                .ExecuteUpdateAsync(
-                    update => update.SetProperty(
-                        state => state.QueriesSpentToday,
-                        state => state.QueriesSpentToday + 1),
-                    cancellationToken),
-            _ => 0,
-        };
+        var plan = await BudgetAsync(indexerId, cancellationToken);
+        var allowance = plan.AvailableFor(purpose);
+        var admitted = await context.IndexerWalkStates
+            .Where(state => state.IndexerId == indexerId
+                && state.QueryDay == today && state.QueriesSpentToday < plan.Spent + allowance)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(state => state.QueriesSpentToday, state => state.QueriesSpentToday + 1)
+                .SetProperty(state => state.SweepQueriesSpentToday, state => state.SweepQueriesSpentToday + (purpose == IndexerQueryPurpose.WantedSweep ? 1 : 0))
+                .SetProperty(state => state.HeadQueriesSpentToday, state => state.HeadQueriesSpentToday + (purpose == IndexerQueryPurpose.Walk ? 1 : 0))
+                .SetProperty(state => state.MinimumQueriesSpentToday, state => state.MinimumQueriesSpentToday + (purpose == IndexerQueryPurpose.MinimumWindow ? 1 : 0))
+                .SetProperty(state => state.HistoryQueriesSpentToday, state => state.HistoryQueriesSpentToday
+                    + (purpose == IndexerQueryPurpose.OptionalHistory || purpose == IndexerQueryPurpose.WorkingWindow ? 1 : 0)), cancellationToken);
 
         if (admitted == 0)
         {
@@ -88,6 +71,25 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
 
         return new(read, null);
     }
+    public async Task<IndexerBudgetPlan> BudgetAsync(Guid indexerId, CancellationToken cancellationToken)
+    {
+        var indexer = await context.Indexers.SingleAsync(row => row.Id == indexerId, cancellationToken);
+        var state = await context.IndexerWalkStates.SingleAsync(row => row.IndexerId == indexerId, cancellationToken);
+        var now = time.GetUtcNow();
+        var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
+        var currentDay = state.QueryDay == today;
+        var titles = await context.WantedVideos.Select(row => row.Video!.Title).ToListAsync(cancellationToken);
+        var wanted = titles.Select(WantedSearchTitle.Of).Count(WantedSearchTitle.IsSearchable);
+        // A Manual Search is a bounded, durable request; unfinished pairs are
+        // included even if the user made them after historical work started.
+        var manual = await context.ManualSearchIndexers.CountAsync(row => row.IndexerId == indexerId
+            && (row.State == ManualSearchIndexerState.Queued || row.State == ManualSearchIndexerState.Searching || row.State == ManualSearchIndexerState.Deferred), cancellationToken);
+        var minimum = state.RecentWindowCompletedAt >= now.AddHours(-24) ? 0
+            : Math.Max(1, state.MinimumPassQueries - (currentDay ? state.MinimumQueriesSpentToday : 0));
+        return IndexerQueryBudget.Plan(indexer.DailyQueryBudget, currentDay ? state.QueriesSpentToday : 0,
+            now, state.HeadPagesPerPoll, minimum, wanted, manual);
+    }
+
 }
 
 public sealed record IndexerSearchRead(NewznabSearchRead? Read, TimeSpan? DeferredFor)

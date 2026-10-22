@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Prdb.Fab.Infrastructure.Tests.ReleaseDiscovery;
 
-public sealed class IndexerWalkTests
+public sealed partial class IndexerWalkTests
 {
     private static readonly Guid IndexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000002");
 
