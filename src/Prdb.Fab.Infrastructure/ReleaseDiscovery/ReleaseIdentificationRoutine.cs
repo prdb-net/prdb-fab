@@ -62,7 +62,7 @@ public sealed class ReleaseIdentificationRoutine(
 
         var response = await prdb.AskAsync(
             apiKey,
-            PrdbWork.Identification,
+            PrdbWork.ReleaseIdentification,
             (client, token) => client.Videos.Identify.PostAsync(
                 new IdentifyVideosRequest
                 {
@@ -142,7 +142,7 @@ public sealed class ReleaseIdentificationRoutine(
         {
             var read = await prdb.AskAsync(
                 apiKey,
-                PrdbWork.Identification,
+                PrdbWork.ReleaseIdentification,
                 (client, token) => client.Videos.Batch.PostAsync(
                     new GetVideosByIdsRequest { Ids = [.. batch.Select(id => (Guid?)id)] },
                     cancellationToken: token),

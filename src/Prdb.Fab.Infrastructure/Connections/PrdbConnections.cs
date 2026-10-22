@@ -14,6 +14,7 @@ public sealed class PrdbConnections(
     FabDbContext context,
     PrdbGateway prdb,
     AccountScopedRows accountScoped,
+    TimeProvider time,
     ILogger<PrdbConnections> logger)
 {
     /// <summary>
@@ -55,6 +56,7 @@ public sealed class PrdbConnections(
             return new PrdbSave(PrdbConnectionOutcome.AnotherAccount, null);
         }
 
+        var firstKey = string.IsNullOrWhiteSpace(installation.PrdbApiKey);
         var changedAccount = installation.PrdbUserHash is { Length: > 0 } held
             && !string.Equals(held, userHash, StringComparison.Ordinal);
 
@@ -88,6 +90,13 @@ public sealed class PrdbConnections(
                 + "installation was running as. What was already reported stays recorded against "
                 + "the account it was reported for. The three feeds it dropped fill again from "
                 + "the beginning on their next run.");
+        }
+
+        if (firstKey || changedAccount)
+        {
+            var feeds = new[] { "prdb.wanted-videos", "prdb.favourite-sites", "prdb.favourite-actors", "prdb.ignored-sites" };
+            await context.Routines.Where(row => feeds.Contains(row.Name))
+                .ExecuteUpdateAsync(update => update.SetProperty(row => row.DueAt, time.GetUtcNow()), cancellationToken);
         }
 
         logger.LogInformation("The prdb key has been stored.");

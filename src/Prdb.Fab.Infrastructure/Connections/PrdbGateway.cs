@@ -159,6 +159,9 @@ public sealed class PrdbGateway(
     /// and ADR 0020's reason: the key is something a person changes in a form
     /// while the container runs.
     /// </summary>
+    public Task EnsureBudgetAsync(string apiKey, CancellationToken cancellationToken) =>
+        ReadBudgetAsync(Client(apiKey), cancellationToken);
+
     private async Task ReadBudgetAsync(PrdbClient client, CancellationToken cancellationToken)
     {
         await governor.RefreshGate.WaitAsync(cancellationToken);

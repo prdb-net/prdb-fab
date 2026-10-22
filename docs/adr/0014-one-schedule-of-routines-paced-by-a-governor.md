@@ -201,3 +201,13 @@ burst of 1% of the hourly limit (one to twenty requests) makes bootstrap useful;
 credits then accrue only at that conservative pace. Other account clients reduce
 observed counters and hence throughput. This is a bounded target, not a forecast
 of external use or a promise that a particular plan can sustain all demand.
+
+## Amendment: background Identification is below account and arrived-file work
+
+An arrived file retains `Identification` precedence. Cached Release names and
+all their dependent detail reads use `ReleaseIdentification`, the same hourly
+reserve and paced background pool as repair. A backlog can no longer consume
+capacity protected for account feeds, writes, direct acquisition and arrived
+files. Every bounded turn still yields its lane. On first successful key save,
+and a confirmed account change, account feeds are made due immediately through
+the normal schedule; ordinary settings saves preserve feed cursors and due times.
