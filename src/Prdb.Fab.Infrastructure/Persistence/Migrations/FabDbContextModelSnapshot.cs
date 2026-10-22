@@ -1192,6 +1192,24 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("CatchUpTo")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("HeadLastSucceededAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HeadPagesPerPoll")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("HeadQueriesSpentToday")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("HistoryQueriesSpentToday")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinimumPassQueries")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MinimumQueriesSpentToday")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MissingCategoryNames")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1235,6 +1253,50 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasKey("IndexerId");
 
                     b.ToTable("indexer_walk_state", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IndexerWindowRow", b =>
+                {
+                    b.Property<Guid>("IndexerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AnchorReleaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LastPassQueries")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("OldestPostDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PassQueries")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PassStartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ProofStartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResumeOffset")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("IndexerId", "Days");
+
+                    b.ToTable("indexer_window", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_indexer_window_days", "Days IN (14,30,90)");
+                        });
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")
@@ -1784,11 +1846,23 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DetailRetryAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DownloadUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentificationAnswerJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IdentificationDetailsPending")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("IdentificationInputKey")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("IdentificationState")
@@ -1831,6 +1905,7 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -1849,6 +1924,10 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("VideoId");
+
+                    b.HasIndex("IdentificationDetailsPending", "DetailRetryAt");
+
+                    b.HasIndex("IdentificationInputKey", "LastIdentifiedAt");
 
                     b.HasIndex("IndexerId", "DerivedReleaseId")
                         .IsUnique();
@@ -2475,6 +2554,17 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasOne("Prdb.Fab.Infrastructure.Persistence.IndexerRow", "Indexer")
                         .WithOne()
                         .HasForeignKey("Prdb.Fab.Infrastructure.Persistence.IndexerWalkStateRow", "IndexerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Indexer");
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IndexerWindowRow", b =>
+                {
+                    b.HasOne("Prdb.Fab.Infrastructure.Persistence.IndexerRow", "Indexer")
+                        .WithMany()
+                        .HasForeignKey("IndexerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

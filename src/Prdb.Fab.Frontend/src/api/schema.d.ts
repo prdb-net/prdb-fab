@@ -4385,6 +4385,20 @@ export interface components {
             indexerId: string;
             detail: string;
         };
+        IndexerRangeCoverage: {
+            /** Format: int32 */
+            days: number | string;
+            fresh: boolean;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: date-time */
+            proofStartedAt: null | string;
+            /** Format: date-time */
+            oldestProvedAt: null | string;
+            /** Format: int32 */
+            resumeOffset: number | string;
+            passInProgress: boolean;
+        };
         IndexerSettingsRequest: {
             enabled: boolean;
             /** Format: int32 */
@@ -4742,6 +4756,16 @@ export interface components {
             /** Format: int32 */
             identificationsDue: number | string;
             videoChanges?: null | components["schemas"]["VideoChangeProgress"];
+            /**
+             * Format: int32
+             * @default 30
+             */
+            indexerInitialDays: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            identificationInputsDue: number | string;
         };
         RecentWindowIndexer: {
             /** Format: uuid */
@@ -4753,6 +4777,9 @@ export interface components {
             /** Format: date-time */
             oldestProvedAt: null | string;
             passInProgress: boolean;
+            ranges?: null | components["schemas"]["IndexerRangeCoverage"][];
+            /** Format: date-time */
+            headLastSucceededAt?: null | string;
         };
         RecentWindowSource: {
             complete: boolean;

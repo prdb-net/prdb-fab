@@ -100,7 +100,7 @@ public sealed class StatusTests
             gap => gap.Title == "The prdb Recent Window is incomplete");
         Assert.Contains(
             status.Stages.Single(stage => stage.Id == "sync-indexers").Gaps,
-            gap => gap.Title == "Fixture's Recent Window is incomplete");
+            gap => gap.Title == "Fixture's 14-day minimum is incomplete");
     }
 
     [Fact]

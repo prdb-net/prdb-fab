@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
+using Prdb.Fab.Infrastructure.Connections;
 
 namespace Prdb.Fab.Host.Tests;
 
@@ -159,7 +160,7 @@ public sealed class FabApplication : WebApplicationFactory<Program>
                 // The primary handler, so everything the application layers on
                 // top of it — the agent, the redirect rule, the SDK's own
                 // middleware — is still in the chain being exercised.
-                services.AddHttpClient(transport).ConfigurePrimaryHttpMessageHandler(() => handler);
+                services.AddHttpClient(transport).ConfigurePrimaryHttpMessageHandler(() => transport == FabTransports.Prdb ? new BudgetSocket(handler) : handler);
             }
         });
     }

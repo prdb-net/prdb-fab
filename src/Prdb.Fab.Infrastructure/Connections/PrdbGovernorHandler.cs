@@ -13,23 +13,58 @@ namespace Prdb.Fab.Infrastructure.Connections;
 /// sends — a call site built somewhere else would be a bypass nobody would
 /// notice, which is what the architecture test guards and what this relies on.
 /// </remarks>
-internal sealed class PrdbGovernorHandler(PrdbGovernor governor) : DelegatingHandler
+internal sealed class PrdbGovernorHandler(PrdbGovernor governor, TimeProvider time) : DelegatingHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
+    {
+        await governor.TransportGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await SendGovernedAsync(request, cancellationToken);
+        }
+        finally
+        {
+            governor.TransportGate.Release();
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendGovernedAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var work = governor.Current;
         var verdict = governor.Ask(work);
 
         if (!verdict.Sends)
         {
+            governor.Costs.Deferred(work, verdict.Wait);
             throw new PrdbDeferredException(work, verdict.Wait, verdict.Reason);
         }
 
-        var response = await base.SendAsync(request, cancellationToken);
+        governor.Debit(work);
+        var started = time.GetTimestamp();
+        HttpResponseMessage? response = null;
+        try
+        {
+            response = await base.SendAsync(request, cancellationToken);
+            governor.Observe(response);
+            // The SDK consumes JSON bodies; buffer within its existing timeout
+            // so elapsed time and bytes include the payload, even without Content-Length.
+            if (response.Content is { } content)
+            {
+                await content.LoadIntoBufferAsync(32 * 1024 * 1024, cancellationToken);
+            }
+        }
+        catch
+        {
+            response?.Dispose();
+            governor.Costs.Request(work, request.RequestUri?.AbsolutePath, 0,
+                time.GetElapsedTime(started), 0);
+            throw;
+        }
+        governor.Costs.Request(work, request.RequestUri?.AbsolutePath, (int)response.StatusCode,
+            time.GetElapsedTime(started), response.Content?.Headers.ContentLength ?? 0);
 
-        governor.Observe(response);
 
         if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests
             || work == PrdbWork.Verification)

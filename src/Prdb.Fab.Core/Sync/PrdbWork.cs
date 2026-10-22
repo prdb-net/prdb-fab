@@ -31,6 +31,9 @@ public enum PrdbWork
     /// </summary>
     Verification,
 
+    /// <summary>Unmetered, bounded refresh of the shared account counters.</summary>
+    BudgetReading,
+
     /// <summary>
     /// <c>POST /videos/identify</c>. First of ADR 0014's order: an arrived file
     /// is waiting on it, and everything downstream of filing waits with it.
@@ -117,4 +120,7 @@ public enum PrdbWork
     /// it may spend whatever holds hourly usage under half of the limit.
     /// </summary>
     Repair,
+
+    /// <summary>Background cached Release names, below essential account and file work.</summary>
+    ReleaseIdentification,
 }

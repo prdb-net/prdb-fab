@@ -79,3 +79,66 @@ new summary placeholders remain due. Indexer and Identification proofs remain
 independent. A missing/lost cursor, incomplete baseline or old caught-up proof
 keeps bounded fallback repair due; it never declares the window complete merely
 because the feed made a request.
+
+## Amendment: Identify answers precede detail hydration
+
+A validated Identify response is saved on each Release before any dependent
+Video detail request. The Release remains Awaiting and cannot enter acquisition
+until required match details exist. A new scope or restart resumes saved results;
+successful detail batches are reused, so a deferred/lost later request cannot
+force another metered Identify call. Omitted match documents retain their saved
+answer and retry details hourly. Candidate identity stubs stay repairable and
+pinned. The JSON checkpoint is disposable cache state and is never exported.
+
+## Amendment: exact-input reuse
+
+Filename-only Release Identification coalesces the complete exact input tuple,
+including all absent hashes and size. Neither normalisation nor punctuation
+removal establishes equality. A versioned SHA-256 key over that tuple and the
+account scope indexes the authoritative answer retained on bounded cached
+Release rows. Independent Release identities, candidate edges and acquisition
+history remain independent. At most 200 distinct inputs and 2,000 row updates
+are considered in a turn; excess duplicates reuse the saved answer next turn.
+Reuse retains the original answer timestamp and expires at the existing
+revalidation lifetime. It never extends authority by copying an old answer.
+Changed titles clear the checkpoint; changed account scope cannot reuse it.
+Inline documents are projected once and removed from completed checkpoints.
+
+## Amendment: staged Indexer coverage replaces the fixed daily 90-day obligation
+
+The Catalogue remains ninety days. Indexers now prove the newest **14 days**
+first, extend that pass to the initial **30-day** target, and extend up to
+**90 days** only from protected budget surplus and available downstream
+Identification capacity. An incomplete optional extension is healthy. The
+minimum takes precedence whenever its proof ages, including during expansion.
+Each range has its own durable position, start/completion timestamps and query
+cost. Extending reuses the completed shorter range's anchor rather than starting
+its minimum scan again. A pass that took longer than a day cannot claim a fresh
+proof merely because its final page just completed.
+
+Newznab offsets are not snapshots. Every resumed request overlaps ten rows and
+must rediscover the saved identity anchor before advancing. A missing anchor
+restarts that proof at the head, preserving all cached rows. Head polling stays
+at fifteen minutes beside these passes. Concurrent late visibility can still be
+repaired only by a later pass: the external interface supplies no snapshot or
+change cursor. Legacy completed 90-day proofs initialize all three ranges;
+legacy unfinished numeric offsets lack an identity anchor, so the first anchored
+proof restarts once. The previous cache and legacy progress record are retained.
+
+RecentWindow.Days is unchanged: Catalogue scope and protected cache retention
+still use ninety days. Existing older cached data is not destructively trimmed.
+Daily Identification revalidation covers the thirty-day working set and wanted
+older matches. Other retained older answers are best effort; newly discovered
+older Releases and explicit Screening/search reasons still enter Awaiting once.
+Optional history pauses when existing Identification demand exceeds two distinct
+batches or the local dual-window Governor cannot currently admit background work.
+No additional Automation permission follows from coverage.
+
+
+A cached answer is also invalidated by explicit backwards Screening after a new
+Catalogue needle, and an unfinished checkpoint cannot survive an input/account
+scope change or its original revalidation expiry as fresh evidence. Release
+titles are optimistic concurrency tokens: a response cannot be attached after
+the submitted title changed in another lane. A changed title explicitly clears
+all derived evidence and acquisition state, including fields a concurrent
+Identify response may just have written.

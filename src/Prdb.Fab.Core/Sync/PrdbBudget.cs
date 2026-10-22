@@ -56,7 +56,7 @@ public sealed record PrdbBudget(int Limit, int Remaining, TimeSpan ResetIn)
     {
         // Neither can be held back at all: one is a person waiting, the other
         // is a file that has arrived and cannot be filed until prdb answers.
-        PrdbWork.Verification or PrdbWork.Identification => 0,
+        PrdbWork.Verification or PrdbWork.Identification or PrdbWork.BudgetReading => 0,
 
         PrdbWork.Writes => 0.05,
 
@@ -90,7 +90,7 @@ public sealed record PrdbBudget(int Limit, int Remaining, TimeSpan ResetIn)
 
         // ADR 0014's own number, and the only one here that is not a step on
         // the staircase: repair runs on what is left above half the limit.
-        PrdbWork.Repair => 0.50,
+        PrdbWork.Repair or PrdbWork.ReleaseIdentification => 0.50,
 
         _ => throw new ArgumentOutOfRangeException(
             nameof(work),

@@ -98,6 +98,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<IndexerWalkStateRow> IndexerWalkStates => Set<IndexerWalkStateRow>();
 
+    public DbSet<IndexerWindowRow> IndexerWindows => Set<IndexerWindowRow>();
+
     public DbSet<ReleaseRow> Releases => Set<ReleaseRow>();
 
     public DbSet<ReleaseCandidateRow> ReleaseCandidates => Set<ReleaseCandidateRow>();
@@ -736,6 +738,14 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        builder.Entity<IndexerWindowRow>(window =>
+        {
+            window.ToTable("indexer_window", table => table.HasCheckConstraint("CK_indexer_window_days", "Days IN (14,30,90)"));
+            window.HasKey(row => new { row.IndexerId, row.Days });
+            window.Declares(AccountClass.AccountFree);
+            window.HasOne(row => row.Indexer).WithMany().HasForeignKey(row => row.IndexerId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         builder.Entity<ReleaseRow>(release =>
         {
             release.ToTable("release", table => table.HasCheckConstraint(
@@ -745,12 +755,14 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             release.Declares(AccountClass.AccountFree);
             release.HasIndex(row => new { row.IndexerId, row.DerivedReleaseId }).IsUnique();
             release.HasIndex(row => row.IdentificationState);
+            release.HasIndex(row => new { row.IdentificationDetailsPending, row.DetailRetryAt });
+            release.HasIndex(row => new { row.IdentificationInputKey, row.LastIdentifiedAt });
             release.HasIndex(row => row.VideoId);
             release.HasIndex(row => row.FirstSeenAt);
             release.HasIndex(row => new { row.PostDate, row.LastIdentifiedAt });
             release.Property(row => row.DerivedReleaseId).IsRequired();
             release.Property(row => row.RawGuid).IsRequired();
-            release.Property(row => row.Title).IsRequired();
+            release.Property(row => row.Title).IsRequired().IsConcurrencyToken();
             release.Property(row => row.NormalisedTitle).IsRequired();
             release.Property(row => row.Categories).IsRequired();
             release.Property(row => row.DownloadUrl).IsRequired();

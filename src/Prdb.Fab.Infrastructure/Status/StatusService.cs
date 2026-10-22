@@ -26,6 +26,7 @@ public sealed class StatusService(
     RecentWindowCoverage recentWindow,
     VideoChangeCoverage videoChanges,
     IRoutineStore routineStore,
+    IndexerSearch indexerSearch,
     TimeProvider time)
 {
     private static readonly string[] StageOrder = ["sync-prdb", "sync-indexers", "match", "decide", "download", "file"];
@@ -71,6 +72,10 @@ public sealed class StatusService(
         var reportingState = await reporting.ReadAsync(cancellationToken);
         var recentCoverage = await recentWindow.ReadAsync(cancellationToken);
 
+        var indexerBudgets = new Dictionary<Guid, IndexerBudgetPlan>();
+        foreach (var indexer in indexers.Where(row => row.Enabled && walkStates.Any(walk => walk.IndexerId == row.Id)))
+            indexerBudgets[indexer.Id] = await indexerSearch.BudgetAsync(indexer.Id, cancellationToken);
+
         var workSets = await WorkSetsAsync(routines, reportingState, cancellationToken);
         var routineFacts = routines.Select(row => DescribeRoutine(
             row,
@@ -89,6 +94,17 @@ public sealed class StatusService(
         AddRoutineGaps(conditions, routines, runs, indexers);
         AddDeferralBrakes(conditions, routines, now);
         AddIndexerBudgetBrakes(conditions, indexers, walkStates, now);
+        foreach (var indexer in indexers.Where(row => row.Enabled))
+        {
+            if (!indexerBudgets.TryGetValue(indexer.Id, out var budget)) continue;
+            var headPages = walkStates.Single(row => row.IndexerId == indexer.Id).HeadPagesPerPoll;
+            var dailyRequired = Math.Clamp(headPages, 1, 10) * IndexerQueryBudget.PollsPerDay + Math.Max(1, budget.MinimumDailyCost);
+            if (dailyRequired > indexer.DailyQueryBudget)
+                conditions.Add(Gap($"{indexer.Name}'s Daily Query Budget cannot sustain the minimum",
+                    $"At least {dailyRequired} queries/day are needed for measured head polling and 14-day coverage; "
+                    + $"the configured budget is {indexer.DailyQueryBudget} (short by at least {dailyRequired - indexer.DailyQueryBudget}).",
+                    "sync-indexers", $"/settings/connections/indexers/{indexer.Id:D}"));
+        }
         AddReportingBrakes(conditions, reportingState, publishing);
 
         var admissions = await context.GateAdmissions.ToListAsync(cancellationToken);
@@ -138,6 +154,7 @@ public sealed class StatusService(
             recentCoverage,
             governor,
             publishing,
+            indexerBudgets,
             now)).ToArray();
 
         return new StatusState(
@@ -242,13 +259,9 @@ public sealed class StatusService(
         await SetAsync(DiscoveryRoutineNames.Identification,
             () =>
             {
-                var now = time.GetUtcNow();
-                var recentSince = RecentWindow.BeginsAt(now);
-                var identifyAgainBefore = now - RecentWindow.RevalidateAfter;
-                return context.Releases.CountAsync(row => row.IdentificationState == IdentificationState.Awaiting
-                    || row.PostDate >= recentSince
-                        && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore), cancellationToken);
+                return ReleaseIdentificationWork.Current(context, time.GetUtcNow(), includeDelayed: true).CountAsync(cancellationToken);
             });
+
         await SetAsync(ArrivalIdentificationRoutine.RoutineName,
             () => context.ArrivingFiles.CountAsync(row => row.State == ArrivingFileState.AwaitingIdentification && row.Reason == null, cancellationToken));
         await SetAsync(FilingRoutine.RoutineName,
@@ -373,6 +386,11 @@ public sealed class StatusService(
             conditions.Add(Gap("No Indexer is configured", "Release discovery has nowhere to search.", "sync-indexers", "/settings/connections"));
         if (installation.PlanShortSince is { } since)
             conditions.Add(Gap("The prdb plan cannot carry the schedule", $"Lower-priority sync work has been reduced since {since:u}.", "sync-prdb", "/settings/connections/prdb"));
+        if (governor.Snapshot().Monthly is { } month && !IdleProfile.CarriedByMonthly(month.Limit))
+            conditions.Add(Gap("The rolling monthly plan cannot carry the ordinary schedule",
+                $"The ordinary idle schedule needs about {IdleProfile.RequestsInThirtyDays:F0} requests per 30 days; "
+                + $"the shared monthly limit is {month.Limit}. Lower-priority feeds are reduced and background work waits.",
+                "sync-prdb", "/settings/connections/prdb"));
         if (governor.RefusedWith is { } status)
             conditions.Add(Gap("prdb refused the API key", $"prdb returned {status}; unattended requests remain stopped until a key works.", "sync-prdb", "/settings/connections/prdb"));
     }
@@ -393,13 +411,13 @@ public sealed class StatusService(
                 "/status"));
         }
 
-        foreach (var indexer in coverage.Indexers.Where(indexer => !indexer.Complete))
+        foreach (var indexer in coverage.Indexers.Where(indexer => indexer.Ranges?.Single(range => range.Days == 14).Fresh != true))
         {
             conditions.Add(Gap(
-                $"{indexer.Name}'s Recent Window is incomplete",
+                $"{indexer.Name}'s 14-day minimum is incomplete",
                 indexer.CompletedAt is null
-                    ? "Its first ninety-day Indexer pass is still filling."
-                    : $"Its last complete ninety-day pass finished at {indexer.CompletedAt:u}.",
+                    ? "Its first 14-day minimum pass is still filling. The initial target is 30 days."
+                    : $"The 14-day proof is stale; the last initial-target completion was {indexer.CompletedAt:u}.",
                 "sync-indexers",
                 $"/settings/connections/indexers/{indexer.Id:D}"));
         }
@@ -810,14 +828,29 @@ public sealed class StatusService(
         RecentWindowCoverageState recentWindow,
         PrdbGovernor governor,
         StatusPublishing publishing,
+        IReadOnlyDictionary<Guid, IndexerBudgetPlan> indexerBudgets,
         DateTimeOffset now)
     {
         var facts = new List<StatusFact>();
         if (id == "sync-prdb")
         {
-            var budget = governor.LastReading;
+            var quota = governor.Snapshot();
+            var costs = governor.Costs.Snapshot();
             facts.Add(new("prdb connection", string.IsNullOrWhiteSpace(installation.PrdbApiKey) ? "Not configured" : governor.RefusedWith is null ? "Configured" : $"Refused with {governor.RefusedWith}", "/settings/connections/prdb"));
-            facts.Add(new("Hourly budget", budget is null ? "Not read yet" : $"{budget.Remaining} of {budget.Limit} remaining", null));
+            facts.Add(new("Hourly account budget", QuotaText(quota.Hourly, quota), null));
+            facts.Add(new("Rolling monthly account budget", QuotaText(quota.Monthly, quota), null));
+            var admission = governor.Ask(PrdbWork.ReleaseIdentification);
+            facts.Add(new("Background capacity", admission.Sends ? "Admitted within shared pacing" : admission.Reason ?? "Waiting", null));
+            if (quota.RetryAfterUntil is { } until && until > now)
+                facts.Add(new("prdb requested wait", $"No unattended request before {until:u}", null));
+            else if (quota.BackgroundDueAt is { } next)
+                facts.Add(new("Next background admission", $"No earlier than {next:u}; shared account use can delay it", null));
+            facts.Add(new("Measured HTTP costs", $"Since {costs.Since:u}: {costs.Requests.Sum(row => row.Requests)} requests "
+                + $"({costs.Requests.Where(row => row.Work == PrdbWork.BudgetReading).Sum(row => row.Requests)} unmetered budget reads), "
+                + $"{costs.Requests.Sum(row => row.PayloadBytes)} response bytes, {costs.Requests.Sum(row => row.ElapsedMilliseconds) / 1000:F1}s HTTP time", null));
+            foreach (var cost in costs.Requests.OrderBy(row => row.Work).ThenBy(row => row.Endpoint).ThenBy(row => row.StatusClass))
+                facts.Add(new($"{cost.Work}: {cost.Endpoint} ({cost.StatusClass})", $"{cost.Requests} requests, "
+                    + $"{cost.PayloadBytes} bytes, {cost.ElapsedMilliseconds / 1000:F1}s", null));
 
             // ADR 0064's channel, in the two sentences a person reading this
             // page is owed about it. The first is what is still owed and what
@@ -875,12 +908,19 @@ public sealed class StatusService(
                     : 0;
                 facts.Add(new(indexer.Name, $"{indexer.LastVerdict} at {indexer.LastCheckedAt:u}; {spent} of {indexer.DailyQueryBudget} queries used", $"/settings/connections/indexers/{indexer.Id:D}"));
                 var coverage = recentWindow.Indexers.SingleOrDefault(item => item.Id == indexer.Id);
-                facts.Add(new(
-                    $"{indexer.Name} Recent Window",
-                    coverage?.CompletedAt is null
-                        ? "Initial ninety-day fill in progress"
-                        : $"Last proved complete at {coverage.CompletedAt:u}",
-                    $"/settings/connections/indexers/{indexer.Id:D}"));
+                facts.Add(new($"{indexer.Name} coverage target", "14-day minimum; initial target 30 days; optional history up to 90 days", null));
+                facts.Add(new($"{indexer.Name} head poll", coverage?.HeadLastSucceededAt is { } head ? $"Last succeeded at {head:u}" : "No successful head poll recorded", null));
+                foreach (var range in coverage?.Ranges ?? [])
+                    facts.Add(new($"{indexer.Name}: {range.Days} days", range.Fresh
+                        ? $"Proved fresh at {range.CompletedAt:u}"
+                        : $"{(range.Days == 90 ? "Optional history" : range.Days == 14 ? "Minimum not yet satisfied" : "Initial target")}; "
+                            + $"{(range.PassInProgress ? "pass in progress" : "waiting for capacity")}, source offset {range.ResumeOffset}; "
+                            + $"oldest observed {range.OldestProvedAt:u}; last proof {range.CompletedAt:u}", null));
+                if (indexerBudgets.TryGetValue(indexer.Id, out var plan))
+                    facts.Add(new($"{indexer.Name} protected demand", $"{plan.Remaining} queries remain today; "
+                        + $"{plan.HeadReserve} head, {plan.MinimumReserve} minimum, {plan.SearchReserve} search reserved; "
+                        + $"at least {plan.RequiredShortfall} additional queries needed to meet today's required demand", null));
+
             }
         }
         if (id is "decide" or "file")
@@ -892,8 +932,19 @@ public sealed class StatusService(
         {
             facts.Add(new(
                 "Recent Window Identification",
-                $"{recentWindow.IdentificationsDue} Release(s) due",
+                $"{recentWindow.IdentificationsDue} Release rows, {recentWindow.IdentificationInputsDue} distinct inputs due",
                 "/status"));
+        }
+        if (id == "match")
+        {
+            var costs = governor.Costs.Snapshot();
+            facts.Add(new("Identification reuse", $"Since {costs.Since:u}: {costs.IdentifiedInputs} new inputs, {costs.ReusedAnswers} reused answers, "
+                + $"{costs.DetailFetchesAvoided} detail reads avoided", null));
+            var elapsed = (now - costs.Since).TotalHours;
+            facts.Add(new("Measured Identification throughput", elapsed >= 1d / 60 && costs.IdentifiedInputs >= 1000
+                ? $"{costs.IdentifiedInputs / elapsed:F0} distinct inputs/hour since measurement began; shared quotas make completion time uncertain"
+                : "Insufficient sample for a completion estimate; shared account quota remains uncertain", null));
+            facts.Add(new("Quota waits", $"{costs.Waits.Sum(row => row.Deferrals)} deferrals; {costs.Waits.Sum(row => row.ScheduledWaitSeconds):F0}s scheduled wait (separate from processing)", null));
         }
         if (id == "decide")
         {
@@ -956,6 +1007,11 @@ public sealed class StatusService(
         return new[] { new StatusUsefulAct("Filed a library file", filed), new StatusUsefulAct("Started a Download", downloaded), new StatusUsefulAct("Added a Release to the cache", cached) }
             .Where(item => item.At is not null).OrderByDescending(item => item.At).FirstOrDefault();
     }
+
+    private static string QuotaText(PrdbBudget? budget, PrdbQuotaSnapshot snapshot) => budget is null
+        ? "Not read yet; work awaits current account counters"
+        : $"{budget.Remaining} of {budget.Limit} remaining account-wide; observed {snapshot.ObservedAt:u} "
+            + $"({(snapshot.Fresh ? "fresh" : "stale")}); next oldest-slot expiry after {budget.ResetIn.TotalSeconds:F0}s from that reading, not a full reset";
 
     private static StatusCondition Gap(string title, string detail, string stage, string? route) => new(StatusConditionKind.Gap, title, detail, stage, route, false);
     private static StatusCondition Brake(string title, string detail, string stage, string? route) => new(StatusConditionKind.Brake, title, detail, stage, route, false);

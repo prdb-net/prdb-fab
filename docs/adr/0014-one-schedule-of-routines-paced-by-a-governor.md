@@ -181,3 +181,64 @@ Status reports baseline completion, the post-apply server bound, observed lag
 and whether fallback repair is active. Cursor progress commits after application;
 a Governor deferral changes neither cursor nor coverage. Missing envelopes do
 not manufacture freshness.
+
+## Amendment: shared hourly and rolling monthly windows
+
+The Governor now admits against **both** account-wide counters. Before work
+starts, and after counters age by a minute, it reads the unmetered `/rate-limit`
+through the generated SDK and the same governed transport. Refresh attempts are
+bounded to once per minute and obey authentication refusal and `Retry-After`.
+Missing readings defer work; a restart or changed key must read remote counters.
+An oldest-slot expiry never creates a full local allowance. Serial transport
+admission debits capacity before sending, including requests with lost answers.
+
+Hourly reserves keep their existing staircase. Monthly reserves for foreground
+and feed work are capped at 10% of the reported limit. Background repair and
+Release Identification protect at least the ordinary thirty-day idle demand
+as well as that reserve. They share pacing: at most half the reported hourly
+limit and 80% of remaining monthly capacity after ordinary idle demand is
+reserved, spread across another thirty days. A bounded initial
+burst of 1% of the hourly limit (one to twenty requests) makes bootstrap useful;
+credits then accrue only at that conservative pace. Other account clients reduce
+observed counters and hence throughput. This is a bounded target, not a forecast
+of external use or a promise that a particular plan can sustain all demand.
+
+## Amendment: background Identification is below account and arrived-file work
+
+An arrived file retains `Identification` precedence. Cached Release names and
+all their dependent detail reads use `ReleaseIdentification`, the same hourly
+reserve and paced background pool as repair. A backlog can no longer consume
+capacity protected for account feeds, writes, direct acquisition and arrived
+files. Every bounded turn still yields its lane. On first successful key save,
+and a confirmed account change, account feeds are made due immediately through
+the normal schedule; ordinary settings saves preserve feed cursors and due times.
+
+## Amendment: protected Indexer demand
+
+The Daily Query Budget is now divided by purpose: head polling, minimum-window
+repair, Wanted/Manual Search, and working/optional history. Remaining head calls
+are forecast from measured pages per poll and the remaining fifteen-minute
+slots before UTC midnight. Minimum repair is protected next, from observed pass
+cost; searchable Wanted demand is bounded by five per remaining poll and Manual
+Search by unfinished requests. Optional history yields first. Unknown minimum
+cost is explicitly a lower bound, not proof that the configured budget fits.
+Counters and admission update atomically across lanes, reset at UTC midnight,
+and survive restart. Refusals still spend the admitted query. Very small plans
+retain head polling and report a minimum-capacity shortfall instead of reserving
+every request for an impossible complete pass.
+
+
+The ordinary idle demand is checked against the monthly limit as well as the
+hourly limit. An insufficient monthly plan triggers the same documented feed
+shedding and an explicit Status shortfall. Serialized SDK operations cover key
+selection, the unmetered snapshot, parsing and the metered request; this prevents
+a concurrent key change or an older snapshot from restoring capacity over a
+newer response. No transaction spans any of those remote calls.
+
+A minimum proof that will expire before the next UTC midnight reserves its next
+pass in advance. Only committed range progress reduces that reservation;
+abandoned attempts and yesterday's spent counter cannot stand in for progress.
+A deferred larger range wakes no later than minimum-proof expiry, and even a
+completed optional pass schedules the next check from the minimum's proof time.
+This prevents search/history reservations or a midnight wait from starving a
+minimum that the configured Daily Query Budget can actually sustain.

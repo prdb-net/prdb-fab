@@ -26,6 +26,7 @@ public sealed class RoutineRunner(
     IRoutineStore store,
     ThePlan plan,
     IEnumerable<IRoutine> routines,
+    TimeProvider time,
     ILogger<RoutineRunner> logger)
 {
     /// <summary>Runs everything <paramref name="lane"/> has due.</summary>
@@ -63,6 +64,7 @@ public sealed class RoutineRunner(
     private async Task RunAsync(IRoutine routine, DueRoutine row, CancellationToken stoppingToken)
     {
         RunResult result;
+        var startedAt = time.GetUtcNow();
 
         try
         {
@@ -80,7 +82,7 @@ public sealed class RoutineRunner(
             // lose the only trace.
             await store.RecordAsync(
                 row.Id,
-                RunResult.Interrupted(0),
+                RunResult.Interrupted(0) with { StartedAt = startedAt },
                 plan.CadenceFor(routine),
                 CancellationToken.None);
             throw;
@@ -120,6 +122,6 @@ public sealed class RoutineRunner(
         // documented order. Not a backoff and not a deferral: both of those are
         // about this run, and this is about every run from now until the plan
         // changes.
-        await store.RecordAsync(row.Id, result, plan.CadenceFor(routine), stoppingToken);
+        await store.RecordAsync(row.Id, result with { StartedAt = startedAt }, plan.CadenceFor(routine), stoppingToken);
     }
 }

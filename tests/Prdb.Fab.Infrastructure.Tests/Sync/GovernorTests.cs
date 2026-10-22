@@ -64,12 +64,18 @@ public sealed class GovernorTests
         Assert.Equal(deferredAt + TimeSpan.FromSeconds(600), routine.DueAt);
 
         database.Time.Advance(TimeSpan.FromSeconds(600));
+        // Oldest-slot expiry permits a reading, never a fabricated full reset.
+        prdb.Hourly = (1000, 800, 600);
+        // A verification supplies the newly observed shared account counters.
+        await using (var refresh = database.Scope())
+            await refresh.ServiceProvider.GetRequiredService<PrdbGateway>()
+                .CheckAsync(GovernedRoutine.ApiKey, TestContext.Current.CancellationToken);
         await TurnAsync(database);
 
         // The old remaining count expires with the reset it described. The
         // next request goes out to obtain the changed hourly window rather
         // than deferring the same stale reading for a whole hour.
-        Assert.Equal(2, prdb.Requests);
+        Assert.Equal(3, prdb.Requests);
     }
 
     /// <summary>

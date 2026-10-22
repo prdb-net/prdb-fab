@@ -1,303 +1,208 @@
 using System.Globalization;
-
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
-
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Sync;
+using Prdb.Sdk.Generated.Models;
 
 namespace Prdb.Fab.Infrastructure.Connections;
 
-/// <summary>
-/// ADR 0014's governor: what decides whether a prdb request is sent now or
-/// deferred, from the rate limit read off the last response rather than from a
-/// number known in advance.
-/// </summary>
-/// <remarks>
-/// <para>
-/// One instance for the process, because what it holds is one account's hourly
-/// window and the window is shared by every routine that spends from it. It is
-/// asked by the handler on the prdb transport (ADR 0041) rather than by each
-/// caller, which is what makes <em>every request passes it</em> true rather
-/// than conventional: a call site that forgot to ask would still be asked for.
-/// </para>
-/// <para>
-/// It reads the three hourly headers itself. The SDK offers the same numbers
-/// typed, as a per-request option, and that is the better shape for a caller
-/// who wants them — but it is per caller, and a governor that only sees the
-/// requests whose authors remembered to hand it an option is not a governor.
-/// </para>
-/// </remarks>
+/// <summary>Admission from shared account counters, never a locally replenished allowance.</summary>
 public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger)
 {
-    /// <summary>
-    /// The longest a reading can describe anything. Its reported reset is
-    /// normally sooner: once that elapses at least one slot has changed, so a
-    /// request has to obtain a new reading rather than reusing the old count.
-    /// </summary>
-    private static readonly TimeSpan ReadingKeeps = TimeSpan.FromHours(1);
-
-    /// <summary>
-    /// What the routine currently on this lane is doing, so that the handler
-    /// knows what it is being asked to send.
-    /// </summary>
-    /// <remarks>
-    /// Ambient rather than a parameter because the request is built by the SDK,
-    /// several layers below whoever knows why it is being made. The alternative
-    /// — threading the reason through the generated client — is not available,
-    /// and passing it on the URL or a header would send it to prdb.
-    /// </remarks>
     private static readonly AsyncLocal<PrdbWork?> Doing = new();
-
     private readonly Lock gate = new();
-
-    private PrdbBudget? reading;
+    private PrdbBudget? hourly;
+    private PrdbBudget? monthly;
     private DateTimeOffset readAt;
+    private DateTimeOffset refreshAfter;
     private DateTimeOffset? spentUntil;
+    private DateTimeOffset nextBackgroundAt;
+    private DateTimeOffset backgroundDebitedAt;
+    private double backgroundCredits;
     private int? refusedWith;
+    private string? keyDigest;
 
-    /// <summary>
-    /// What prdb last said about the hourly window, or null if it has not been
-    /// asked anything yet.
-    /// </summary>
-    public PrdbBudget? LastReading
-    {
-        get
-        {
-            lock (gate)
-            {
-                return Fresh() ? reading : null;
-            }
-        }
-    }
-
-    /// <summary>
-    /// The status code prdb refused the key with — <c>401</c> or <c>403</c> —
-    /// or null while it has not. ADR 0014 makes a permanent refusal a Gap at
-    /// once rather than after three failures, and this is the fact that Gap is
-    /// drawn from: nothing about a routine can express it, because after the
-    /// first refusal the routines stop running rather than failing.
-    /// </summary>
-    public int? RefusedWith
-    {
-        get
-        {
-            lock (gate)
-            {
-                return refusedWith;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Marks everything done inside it as <paramref name="work"/>, for the
-    /// handler to read. Nested scopes are not expected and the inner one wins.
-    /// </summary>
+    // Serial transport admission makes counters and debit atomic across lanes.
+    // No transaction spans HTTP and no new network concurrency is introduced.
+    internal SemaphoreSlim OperationGate { get; } = new(1, 1);
+    internal SemaphoreSlim TransportGate { get; } = new(1, 1);
+    internal SemaphoreSlim RefreshGate { get; } = new(1, 1);
+    public SyncCosts Costs { get; } = new(time);
+    public PrdbBudget? LastReading { get { lock (gate) return Fresh() ? hourly : null; } }
+    public int? RefusedWith { get { lock (gate) return refusedWith; } }
+    public bool NeedsRefresh { get { lock (gate) return !Fresh() && time.GetUtcNow() >= refreshAfter; } }
+    public bool HasReading { get { lock (gate) return Fresh(); } }
     public IDisposable For(PrdbWork work) => new Scope(work);
-
-    /// <summary>
-    /// What the caller said it was doing, or the least privileged kind of work
-    /// there is when nobody said.
-    /// </summary>
-    /// <remarks>
-    /// Falling back downwards rather than upwards is the whole of the choice: a
-    /// request nobody classified is a bug, and the two ways to be wrong about a
-    /// bug are to let it spend a budget reserved for an arrived file, or to
-    /// have it deferred until somebody notices it never runs. The second is the
-    /// one that shows up.
-    /// </remarks>
     public PrdbWork Current => Doing.Value ?? PrdbWork.Repair;
 
-    /// <summary>
-    /// How long prdb's last <c>429</c> said to wait, or null if nothing is
-    /// holding the budget shut.
-    /// </summary>
-    public TimeSpan? HeldFor()
+    public PrdbQuotaSnapshot Snapshot()
     {
+        lock (gate) return new(hourly, monthly, hourly is null ? null : readAt, Fresh(),
+            spentUntil, nextBackgroundAt > time.GetUtcNow() ? nextBackgroundAt : null);
+    }
+
+    internal void UseKey(string key)
+    {
+        var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
         lock (gate)
         {
-            var now = time.GetUtcNow();
-
-            return spentUntil is { } until && until > now ? until - now : null;
+            if (keyDigest == digest) return;
+            keyDigest = digest;
+            hourly = monthly = null;
+            spentUntil = null;
+            refusedWith = null;
+            refreshAfter = default;
+            // A different key still has to read its remote account counters.
         }
     }
 
-    /// <summary>Whether a request for <paramref name="work"/> may be sent now.</summary>
+    public TimeSpan? HeldFor()
+    {
+        lock (gate) return spentUntil is { } until && until > time.GetUtcNow()
+            ? until - time.GetUtcNow() : null;
+    }
+
     public GovernorVerdict Ask(PrdbWork work)
     {
         lock (gate)
         {
             var now = time.GetUtcNow();
-
-            // A person typing a key is above all of it, including a refusal and
-            // a spent budget: this is the request that finds out whether the key
-            // works, and refusing to send it makes a wrong key unfixable from
-            // the inside. It costs one request and is never made unattended.
-            if (work == PrdbWork.Verification)
-            {
-                return GovernorVerdict.Send;
-            }
-
+            if (work == PrdbWork.Verification) return GovernorVerdict.Send;
             if (refusedWith is { } refused)
-            {
-                return GovernorVerdict.Defer(
-                    Backoff.Longest,
-                    $"prdb refused the key with {refused}");
-            }
-
+                return GovernorVerdict.Defer(Backoff.Longest, $"prdb refused the key with {refused}");
             if (spentUntil is { } until && until > now)
-            {
-                return GovernorVerdict.Defer(until - now, "the hourly budget is spent");
-            }
+                return GovernorVerdict.Defer(until - now, "prdb requested a quota wait (Retry-After)");
+            if (work == PrdbWork.BudgetReading) return GovernorVerdict.Send;
+            if (!Fresh()) return GovernorVerdict.Defer(PrdbBudget.ShortestWait,
+                "current hourly and monthly account counters are unavailable; waiting for a budget reading");
 
-            if (!Fresh() || reading is not { } budget)
+            foreach (var (budget, window) in new[] { (hourly!, "hourly"), (monthly!, "rolling monthly") })
             {
-                // Nothing has been read yet, or what was read has aged out of
-                // the window it described. The request is how the next reading
-                // arrives.
-                return GovernorVerdict.Send;
+                var reserve = window == "hourly" ? budget.ReserveFor(work)
+                    : Math.Min(budget.ReserveFor(work), (int)Math.Ceiling(budget.Limit * 0.10));
+                if (window != "hourly" && Background(work))
+                    reserve = Math.Max(reserve, Math.Min(budget.Limit, (int)Math.Ceiling(IdleProfile.RequestsInThirtyDays)));
+                if (budget.Remaining <= reserve)
+                    return GovernorVerdict.Defer(WaitForReading(budget),
+                        $"{budget.Remaining} of {budget.Limit} account requests remain in the {window} window; {work} preserves {reserve}");
             }
-
-            return budget.Admits(work)
-                ? GovernorVerdict.Send
-                : GovernorVerdict.Defer(
-                    budget.WaitBefore(work),
-                    $"{budget.Remaining} of {budget.Limit} requests left this hour, "
-                    + $"and {work} is held back below {budget.ReserveFor(work)}");
+            if (Background(work) && nextBackgroundAt > now)
+                return GovernorVerdict.Defer(nextBackgroundAt - now,
+                    "background work is paced by sustainable hourly and rolling monthly account capacity");
+            return GovernorVerdict.Send;
         }
     }
 
-    /// <summary>
-    /// Reads what the answer said about the budget. Every metered response
-    /// carries it, so the tool paces itself off the answers it is already
-    /// getting rather than spending a request on <c>GET /rate-limit</c> to ask.
-    /// </summary>
-    public void Observe(HttpResponseMessage response)
+    internal void Debit(PrdbWork work)
     {
-        var status = (int)response.StatusCode;
-
         lock (gate)
         {
-            var now = time.GetUtcNow();
-
-            if (ReadHourlyWindow(response) is { } window)
+            if (work == PrdbWork.BudgetReading) return;
+            if (Background(work) && hourly is { } hour && monthly is { } month)
             {
-                reading = window;
-                readAt = now;
+                // Spend at most 80% of observed remaining monthly capacity over
+                // another rolling 30 days; no assumption about oldest-slot size.
+                var seconds = Math.Max(3600d / Math.Max(1, hour.Limit * .5),
+                    TimeSpan.FromDays(30).TotalSeconds / Math.Max(1, (month.Remaining - IdleProfile.RequestsInThirtyDays) * .8));
+                var now = time.GetUtcNow();
+                var capacity = Math.Clamp(hour.Limit / 100, 1, 20);
+                backgroundCredits = backgroundDebitedAt == default ? capacity
+                    : Math.Min(capacity, backgroundCredits + (now - backgroundDebitedAt).TotalSeconds / seconds);
+                backgroundCredits = Math.Max(0, backgroundCredits - 1);
+                backgroundDebitedAt = now;
+                nextBackgroundAt = backgroundCredits >= 1 ? now
+                    : now + TimeSpan.FromSeconds(seconds * (1 - backgroundCredits));
             }
+            if (hourly is { } h) hourly = h with { Remaining = Math.Max(0, h.Remaining - 1) };
+            if (monthly is { } m) monthly = m with { Remaining = Math.Max(0, m.Remaining - 1) };
+        }
+    }
 
-            switch (status)
+    public void Observe(HttpResponseMessage response)
+    {
+        lock (gate)
+        {
+            var hour = ReadWindow(response, "Hour");
+            var month = ReadWindow(response, "Month");
+            if (hour is not null) hourly = hour;
+            if (month is not null) monthly = month;
+            if (hour is not null && month is not null) readAt = time.GetUtcNow();
+            switch ((int)response.StatusCode)
             {
                 case 429:
-                    // ADR 0014: Retry-After overrides the backoff exactly. Read
-                    // only in its delta-seconds form, which is the form prdb
-                    // documents; the HTTP-date form would need the clock read
-                    // against somebody else's, and there is no reason to.
-                    var wait = RetryAfterFrom(response) ?? PrdbBudget.ShortestWait;
-                    spentUntil = now + wait;
-
-                    logger.LogInformation(
-                        "prdb says the budget is spent. Nothing is sent for {Seconds}s.",
-                        (int)wait.TotalSeconds);
+                    spentUntil = time.GetUtcNow() + (response.Headers.RetryAfter?.Delta ?? PrdbBudget.ShortestWait);
+                    logger.LogInformation("prdb requested a quota wait.");
                     break;
-
                 case 401 or 403:
-                    // A settled answer. ADR 0014 stops the routines rather than
-                    // retrying it, because retrying a settled answer buys
-                    // nothing and spends the budget finding that out.
-                    if (refusedWith != status)
-                    {
-                        logger.LogWarning(
-                            "prdb refused the key with {Status}. Nothing is sent until a key works.",
-                            status);
-                    }
-
-                    refusedWith = status;
+                    refusedWith = (int)response.StatusCode;
                     break;
-
-                default:
-                    if (status < 400)
-                    {
-                        // The key works, whatever it did last. This is the way
-                        // back from a refusal: a person saves a key, ADR 0010's
-                        // check goes out under Verification, and it answers.
-                        if (refusedWith is not null)
-                        {
-                            logger.LogInformation("prdb accepted a request again. The refusal is lifted.");
-                        }
-
-                        refusedWith = null;
-                        spentUntil = null;
-                    }
-
+                case < 400:
+                    refusedWith = null;
+                    // An unrelated successful response cannot cancel a 429 hold.
                     break;
             }
         }
     }
 
-    private bool Fresh()
+    internal void BeginRefresh()
     {
-        if (reading is not { } budget) return false;
-
-        var keepsFor = budget.ResetIn <= TimeSpan.Zero
-            ? TimeSpan.Zero
-            : budget.ResetIn < ReadingKeeps
-                ? budget.ResetIn
-                : ReadingKeeps;
-        return time.GetUtcNow() - readAt < keepsFor;
+        lock (gate) refreshAfter = time.GetUtcNow() + PrdbBudget.ShortestWait;
     }
 
-    private static PrdbBudget? ReadHourlyWindow(HttpResponseMessage response)
+    internal void Observe(GetRateLimitResponse? response)
     {
-        if (Header(response, "X-RateLimit-Limit-Hour") is not { } limit
-            || Header(response, "X-RateLimit-Remaining-Hour") is not { } remaining
-            || Header(response, "X-RateLimit-Reset-Hour") is not { } reset)
+        lock (gate)
         {
-            // Lenient on purpose: the headers are metadata about a call that has
-            // already been made, so a missing one is "no reading" rather than a
-            // failure. 401, 403 and 503 carry none, because prdb did not meter
-            // them.
-            return null;
+            if (From(response?.Hourly) is not { } hour || From(response?.Monthly) is not { } month) return;
+            hourly = hour;
+            monthly = month;
+            readAt = time.GetUtcNow();
         }
-
-        return new PrdbBudget(limit, remaining, TimeSpan.FromSeconds(reset));
     }
 
+    private static PrdbBudget? From(RateLimitWindowStatus? window) =>
+        window?.Limit is > 0 && window.Remaining is >= 0 && window.ResetsInSeconds is >= 0
+            ? new(window.Limit.Value, Math.Min(window.Remaining.Value, window.Limit.Value),
+                TimeSpan.FromSeconds(window.ResetsInSeconds.Value)) : null;
+
+    private bool Fresh() => hourly is not null && monthly is not null
+        && time.GetUtcNow() - readAt < TimeSpan.FromMinutes(1);
+
+    private TimeSpan WaitForReading(PrdbBudget budget)
+    {
+        var next = readAt + (budget.ResetIn > PrdbBudget.ShortestWait ? budget.ResetIn : PrdbBudget.ShortestWait);
+        return next > time.GetUtcNow() ? next - time.GetUtcNow() : PrdbBudget.ShortestWait;
+    }
+
+    private static bool Background(PrdbWork work) => work is PrdbWork.Repair or PrdbWork.ReleaseIdentification;
+    private static PrdbBudget? ReadWindow(HttpResponseMessage response, string suffix)
+    {
+        if (Header(response, $"X-RateLimit-Limit-{suffix}") is not > 0
+            || Header(response, $"X-RateLimit-Remaining-{suffix}") is not >= 0
+            || Header(response, $"X-RateLimit-Reset-{suffix}") is not >= 0) return null;
+        var limit = Header(response, $"X-RateLimit-Limit-{suffix}")!.Value;
+        return new(limit, Math.Min(limit, Header(response, $"X-RateLimit-Remaining-{suffix}")!.Value),
+            TimeSpan.FromSeconds(Header(response, $"X-RateLimit-Reset-{suffix}")!.Value));
+    }
     private static int? Header(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out var values)
-        && int.TryParse(
-            values.FirstOrDefault(),
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out var value)
-            ? value
-            : null;
-
-    private static TimeSpan? RetryAfterFrom(HttpResponseMessage response) =>
-        response.Headers.RetryAfter?.Delta
-        ?? (response.Headers.TryGetValues("Retry-After", out var values)
-            && int.TryParse(values.FirstOrDefault(), out var seconds)
-            && seconds > 0
-                ? TimeSpan.FromSeconds(seconds)
-                : null);
+        && int.TryParse(values.FirstOrDefault(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+            ? value : null;
 
     private sealed class Scope : IDisposable
     {
-        private readonly PrdbWork? outer;
-
-        public Scope(PrdbWork work)
-        {
-            outer = Doing.Value;
-            Doing.Value = work;
-        }
-
+        private readonly PrdbWork? outer = Doing.Value;
+        public Scope(PrdbWork work) => Doing.Value = work;
         public void Dispose() => Doing.Value = outer;
     }
 }
 
-/// <summary>What the governor said about one request.</summary>
+public sealed record PrdbQuotaSnapshot(PrdbBudget? Hourly, PrdbBudget? Monthly,
+    DateTimeOffset? ObservedAt, bool Fresh, DateTimeOffset? RetryAfterUntil, DateTimeOffset? BackgroundDueAt);
 public sealed record GovernorVerdict(bool Sends, TimeSpan Wait, string? Reason)
 {
-    public static GovernorVerdict Send { get; } = new(Sends: true, TimeSpan.Zero, Reason: null);
-
-    public static GovernorVerdict Defer(TimeSpan wait, string reason) => new(Sends: false, wait, reason);
+    public static GovernorVerdict Send { get; } = new(true, TimeSpan.Zero, null);
+    public static GovernorVerdict Defer(TimeSpan wait, string reason) => new(false, wait, reason);
 }

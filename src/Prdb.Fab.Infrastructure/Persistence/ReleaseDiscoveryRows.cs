@@ -16,6 +16,12 @@ public sealed class IndexerWalkStateRow
     public DateTimeOffset QueryDay { get; set; }
     public int QueriesSpentToday { get; set; }
     public int SweepQueriesSpentToday { get; set; }
+    public int HeadPagesPerPoll { get; set; } = 1;
+    public int MinimumPassQueries { get; set; }
+    public int MinimumQueriesSpentToday { get; set; }
+    public int HeadQueriesSpentToday { get; set; }
+    public int HistoryQueriesSpentToday { get; set; }
+    public DateTimeOffset? HeadLastSucceededAt { get; set; }
     public int? ResumePage { get; set; }
     public DateTimeOffset? CatchUpFrom { get; set; }
     public DateTimeOffset? CatchUpTo { get; set; }
@@ -48,6 +54,11 @@ public sealed class ReleaseRow
     public DateTimeOffset FirstSeenAt { get; set; }
     public IdentificationState IdentificationState { get; set; }
     public DateTimeOffset? LastIdentifiedAt { get; set; }
+    /// <summary>Authoritative SDK result, durable before any dependent call.</summary>
+    public string? IdentificationAnswerJson { get; set; }
+    public string? IdentificationInputKey { get; set; }
+    public bool IdentificationDetailsPending { get; set; }
+    public DateTimeOffset? DetailRetryAt { get; set; }
     public long? VideoId { get; set; }
     public CatalogueVideoRow? Video { get; set; }
     public IdentificationConfidence? Confidence { get; set; }

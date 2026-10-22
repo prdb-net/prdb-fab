@@ -155,6 +155,7 @@ public sealed class PreviewUploadRoutine(
         // decides whether the row is marked as being in flight at all. A
         // deferral must leave it untouched, and the cheapest way to promise
         // that is to not write anything.
+        await prdb.EnsureBudgetAsync(installation.PrdbApiKey, cancellationToken);
         if (governor.Ask(PrdbWork.Publications) is { Sends: false } held)
         {
             return RunResult.Deferred(held.Wait, held.Reason);

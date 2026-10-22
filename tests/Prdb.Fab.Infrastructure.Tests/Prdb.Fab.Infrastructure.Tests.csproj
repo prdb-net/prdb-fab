@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../BudgetSocket.cs" Link="BudgetSocket.cs" />
     <ProjectReference Include="..\..\src\Prdb.Fab.Infrastructure\Prdb.Fab.Infrastructure.csproj" />
   </ItemGroup>
 

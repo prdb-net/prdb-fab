@@ -71,11 +71,11 @@ Everything you answered is editable later under **Settings**, without a restart
 and without editing this Compose file.
 
 As soon as the prdb key and an Indexer are configured, background routines fill
-the rolling **90-day Recent Window**. They read prdb Catalogue details, cache
-every enabled Indexer's recent Releases and submit those Releases to prdb for
-Identification without requiring a page visit or Manual Search. The first fill
-is incremental and survives restarts; Status shows it as incomplete until prdb
-and every enabled Indexer have each proved the whole interval.
+the ninety-day prdb Catalogue and staged Indexer coverage: 14 days first, an
+initial 30-day target, then optional history up to 90 days. They cache and identify
+Releases without requiring a page visit or Manual Search. The incremental fill
+survives restarts; Status separates the minimum, initial target and optional
+extension and reports only what each source has actually proved.
 
 ## Automation, Downloads and the SABnzbd boundary
 
@@ -237,20 +237,28 @@ Release table sends no request to an Indexer; background routines own that
 budget.
 
 Each newly added Indexer starts with a **Daily Query Budget of 1,000 requests**,
-reset at midnight UTC. When at least one Wanted Video has a searchable title,
-the Wanted Sweep reserves half of the budget, capped at **480 requests per
-day** — five titles every fifteen minutes. The Indexer Walk uses the remaining
-share. With no searchable Wanted work, the walk may use the whole budget. One
-Indexer never spends another's allowance.
+reset at midnight UTC. Head polling and the 14-day minimum are protected first. Wanted Sweep reserves
+its bounded demand (up to five titles each fifteen minutes), and unfinished
+Manual Searches also reserve capacity before optional history. One Indexer never
+spends another's allowance.
 
 The fast Indexer Walk extends the cache with newly visible Releases. Beside it,
-a complete pass pages through **90 days** of the configured categories, 100
-Releases at a time, and repeats at least daily. That second pass finds Releases
-which became visible late or were missed during an outage. A busy Indexer can
-cost hundreds of queries on its first day, and a very large history can continue
-on the next. The saved page advances only after its batch commits, so a restart
-resumes rather than beginning again, and neither pass exceeds that Indexer's
-daily budget.
+a staged pass proves **14 days**, continues to the initial **30-day target**,
+and extends optionally up to **90 days** only when Indexer and downstream prdb
+capacity allow it. Each range has its own durable coverage proof. A resumed page
+overlaps ten results and must rediscover its stored identity anchor; excessive
+offset drift restarts the proof while retaining cached Releases. Older cache
+rows are retained. The prdb Catalogue still covers ninety days.
+
+Status shows 14/30/90-day freshness separately, the last successful head poll,
+protected remaining demand and a measured shortfall if the budget cannot sustain
+the minimum. Optional history waiting for capacity is healthy. Both prdb windows
+show account-wide counters and the age of their reading. Their oldest-slot
+expiry releases an unknown number of requests; it is **not a full quota reset**.
+Background work is paced against sustainable monthly demand while essential
+account state and arrived files retain capacity. Diagnostics expose counts and
+HTTP bytes/time, never API keys, URLs or Identify payloads. They restart their
+measurement interval when the process restarts; routine history remains durable.
 
 The Wanted Sweep searches older Wanted Videos directly by title, which is why
 the two routines need separate shares of the same budget. Both write the same

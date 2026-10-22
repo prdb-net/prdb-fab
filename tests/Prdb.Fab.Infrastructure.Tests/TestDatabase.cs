@@ -98,7 +98,7 @@ public sealed class TestDatabase : IAsyncDisposable
 
         if (prdb is not null)
         {
-            services.AddHttpClient(FabTransports.Prdb).ConfigurePrimaryHttpMessageHandler(() => prdb);
+            services.AddHttpClient(FabTransports.Prdb).ConfigurePrimaryHttpMessageHandler(() => new BudgetSocket(prdb));
         }
 
         also?.Invoke(services);

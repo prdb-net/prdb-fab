@@ -52,6 +52,31 @@ public sealed class ReleaseRows(
             // provenance is never evidence, and settled answers are not asked
             // again merely because a title search found the row again.
 
+            if (!string.Equals(row.Title, release.Title, StringComparison.Ordinal) && row.Title.Length > 0)
+            {
+                row.IdentificationAnswerJson = null;
+                row.IdentificationInputKey = null;
+                row.IdentificationDetailsPending = false;
+                row.DetailRetryAt = null;
+                row.LastIdentifiedAt = null;
+                row.IdentificationState = IdentificationState.Awaiting;
+                row.AutomationPending = false;
+                row.VideoId = null;
+                row.Confidence = null;
+                row.MatchedBy = null;
+                row.SiteId = null;
+                row.AutomationDecisionReason = null;
+                row.AutomationDecisionAt = null;
+                // Force invalidation even when an Identify response wrote its
+                // checkpoint after this row was loaded but before this save.
+                foreach (var property in new[] { nameof(ReleaseRow.IdentificationAnswerJson), nameof(ReleaseRow.IdentificationInputKey),
+                    nameof(ReleaseRow.IdentificationDetailsPending), nameof(ReleaseRow.DetailRetryAt), nameof(ReleaseRow.LastIdentifiedAt),
+                    nameof(ReleaseRow.IdentificationState), nameof(ReleaseRow.AutomationPending), nameof(ReleaseRow.VideoId),
+                    nameof(ReleaseRow.Confidence), nameof(ReleaseRow.MatchedBy), nameof(ReleaseRow.SiteId),
+                    nameof(ReleaseRow.AutomationDecisionReason), nameof(ReleaseRow.AutomationDecisionAt) })
+                    context.Entry(row).Property(property).IsModified = true;
+                await context.ReleaseCandidates.Where(candidate => candidate.ReleaseId == row.Id).ExecuteDeleteAsync(cancellationToken);
+            }
             row.RawGuid = release.RawGuid;
             row.Title = release.Title;
             row.NormalisedTitle = release.NormalisedTitle;

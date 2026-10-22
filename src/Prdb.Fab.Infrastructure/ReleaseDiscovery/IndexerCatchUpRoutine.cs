@@ -42,7 +42,7 @@ public sealed class IndexerCatchUpRoutine(
                 indexerId,
                 page,
                 maxAge,
-                purpose: IndexerQueryPurpose.Walk,
+                purpose: IndexerQueryPurpose.OptionalHistory,
                 query: null,
                 cancellationToken: cancellationToken);
         if (searched.DeferredFor is { } wait) return RunResult.Deferred(wait);

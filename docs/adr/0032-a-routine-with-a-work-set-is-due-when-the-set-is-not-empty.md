@@ -302,3 +302,13 @@ and the tool does not claim it.
   as a number rather than as a reassurance, because it is the price of refusing
   the signal.
 - Nothing here is a setting, and nothing here is a surface.
+
+## Amendment: admitted Release Identification continuations
+
+A successful bounded Release Identification turn asks for `DueIn = 0` while
+its durable work set remains nonempty. It yields to all other due routines and
+the lane checks again on its ordinary one-second tick. An empty set keeps the
+ten-second idle tick. Every request, including a resumed detail read, still
+passes dual-window admission and background pacing; a prompt due time cannot
+bypass a quota wait or failure backoff. The same work-set predicate drives both
+selection and continuation, including deferred missing-document retries.

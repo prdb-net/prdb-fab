@@ -43,6 +43,13 @@ public sealed class PrdbGateway(
     /// </summary>
     public async Task<PrdbCheck> CheckAsync(string? apiKey, CancellationToken cancellationToken = default)
     {
+        await governor.OperationGate.WaitAsync(cancellationToken);
+        try { return await CheckCoreAsync(apiKey, cancellationToken); }
+        finally { governor.OperationGate.Release(); }
+    }
+
+    private async Task<PrdbCheck> CheckCoreAsync(string? apiKey, CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             // The SDK refuses an empty key at construction, and it is right to:
@@ -131,11 +138,17 @@ public sealed class PrdbGateway(
         Func<PrdbClient, CancellationToken, Task<TAnswer?>> ask,
         CancellationToken cancellationToken = default)
     {
-        var client = Client(apiKey);
+        await governor.OperationGate.WaitAsync(cancellationToken);
+        try
+        {
+            var client = Client(apiKey);
 
-        using var doing = governor.For(work);
+            await ReadBudgetAsync(client, cancellationToken);
+            using var doing = governor.For(work);
 
-        return await ask(client, cancellationToken);
+            return await ask(client, cancellationToken);
+        }
+        finally { governor.OperationGate.Release(); }
     }
 
     /// <summary>Makes one no-content prdb write through the governed transport.</summary>
@@ -145,11 +158,17 @@ public sealed class PrdbGateway(
         Func<PrdbClient, CancellationToken, Task> act,
         CancellationToken cancellationToken = default)
     {
-        var client = Client(apiKey);
+        await governor.OperationGate.WaitAsync(cancellationToken);
+        try
+        {
+            var client = Client(apiKey);
 
-        using var doing = governor.For(work);
+            await ReadBudgetAsync(client, cancellationToken);
+            using var doing = governor.For(work);
 
-        await act(client, cancellationToken);
+            await act(client, cancellationToken);
+        }
+        finally { governor.OperationGate.Release(); }
     }
 
     /// <summary>
@@ -157,12 +176,36 @@ public sealed class PrdbGateway(
     /// and ADR 0020's reason: the key is something a person changes in a form
     /// while the container runs.
     /// </summary>
-    private PrdbClient Client(string apiKey) => PrdbClientFactory.Create(
+    public async Task EnsureBudgetAsync(string apiKey, CancellationToken cancellationToken)
+    {
+        await governor.OperationGate.WaitAsync(cancellationToken);
+        try { await ReadBudgetAsync(Client(apiKey), cancellationToken); }
+        finally { governor.OperationGate.Release(); }
+    }
+
+    private async Task ReadBudgetAsync(PrdbClient client, CancellationToken cancellationToken)
+    {
+        await governor.RefreshGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!governor.NeedsRefresh) return;
+            governor.BeginRefresh();
+            using var reading = governor.For(PrdbWork.BudgetReading);
+            governor.Observe(await client.RateLimit.GetAsync(cancellationToken: cancellationToken));
+        }
+        finally { governor.RefreshGate.Release(); }
+    }
+
+    private PrdbClient Client(string apiKey)
+    {
+        governor.UseKey(apiKey);
+        return PrdbClientFactory.Create(
         apiKey,
         baseUrl: endpoint.BaseUrl,
         transport: transports.CreateHandler(FabTransports.Prdb),
         retry: PrdbRetryOptions.Disabled,
         timeout: FabTransports.PrdbTimeout);
+    }
 
     /// <summary>
     /// The <c>Retry-After</c> prdb sends with a <c>429</c>, in seconds.

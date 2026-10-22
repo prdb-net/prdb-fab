@@ -137,6 +137,7 @@ public sealed class DiscoveryState(FabDbContext context, TimeProvider time)
 
         if (addedIds.Length > 0)
         {
+            await context.IndexerWindows.Where(row => row.IndexerId == indexerId).ExecuteDeleteAsync(cancellationToken);
             state.RecentWindowResumePage = 0;
             state.RecentWindowPassStartedAt = null;
             state.RecentWindowCompletedAt = null;
