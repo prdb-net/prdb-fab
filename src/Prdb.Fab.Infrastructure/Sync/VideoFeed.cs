@@ -35,6 +35,7 @@ public sealed class VideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
         if (page is null) return FeedPage.Nothing;
         var position = new FeedPage(0, page.HasMore ?? false, page.NextCursor?.UpdatedAtUtc,
             page.NextCursor?.Id, page.ServerTimeUtc, page.Items?.Count ?? 0);
+        if (pageSize == 1 && from == FeedPosition.TheBeginning) return position;
         var next = position.Next();
         if (checkpoint && (page.Items is null || page.HasMore is null || next is null || next.At < from.At
             || page.Items.Any(i => i.Video?.Id is null || i.Video.UpdatedAtUtc is null)))
@@ -45,16 +46,34 @@ public sealed class VideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
         var survivorIds = (page.Items ?? []).Where(i => i.Video?.MergedIntoId is not null)
             .Select(i => i.Video!).ToArray();
         var known = await Context.CatalogueVideos.Where(v => survivorIds.Select(i => i.Id).Contains(v.PrdbId))
-            .Select(v => v.PrdbId).ToListAsync(cancellationToken);
+            .Select(v => v.PrdbId).ToHashSetAsync(cancellationToken);
+        // A page may put an intermediate tombstone before its known source.
+        // Compute the bounded closure before applying either event.
+        bool extended;
+        do
+        {
+            extended = false;
+            foreach (var video in survivorIds)
+                if (video.Id is { } source && known.Contains(source) && video.MergedIntoId is { } destination && destination != Guid.Empty)
+                    extended |= known.Add(destination);
+        } while (extended);
+        var targets = survivorIds.Where(v => v.Id is { } id && known.Contains(id))
+            .Select(v => v.MergedIntoId).OfType<Guid>().Where(id => id != Guid.Empty).Distinct().ToArray();
+        var terminalTargets = targets.Where(id => !survivorIds.Any(v => v.Id == id)).ToArray();
+        if (targets.Length > 0 && terminalTargets.Length == 0)
+            throw new InvalidOperationException("prdb returned a merge cycle without a survivor.");
         var survivors = new List<VideoDetailDto>();
-        foreach (var batch in survivorIds.Where(v => known.Contains(v.Id!.Value))
-            .Select(v => v.MergedIntoId).OfType<Guid>().Where(id => id != Guid.Empty).Distinct().Chunk(CatalogueRead.ABatch))
+        foreach (var batch in terminalTargets.Chunk(CatalogueRead.ABatch))
         {
             var found = await Prdb.AskAsync(apiKey, Work, (client, ct) => client.Videos.Batch.PostAsync(
                 new GetVideosByIdsRequest { Ids = [.. batch.Select(id => (Guid?)id)] }, cancellationToken: ct), cancellationToken);
             survivors.AddRange(found ?? []);
         }
+        if (terminalTargets.Except(survivors.Select(v => v.Id).OfType<Guid>()).Any())
+            throw new InvalidOperationException("prdb omitted a merge survivor; the change page remains due.");
         await using var applying = await Context.Database.BeginTransactionAsync(cancellationToken);
+        foreach (var tombstone in survivorIds.Where(v => v.Id is { } id && known.Contains(id)))
+            await Catalogue.VideoAsync(tombstone.Id!.Value, null, null, cancellationToken);
         foreach (var survivor in survivors) await details.WriteAsync(survivor, cancellationToken);
         var applied = 0;
         if (pageSize != 1 || from != FeedPosition.TheBeginning)

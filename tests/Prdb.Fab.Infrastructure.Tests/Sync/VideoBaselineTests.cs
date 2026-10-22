@@ -201,6 +201,32 @@ public sealed class VideoBaselineTests
         Assert.Equal(2, api.AskedFor("/videos/baseline").Count);
     }
 
+    [Fact]
+    public async Task Merge_chains_are_followed_even_when_the_unknown_intermediate_precedes_the_known_source()
+    {
+        var intermediate = Guid.NewGuid();
+        var survivor = Guid.NewGuid();
+        var api = new FakePrdbApi().Answers("/videos/baseline", Page([Video(First)], false))
+            .Answers("/videos/changes", JsonSerializer.Serialize(new
+            {
+                items = new[]
+                {
+                    new { eventType = "deleted", video = new { id = intermediate, updatedAtUtc = Now, isDeleted = true, mergedIntoId = survivor } },
+                    new { eventType = "deleted", video = new { id = First, updatedAtUtc = Now, isDeleted = true, mergedIntoId = intermediate } },
+                }, hasMore = false, serverTimeUtc = Now, nextCursor = new { id = First, updatedAtUtc = Now },
+            })).Answers("/videos/batch", JsonSerializer.Serialize(new[] { Video(survivor, "Survivor", Now) }));
+        await using var db = await CreateAsync(api);
+        await RunAsync<RecentCatalogueRoutine>(db);
+        await RunAsync<VideoFeedRoutine>(db);
+        await using var scope = db.Scope();
+        var rows = await scope.ServiceProvider.GetRequiredService<FabDbContext>().CatalogueVideos.ToDictionaryAsync(v => v.PrdbId, Token);
+        Assert.False(rows[First].Available);
+        Assert.False(rows[intermediate].Available);
+        Assert.Equal(survivor, rows[intermediate].MergedIntoId);
+        Assert.Equal("Survivor", rows[survivor].Title);
+        Assert.Single(api.AskedFor("/videos/batch"));
+    }
+
     private static void Observe(PrdbGovernor governor, int remaining)
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK);
