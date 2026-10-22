@@ -63,8 +63,9 @@ public sealed class BackwardsScreeningRoutine(
                 continue;
             }
 
-            release.IdentificationAnswerJson = null;
-            release.IdentificationInputKey = null;
+            // Retain the original tuple-bound answer/proof for server validation.
+            // Awaiting rows cannot satisfy the local exact-answer cache.
+            release.IdentificationValidatedAt = null;
             release.IdentificationDetailsPending = false;
             release.DetailRetryAt = null;
             release.IdentificationState = IdentificationState.Awaiting;

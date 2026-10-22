@@ -206,6 +206,13 @@ download from the name, after one from the hash. Where prdb's own ladder names
 no video, Preview-Hash Evidence may.
 _Avoid_: Matching, Lookup, Recognition
 
+**Identification Freshness Proof**:
+An optional opaque prdb handle bound to the account and complete Identification
+input tuple, used to validate a retained answer against current matching evidence
+and algorithm. Its original expiry is never extended by validation. A proof does
+not strengthen Confidence or establish freshness of Catalogue details.
+_Avoid_: Local match, Guaranteed match, Detail freshness
+
 **Preview-Hash Evidence**:
 A User Preview prdb has linked to a video and is currently showing, whose
 osHash is a video file's. A statement prdb published and a moderator approved
@@ -430,8 +437,10 @@ including current details, without the user opening a page. Indexer coverage is
 separate: prove fourteen days first, target thirty, and extend optionally up to
 ninety only from remaining Indexer and downstream Identification capacity.
 Cached older Releases remain; their existence is not a current coverage proof.
-Identification revalidates the thirty-day working set and wanted older matches;
-other retained older answers are best effort until explicitly reconsidered.
+Identification validates retained answers in the thirty-day working set and
+wanted older matches, using prdb proofs where usable and conservative Identify
+fallback otherwise. Other retained older answers are best effort until explicitly
+reconsidered.
 _Avoid_: Backfill window, Lookback, Retention period
 
 **Artwork Cache**:

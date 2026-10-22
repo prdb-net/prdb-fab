@@ -54,6 +54,8 @@ public sealed class ReleaseRow
     public DateTimeOffset FirstSeenAt { get; set; }
     public IdentificationState IdentificationState { get; set; }
     public DateTimeOffset? LastIdentifiedAt { get; set; }
+    /// <summary>Last server validation of this exact retained answer; never extends its proof token.</summary>
+    public DateTimeOffset? IdentificationValidatedAt { get; set; }
     /// <summary>Authoritative SDK result, durable before any dependent call.</summary>
     public string? IdentificationAnswerJson { get; set; }
     public string? IdentificationInputKey { get; set; }

@@ -74,11 +74,27 @@ public sealed class PrdbConnections(
             await accountScoped.DropAsync(cancellationToken);
         }
 
+        await using var updating = await context.Database.BeginTransactionAsync(cancellationToken);
         installation.PrdbApiKey = key;
         installation.PrdbUserHash = userHash;
 
         context.Installation.Update(installation);
         await context.SaveChangesAsync(cancellationToken);
+        if (changedAccount)
+        {
+            // Proof handles belong to the previous account. Keep Release and
+            // Download identities, but require new authority before acquisition.
+            await context.Releases.ExecuteUpdateAsync(u => u
+                .SetProperty(r => r.IdentificationAnswerJson, (string?)null)
+                .SetProperty(r => r.IdentificationInputKey, (string?)null)
+                .SetProperty(r => r.IdentificationValidatedAt, (DateTimeOffset?)null)
+                .SetProperty(r => r.LastIdentifiedAt, (DateTimeOffset?)null)
+                .SetProperty(r => r.IdentificationDetailsPending, false)
+                .SetProperty(r => r.DetailRetryAt, (DateTimeOffset?)null)
+                .SetProperty(r => r.IdentificationState, Prdb.Fab.Core.ReleaseDiscovery.IdentificationState.Awaiting)
+                .SetProperty(r => r.AutomationPending, false), cancellationToken);
+        }
+        await updating.CommitAsync(cancellationToken);
 
         if (changedAccount)
         {

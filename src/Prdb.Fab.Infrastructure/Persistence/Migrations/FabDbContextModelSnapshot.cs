@@ -1898,6 +1898,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("IdentificationValidatedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("IndexerId")
                         .HasColumnType("TEXT");
 

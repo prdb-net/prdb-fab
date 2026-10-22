@@ -174,6 +174,7 @@ public sealed class CatalogueSearchRouteTests
             Categories = "[]",
             DownloadUrl = "https://indexer.invalid/ready.nzb",
             IdentificationState = IdentificationState.Matched,
+            LastIdentifiedAt = scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow(),
             Confidence = IdentificationConfidence.Exact,
             VideoId = ready.Id,
         });

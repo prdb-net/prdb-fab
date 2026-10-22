@@ -365,6 +365,7 @@ public sealed class AutomationTests
             DownloadUrl = "https://indexer.invalid/nzb",
             FirstSeenAt = database.Time.GetUtcNow(),
             IdentificationState = IdentificationState.Matched,
+            LastIdentifiedAt = database.Time.GetUtcNow(),
             VideoId = video.Id,
             Confidence = IdentificationConfidence.Exact,
             MatchedBy = IdentificationRung.ReleaseName,

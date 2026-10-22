@@ -941,7 +941,9 @@ public sealed class StatusService(
         if (id == "match")
         {
             var costs = governor.Costs.Snapshot();
-            facts.Add(new("Identification reuse", $"Since {costs.Since:u}: {costs.IdentifiedInputs} new inputs, {costs.ReusedAnswers} reused answers, "
+            facts.Add(new("Identification freshness", $"{costs.ValidatedInputs} inputs validated; {costs.UnchangedInputs} unchanged answers reused; "
+                + $"{costs.ReidentifiedInputs} inputs identified again. Validation spends ordinary quota and never extends token expiry.", "/status"));
+            facts.Add(new("Identification reuse", $"Since {costs.Since:u}: {costs.IdentifiedInputs} inputs identified, {costs.ReusedAnswers} reused answers, "
                 + $"{costs.DetailFetchesAvoided} detail reads avoided", null));
             var elapsed = (now - costs.Since).TotalHours;
             facts.Add(new("Measured Identification throughput", elapsed >= 1d / 60 && costs.IdentifiedInputs >= 1000

@@ -170,3 +170,46 @@ unread pinned older row. Servers without the baseline route retain bounded,
 governed summary/detail discovery and repair, retrying capability on the next
 daily pass. Status names the phase and counts actual full documents and requests.
 Indexer 14/30/90 coverage and all acquisition permissions remain independent.
+
+## Amendment: validate retained Identification authority before re-identifying
+
+The fixed 23-hour interval now makes an answer **due for validation**, rather
+than unconditionally requiring the Identification ladder to run again. SDK
+0.22 opts into account/full-tuple/algorithm/evidence-bound freshness proofs.
+Each answer, its original Identify timestamp, optional proof and server expiry
+are saved atomically. A separate validation timestamp records a server-confirmed
+`unchanged` answer. Validation never renews the token expiry or strengthens its
+Confidence, never refreshes Video details, and never resets a settled Release's
+Candidate edges or automatic decisions.
+
+At most 200 distinct complete tuples and 2,000 Release rows enter a turn. If at
+least one retained proof could still be usable, the generated validation route
+handles that bounded mixed batch with `reidentify=true`; only `identified`
+results replace authority. A server's explicit `reidentify` result takes an
+ordinary bounded Identify fallback. If no proof can still be usable, ordinary
+Identify avoids a larger validation envelope. Missing/expired proofs, changed
+evidence or algorithm, cache loss and older servers therefore retain conservative
+fallback. A new Catalogue needle requests server validation of any retained
+proof instead of accepting the old negative from the local cache. Title changes
+discard the tuple and proof; account changes invalidate retained authority in
+the same transaction as the new key. In-flight responses cannot commit under a
+changed account. Rotating a key within the same verified account preserves the
+account-bound proof.
+
+Local exact-input reuse retains the source's original Identify and validation
+timestamps and its original expiry. A stale answer, pending detail hydration or
+unknown authority cannot enter Download Ranking or reserve a Download. Automatic
+decisions keep their pending work until validation; resumed manual reservations
+also wait and re-check immediately before submission. This is a wait for the
+ordinary governed routine, not a remote request from a page read. The original
+23-hour client authority interval remains the conservative fallback policy;
+a token's handle expiry says it can no longer be validated, not that a previously
+received answer was independently revoked. The expiry itself is never extended.
+
+Every validation batch costs the same one hourly/monthly quota unit as Identify.
+The published server defaults to **six-hour** proofs and permits up to 24 hours.
+At a 23-hour validation interval, six-hour proofs cannot avoid the ordinary daily
+ladder work; FaB does not poll more often just to keep those handles alive.
+Longer server-issued proofs can avoid retransmitting unchanged answers while
+usable. Measured savings and limits are documented separately; no quota reduction
+or increase in subscription allowance follows from a freshness hit.

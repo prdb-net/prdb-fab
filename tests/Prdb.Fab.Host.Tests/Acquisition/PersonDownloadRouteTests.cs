@@ -51,6 +51,7 @@ public sealed class PersonDownloadRouteTests
                 DownloadUrl = highest.DownloadUrl,
                 FirstSeenAt = highest.FirstSeenAt,
                 IdentificationState = IdentificationState.Matched,
+                LastIdentifiedAt = scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow(),
                 VideoId = highest.VideoId,
                 Confidence = IdentificationConfidence.Exact,
                 MatchedBy = IdentificationRung.ReleaseName,
@@ -237,8 +238,10 @@ public sealed class PersonDownloadRouteTests
         Assert.Null(stored.NzoId);
     }
 
-    [Fact]
-    public async Task A_pending_manual_reservation_resumes_once_after_a_process_boundary()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_pending_manual_reservation_waits_for_current_authority_and_resumes_once_after_a_process_boundary(bool stale)
     {
         var indexer = new NzbIndexer();
         var sabnzbd = new FakeSabnzbd();
@@ -251,6 +254,11 @@ public sealed class PersonDownloadRouteTests
         {
             var context = beforeCrash.ServiceProvider.GetRequiredService<FabDbContext>();
             var release = await context.Releases.SingleAsync(TestContext.Current.CancellationToken);
+            if (stale)
+            {
+                release.LastIdentifiedAt = beforeCrash.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow().AddHours(-24);
+                context.Releases.Update(release);
+            }
             context.Downloads.Add(new DownloadRow
             {
                 Id = downloadId,
@@ -270,6 +278,18 @@ public sealed class PersonDownloadRouteTests
         await using (var afterRestart = application.Services.CreateAsyncScope())
         {
             var routine = afterRestart.ServiceProvider.GetRequiredService<DownloadSubmissionRoutine>();
+            if (stale)
+            {
+                var waiting = await routine.RunAsync(null, TestContext.Current.CancellationToken);
+                Assert.Null(waiting.Outcome);
+                Assert.Equal(0, waiting.ItemsHandled);
+                Assert.Contains("fresh matching prdb authority", waiting.Reason);
+                Assert.Equal(0, indexer.Requests);
+                Assert.DoesNotContain("addfile", sabnzbd.Modes);
+                await afterRestart.ServiceProvider.GetRequiredService<FabDbContext>().Releases.ExecuteUpdateAsync(
+                    u => u.SetProperty(r => r.IdentificationValidatedAt, afterRestart.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow()),
+                    TestContext.Current.CancellationToken);
+            }
             Assert.Equal(1, (await routine.RunAsync(null, TestContext.Current.CancellationToken)).ItemsHandled);
         }
         await using (var nextTurn = application.Services.CreateAsyncScope())
@@ -414,6 +434,7 @@ public sealed class PersonDownloadRouteTests
             DownloadUrl = downloadUrl ?? $"https://indexer.invalid/nzb?apikey={NzbIndexer.Secret}",
             FirstSeenAt = new DateTimeOffset(2026, 8, 28, 12, 0, 0, TimeSpan.Zero),
             IdentificationState = IdentificationState.Matched,
+            LastIdentifiedAt = scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow(),
             VideoId = video.Id,
             Confidence = IdentificationConfidence.Exact,
             MatchedBy = IdentificationRung.ReleaseName,

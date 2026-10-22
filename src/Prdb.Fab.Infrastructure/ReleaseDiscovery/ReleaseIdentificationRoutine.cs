@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Kiota.Abstractions.Serialization;
+using Microsoft.Kiota.Abstractions;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.ReleaseDiscovery;
@@ -71,7 +72,7 @@ public sealed class ReleaseIdentificationRoutine(
             ?? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(apiKey)));
         foreach (var release in releases.Where(row => row.IdentificationDetailsPending))
         {
-            if (release.IdentificationInputKey == InputKey(release.Title, scope) && release.LastIdentifiedAt > identifyAgainBefore) continue;
+            if (release.IdentificationInputKey == InputKey(release.Title, scope) && (release.IdentificationValidatedAt ?? release.LastIdentifiedAt) > identifyAgainBefore) continue;
             release.IdentificationDetailsPending = false;
             release.IdentificationAnswerJson = null;
             release.DetailRetryAt = null;
@@ -83,47 +84,34 @@ public sealed class ReleaseIdentificationRoutine(
         {
             var cached = await context.Releases
                 .Where(row => row.IdentificationInputKey == group.Key && !row.IdentificationDetailsPending
-                    && row.IdentificationAnswerJson != null && row.LastIdentifiedAt > identifyAgainBefore)
-                .OrderByDescending(row => row.LastIdentifiedAt)
-                .Select(row => new { row.IdentificationAnswerJson, row.LastIdentifiedAt })
+                    && row.IdentificationState != IdentificationState.Awaiting
+                    && row.IdentificationAnswerJson != null
+                    && (row.IdentificationValidatedAt ?? row.LastIdentifiedAt) > identifyAgainBefore)
+                .OrderByDescending(row => row.IdentificationValidatedAt ?? row.LastIdentifiedAt)
+                .Select(row => new { row.IdentificationAnswerJson, row.LastIdentifiedAt, row.IdentificationValidatedAt })
                 .FirstOrDefaultAsync(cancellationToken);
-            if (cached is null) { remote.Add(group); continue; }
-            var answer = await ReadAnswerAsync(cached.IdentificationAnswerJson!, cancellationToken);
+            var answer = cached is null ? null : await ReadAnswerAsync(cached.IdentificationAnswerJson!, cancellationToken);
+            if (cached is null || answer is null || !string.IsNullOrWhiteSpace(answer.FreshnessToken)
+                && (answer.FreshnessExpiresAtUtc is null || answer.FreshnessExpiresAtUtc <= now))
+            { remote.Add(group); continue; }
             foreach (var release in group)
-                await CheckpointAsync(release, group.Key, answer, cached.LastIdentifiedAt!.Value, cancellationToken);
+                await RetainAsync(release, group.Key, answer, cached.LastIdentifiedAt!.Value,
+                    cached.IdentificationValidatedAt ?? cached.LastIdentifiedAt.Value, cancellationToken);
         }
         // A quota refusal of the uncached names must not discard cache hits.
-        await context.SaveChangesAsync(cancellationToken);
-        if (remote.Count > 0)
+        await using (var retaining = await context.Database.BeginTransactionAsync(cancellationToken))
         {
-            var response = await prdb.AskAsync(apiKey, PrdbWork.ReleaseIdentification,
-                (client, token) => client.Videos.Identify.PostAsync(new IdentifyVideosRequest
-                {
-                    IncludeVideoDetails = true,
-                    Files = [.. remote.Select(group => new IdentifyVideoFileDto
-                    {
-                        Ref = group.First().Id.ToString(CultureInfo.InvariantCulture),
-                        Filename = group.First().Title,
-                        // Size and hashes are absent on this path. If evidence
-                        // is added, it must also populate IdentificationInput.
-                    })],
-                }, cancellationToken: token), cancellationToken);
-            var returned = response?.Results ?? throw new InvalidOperationException("prdb answered Identification without results.");
-            var answersByRef = returned.Where(answer => answer.Ref is not null)
-                .ToDictionary(answer => answer.Ref!, StringComparer.Ordinal);
-            if (returned.Count != remote.Count || remote.Any(group =>
-                !answersByRef.ContainsKey(group.First().Id.ToString(CultureInfo.InvariantCulture))))
-                throw new InvalidOperationException("prdb did not return exactly one Identification result per submitted input.");
-            foreach (var answer in returned) Validate(answer);
-            foreach (var group in remote)
-            {
-                var answer = answersByRef[group.First().Id.ToString(CultureInfo.InvariantCulture)];
-                foreach (var release in group)
-                    await CheckpointAsync(release, group.Key, answer, now, cancellationToken);
-            }
+            await EnsureScopeAsync(apiKey, scope, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
+            await retaining.CommitAsync(cancellationToken);
         }
-        governor.Costs.Identification(remote.Count, unasked.Count - remote.Count, 0);
+        if (remote.Count > 0) await AskAsync(apiKey, scope, remote, now, cancellationToken);
+        governor.Costs.Identification(0, unasked.Count - remote.Count, 0);
+        // Unchanged settled answers retain candidates, confidence and decisions.
+        // Only a replacement or a new Release needs projection and acquisition work.
+        releases = releases.Where(row => row.IdentificationDetailsPending).ToList();
+        if (releases.Count == 0)
+            return RunResult.Handled(unasked.Count, await WorkSet(time.GetUtcNow()).AnyAsync(cancellationToken) ? TimeSpan.Zero : Cadence);
         var byReference = new Dictionary<string, IdentifyVideoResultDto>(StringComparer.Ordinal);
         foreach (var release in releases)
         {
@@ -158,6 +146,7 @@ public sealed class ReleaseIdentificationRoutine(
         }
 
         await using var applying = await context.Database.BeginTransactionAsync(cancellationToken);
+        await EnsureScopeAsync(apiKey, scope, cancellationToken);
         await context.IdentificationOutcomes
             .Where(outcome => outcome.At < now - OutcomeWindow)
             .ExecuteDeleteAsync(cancellationToken);
@@ -192,6 +181,158 @@ public sealed class ReleaseIdentificationRoutine(
         return RunResult.Handled(releases.Count, remains ? TimeSpan.Zero : Cadence);
     }
 
+    private async Task AskAsync(string apiKey, string scope, IReadOnlyList<IGrouping<string, ReleaseRow>> groups,
+        DateTimeOffset now, CancellationToken token)
+    {
+        var held = new Dictionary<string, (IdentifyVideoResultDto Answer, DateTimeOffset At)>();
+        foreach (var group in groups)
+        {
+            var retained = await context.Releases.Where(row => row.IdentificationInputKey == group.Key
+                    && row.IdentificationAnswerJson != null && row.LastIdentifiedAt != null)
+                .OrderByDescending(row => row.IdentificationValidatedAt ?? row.LastIdentifiedAt)
+                .Select(row => new { row.IdentificationAnswerJson, row.LastIdentifiedAt }).FirstOrDefaultAsync(token);
+            if (retained is not null)
+                held[group.Key] = (await ReadAnswerAsync(retained.IdentificationAnswerJson!, token), retained.LastIdentifiedAt!.Value);
+        }
+        var files = groups.Select(group => new IdentifyVideoFileDto
+        {
+            Ref = group.First().Id.ToString(CultureInfo.InvariantCulture), Filename = group.First().Title,
+            // Release Identification supplies no size or hashes. InputKey covers
+            // precisely this complete tuple and the account, never a normalized name.
+            FreshnessToken = held.TryGetValue(group.Key, out var saved) ? saved.Answer.FreshnessToken : null,
+        }).ToList();
+        // Expired handles cannot save ladder work. Avoid a larger validation
+        // envelope when no input has a potentially usable server proof.
+        if (held.Values.Any(saved => !string.IsNullOrWhiteSpace(saved.Answer.FreshnessToken)
+                && saved.Answer.FreshnessExpiresAtUtc > now))
+        {
+            IdentifyFreshnessResponse? response;
+            try
+            {
+                response = await prdb.AskAsync(apiKey, PrdbWork.ReleaseIdentification,
+                    (client, ct) => client.Videos.Identify.Validate.PostAsync(new ValidateIdentificationRequest
+                    { Files = files, Reidentify = true, IncludeFreshness = true, IncludeVideoDetails = true }, cancellationToken: ct), token);
+            }
+            catch (ApiException unsupported) when (unsupported.ResponseStatusCode is 404 or 405 or 501)
+            { response = null; }
+            if (response is not null)
+            {
+                var results = response.Results ?? throw new InvalidOperationException("prdb omitted Identification validation results.");
+                if (results.Count != groups.Count || results.Select(r => r.Ref).Distinct().Count() != groups.Count
+                    || files.Any(f => !results.Any(r => r.Ref == f.Ref)))
+                    throw new InvalidOperationException("prdb did not return one validation per input.");
+                var reidentified = 0;
+                var unchanged = 0;
+                var fallback = new List<IGrouping<string, ReleaseRow>>();
+                // Validate the whole envelope before checkpointing any replacement.
+                foreach (var group in groups)
+                {
+                    var result = results.Single(r => r.Ref == group.First().Id.ToString(CultureInfo.InvariantCulture));
+                    switch (result.Status)
+                    {
+                        case IdentifyFreshnessResultDto_status.Unchanged:
+                            if (result.Result is not null || !held.TryGetValue(group.Key, out var retained)
+                                || string.IsNullOrWhiteSpace(retained.Answer.FreshnessToken)
+                                || retained.Answer.FreshnessExpiresAtUtc is not { } expires || expires <= now)
+                                throw new InvalidOperationException("prdb asserted freshness without a usable retained proof.");
+                            break;
+                        case IdentifyFreshnessResultDto_status.Identified:
+                            if (result.Result is null) throw new InvalidOperationException("prdb omitted a replacement Identification.");
+                            Validate(result.Result);
+                            break;
+                        case IdentifyFreshnessResultDto_status.Reidentify:
+                            if (result.Result is not null) throw new InvalidOperationException("prdb returned an inconsistent validation outcome.");
+                            break;
+                        default: throw new InvalidOperationException("prdb returned an unknown Identification validation status.");
+                    }
+                }
+                await using var saving = await context.Database.BeginTransactionAsync(token);
+                await EnsureScopeAsync(apiKey, scope, token);
+                foreach (var group in groups)
+                {
+                    var result = results.Single(r => r.Ref == group.First().Id.ToString(CultureInfo.InvariantCulture));
+                    if (result.Status == IdentifyFreshnessResultDto_status.Unchanged)
+                    {
+                        var retained = held[group.Key];
+                        foreach (var release in group)
+                            await RetainAsync(release, group.Key, retained.Answer, retained.At, now, token);
+                        unchanged++;
+                    }
+                    else if (result.Status == IdentifyFreshnessResultDto_status.Identified)
+                    {
+                        foreach (var release in group) await CheckpointAsync(release, group.Key, result.Result!, now, token);
+                        if (held.ContainsKey(group.Key)) reidentified++;
+                    }
+                    else fallback.Add(group);
+                }
+                await context.SaveChangesAsync(token);
+                await saving.CommitAsync(token);
+                governor.Costs.Freshness(groups.Count, unchanged, reidentified);
+                governor.Costs.Identification(groups.Count - unchanged - fallback.Count, 0, 0);
+                if (fallback.Count > 0) await IdentifyAsync(apiKey, scope, fallback, now, token);
+                return;
+            }
+        }
+        await IdentifyAsync(apiKey, scope, groups, now, token);
+    }
+
+    private async Task IdentifyAsync(string key, string scope, IReadOnlyList<IGrouping<string, ReleaseRow>> groups, DateTimeOffset now, CancellationToken token)
+    {
+        var response = await prdb.AskAsync(key, PrdbWork.ReleaseIdentification,
+            (client, ct) => client.Videos.Identify.PostAsync(new IdentifyVideosRequest
+            {
+                IncludeVideoDetails = true, IncludeFreshness = true,
+                Files = [.. groups.Select(g => new IdentifyVideoFileDto
+                { Ref = g.First().Id.ToString(CultureInfo.InvariantCulture), Filename = g.First().Title })],
+            }, cancellationToken: ct), token);
+        var results = response?.Results ?? throw new InvalidOperationException("prdb answered Identification without results.");
+        if (results.Count != groups.Count || results.Select(r => r.Ref).Distinct().Count() != groups.Count
+            || groups.Any(g => !results.Any(r => r.Ref == g.First().Id.ToString(CultureInfo.InvariantCulture))))
+            throw new InvalidOperationException("prdb did not return exactly one Identification result per input.");
+        foreach (var answer in results) Validate(answer);
+        var reidentified = groups.Count(g => g.Any(r => r.IdentificationAnswerJson is not null));
+        await using var saving = await context.Database.BeginTransactionAsync(token);
+        await EnsureScopeAsync(key, scope, token);
+        foreach (var group in groups)
+        {
+            var answer = results.Single(r => r.Ref == group.First().Id.ToString(CultureInfo.InvariantCulture));
+            foreach (var release in group) await CheckpointAsync(release, group.Key, answer, now, token);
+        }
+        await context.SaveChangesAsync(token);
+        await saving.CommitAsync(token);
+        governor.Costs.Identification(groups.Count, 0, 0);
+        governor.Costs.Freshness(0, 0, reidentified);
+    }
+
+    private async Task EnsureScopeAsync(string key, string scope, CancellationToken token)
+    {
+        var installation = await context.Installation.Select(i => new { i.PrdbApiKey, i.PrdbUserHash }).SingleAsync(token);
+        var currentScope = installation.PrdbUserHash ?? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(installation.PrdbApiKey ?? "")));
+        if (installation.PrdbApiKey != key || currentScope != scope)
+            throw new InvalidOperationException("The prdb account changed during Identification; its response was discarded.");
+    }
+
+    private static async Task RetainAsync(ReleaseRow release, string key, IdentifyVideoResultDto answer,
+        DateTimeOffset identifiedAt, DateTimeOffset validatedAt, CancellationToken token)
+    {
+        var previous = release.IdentificationAnswerJson is null ? null
+            : await ReadAnswerAsync(release.IdentificationAnswerJson, token);
+        var same = previous is not null && previous.VideoId == answer.VideoId
+            && previous.Confidence == answer.Confidence && previous.MatchedBy == answer.MatchedBy
+            && previous.Site?.Id == answer.Site?.Id && previous.Site?.Title == answer.Site?.Title
+            && (previous.Candidates ?? []).SequenceEqual(answer.Candidates ?? []);
+        if (!same || release.IdentificationInputKey != key || release.IdentificationState == IdentificationState.Awaiting
+            || release.IdentificationDetailsPending)
+            await CheckpointAsync(release, key, answer, identifiedAt, token);
+        else
+        {
+            answer.Ref = release.Id.ToString(CultureInfo.InvariantCulture);
+            release.IdentificationAnswerJson = await KiotaJsonSerializer.SerializeAsStringAsync(answer, false, token);
+            release.LastIdentifiedAt = identifiedAt;
+        }
+        release.IdentificationValidatedAt = validatedAt;
+    }
+
     private IQueryable<ReleaseRow> WorkSet(DateTimeOffset now) => ReleaseIdentificationWork.Current(context, now);
 
     private static string InputKey(string title, string accountScope) => Convert.ToHexString(SHA256.HashData(
@@ -219,6 +360,7 @@ public sealed class ReleaseIdentificationRoutine(
         release.IdentificationAnswerJson = await KiotaJsonSerializer.SerializeAsStringAsync(answer, false, token);
         release.IdentificationDetailsPending = true;
         release.LastIdentifiedAt = at;
+        release.IdentificationValidatedAt = at;
         release.IdentificationState = IdentificationState.Awaiting;
         release.AutomationPending = false;
         release.VideoId = null;

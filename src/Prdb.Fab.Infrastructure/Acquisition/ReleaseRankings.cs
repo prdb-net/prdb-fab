@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
 namespace Prdb.Fab.Infrastructure.Acquisition;
 
@@ -22,7 +23,7 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
 
         if (video is null) return null;
 
-        var releases = await context.Releases
+        var releases = await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
             .AsNoTracking()
             .Where(row => row.VideoId == video.Id && row.IdentificationState == IdentificationState.Matched)
             .Include(row => row.Indexer)
@@ -83,7 +84,7 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
             .Select(row => new { row.Id, row.PrdbId })
             .ToListAsync(cancellationToken);
         var localIds = videos.Select(row => row.Id).ToArray();
-        var releases = await context.Releases
+        var releases = await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
             .AsNoTracking()
             .Where(row => row.VideoId.HasValue
                 && localIds.Contains(row.VideoId.Value)

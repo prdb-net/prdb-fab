@@ -264,6 +264,14 @@ account state and arrived files retain capacity. Diagnostics expose counts and
 HTTP bytes/time, never API keys, URLs or Identify payloads. They restart their
 measurement interval when the process restarts; routine history remains durable.
 
+Identification requests opt into the server's optional freshness proofs. Usable
+proofs validate retained answers; expired/missing proofs and older servers fall
+back conservatively. Validation does not extend proof expiry or change Confidence.
+It spends ordinary quota. The server's six-hour default provides no saving at the
+23-hour daily interval; FaB does not increase polling to keep tokens alive. Status
+reports validated, unchanged and re-identified input counts. Stale authority
+waits for the ordinary schedule before Ranking or Download submission.
+
 The Wanted Sweep searches older Wanted Videos directly by title, which is why
 the two routines need separate shares of the same budget. Both write the same
 cache; neither identifies a Release by itself. prdb remains the only authority
