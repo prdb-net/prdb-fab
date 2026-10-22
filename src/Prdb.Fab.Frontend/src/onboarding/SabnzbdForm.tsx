@@ -77,7 +77,7 @@ export function SabnzbdForm({
 
       setCategory(held?.name ?? answer.categories[0]?.name ?? '')
     },
-    onError: () => setFailure('SABnzbd could not be reached from here. The log says what happened.'),
+    onError: () => setFailure('Could not load SABnzbd categories. Check the connection details and try again.'),
   })
 
   const save = useMutation({
@@ -90,7 +90,7 @@ export function SabnzbdForm({
         onSaved?.()
       }
     },
-    onError: () => setFailure('The connection could not be sent. The tool may have stopped; the log says.'),
+    onError: () => setFailure('Could not confirm the SABnzbd connection was saved. Check your connection to fab and try again.'),
   })
 
   const chosen = listing?.categories.find((candidate) => candidate.name === category)
@@ -126,8 +126,8 @@ export function SabnzbdForm({
       }}
     >
       <Field
-        label="Where SABnzbd is"
-        hint="The address you open SABnzbd at, without /api on the end."
+        label="SABnzbd URL"
+        hint="Use a URL reachable from this container, without /api at the end."
       >
         {(id) => (
           <input
@@ -148,20 +148,9 @@ export function SabnzbdForm({
       </Field>
 
       <Field
-        label="Its API key"
-        hint={
-          <>
-            {stored?.keyIsStored ? (
-              <>
-                A key is stored. Leave this empty to keep it &mdash; it is kept even
-                when the address changes, since SABnzbd moving to another port is
-                not a new key.{' '}
-              </>
-            ) : null}
-            The full API key from Config &rarr; General, not the NZB key. The NZB key
-            can submit a download and cannot follow one.
-          </>
-        }
+        label="SABnzbd API key"
+        hint={stored?.keyIsStored ? 'A key is stored. Leave empty to keep it.' : 'Use the full API key from Config → General.'}
+        help="Use the full API key, not the NZB key: fab needs to follow Downloads as well as submit them. A stored key is retained even when the address changes."
       >
         {(id) => (
           <input
@@ -187,14 +176,8 @@ export function SabnzbdForm({
       {answered && (
         <>
           <Field
-            label="The category it downloads into"
-            hint={
-              <>
-                SABnzbd's own list. A category it does not know is not an error
-                there &mdash; it quietly becomes Default, and the downloads land
-                somewhere nothing is looking.
-              </>
-            }
+            label="Download category"
+            help="Choose a category returned by SABnzbd. An unknown category silently falls back to Default in SABnzbd, which can send files to the wrong folder."
           >
             {(id) => (
               <select
@@ -220,15 +203,9 @@ export function SabnzbdForm({
           <code className={formStyles.path}>{chosen?.completedRoot}</code>
 
           <Field
-            label="Where that folder is in this container"
-            hint={
-              <>
-                The same folder, as this container sees it. They are often
-                different, and this one is checked before it is stored &mdash; a
-                wrong answer is otherwise found at the first finished download,
-                where it looks like a download that hangs.
-              </>
-            }
+            label="Completed-download path in this container"
+            hint="Use the same completed-download folder as seen inside this container."
+            help="This path can differ from the path SABnzbd sees. It is checked before saving to ensure completed Downloads can be found."
           >
             {(id) => (
               <input
@@ -251,17 +228,17 @@ export function SabnzbdForm({
       )}
 
       <SaveBar
-        label={saved ? 'Saved' : answered ? submitLabel : 'Ask SABnzbd for its categories'}
+        label={saved ? 'Saved' : answered ? submitLabel : 'Load categories'}
         dirty={somethingToDo}
         pending={busy}
         disabled={incomplete}
         unsaved={answered ? undefined : 'Check SABnzbd to choose a category and its folder.'}
         blocked={
           url.trim().length === 0
-            ? 'The address is needed before SABnzbd can be asked anything.'
+            ? 'Enter the SABnzbd URL.'
             : answered
-              ? 'The category and the folder it lands in are both needed.'
-              : 'A key is needed: the address alone answers to anybody.'
+              ? 'Choose a category and enter its completed-download path.'
+              : 'Enter the full SABnzbd API key.'
         }
       >
         {verdict && (

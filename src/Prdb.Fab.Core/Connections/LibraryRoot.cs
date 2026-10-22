@@ -54,37 +54,31 @@ public static class LibraryRoot
     public static string Sentence(LibraryRootOutcome outcome) => outcome switch
     {
         LibraryRootOutcome.Saved =>
-            "The library root is there, writable, and clear of the download "
-            + "directory.",
+            "Library root verified and saved. It is writable and separate from the download directory.",
 
         LibraryRootOutcome.SavedWithWarning =>
-            "Stored. The library root and the download directory are on "
-            + "different filesystems, so filing copies each video and deletes "
-            + "the original rather than renaming it. That works, and it is "
-            + "slower and needs room for both at once.",
+            "Library root saved. It is on a different filesystem from the download directory. Filing will "
+            + "copy each video, verify the copy, then delete the original. This takes longer and requires "
+            + "space for both copies.",
 
         LibraryRootOutcome.NotAbsolute =>
-            "The library root is an absolute path — the one inside this "
-            + "container, which is whatever you mounted your library at.",
+            "Enter the absolute path to the Library inside this container, such as /library.",
 
         LibraryRootOutcome.Missing =>
-            "There is no such directory in this container. It is a path inside "
-            + "a volume you mounted, not the path on the host.",
+            "The Library directory does not exist inside this container. Check the volume mount and enter "
+            + "its container path.",
 
         LibraryRootOutcome.NotWritable =>
-            "That directory is there and this container cannot write to it. It "
-            + "runs as the PUID and PGID you gave it, and that is who has to own "
-            + "the library.",
+            "The Library directory exists but fab cannot write to it. Grant write access to the container "
+            + "user configured by PUID and PGID.",
 
         LibraryRootOutcome.InsideDownloadDirectory =>
-            "The library root is inside the download directory. Filing moves "
-            + "videos out of what SABnzbd finished, and it cannot move them into "
-            + "the place it is moving them out of.",
+            "The Library root must not be the download directory or a directory inside it. Choose a "
+            + "separate directory.",
 
         LibraryRootOutcome.ContainsDownloadDirectory =>
-            "The library root contains the download directory. The library is "
-            + "the only directory this tool owns, and what SABnzbd leaves behind "
-            + "would be sitting inside it.",
+            "The Library root must not contain the download directory. Choose separate directories for "
+            + "the Library and completed Downloads.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
     };

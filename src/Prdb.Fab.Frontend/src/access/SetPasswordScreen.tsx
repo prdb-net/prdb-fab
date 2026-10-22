@@ -33,7 +33,7 @@ export function SetPasswordScreen() {
 
       setRefusal(
         verdict.refusal ??
-          'This installation already has a password. Sign in with it, or clear it at the host.',
+          'This installation already has a password. Sign in or reset it on the machine running the container.',
       )
     },
     onError: (error) => setRefusal(String(error)),
@@ -52,8 +52,8 @@ export function SetPasswordScreen() {
     <main className={styles.screen}>
       <h1>prdb-fab</h1>
       <p className={styles.lede}>
-        Choose the password this installation is reached by. There is no user
-        name and no second account — one password, and it is set here once.
+        Set the password used to sign in to this installation. No username is
+        required. You can change the password later in Settings → Account.
       </p>
 
       <form
@@ -65,7 +65,7 @@ export function SetPasswordScreen() {
         }}
       >
         <label className={styles.label} htmlFor="password">
-          A password
+          Password
         </label>
         <input
           id="password"
@@ -77,7 +77,7 @@ export function SetPasswordScreen() {
         />
 
         <label className={styles.label} htmlFor="repeat">
-          The same password again
+          Confirm password
         </label>
         <input
           id="repeat"
@@ -88,7 +88,7 @@ export function SetPasswordScreen() {
           onChange={(event) => setRepeated(event.target.value)}
         />
 
-        {mismatched && <p className={styles.refusal}>The two do not match.</p>}
+        {mismatched && <p className={styles.refusal}>The passwords do not match.</p>}
         {refusal && <p className={styles.refusal}>{refusal}</p>}
 
         <button
@@ -96,12 +96,12 @@ export function SetPasswordScreen() {
           type="submit"
           disabled={submit.isPending || mismatched || repeated.length === 0}
         >
-          Set it
+          Set password
         </button>
       </form>
 
       <p className={styles.fork}>
-        Moving an installation, or coming back from a lost disk?{' '}
+        Already have a backup?{' '}
         <button
           className={styles.forkButton}
           type="button"
@@ -109,14 +109,14 @@ export function SetPasswordScreen() {
         >
           Restore a backup
         </button>{' '}
-        instead &mdash; the password is in the file.
+        to recover your settings and login password.
       </p>
 
       <p className={styles.note}>
-        Losing it is recovered at the host rather than over the network: start
-        the container once with <code>FAB_RESET_PASSWORD=true</code>, which
-        clears the password and every session and leaves everything else — the
-        prdb key, the indexers, the library — exactly as it was.
+        If you forget the password, start the container once with{' '}
+        <code>FAB_RESET_PASSWORD=true</code>. This clears the password and all
+        sessions while keeping your keys, settings and Library. Remove the
+        variable and restart before setting a new password.
       </p>
     </main>
   )

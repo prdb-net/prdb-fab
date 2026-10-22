@@ -311,7 +311,7 @@ public sealed class StatusTests
         Assert.Equal(0, status.GapCount);
         var brake = Assert.Single(
             status.Stages.Single(stage => stage.Id == "file").Brakes,
-            item => item.Title == "Preview publication is waiting to be explained");
+            item => item.Title == "Preview publishing needs confirmation");
         Assert.Equal("/settings/reporting?from=/status", brake.Route);
     }
 
@@ -336,7 +336,7 @@ public sealed class StatusTests
 
         Assert.DoesNotContain(
             status.Stages.SelectMany(stage => stage.Brakes),
-            item => item.Title == "Preview publication is waiting to be explained");
+            item => item.Title == "Preview publishing needs confirmation");
     }
 
     /// <summary>
@@ -468,7 +468,7 @@ public sealed class StatusTests
             item => item.Title == "The Library preview request is paused");
 
         Assert.Contains("7 of about 40", brake.Detail, StringComparison.Ordinal);
-        Assert.Contains("given up", brake.Detail, StringComparison.Ordinal);
+        Assert.Contains("Pending work is kept", brake.Detail, StringComparison.Ordinal);
 
         // And the prdb stage says where the request stands, which is the fact
         // rather than the condition.
@@ -527,7 +527,7 @@ public sealed class StatusTests
             status.Stages.Single(stage => stage.Id == "file").Brakes,
             item => item.Title == "Preview publication is off");
 
-        Assert.Contains("2 generated preview(s)", brake.Detail, StringComparison.Ordinal);
+        Assert.Contains("2 preview(s)", brake.Detail, StringComparison.Ordinal);
         Assert.Contains("stays at prdb", brake.Detail, StringComparison.Ordinal);
     }
 

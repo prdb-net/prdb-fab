@@ -46,7 +46,7 @@ export function PrdbForm({
         onSaved?.()
       }
     },
-    onError: () => setFailure('The key could not be sent. The tool may have stopped; the log says.'),
+    onError: () => setFailure('Could not confirm the prdb connection was saved. Check your connection to fab and try again.'),
   })
 
   const asking = verdict?.outcome === 'AnotherAccount'
@@ -68,19 +68,8 @@ export function PrdbForm({
     >
       <Field
         label="Your prdb API key"
-        hint={
-          <>
-            {keyIsStored ? (
-              <>
-                A key is stored. Leave this empty to keep it &mdash; saving re-checks
-                it against prdb either way.{' '}
-              </>
-            ) : null}
-            It is on your prdb account page. This installation checks it against prdb
-            before storing it, so a key that is wrong is a wrong key now rather than
-            a library that quietly never fills.
-          </>
-        }
+        hint={keyIsStored ? 'A key is stored. Leave empty to keep it.' : 'Find the key on your prdb account page.'}
+        help="The key is checked against prdb before it is stored. Saving with an empty field re-checks the stored key."
       >
         {(id) => (
           <input
@@ -103,7 +92,7 @@ export function PrdbForm({
         dirty={dirty}
         pending={submit.isPending}
         disabled={!dirty}
-        blocked="Type the key, or leave it empty to re-check the one that is stored."
+        blocked="Enter your prdb API key."
       >
         <PrdbVerdict verdict={verdict} />
         {failure && <Verdict tone="refusal">{failure}</Verdict>}
@@ -128,7 +117,7 @@ function PrdbVerdict({ verdict }: { verdict: PrdbConnectionVerdict | null }) {
   return (
     <Verdict tone="refusal">
       {verdict.detail}
-      {verdict.retryAfterSeconds != null && ` prdb asks for ${verdict.retryAfterSeconds} seconds.`}
+      {verdict.retryAfterSeconds != null && ` Try again in ${verdict.retryAfterSeconds} seconds.`}
     </Verdict>
   )
 }

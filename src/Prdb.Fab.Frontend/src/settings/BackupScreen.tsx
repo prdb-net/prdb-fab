@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { exportBackup } from '../api/client.ts'
 import { Switch, formStyles } from '../ui/Form.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 import styles from './Settings.module.css'
 
@@ -27,9 +28,9 @@ export function BackupScreen() {
   return (
     <SettingsPage
       title="Backup"
-      lede="One file holding everything about this installation that cannot be fetched again — and nothing that can be."
+      lede="Export your settings and records. Video files are not included."
     >
-      <h2 className={styles.heading}>What is in the file</h2>
+      <InfoHelp label="What the backup contains">
       <p className={formStyles.hint}>
         Your settings, every indexer with its address and key, the SABnzbd
         connection and its path mapping, the prdb key, every automation rule
@@ -38,28 +39,21 @@ export function BackupScreen() {
         what has already been reported to prdb.
       </p>
       <p className={formStyles.hint}>
-        Not in it, because all of it can be fetched again: the indexer cache,
-        cached artwork, prdb&rsquo;s own catalogue, and the video files
-        themselves. The backup is a file, not an archive of your library.
+        The Indexer Cache, cached artwork, prdb Catalogue and video files are
+        excluded. Back up your video files separately.
       </p>
 
-      <h2 className={styles.heading}>It is readable, and that is deliberate</h2>
+      </InfoHelp>
+
+      <h2 className={styles.heading}>Keep your backup private</h2>
       <Verdict tone="warning">
         <strong>
           The file is plain JSON and the credentials in it are readable. Anyone
           who has the file has your prdb key, your SABnzbd key and every indexer
           key.
         </strong>{' '}
-        Nothing here encrypts it, so treat it exactly as you treat the data
-        volume: keep it somewhere that encrypts what it holds. Whatever you back
-        up with already does — restic, borg, an encrypted share — and doing it
-        there means one key you manage rather than one more passphrase to lose at
-        the moment you need the file most.
+        Store it in a private, encrypted location.
       </Verdict>
-      <p className={formStyles.hint}>
-        Being readable is what makes it useful when a restore will not complete:
-        you can open it and see what is actually in there.
-      </p>
 
       <form
         className={formStyles.form}
@@ -77,13 +71,13 @@ export function BackupScreen() {
 
         {write.isError && (
           <Verdict tone="refusal">
-            The Backup could not be written. Nothing has left this installation.
+            The backup export did not complete. Check your browser downloads before trying again.
           </Verdict>
         )}
         {saved && (
           <Verdict tone="done">
-            Exported as <code>{saved}</code>. Your browser has saved it wherever it
-            puts downloads &mdash; move it somewhere that encrypts it.
+            Download started: <code>{saved}</code>. Once it finishes, move the file
+            to a private, encrypted location.
           </Verdict>
         )}
 
@@ -96,15 +90,14 @@ export function BackupScreen() {
         </button>
       </form>
 
-      <h2 className={styles.heading}>Restoring it</h2>
+      <InfoHelp label="How to restore a backup">
       <p className={formStyles.hint}>
-        A restore runs on an installation that holds nothing yet, before a
-        password exists &mdash; the login credential is inside the file, so a
-        fresh container offers it as the second way to begin setting up. It
-        refuses an installation that already holds an indexer, an automation rule
-        or a library entry, and names what it found. There is nothing to merge
-        into an installation you are already using.
+        Start a fresh container and choose Restore before setting a password.
+        The backup restores the login password too. Restore requires an empty
+        installation: existing Indexers, Automation Rules or Library Entries
+        prevent it. Backups cannot be merged into an installation in use.
       </p>
+      </InfoHelp>
     </SettingsPage>
   )
 }

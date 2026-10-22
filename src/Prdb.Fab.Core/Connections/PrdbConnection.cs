@@ -43,31 +43,25 @@ public static class PrdbConnection
     public static string Sentence(PrdbConnectionOutcome outcome) => outcome switch
     {
         PrdbConnectionOutcome.Saved =>
-            "prdb answered, and this installation is now using that key.",
+            "prdb API key verified and saved.",
 
         PrdbConnectionOutcome.WrongKey =>
-            "prdb does not know that key. Copy it again from your prdb account; "
-            + "nothing has been stored.",
+            "prdb rejected this API key. Copy the key from your prdb account and try again. The rejected "
+            + "key was not stored.",
 
         PrdbConnectionOutcome.NoApiAccess =>
-            "The key is real, but the prdb account behind it has no subscription "
-            + "tier that includes API access. The key is not the thing to change.",
+            "This prdb account does not have API access. Check your subscription tier on prdb.",
 
         PrdbConnectionOutcome.QuotaSpent =>
-            "The key is spent for now: prdb's rate limit refused the request. "
-            + "Nothing is wrong with the key, so this is worth trying again "
-            + "rather than correcting.",
+            "prdb’s request limit has been reached. Wait for the limit to reset, then try again.",
 
         PrdbConnectionOutcome.NotRightNow =>
-            "prdb did not answer. That is prdb or the network rather than the "
-            + "key, and it is worth trying again.",
+            "Could not reach prdb. Check network access and try again later.",
 
         PrdbConnectionOutcome.AnotherAccount =>
-            "That key belongs to a different prdb account than the one this "
-            + "installation has been using. The wanted list is that account's, "
-            + "so it is swapped out underneath; and what has already been "
-            + "reported stays recorded against the old account rather than this "
-            + "one. Confirm and the key is stored.",
+            "This key belongs to a different prdb account. Switching replaces the local Wanted list with "
+            + "that account’s list. Previous reports remain associated with the old account. Confirm to "
+            + "save the new key.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
     };

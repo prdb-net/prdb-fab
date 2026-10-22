@@ -92,41 +92,29 @@ public static class IndexerConnection
     public static string Sentence(IndexerConnectionOutcome outcome, string? refusal = null) => outcome switch
     {
         IndexerConnectionOutcome.Saved =>
-            "The indexer answered a real search, and its categories were read "
-            + "from its own list.",
+            "Indexer search verified and available categories loaded.",
 
         IndexerConnectionOutcome.WrongKey =>
-            "The indexer refused that key. It is the API key from your account "
-            + "page there, and this tool checks it with a real search rather "
-            + "than with a capabilities call — most indexers answer that "
-            + "one to anybody.",
+            "The Indexer rejected this API key. Copy it from your Indexer account page and try again.",
 
         IndexerConnectionOutcome.LimitReached =>
-            "The key is right and the indexer has had enough requests from it "
-            + "for now. Nothing to correct; try again later.",
+            "The Indexer’s request limit has been reached. Try again after the limit resets.",
 
         IndexerConnectionOutcome.NotAnIndexer =>
-            "Something answered at that address and it was not a Newznab API. "
-            + "The address is the API one, which usually ends in /api — and "
-            + "an HTML page coming back is what a blocked or mistyped one looks "
-            + "like.",
+            "This URL did not return a Newznab API response. Check the API URL, usually ending in /api, "
+            + "and any proxy or access restrictions.",
 
         IndexerConnectionOutcome.Refused =>
             $"The indexer refused: {refusal ?? "no reason given"}.",
 
         IndexerConnectionOutcome.NotRightNow =>
-            "Nothing answered at that address. That is the indexer or the "
-            + "network rather than the key.",
+            "Could not reach the Indexer. Check its URL, network access and service status.",
 
         IndexerConnectionOutcome.AlreadyAdded =>
-            "That address is already configured as an indexer. Correct the one "
-            + "that is there rather than adding it twice.",
+            "An Indexer with this URL is already configured. Edit its existing connection.",
 
         IndexerConnectionOutcome.NoCategories =>
-            "The indexer answered, and its category list holds nothing this "
-            + "tool searches for. It has not been added, because an indexer "
-            + "with nothing to search is a gap that would otherwise be found by "
-            + "the first sweep that came back empty.",
+            "The Indexer has no XXX or Adult category for fab to search. It was not added.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
     };

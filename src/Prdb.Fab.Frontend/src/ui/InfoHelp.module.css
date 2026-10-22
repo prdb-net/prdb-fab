@@ -1,0 +1,11 @@
+.help { min-width: 0; }
+.heading { align-items: center; display: flex; gap: .5rem; justify-content: space-between; }
+.heading > :first-child { min-width: 0; }
+.label { color: var(--text-quiet); font-size: .85rem; }
+.button { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 50%; color: var(--text-quiet); cursor: pointer; display: inline-flex; flex: none; height: 32px; justify-content: center; padding: 5px; width: 32px; }
+.button svg { width: 20px; height: 20px; }
+.button:hover, .button[aria-expanded='true'] { background: var(--accent-soft); color: var(--accent); }
+.content { background: var(--surface-raised); border-left: 2px solid var(--accent); border-radius: 0 6px 6px 0; color: var(--text-quiet); font-size: .85rem; margin: .4rem 0 .6rem; overflow-wrap: anywhere; padding: .75rem .9rem; }
+.content > :first-child { margin-top: 0; }
+.content > :last-child { margin-bottom: 0; }
+@media (pointer: coarse) { .button { width: 44px; height: 44px; } }

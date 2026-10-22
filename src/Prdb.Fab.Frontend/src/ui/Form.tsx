@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react'
 
+import { InfoHelp } from './InfoHelp.tsx'
 import styles from './Form.module.css'
 
 export { styles as formStyles }
@@ -16,22 +17,23 @@ export { styles as formStyles }
 export function Field({
   label,
   hint,
+  help,
   children,
 }: {
   label: ReactNode
   hint?: ReactNode
+  help?: ReactNode
   children: (id: string) => ReactNode
 }) {
   const id = useId()
 
+  const caption = <label className={styles.label} htmlFor={id}>{label}</label>
   return (
-    <>
-      <label className={styles.label} htmlFor={id}>
-        {label}
-      </label>
+    <div className={styles.fieldGroup}>
+      {help ? <InfoHelp label={typeof label === 'string' ? label : 'This field'} heading={caption}>{help}</InfoHelp> : caption}
       {children(id)}
       {hint && <p className={styles.hint}>{hint}</p>}
-    </>
+    </div>
   )
 }
 
@@ -46,16 +48,20 @@ export function Field({
 export function Fieldset({
   legend,
   hint,
+  help,
   children,
 }: {
   legend: ReactNode
   hint?: ReactNode
+  help?: ReactNode
   children: ReactNode
 }) {
   return (
     <fieldset className={styles.fieldset}>
       <legend className={styles.legend}>{legend}</legend>
-      {hint && <p className={styles.hint}>{hint}</p>}
+      {help ? (
+        <InfoHelp label={typeof legend === 'string' ? legend : 'This group'} heading={<span className={styles.hint}>{hint ?? 'More information'}</span>}>{help}</InfoHelp>
+      ) : hint && <p className={styles.hint}>{hint}</p>}
       {children}
     </fieldset>
   )
@@ -129,12 +135,14 @@ export function Switch({
   onChange,
   label,
   hint,
+  help,
   disabled = false,
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
   label: ReactNode
   hint?: ReactNode
+  help?: ReactNode
   disabled?: boolean
 }) {
   const id = useId()
@@ -148,7 +156,7 @@ export function Switch({
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
-      <label htmlFor={id}>{label}</label>
+      {help ? <InfoHelp label={typeof label === 'string' ? label : 'This option'} heading={<label htmlFor={id}>{label}</label>}>{help}</InfoHelp> : <label htmlFor={id}>{label}</label>}
       {hint && <p className={styles.memberHint}>{hint}</p>}
     </div>
   )

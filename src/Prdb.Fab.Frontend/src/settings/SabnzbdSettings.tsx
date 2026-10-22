@@ -28,7 +28,8 @@ export function SabnzbdSettings() {
   return (
     <SettingsPage
       title="SABnzbd"
-      lede="What downloads, and where its finished folder is in this container. The mapping is verified rather than collected, so a wrong answer is refused here instead of turning up as a download that hangs."
+      lede="Connect SABnzbd and locate its completed downloads."
+      help="SABnzbd downloads the Releases. fab needs access to its completed-download folder to find and file the Videos. The path is checked before saving."
       back="/settings/connections"
       backLabel="Connections"
     >
@@ -62,8 +63,8 @@ function Stored({ connections }: { connections: ConnectionsState | undefined }) 
     return (
       <p className={styles.note}>
         {connections?.sabnzbdSkipped === true
-          ? 'Nothing is stored: this step was skipped during setting up, so nothing is downloaded.'
-          : 'Nothing is stored yet, so nothing is downloaded.'}
+          ? 'SABnzbd was skipped during setup. Connect it to enable Downloads.'
+          : 'SABnzbd is not configured. Connect it to enable Downloads.'}
       </p>
     )
   }

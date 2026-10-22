@@ -7,6 +7,7 @@ import { Fieldset, Switch, formStyles } from '../ui/Form.tsx'
 import { Loaded } from '../ui/Loaded.tsx'
 import { SaveBar } from '../ui/SaveBar.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 import styles from './Settings.module.css'
 
@@ -19,7 +20,7 @@ export function LibrarySettingsScreen() {
   return (
     <SettingsPage
       title="Library"
-      lede="Where filing puts things, and what it may remove from a completed download directory once nothing in there is still undecided."
+      lede="Choose where Videos are filed and how leftovers are cleaned up."
     >
       <Loaded query={settings} of="the Library settings">
         {(held) => (
@@ -51,7 +52,7 @@ function RootInForce({ held }: { held: LibrarySettingsState }) {
         <code className={formStyles.path}>{held.libraryRoot}</code>
       ) : (
         <p className={styles.detail}>
-          No root has been answered yet, so nothing can be filed.
+          Set a Library root before filing Videos.
         </p>
       )}
 
@@ -67,15 +68,14 @@ function RootInForce({ held }: { held: LibrarySettingsState }) {
         Restore path and this is not it.
       */}
       <p className={styles.detail}>
-        A new root is used for <strong>everything filed from then on</strong>.
-        Entries that are already filed keep the paths they were filed at: nothing
-        is moved and no record is rewritten, because a filed path is computed once
-        and then recorded. So changing it here is for an installation that has not
-        filed anything yet, or one that is keeping the old path mounted. Moving a
-        library that already holds something is what restoring a Backup on the new
-        machine is for &mdash; that places every recorded path against the roots
-        you answer, in one transaction.
+        Changing the root affects future files only. Existing files stay where they are;
+        keep their old path mounted.
       </p>
+      <InfoHelp label="Moving an existing Library">
+        Filed paths are recorded when each file arrives. Changing this setting does not
+        move files or rewrite those records. To move the Library to another machine,
+        restore a Backup there and supply the new roots during setup.
+      </InfoHelp>
 
       <LibraryRootForm
         submitLabel="Save Library root"
@@ -118,8 +118,7 @@ function LeftoverForm({ held }: { held: LibrarySettingsState }) {
         rather than buried in a hint.
       */}
       <p className={styles.detail}>
-        Only these eight kinds of file are ever removed, and the list is fixed
-        rather than something patterns are written into:
+        Cleanup only removes these file types:
       </p>
       <ul className={styles.extensions}>
         {leftovers.map((extension) => (
@@ -129,20 +128,20 @@ function LeftoverForm({ held }: { held: LibrarySettingsState }) {
         ))}
       </ul>
       <p className={styles.detail}>
-        Two things are never touched whatever this is set to: a file whose kind is
-        not on that list, and the parent directory of a single-file download.
+        Other file types and the parent directory of a single-file Download are kept.
       </p>
 
       <Fieldset legend="What filing may remove">
         <Switch
           checked={deleteLeftovers}
           onChange={(checked) => { setDeleteLeftovers(checked); setSaved(false) }}
-          label="Delete those leftovers from directory-shaped SABnzbd storage"
-          hint={
+          label="Delete leftovers after filing"
+          hint="Only after all files in the download directory are resolved."
+          help={
             <>
-              Enabled by default, and applied only once nothing in that directory
-              is still waiting on a decision. Turning it off leaves the download
-              directory to fill up, which is yours to empty.
+              Enabled by default. Cleanup waits until all files in the download
+              directory have been filed or resolved in the Review Queue.
+              When disabled, you must remove leftover files yourself.
             </>
           }
         />
@@ -155,7 +154,7 @@ function LeftoverForm({ held }: { held: LibrarySettingsState }) {
       >
         {save.isError && (
           <Verdict tone="refusal">
-            The Library settings could not be saved. Nothing was changed.
+            Could not confirm that the Library settings were saved. Reload to check the current values.
           </Verdict>
         )}
         {saved && <Verdict tone="done">Library settings saved.</Verdict>}

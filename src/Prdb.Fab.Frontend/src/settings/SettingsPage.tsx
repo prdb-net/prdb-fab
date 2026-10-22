@@ -6,6 +6,7 @@ import { readAccessState } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
 import { SettingsRail } from './SettingsRail.tsx'
 import styles from './Settings.module.css'
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 
 /**
@@ -52,12 +53,14 @@ export function SettingsGate() {
 export function SettingsPage({
   title,
   lede,
+  help,
   back,
   backLabel,
   children,
 }: {
   title: string
   lede?: ReactNode
+  help?: ReactNode
   /** Where the mask's own parent is, when it has one other than the surface. */
   back?: string
   backLabel?: string
@@ -72,7 +75,7 @@ export function SettingsPage({
         <Link className={styles.back} to={to}>
           &larr; {label}
         </Link>
-        <h1>{title}</h1>
+        {help ? <InfoHelp key={title} label={title} heading={<h1>{title}</h1>}>{help}</InfoHelp> : <h1>{title}</h1>}
         {lede && <p className={styles.lede}>{lede}</p>}
       </header>
 

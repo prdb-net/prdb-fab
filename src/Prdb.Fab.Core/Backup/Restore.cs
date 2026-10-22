@@ -109,34 +109,28 @@ public static class Restore
         return refusal switch
         {
             RootRefusal.Unanswered =>
-                $"This Backup has paths recorded under its {name}, so one has to be given "
-                + "before they can be placed.",
+                $"Enter the {name} path inside this container to restore the paths recorded in the backup.",
 
             RootRefusal.NotAbsolute =>
-                $"The {name} is an absolute path — the one inside this container, which is "
-                + "whatever you mounted it at.",
+                $"Enter an absolute path for the {name} inside this container.",
 
             RootRefusal.Missing =>
-                $"There is no such directory in this container. The {name} is a path inside "
-                + "a volume you mounted, not the path on the host.",
+                $"The {name} does not exist inside this container. Check the volume mount and its container path.",
 
             RootRefusal.NotReadable =>
-                $"That directory is there and this container cannot read it. The {name} has "
-                + "to be readable by the PUID and PGID this container runs as.",
+                $"The {name} exists but is not readable. Grant read access to the container user configured by "
+                + $"PUID and PGID.",
 
             RootRefusal.NotWritable =>
-                $"That directory is there and this container cannot write to it. The {name} "
-                + "has to be owned by the PUID and PGID this container runs as.",
+                $"The {name} exists but is not writable. Grant write access to the container user configured "
+                + $"by PUID and PGID.",
 
             RootRefusal.TheSameAsTheOther =>
-                "The library and the downloads cannot be the same directory. Filing moves "
-                + "videos out of one and into the other, and a tool that sorts within the "
-                + "directory it also watches ends up re-processing its own output.",
+                "The Library and download directory must be separate directories. Choose a different path for "
+                + "one of them.",
 
             RootRefusal.OverlapsTheOther =>
-                "One of these two directories is inside the other. Filing moves videos out "
-                + "of the downloads and into the library, and nesting them means the library "
-                + "is watched as a download directory or the other way round.",
+                "The Library and download directory must not contain one another. Choose separate directories.",
 
             _ => throw new ArgumentOutOfRangeException(nameof(refusal)),
         };
@@ -154,45 +148,36 @@ public static class Restore
     public static string Sentence(RestoreOutcome outcome) => outcome switch
     {
         RestoreOutcome.Restored =>
-            "This installation is now the one in the file. Sign in with the password it "
-            + "carried — sessions are not in a Backup, so the one you had is not either.",
+            "Backup restored. Sign in with the password saved in the backup. Previous sessions were not restored.",
 
         RestoreOutcome.NotOffered =>
-            "This installation already has a password, so restoring into it is no longer "
-            + "offered. A Restore replaces an installation rather than joining one, and it "
-            + "runs on a container that has nothing in it yet.",
+            "This installation already has a password. Restore requires a fresh, empty installation "
+            + "before a password is set.",
 
         RestoreOutcome.NotABackup =>
-            "That file is not a Backup this tool can read. A Backup is the JSON document the "
-            + "export produces, and it says its own format version in the first few lines.",
+            "This file is not a supported fab backup. Select the JSON file created by Export backup.",
 
         RestoreOutcome.FromANewerTool =>
-            "That Backup was written by a newer version of this tool than the one running "
-            + "here. Reading the parts of it this version recognises would quietly drop the "
-            + "rest, so run the version that wrote it instead.",
+            "This backup was created by a newer version of fab. Upgrade to that version or later before "
+            + "restoring it.",
 
         RestoreOutcome.RootsNeeded =>
-            "The Backup is readable and this installation is empty. What it cannot know is "
-            + "where its library and its downloads are mounted in this container — the paths "
-            + "inside it are recorded against those two roots, and they are answered once, "
-            + "here.",
+            "Backup checked. Confirm where the Library and completed Downloads are mounted inside this container.",
 
         RestoreOutcome.NotEmpty =>
-            "This installation already holds something, so nothing was changed. A Restore "
-            + "never merges: it is for a container that has nothing yet.",
+            "Restore requires an empty installation. Existing data was found; nothing was changed. Use a "
+            + "fresh container to restore this backup.",
 
         RestoreOutcome.LibraryRootRefused =>
-            "The library root cannot be used, so nothing was restored.",
+            "The Library root cannot be used. Correct the path or permissions listed below; nothing was restored.",
 
         RestoreOutcome.DownloadDirectoryRefused =>
-            "The download directory cannot be used, so nothing was restored. The Backup has "
-            + "paths under it, which is why it is being asked for.",
+            "The download directory cannot be used. Correct the path or permissions listed below; nothing "
+            + "was restored.",
 
         RestoreOutcome.PathOutsideItsRoot =>
-            "A path in the Backup does not sit under the root it names, so nothing was "
-            + "restored. That is either a root this Backup needs and nobody answered, or a "
-            + "file that has been edited — and re-rooting must not be able to place a path "
-            + "somewhere it was not pointed at.",
+            "The backup contains a path outside its recorded root, or a required root was not supplied. "
+            + "Check the selected roots and use an unmodified export. Nothing was restored.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(outcome)),
     };

@@ -50,7 +50,7 @@ export function LibraryRootForm({
         onSaved?.()
       }
     },
-    onError: () => setFailure('The path could not be sent. The tool may have stopped; the log says.'),
+    onError: () => setFailure('Could not confirm the Library root was saved. Check your connection to fab and try again.'),
   })
 
   const trimmed = path.trim()
@@ -66,14 +66,9 @@ export function LibraryRootForm({
       }}
     >
       <Field
-        label="Where the library goes"
-        hint={
-          <>
-            The path inside this container, which is whatever you mounted your
-            library at. It has to be writable by the user the container runs as,
-            and it is the only directory this tool writes to.
-          </>
-        }
+        label="Library root"
+        hint="Use the path inside this container."
+        help="The directory must be writable by the user the container runs as. Use the mount path for your Library."
       >
         {(id) => (
           <input
@@ -97,9 +92,9 @@ export function LibraryRootForm({
 
       {connections.data?.downloadDirectory && (
         <p className={formStyles.hint}>
-          It may not be inside <code>{connections.data.downloadDirectory}</code>,
-          or contain it &mdash; that is where SABnzbd's finished downloads
-          arrive, and filing moves videos out of there.
+          Choose a directory separate from <code>{connections.data.downloadDirectory}</code>.
+          The Library and SABnzbd download directory must not be the same
+          directory or contain one another.
         </p>
       )}
 

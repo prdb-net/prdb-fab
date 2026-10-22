@@ -31,7 +31,7 @@ export function StatusScreen() {
     <main className={styles.screen}>
       <header className={styles.heading}>
         <div>
-          <p className={styles.eyebrow}>The unattended loop</p>
+          <p className={styles.eyebrow}>Background activity</p>
           <h1>Status</h1>
           <p>Follow your library from discovery to filing. Updated every five seconds.</p>
         </div>
@@ -42,10 +42,10 @@ export function StatusScreen() {
       </header>
 
       <section className={styles.useful}>
-        <span>Last useful act</span>
+        <span>Last recorded activity</span>
         {answer.lastUsefulAct?.at
           ? <strong>{answer.lastUsefulAct.act} {ago(answer.lastUsefulAct.at, now)}</strong>
-          : <strong>No useful act has been recorded yet.</strong>}
+          : <strong>No Releases cached, Downloads started or files filed yet.</strong>}
       </section>
 
       <nav className={styles.related} aria-label="Related work surfaces">
@@ -143,7 +143,7 @@ function Stage({
               {routine.resultsSeen !== null && <Fact label="Results seen" value={String(routine.resultsSeen)} />}
               {routine.rowsAdded !== null && <Fact label="Rows added" value={String(routine.rowsAdded)} />}
             </dl>
-            {routine.backingOff && <p className={styles.backoff}>Backing off after {routine.consecutiveFailures} failed turn(s). This is not a Gap yet.</p>}
+            {routine.backingOff && <p className={styles.backoff}>Waiting to retry after {routine.consecutiveFailures} consecutive failures. No Gap has been raised yet.</p>}
             {routine.lastRunNowOutcome && <p className={styles.runVerdict}>
               <strong>{routine.lastRunNowOutcome}:</strong> {routine.lastRunNowDetail}
             </p>}
@@ -178,7 +178,7 @@ function DeferredWork({ stages }: { stages: StatusState['stages'] }) {
       return <article key={key} className={`${styles.condition} ${styles.brake}`}>
         <span>Brake</span>
         <div>
-          <strong>{first.source === 'prdb' ? 'prdb work is deliberately waiting' : 'Scheduled work is deliberately waiting'}</strong>
+          <strong>{first.source === 'prdb' ? 'prdb work is waiting' : 'Scheduled work is waiting'}</strong>
           <p>{reasons.size === 1 ? first.reason : `${conditions.length} work items are waiting; expand below for their reasons`}. Next work may be due at <time dateTime={earliest}>{localTime(earliest)}</time>.</p>
           <details>
             <summary>{conditions.length} affected {conditions.length === 1 ? 'work item' : 'work items'}</summary>

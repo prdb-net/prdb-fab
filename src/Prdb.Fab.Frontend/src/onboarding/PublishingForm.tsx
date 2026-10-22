@@ -38,8 +38,8 @@ export function PublicationChannel({
     <>
       {!explained && (
         <Verdict tone="warning">
-          Nothing has been published yet. Generating and sending starts once this
-          is saved &mdash; whichever way the switch is left.
+          Save your choice to finish this step. Preview generation and
+          submission will start only if publishing is enabled.
         </Verdict>
       )}
 
@@ -49,19 +49,18 @@ export function PublicationChannel({
         label="Publish generated previews to prdb"
         hint={
           <>
-            This one is <strong>public</strong>. A preview published here is
-            shown to everyone who looks at that Video on prdb, under your
-            account, after a moderator has seen it. Turning this off later stops
-            future publications; <strong>prdb has no retraction</strong> for one
-            it has already accepted.
+            Previews appear <strong>publicly on prdb under your account</strong>
+            {' '}after moderation approval. Turning this off stops future
+            submissions. <strong>Accepted submissions cannot be retracted
+            through prdb.</strong>
           </>
         }
       />
 
       <Sends summary="What a published preview contains">
         <li>
-          One JPEG: a grid of small pictures taken from the video file, and a
-          WebVTT saying which picture is which second.
+          A JPEG Sprite Sheet of frames from the video file and a WebVTT file
+          with their timestamps.
         </li>
         <li>The prdb Video id the file is filed under, and the file&rsquo;s osHash.</li>
         <li>
@@ -69,14 +68,13 @@ export function PublicationChannel({
           Video.
         </li>
         <li>
-          <strong>Not</strong> the video file, not its name, not where it is on
-          disk, and no sound.
+          The video file, filename, path and audio are <strong>not sent</strong>.
         </li>
       </Sends>
 
       <p className={formStyles.hint}>
-        Only files filed from now on. Videos the library already holds are left
-        alone until they are asked for by name.
+        Applies to newly filed Videos. To include existing Library files,
+        request their previews in Settings → Reporting → Published previews.
       </p>
     </>
   )
@@ -114,7 +112,7 @@ function Form({ held, onSaved }: { held: ReportingSettingsState; onSaved?: () =>
       onSaved?.()
     },
     onError: () =>
-      setFailure('The choice could not be sent. The tool may have stopped; the log says.'),
+      setFailure('Could not confirm your publishing choice was saved. Check your connection to fab and try again.'),
   })
 
   return (
@@ -144,7 +142,7 @@ function Form({ held, onSaved }: { held: ReportingSettingsState; onSaved?: () =>
         label="Save and continue"
         dirty
         pending={save.isPending}
-        unsaved="Setting up waits here until this is answered."
+        unsaved="Save your publishing choice to continue setup."
       >
         {failure && <Verdict tone="refusal">{failure}</Verdict>}
       </SaveBar>

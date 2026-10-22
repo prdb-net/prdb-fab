@@ -31,8 +31,8 @@ export function AccessGate({ children }: { children: ReactNode }) {
       <main className={styles.screen}>
         <h1>prdb-fab</h1>
         <p className={styles.refusal}>
-          The tool did not answer. It may still be starting; the log says what
-          happened.
+          Could not connect to fab. Reload to try again. If the problem continues,
+          check the container status and application log.
         </p>
       </main>
     )

@@ -83,20 +83,19 @@ public static class LibraryVerifications
     public static string Sentence(LibraryVerification verification) => verification switch
     {
         LibraryVerification.Confirmed =>
-            "The file is where the library says it is.",
+            "The file was verified at its recorded Library path.",
 
         LibraryVerification.Missing =>
-            "There is nothing at the path the library records. Nothing has been deleted and "
-            + "nothing will be fetched again over this: a library mounted somewhere else looks "
-            + "exactly the same from here.",
+            "No file was found at the recorded Library path. Check the storage mount. The Library record "
+            + "is kept, and this does not trigger a replacement Download.",
 
         LibraryVerification.Mismatched =>
-            "There is a file at the recorded path and it is a different file. This tool is the "
-            + "only thing that writes into the library, so something else has.",
+            "The file at the recorded Library path differs from the filed file. Check whether it was "
+            + "replaced or modified outside fab.",
 
         LibraryVerification.Unreadable =>
-            "There is a file at the recorded path and it could not be read. That is a "
-            + "permission or a mount rather than anything about the content.",
+            "The file exists at the recorded Library path but cannot be read. Check file permissions and "
+            + "the storage mount.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(verification)),
     };

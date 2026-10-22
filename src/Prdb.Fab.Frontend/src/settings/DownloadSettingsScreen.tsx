@@ -65,7 +65,7 @@ function DownloadSettingsForm({ held }: { held: DownloadSettingsState }) {
     >
       <Field
         label="Preferred highest Quality"
-        hint={
+        help={
           <>
             Direct Download first tries this Quality, then each lower one. It never
             substitutes a known higher Quality. Indexers do not provide a dependable
@@ -99,7 +99,7 @@ function DownloadSettingsForm({ held }: { held: DownloadSettingsState }) {
       >
         {save.isError && (
           <Verdict tone="refusal">
-            The preferred Quality could not be saved. Nothing was changed.
+            Could not confirm the preferred Quality was saved. Reload to check its value.
           </Verdict>
         )}
         {saved && <Verdict tone="done">The preferred Download Quality has been saved.</Verdict>}

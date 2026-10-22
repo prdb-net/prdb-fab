@@ -39,8 +39,8 @@ export function Loaded<T>({
     return (
       <>
         <Verdict tone="refusal">
-          {of.charAt(0).toUpperCase() + of.slice(1)} could not be read. The tool may
-          still be starting, or it may have stopped; the log says which.
+          Could not load {of}. Try again. If the problem continues, check the
+          application log.
         </Verdict>
         <button
           className={styles.button}

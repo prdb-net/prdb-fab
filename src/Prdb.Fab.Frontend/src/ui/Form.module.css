@@ -275,3 +275,8 @@
 .sends li {
   margin-bottom: 0.25rem;
 }
+
+/* Keep a label and its control together when a parent lays fields out in columns. */
+.fieldGroup { display: flex; flex-direction: column; gap: .35rem; min-width: 0; margin-top: var(--gap); }
+.fieldGroup .label { margin-top: 0; }
+.fieldGroup > input, .fieldGroup > select, .fieldGroup > textarea { min-width: 0; width: 100%; }

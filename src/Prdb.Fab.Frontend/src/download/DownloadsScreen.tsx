@@ -520,7 +520,7 @@ function formatStageLog(value: string): string {
 }
 
 function stateDetail(download: Download): string {
-  if (download.state === 'Abandoned') return 'Wanted intent ended; SABnzbd was left untouched.'
+  if (download.state === 'Abandoned') return 'The Video is no longer Wanted. Its SABnzbd job was not changed.'
   if (download.state === 'Completed') return 'Waiting for collection.'
   if (download.state === 'Outstanding') return download.lastSabnzbdStatus ?? 'Waiting for SABnzbd.'
   if (download.state === 'Collected') return 'Files were handed to Filing.'

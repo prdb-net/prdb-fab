@@ -47,12 +47,12 @@ export function IndexerSettings() {
         if (id && !indexer) {
           return (
             <SettingsPage
-              title="That indexer is not here"
+              title="Indexer not found"
               back="/settings/connections"
               backLabel="Connections"
             >
               <Verdict tone="refusal">
-                There is no indexer with that address in this installation.
+                This Indexer is no longer configured. Return to Connections to choose another.
               </Verdict>
             </SettingsPage>
           )
@@ -70,7 +70,8 @@ function IndexerMask({ indexer }: { indexer: ConfiguredIndexer | undefined }) {
   return (
     <SettingsPage
       title={indexer ? indexer.name : 'Add an indexer'}
-      lede="Checked with a real search before anything is stored, because most indexers answer a capabilities call to anybody."
+      lede="Connect an Indexer and set its query budget."
+      help="Before saving, fab tests the API key with a search to verify that it can retrieve Releases."
       back="/settings/connections"
       backLabel="Connections"
     >
@@ -146,11 +147,11 @@ function RowSettings({ indexer }: { indexer: ConfiguredIndexer }) {
           checked={enabled}
           onChange={(checked) => { setEnabled(checked); setSaved(false) }}
           label="Enabled"
-          hint={
+          help={
             <>
-              Disabling is forward-only: nothing already submitted changes, and no
-              Automation Rule may permit a Release from it from then on. What it
-              has already cached stays and is still searched locally.
+              Disabling stops searches on this Indexer and prevents new automatic
+              Downloads from it. Existing Downloads continue. Cached Releases
+              remain available for local searches.
             </>
           }
         />
@@ -158,14 +159,14 @@ function RowSettings({ indexer }: { indexer: ConfiguredIndexer }) {
 
       <Field
         label="Daily query budget"
-        hint={
+        hint="Leave empty for no limit. Resets at midnight UTC."
+        help={
           <>
-            The window is <strong>UTC midnight</strong>, not local midnight and not
-            a rolling day. Head polling and minimum recent coverage take priority;
-            Wanted Sweep and Manual Search share the remaining capacity before
-            optional history. Empty means unbounded.{' '}
+            Requests for new and recent Releases take priority. Wanted Sweep and
+            Manual Search share the remaining budget before older history is
+            fetched.{' '}
             {storedBudget >= unbounded
-              ? 'This indexer is currently unbounded.'
+              ? 'No daily query limit is currently set.'
               : `This indexer currently allows ${storedBudget} requests a day.`}
           </>
         }
@@ -177,7 +178,7 @@ function RowSettings({ indexer }: { indexer: ConfiguredIndexer }) {
             type="number"
             min="1"
             max="100000"
-            placeholder="Unbounded"
+            placeholder="No limit"
             value={budget}
             onChange={(event) => { setBudget(event.target.value); setSaved(false) }}
           />
@@ -185,13 +186,13 @@ function RowSettings({ indexer }: { indexer: ConfiguredIndexer }) {
       </Field>
 
       <SaveBar
-        label="Save how it is used"
+        label="Save Indexer settings"
         dirty={enabled !== indexer.enabled || budget !== wasBudget}
         pending={save.isPending}
       >
         {save.data && !save.data.saved && <Verdict tone="refusal">{save.data.detail}</Verdict>}
         {save.isError && (
-          <Verdict tone="refusal">That could not be saved. Nothing was changed.</Verdict>
+          <Verdict tone="refusal">Could not confirm that the Indexer settings were saved. Reload to check the current values.</Verdict>
         )}
         {saved && <Verdict tone="done">{save.data?.detail}</Verdict>}
       </SaveBar>
@@ -225,8 +226,8 @@ function Removal({ indexer }: { indexer: ConfiguredIndexer }) {
   return (
     <>
       <p className={styles.detail}>
-        Disabling stops it being searched and keeps everything it has. Deleting is
-        for an indexer you no longer have an account with.
+        Disable an Indexer to pause its searches while keeping its settings and
+        cache. Delete it to remove its configuration and cached Releases.
       </p>
 
       <button
@@ -235,7 +236,7 @@ function Removal({ indexer }: { indexer: ConfiguredIndexer }) {
         disabled={ask.isPending || remove.isPending}
         onClick={() => ask.mutate()}
       >
-        {ask.isPending ? 'Reading what it holds…' : 'Delete this indexer…'}
+        {ask.isPending ? 'Checking deletion…' : 'Delete this indexer…'}
       </button>
 
       {(ask.isError || remove.isError) && (
@@ -252,29 +253,24 @@ function Removal({ indexer }: { indexer: ConfiguredIndexer }) {
           onConfirm={() => remove.mutate()}
         >
           <p>
-            <strong>Its cache goes with it</strong> — {Number(confirming.cachedReleases)} cached
-            Release(s). That is disposable by design and refills itself from any
-            indexer you still have.
+            <strong>{Number(confirming.cachedReleases)} cached Release(s) will be deleted.</strong>
+            {' '}Other Indexers keep their own caches.
           </p>
           <p>
-            <strong>{Number(confirming.downloads)} Download(s) stay.</strong> The Download record
-            is what says a Release was used up and what answers &ldquo;why is this on my
-            disk&rdquo;, so it outlives the indexer it came from.
+            <strong>{Number(confirming.downloads)} Download(s) stay.</strong> Their history, including which Releases were used, is preserved.
           </p>
           <p>
             {Number(confirming.rulesReferencing) === 0 ? (
-              <>No Automation Rule permits it, so none is affected.</>
+              <>No Automation Rules use this Indexer.</>
             ) : (
               <>
-                <strong>{Number(confirming.rulesReferencing)} Automation Rule(s)</strong> permit it
-                today and lose that permission.
+                <strong>{Number(confirming.rulesReferencing)} Automation Rule(s)</strong> will have this Indexer removed from their allowed list.
                 {Number(confirming.rulesLosingTheirLastIndexer) > 0 && (
                   <>
                     {' '}
                     {Number(confirming.rulesLosingTheirLastIndexer)} of them would be left with no
                     permitted Indexer at all, and{' '}
-                    <strong>come back disabled</strong> rather than quietly permitting nothing — a
-                    disabled rule shows on Status, an inert one does not.
+                    <strong>will be disabled</strong>.
                   </>
                 )}
               </>

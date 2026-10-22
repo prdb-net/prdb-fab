@@ -13,7 +13,7 @@ import { Loaded } from '../ui/Loaded.tsx'
 import { SaveBar } from '../ui/SaveBar.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
-import styles from './Settings.module.css'
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 
 /** How much each named set admits. Higher is stricter. */
 const strictness: Record<string, number> = {
@@ -31,9 +31,9 @@ export function IdentificationScreen() {
   return (
     <SettingsPage
       title="Identification"
-      lede="Two gates over the same ladder of named answers. Both are fixed sets — ADR 0006 makes this set membership rather than an order, which is why there is no slider and no free choice of members."
+      lede="Choose which identifications allow automatic downloading and filing."
     >
-      <Loaded query={settings} of="the identification gates">
+      <Loaded query={settings} of="the identification settings">
         {(held) => <IdentificationForm held={held} />}
       </Loaded>
     </SettingsPage>
@@ -71,23 +71,22 @@ function IdentificationForm({ held }: { held: IdentificationSettingsState }) {
         The relationship between the two is the whole point of ADR 0006 and the
         reason ADR 0020 gave them a page together, and the page never said it.
       */}
-      <p className={styles.detail}>
-        The <strong>first</strong> gate is checked before a Download is submitted
-        without being asked. The <strong>second</strong> is checked before an
-        arrival is filed into the library. The first is meant to be the{' '}
-        <strong>looser</strong> of the two: a wrong download costs bandwidth and
-        can be thrown away, while a wrong filing puts the wrong file in the
-        library under the right name.
-      </p>
+      <InfoHelp label="Identification before and after downloading">
+        Before downloading, prdb identifies the Release from its name. After
+        downloading, the file itself is checked. Requiring stronger evidence
+        before filing helps prevent a file being stored with another Video&apos;s
+        title and artwork. Files that do not meet the filing requirement wait
+        in the Review Queue.
+      </InfoHelp>
 
-      <Fieldset legend="Allow an automatic Download after">
+      <Fieldset legend="Identification required for automatic Downloads">
         <Choice
           name="before-download"
           value="ThroughProbable"
           selected={before}
           onSelect={(value) => { setBefore(value); setSaved(false) }}
           label="Exact, Strong, or Probable identification"
-          hint="The default. Every matched Wanted Release through Probable may reach an Automation Rule."
+          hint="Default. Accepts these results for Wanted Videos; an enabled Automation Rule must also permit the Download."
         />
         <Choice
           name="before-download"
@@ -95,7 +94,7 @@ function IdentificationForm({ held }: { held: IdentificationSettingsState }) {
           selected={before}
           onSelect={(value) => { setBefore(value); setSaved(false) }}
           label="Exact or Strong identification"
-          hint="Probable and every other answer are held before any automatic submission."
+          hint="Releases identified as Probable are not downloaded automatically."
         />
         <Choice
           name="before-download"
@@ -107,14 +106,14 @@ function IdentificationForm({ held }: { held: IdentificationSettingsState }) {
         />
       </Fieldset>
 
-      <Fieldset legend="Proceed to filing after">
+      <Fieldset legend="Identification required for filing">
         <Choice
           name="after-download"
           value="ExactAndStrong"
           selected={after}
           onSelect={(value) => { setAfter(value); setSaved(false) }}
           label="Exact or Strong identification"
-          hint="The default. Both named answers may proceed without review."
+          hint="Default. These results pass the identification check for filing. Other file checks still apply."
         />
         <Choice
           name="after-download"
@@ -122,7 +121,7 @@ function IdentificationForm({ held }: { held: IdentificationSettingsState }) {
           selected={after}
           onSelect={(value) => { setAfter(value); setSaved(false) }}
           label="Exact identification only"
-          hint="Strong and every other answer wait as Unidentified."
+          hint="Files without an Exact identification wait in the Review Queue as Unidentified."
         />
       </Fieldset>
 
@@ -138,16 +137,16 @@ function IdentificationForm({ held }: { held: IdentificationSettingsState }) {
           lede in the same grey as everything else.
         */}
         <Verdict tone="warning">
-          Saving only queues local reconsideration. It submits no Download in this
-          request, and it moves no file: what changes is which Releases the
-          background routines may act on from now on.
+          Saving schedules a background check of cached Releases under these settings.
+          Eligible Releases may then download automatically. Saving does not
+          immediately submit a Download or move a file.
         </Verdict>
         {save.isError && (
           <Verdict tone="refusal">
-            The identification gates could not be saved. Neither was changed.
+            Could not confirm that the identification settings were saved. Reload to check the current values.
           </Verdict>
         )}
-        {saved && <Verdict tone="done">Both identification gates have been saved.</Verdict>}
+        {saved && <Verdict tone="done">Identification settings saved.</Verdict>}
       </SaveBar>
     </form>
   )
@@ -167,11 +166,10 @@ function Pairing({ before, after }: { before: string; after: string }) {
   if (difference > 0) {
     return (
       <Verdict tone="warning">
-        These two are the wrong way round. The gate before a Download is stricter
-        than the one before filing, so the tool will refuse to fetch things it
-        would have been willing to file &mdash; and the error it is being careful
-        about there costs only bandwidth. That is allowed, and it is worth being
-        sure it is what you meant.
+        Automatic downloading requires an Exact identification, while filing also
+        accepts Strong. A Release identified as Strong will therefore need a
+        manual Download, even though a file identified as Strong can pass the
+        filing check.
       </Verdict>
     )
   }
@@ -179,10 +177,9 @@ function Pairing({ before, after }: { before: string; after: string }) {
   if (difference === 0) {
     return (
       <Verdict tone="warning">
-        Both gates admit the same answers, so the first one decides nothing that
-        the second would not have decided anyway. Nothing is wrong with it; it
-        simply means arrivals are never held back by a check the download already
-        passed.
+        Both settings accept the same identification results. Files are still
+        checked after downloading and may receive a different result from the
+        Release name.
       </Verdict>
     )
   }

@@ -21,7 +21,7 @@ export function ReportingScreen() {
   return (
     <SettingsPage
       title="Reporting"
-      lede="What may leave this installation. Three independent channels, all on by default — opting into one is not opting into the other, and the third one publishes in public."
+      lede="Choose what is sent to prdb. Published previews are public."
     >
       <Loaded query={settings} of="the Reporting settings">
         {(held) => <ReportingForm held={held} />}
@@ -90,12 +90,12 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         <Switch
           checked={fulfilments}
           onChange={(checked) => { setFulfilments(checked); setSaved(false) }}
-          label="Report which wanted Videos are held"
+          label="Report which Wanted Videos are in your Library"
           hint={
             <>
-              Turning this off stops future reports. It does not retract anything
-              already at prdb: only a person retracts a Fulfilment, and a missing
-              file or an unmounted library never does.
+              Turning this off stops future reports. Existing Fulfilments stay at
+              prdb until you retract them. Missing files or an unmounted Library
+              do not retract reports automatically.
             </>
           }
         />
@@ -103,10 +103,10 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         <Sends summary="What a Fulfilment report contains">
           <li>The prdb Video id.</li>
           <li>Whether it is held.</li>
-          <li>When it was really filed.</li>
+          <li>The filing date.</li>
           <li>
-            The highest prdb Quality the Library Entry truthfully clears. Below
-            720p is left unstated rather than guessed at.
+            The highest prdb Quality supported by the Library Entry.
+            Quality is omitted for files below 720p.
           </li>
           <li>The application, as Other. No external identifier is sent.</li>
         </Sends>
@@ -123,12 +123,11 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         <Switch
           checked={assignments}
           onChange={(checked) => { setAssignments(checked); setSaved(false) }}
-          label="Report the hash-to-Video answers you confirm by hand"
+          label="Report file identifications confirmed in the Review Queue"
           hint={
             <>
-              Turning this off stops future submissions. <strong>prdb has no
-              retraction for an assignment already sent</strong> &mdash; unlike a
-              Fulfilment, there is nothing to undo it with.
+              Turning this off stops future submissions. <strong>Assignments already
+              sent cannot be retracted through prdb.</strong>
             </>
           }
         />
@@ -153,10 +152,9 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
             Library is asked for, and where an upload nobody can account for is
             decided. Two surfaces because they are two questions. */}
         <p className={styles.detail}>
-          <Link to="/settings/reporting/publications">Published previews</Link> shows
-          what has been generated and submitted, publishes previews of the Library
-          you already hold, and is where an upload whose outcome is unknown is
-          decided.
+          Open <Link to="/settings/reporting/publications">Published previews</Link> to
+          track submissions, request previews for existing Library files, or
+          review submissions with an unknown outcome.
         </p>
       </Fieldset>
 
@@ -168,11 +166,11 @@ function ReportingForm({ held }: { held: ReportingSettingsState }) {
         // even when every switch is exactly as it shipped, and saying a change
         // was made would be a small lie in the one place this is asking to be
         // believed.
-        unsaved={changed ? undefined : 'Publishing is waiting to be answered.'}
+        unsaved={changed ? undefined : 'Save to confirm your publishing choice.'}
       >
         {save.isError && (
           <Verdict tone="refusal">
-            The Reporting settings could not be saved. Neither channel was changed.
+            Could not confirm that the Reporting settings were saved. Reload to check all three switches.
           </Verdict>
         )}
         {saved && <Verdict tone="done">Reporting settings saved.</Verdict>}

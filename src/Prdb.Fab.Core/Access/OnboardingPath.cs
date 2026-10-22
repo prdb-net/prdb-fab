@@ -64,17 +64,15 @@ public static class OnboardingPath
     /// </summary>
     public static string Sentence(OnboardingOutcome outcome) => outcome switch
     {
-        OnboardingOutcome.Taken => "That step is done, and setting up continues at the next one.",
+        OnboardingOutcome.Taken => "Setup step completed.",
         OnboardingOutcome.Skipped =>
-            "That step was skipped. What it would have configured is missing until it is filled in "
-            + "from the settings.",
+            "Setup step skipped. You can configure it later in Settings.",
         OnboardingOutcome.NotTheCurrentStep =>
-            "Setting up is not on that step, so nothing was changed. This window was showing a "
-            + "different one, and it has been brought back to where the path actually is.",
+            "Setup has moved to a different step. This page has been refreshed to show the current step.",
         OnboardingOutcome.NotConfigured =>
-            "That step has nothing stored yet, so there is nothing to continue past.",
+            "Save the required settings for this step before continuing.",
         OnboardingOutcome.NotSkippable =>
-            "That step cannot be skipped: nothing works without it.",
+            "This setup step is required. Complete it to continue.",
         _ => throw new ArgumentOutOfRangeException(nameof(outcome)),
     };
 }

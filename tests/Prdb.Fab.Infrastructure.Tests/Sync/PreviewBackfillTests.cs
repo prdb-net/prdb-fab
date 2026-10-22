@@ -239,7 +239,7 @@ public sealed class PreviewBackfillTests
         var request = await RequestAsync(database, id);
 
         Assert.Equal(PreviewBackfillState.Cancelled, request.State);
-        Assert.Contains("stay at prdb", request.Note!, StringComparison.Ordinal);
+        Assert.Contains("remain at prdb", request.Note!, StringComparison.Ordinal);
 
         // And the routine has nothing left to do: a cancelled request takes
         // nothing up.
