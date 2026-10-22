@@ -1,3 +1,4 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -95,6 +96,7 @@ export function ReviewQueueScreen() {
   const selectionBusy = dismiss.isPending || previewDelete.isPending || remove.isPending
   const globalCount = Number(data?.globalCount ?? 0)
   const matchingCount = Number(data?.total ?? 0)
+  const pages = Math.max(1, Math.ceil(matchingCount / Number(data?.pageSize ?? 24)))
   const requestedEntry = parameters.get('entry')
   const activeIndex = data?.entries.findIndex((entry) => entry.id === requestedEntry) ?? -1
   const activeEntry = activeIndex >= 0 ? data?.entries[activeIndex] : data?.entries[0]
@@ -177,7 +179,8 @@ export function ReviewQueueScreen() {
 
     {feedback && <p className={feedback.tone === 'error' ? styles.error : styles.notice} role="status">{feedback.text}</p>}
     {queue.isError && <p className={styles.error} role="alert">The Review Queue could not be read.</p>}
-    {data?.entries.length === 0 && <p className={styles.empty}>Nothing needs review.</p>}
+    {data && <PageNotice page={page} pages={pages} pending={queue.isFetching} />}
+    {page <= pages && data?.entries.length === 0 && <p className={styles.empty}>Nothing needs review.</p>}
     {activeEntry && data && <div className={styles.reviewWorkspace}>
       <nav className={styles.reviewRail} aria-label="Review Queue entries">
         {data.entries.map((entry, index) => <div className={`${styles.reviewRailItem} ${entry.id === activeEntry.id ? styles.reviewRailItemActive : ''}`} key={entry.id}>
@@ -210,7 +213,7 @@ export function ReviewQueueScreen() {
       />
     </div>}
 
-    {data && Number(data.total) > Number(data.pageSize) && <QueuePager
+    {data && page <= pages && Number(data.total) > Number(data.pageSize) && <QueuePager
       page={page}
       pageSize={Number(data.pageSize)}
       total={Number(data.total)}

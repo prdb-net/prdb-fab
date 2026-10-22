@@ -1,3 +1,5 @@
+import { Loaded } from '../ui/Loaded.tsx'
+import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -46,6 +48,8 @@ export function LibraryScreen() {
   const total = Number(data?.total ?? 0)
   const pageSize = Number(data?.pageSize ?? 48)
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  const shownPage = Number(library.data?.page ?? page)
+  const unavailable = library.data !== undefined && !library.isError && !library.isPlaceholderData && page > pages
   useEffect(() => setSearchInput(search), [search])
   useEffect(() => {
     if (searchInput === search) return
@@ -84,7 +88,7 @@ export function LibraryScreen() {
   }
 
   return (
-    <main className={browseStyles.screen}>
+    <main className={browseStyles.screen} aria-busy={library.isFetching}>
       <div className={browseStyles.heading}>
         <h1>Library</h1>
         {total > 0 && <span className={browseStyles.count}>{total} videos</span>}
@@ -135,18 +139,19 @@ export function LibraryScreen() {
           </select>
         </label>
       </div>
-      {library.isError && <p className={styles.error}>The Library could not be read.</p>}
-      {data?.entries.length === 0
+      <Loaded query={library} of="the Library">{() => null}</Loaded>
+      <PageNotice page={page} pages={pages} pending={library.isFetching} previousPage={library.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
+      {unavailable ? null : data?.entries.length === 0
         ? <p className={browseStyles.empty}>No held Library Entries match these filters.</p>
         : <LibraryGrid
           entries={data?.entries ?? []}
           action={(entry) => <LibraryCardActions entry={entry} returnTo={location.pathname + location.search} />}
         />}
-      {pages > 1 && (
+      {pages > 1 && !unavailable && (
         <nav className={browseStyles.pager}>
-          <button type="button" disabled={page <= 1} onClick={() => goTo(page - 1)}>Previous</button>
-          <span className={browseStyles.where}>Page {page} of {pages}</span>
-          <button type="button" disabled={page >= pages} onClick={() => goTo(page + 1)}>Next</button>
+          <button type="button" disabled={library.isFetching || shownPage <= 1} onClick={() => goTo(page - 1)}>Previous</button>
+          <span className={browseStyles.where}>Page {shownPage} of {pages}</span>
+          <button type="button" disabled={library.isFetching || shownPage >= pages} onClick={() => goTo(page + 1)}>Next</button>
         </nav>
       )}
     </main>

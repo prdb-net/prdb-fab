@@ -1,3 +1,4 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 
@@ -81,7 +82,8 @@ export function DirectoryView({
       </div>
       <Filter value={search} placeholder={`Filter ${title.toLowerCase()}…`} apply={setFilter} />
 
-      {items.length === 0 ? (
+      <PageNotice page={page} pages={pages} />
+      {page > pages ? null : items.length === 0 ? (
         <div className={styles.empty}>
           <p>
             {scope === 'Favourites'
@@ -196,7 +198,8 @@ export function VideoContextView({
       {contextDetail}
       <Filter value={search} placeholder="Filter video titles…" apply={setFilter} />
 
-      {videos.length === 0 ? (
+      <PageNotice page={page} pages={pages} />
+      {page > pages ? null : videos.length === 0 ? (
         <p className={styles.empty}>No videos match this filter.</p>
       ) : (
         <Grid
@@ -281,7 +284,7 @@ function Pager({
   pages: number
   goTo: (page: number) => void
 }) {
-  if (pages <= 1) return null
+  if (pages <= 1 || page > pages) return null
 
   return (
     <nav className={styles.pager}>

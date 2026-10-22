@@ -1,3 +1,4 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -224,8 +225,9 @@ function DownloadList({
         </ConfirmationDialog>
       )}
 
+      <PageNotice page={current} pages={pages} />
       <div className={styles.workspace}>
-        {answer.downloads.length === 0 ? (
+        {current > pages ? null : answer.downloads.length === 0 ? (
           <div className={styles.empty}>
             <strong>{filtered ? 'No Downloads match these filters.' : 'No Downloads yet.'}</strong>
             <p>
@@ -266,7 +268,7 @@ function DownloadList({
         )}
       </div>
 
-      {pages > 1 && <nav className={styles.pager}>
+      {pages > 1 && current <= pages && <nav className={styles.pager}>
         <button type="button" onClick={() => goTo(current - 1)} disabled={current <= 1}>Newer</button>
         <span>Page {current} of {pages}</span>
         <button type="button" onClick={() => goTo(current + 1)} disabled={current >= pages}>Older</button>
