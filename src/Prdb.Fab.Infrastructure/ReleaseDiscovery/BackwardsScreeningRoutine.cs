@@ -63,6 +63,10 @@ public sealed class BackwardsScreeningRoutine(
                 continue;
             }
 
+            release.IdentificationAnswerJson = null;
+            release.IdentificationInputKey = null;
+            release.IdentificationDetailsPending = false;
+            release.DetailRetryAt = null;
             release.IdentificationState = IdentificationState.Awaiting;
             release.VideoId = null;
             release.Confidence = null;

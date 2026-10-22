@@ -762,7 +762,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             release.HasIndex(row => new { row.PostDate, row.LastIdentifiedAt });
             release.Property(row => row.DerivedReleaseId).IsRequired();
             release.Property(row => row.RawGuid).IsRequired();
-            release.Property(row => row.Title).IsRequired();
+            release.Property(row => row.Title).IsRequired().IsConcurrencyToken();
             release.Property(row => row.NormalisedTitle).IsRequired();
             release.Property(row => row.Categories).IsRequired();
             release.Property(row => row.DownloadUrl).IsRequired();

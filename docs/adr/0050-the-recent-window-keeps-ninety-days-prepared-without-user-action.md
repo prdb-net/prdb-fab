@@ -133,3 +133,12 @@ older Releases and explicit Screening/search reasons still enter Awaiting once.
 Optional history pauses when existing Identification demand exceeds two distinct
 batches or the local dual-window Governor cannot currently admit background work.
 No additional Automation permission follows from coverage.
+
+
+A cached answer is also invalidated by explicit backwards Screening after a new
+Catalogue needle, and an unfinished checkpoint cannot survive an input/account
+scope change or its original revalidation expiry as fresh evidence. Release
+titles are optimistic concurrency tokens: a response cannot be attached after
+the submitted title changed in another lane. A changed title explicitly clears
+all derived evidence and acquisition state, including fields a concurrent
+Identify response may just have written.

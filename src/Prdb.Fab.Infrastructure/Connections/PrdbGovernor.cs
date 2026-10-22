@@ -26,6 +26,7 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
 
     // Serial transport admission makes counters and debit atomic across lanes.
     // No transaction spans HTTP and no new network concurrency is introduced.
+    internal SemaphoreSlim OperationGate { get; } = new(1, 1);
     internal SemaphoreSlim TransportGate { get; } = new(1, 1);
     internal SemaphoreSlim RefreshGate { get; } = new(1, 1);
     public SyncCosts Costs { get; } = new(time);
@@ -81,6 +82,8 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
             {
                 var reserve = window == "hourly" ? budget.ReserveFor(work)
                     : Math.Min(budget.ReserveFor(work), (int)Math.Ceiling(budget.Limit * 0.10));
+                if (window != "hourly" && Background(work))
+                    reserve = Math.Max(reserve, Math.Min(budget.Limit, (int)Math.Ceiling(IdleProfile.RequestsInThirtyDays)));
                 if (budget.Remaining <= reserve)
                     return GovernorVerdict.Defer(WaitForReading(budget),
                         $"{budget.Remaining} of {budget.Limit} account requests remain in the {window} window; {work} preserves {reserve}");
@@ -102,7 +105,7 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
                 // Spend at most 80% of observed remaining monthly capacity over
                 // another rolling 30 days; no assumption about oldest-slot size.
                 var seconds = Math.Max(3600d / Math.Max(1, hour.Limit * .5),
-                    TimeSpan.FromDays(30).TotalSeconds / Math.Max(1, month.Remaining * .8));
+                    TimeSpan.FromDays(30).TotalSeconds / Math.Max(1, (month.Remaining - IdleProfile.RequestsInThirtyDays) * .8));
                 var now = time.GetUtcNow();
                 var capacity = Math.Clamp(hour.Limit / 100, 1, 20);
                 backgroundCredits = backgroundDebitedAt == default ? capacity

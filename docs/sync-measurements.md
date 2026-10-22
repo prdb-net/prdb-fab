@@ -32,3 +32,62 @@ well as calls: inline match documents enlarge the Identify response. The governe
 transport buffers at most 32 MiB per response under its existing 30-second
 timeout. Response bytes include the full body even if Content-Length was absent.
 No percentage saving is promised for a particular match ratio or detail size.
+
+
+## Reproducible rolling-window workload
+
+```
+FAB_SYNC_REPORT="$PWD/TestResults/sync-workload.json" \
+  dotnet test --project tests/Prdb.Fab.Infrastructure.Tests -- \
+  --filter-class '*SustainableSyncWorkloadTests'
+```
+
+Parameters are `FAB_SYNC_RELEASES` (98,872), `FAB_SYNC_DISTINCT` (79,150),
+`FAB_SYNC_DAYS` (35), `FAB_SYNC_HOURLY` (1,000), `FAB_SYNC_MONTHLY` (200,000),
+`FAB_SYNC_OTHER_DAILY` (4,000) and `FAB_SYNC_INDEXER_DAILY` (1,000). These are
+synthetic fixture defaults, never product policy. No production names, IDs,
+credentials or remote services participate.
+
+The workload combines a request-demand model at that scale with the real
+SDK, transport, Governor and fake rolling-window server over thirty-five days.
+Existing account use is distributed over seven old cohorts; another client
+keeps spending throughout. The recurring nine-feed profile runs at its actual
+cadences. Representative 200-input inline response payloads have a deterministic
+100 ms socket latency. SQLite projection, exact-input identity, cross-Indexer
+fan-out, overlap drift, restart, expired evidence and interrupted detail batches
+are tested separately through their real composition. This is not an end-to-end
+production speed benchmark or a claim about real prdb network latency.
+
+The committed [synthetic report](fixtures/sync-workload-report.json) records:
+
+| Quantity | Previous algorithm's demand | Current fixture |
+| --- | ---: | ---: |
+| Identify requests per daily working set | 495 | 396 |
+| Additional detail requests, all matches | 1,978 | 0 |
+| Total metered Identification requests/day | 2,473 | 396 |
+| Mandatory ten-second gaps per daily working set | 4,940 seconds | none; bounded turns yield to the lane's one-second tick and Governor |
+| Monthly total including ordinary feeds and competing client | 203,670 | 141,360 |
+
+The old request counts are calculated from its 200-row Identify and 50-ID detail
+batches; the new schedule actually sends 13,860 background batches and 11,060
+feed requests over 35 simulated days. No feed waits for budget and no batch
+remains at the end. Account peaks are 242/hour and 158,405/month, both within the
+same configured limits. There are 580 background deferrals and 2,965 unmetered
+quota readings. The synthetic responses total 581,515,942 bytes; 27,885 HTTP
+samples each take the fixture's 100 ms (p50/p95 both 100 ms by construction).
+Inline payload size is a tradeoff, not a production byte-saving claim.
+
+The Indexer demand model takes one page per simulated minute and uses 10-row
+resume overlap. It needs 414 minimum queries and 652 queries through the initial
+30-day target, reaching those at minutes 413 and 651 in that deliberately coarse
+model. Head gaps stay at fifteen minutes while permanently oversized optional
+history still advances 612 pages over four days. These times describe the model,
+not FaB wall-clock latency. The real range/anchor writer is exercised by
+`StagedCoverageTests`, including new data during bootstrap. No complete 90-day
+source volume is inferred from the observed partial cache. A 400-query plan
+reports a minimum shortfall and does not claim optional coverage.
+
+The final migration is one additive upgrade from the released schema. The
+intermediate development migrations were consolidated before publication;
+existing cached Releases and completed legacy proofs survive. An unfinished
+legacy offset lacks an identity anchor and restarts its coverage proof once.

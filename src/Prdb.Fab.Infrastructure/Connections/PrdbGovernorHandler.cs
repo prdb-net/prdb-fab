@@ -43,10 +43,11 @@ internal sealed class PrdbGovernorHandler(PrdbGovernor governor, TimeProvider ti
 
         governor.Debit(work);
         var started = time.GetTimestamp();
-        HttpResponseMessage response;
+        HttpResponseMessage? response = null;
         try
         {
             response = await base.SendAsync(request, cancellationToken);
+            governor.Observe(response);
             // The SDK consumes JSON bodies; buffer within its existing timeout
             // so elapsed time and bytes include the payload, even without Content-Length.
             if (response.Content is { } content)
@@ -56,6 +57,7 @@ internal sealed class PrdbGovernorHandler(PrdbGovernor governor, TimeProvider ti
         }
         catch
         {
+            response?.Dispose();
             governor.Costs.Request(work, request.RequestUri?.AbsolutePath, 0,
                 time.GetElapsedTime(started), 0);
             throw;
@@ -63,7 +65,6 @@ internal sealed class PrdbGovernorHandler(PrdbGovernor governor, TimeProvider ti
         governor.Costs.Request(work, request.RequestUri?.AbsolutePath, (int)response.StatusCode,
             time.GetElapsedTime(started), response.Content?.Headers.ContentLength ?? 0);
 
-        governor.Observe(response);
 
         if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests
             || work == PrdbWork.Verification)

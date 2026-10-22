@@ -68,6 +68,9 @@ public static class IdleProfile
     /// </remarks>
     public const double ShareOfTheLimit = 0.5;
 
+    public const double RequestsInThirtyDays = RequestsAnHour * 24 * 30;
+    public static bool CarriedByMonthly(int? limit) => limit is not { } monthly || monthly >= RequestsInThirtyDays;
+
     /// <summary>
     /// Whether a plan of this hourly limit carries the schedule.
     /// </summary>

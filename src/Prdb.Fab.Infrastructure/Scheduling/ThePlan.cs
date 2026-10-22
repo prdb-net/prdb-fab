@@ -69,7 +69,9 @@ public sealed class ThePlan(
     /// </para>
     /// </remarks>
     public bool Shedding =>
-        governor.LastReading is { } reading ? !IdleProfile.CarriedBy(reading.Limit) : recorded;
+        governor.LastReading is { } reading
+            ? !IdleProfile.CarriedBy(reading.Limit) || !IdleProfile.CarriedByMonthly(governor.Snapshot().Monthly?.Limit)
+            : recorded;
 
     /// <summary>Whether the plan is known not to carry <see cref="IdleProfile"/>.</summary>
     public bool CarriesTheSchedule => !Shedding;
@@ -122,7 +124,7 @@ public sealed class ThePlan(
             return;
         }
 
-        var carried = IdleProfile.CarriedBy(reading.Limit);
+        var carried = IdleProfile.CarriedBy(reading.Limit) && IdleProfile.CarriedByMonthly(governor.Snapshot().Monthly?.Limit);
 
         if (carried == !recorded)
         {
@@ -144,11 +146,13 @@ public sealed class ThePlan(
         // happened, because the person reading it is being told their tool is
         // deliberately slower than it was designed to be.
         logger.LogWarning(
-            "The prdb plan allows {Limit} requests an hour, which does not carry the schedule's "
-            + "{Profile:0.#} an hour. The actors feed drops to daily, the images feed and What's New "
-            + "to hourly, and the repair pass to its minimum.",
+            "The prdb plan allows {HourlyLimit} hourly and {MonthlyLimit} rolling monthly requests; "
+            + "the ordinary schedule needs {HourlyDemand:0.#}/hour and {MonthlyDemand:0}/30 days. "
+            + "Lower-priority feeds are reduced; background work preserves essential capacity.",
             governor.LastReading?.Limit,
-            IdleProfile.RequestsAnHour);
+            governor.Snapshot().Monthly?.Limit,
+            IdleProfile.RequestsAnHour,
+            IdleProfile.RequestsInThirtyDays);
 
         await WriteAsync(time.GetUtcNow(), cancellationToken);
     }

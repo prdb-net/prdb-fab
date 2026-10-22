@@ -69,6 +69,8 @@ internal sealed class FakePrdbApi : HttpMessageHandler
         }
     }
 
+    public Func<Asking, Task>? BeforeReply { get; set; }
+
     public IReadOnlyList<Uri> Asked => [.. Requests.Select(request => request.Uri)];
 
     /// <summary>
@@ -154,6 +156,8 @@ internal sealed class FakePrdbApi : HttpMessageHandler
                 body));
         }
 
+        if (BeforeReply is { } beforeReply)
+            await beforeReply(new Asking(uri, null, body));
         var path = uri.AbsolutePath;
 
         if (stops.TryGetValue(path, out var stopping))

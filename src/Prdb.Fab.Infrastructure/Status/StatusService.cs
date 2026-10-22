@@ -386,6 +386,11 @@ public sealed class StatusService(
             conditions.Add(Gap("No Indexer is configured", "Release discovery has nowhere to search.", "sync-indexers", "/settings/connections"));
         if (installation.PlanShortSince is { } since)
             conditions.Add(Gap("The prdb plan cannot carry the schedule", $"Lower-priority sync work has been reduced since {since:u}.", "sync-prdb", "/settings/connections/prdb"));
+        if (governor.Snapshot().Monthly is { } month && !IdleProfile.CarriedByMonthly(month.Limit))
+            conditions.Add(Gap("The rolling monthly plan cannot carry the ordinary schedule",
+                $"The ordinary idle schedule needs about {IdleProfile.RequestsInThirtyDays:F0} requests per 30 days; "
+                + $"the shared monthly limit is {month.Limit}. Lower-priority feeds are reduced and background work waits.",
+                "sync-prdb", "/settings/connections/prdb"));
         if (governor.RefusedWith is { } status)
             conditions.Add(Gap("prdb refused the API key", $"prdb returned {status}; unattended requests remain stopped until a key works.", "sync-prdb", "/settings/connections/prdb"));
     }

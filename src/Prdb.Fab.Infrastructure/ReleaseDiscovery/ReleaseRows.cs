@@ -64,6 +64,17 @@ public sealed class ReleaseRows(
                 row.VideoId = null;
                 row.Confidence = null;
                 row.MatchedBy = null;
+                row.SiteId = null;
+                row.AutomationDecisionReason = null;
+                row.AutomationDecisionAt = null;
+                // Force invalidation even when an Identify response wrote its
+                // checkpoint after this row was loaded but before this save.
+                foreach (var property in new[] { nameof(ReleaseRow.IdentificationAnswerJson), nameof(ReleaseRow.IdentificationInputKey),
+                    nameof(ReleaseRow.IdentificationDetailsPending), nameof(ReleaseRow.DetailRetryAt), nameof(ReleaseRow.LastIdentifiedAt),
+                    nameof(ReleaseRow.IdentificationState), nameof(ReleaseRow.AutomationPending), nameof(ReleaseRow.VideoId),
+                    nameof(ReleaseRow.Confidence), nameof(ReleaseRow.MatchedBy), nameof(ReleaseRow.SiteId),
+                    nameof(ReleaseRow.AutomationDecisionReason), nameof(ReleaseRow.AutomationDecisionAt) })
+                    context.Entry(row).Property(property).IsModified = true;
                 await context.ReleaseCandidates.Where(candidate => candidate.ReleaseId == row.Id).ExecuteDeleteAsync(cancellationToken);
             }
             row.RawGuid = release.RawGuid;

@@ -136,3 +136,77 @@ public sealed partial class IdentificationCutTests
         Assert.Single(socket.AskingFor("/videos/batch"));
     }
 }
+
+public sealed partial class IdentificationCutTests
+{
+    [Fact]
+    public async Task An_interruption_between_detail_batches_repeats_only_the_unfinished_batch()
+    {
+        var videos = Enumerable.Range(1, 51).Select(i => Guid.Parse($"aaaaaaaa-0000-4000-8000-{i:000000000000}")).ToArray();
+        var answers = videos.Select((id, i) => new { @ref = (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            videoId = id, confidence = 4, matchedBy = 3 });
+        var documents = videos.Select(id => new { id, title = "Synthetic Video", actors = Array.Empty<object>(), images = Array.Empty<object>(), preNames = Array.Empty<object>() }).ToArray();
+        var socket = new FakePrdbApi().Answers("/videos/identify", System.Text.Json.JsonSerializer.Serialize(new { results = answers }))
+            .Answers("/videos/batch", System.Text.Json.JsonSerializer.Serialize(documents.Take(50)))
+            .IsUnreachable("/videos/batch");
+        await using var database = await TestDatabase.CreateAsync(prdb: socket);
+        await SeedIndexerAsync(database, IndexerId);
+        await SetPrdbKeyAsync(database);
+        await using (var seed = database.Scope())
+        {
+            var context = seed.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Releases.AddRange(Enumerable.Range(1, 51).Select(i => Release("release-" + i, "Synthetic." + i,
+                IdentificationState.Awaiting, database.Time.GetUtcNow())));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        await using (var interrupted = database.Scope())
+            await Assert.ThrowsAsync<HttpRequestException>(() => interrupted.ServiceProvider.GetRequiredService<ReleaseIdentificationRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken));
+        socket.Answers("/videos/batch", System.Text.Json.JsonSerializer.Serialize(documents.Skip(50)));
+        await IdentifyTurnAsync(database);
+        Assert.Single(socket.AskingFor("/videos/identify"));
+        Assert.Equal(3, socket.AskingFor("/videos/batch").Count);
+        using var lastRequest = System.Text.Json.JsonDocument.Parse(socket.AskingFor("/videos/batch")[2].Body);
+        Assert.Single(lastRequest.RootElement.GetProperty("ids").EnumerateArray());
+        await using var final = database.Scope();
+        Assert.Equal(51, await final.ServiceProvider.GetRequiredService<FabDbContext>().Releases.CountAsync(
+            r => r.IdentificationState == IdentificationState.Matched && !r.IdentificationDetailsPending, TestContext.Current.CancellationToken));
+    }
+}
+
+public sealed partial class IdentificationCutTests
+{
+    [Fact]
+    public async Task A_concurrent_title_change_cannot_attach_an_old_input_answer_to_the_new_title()
+    {
+        var socket = new FakePrdbApi().Answers("/videos/identify",
+            "{\"results\":[{\"ref\":\"1\",\"confidence\":0}]}");
+        await using var database = await TestDatabase.CreateAsync(prdb: socket);
+        await SeedIndexerAsync(database, IndexerId);
+        await SetPrdbKeyAsync(database);
+        await using (var seed = database.Scope())
+        {
+            var context = seed.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Releases.Add(Release("renamed", "Old.Name", IdentificationState.Awaiting, database.Time.GetUtcNow()));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        socket.BeforeReply = async request =>
+        {
+            if (request.Uri.AbsolutePath != "/videos/identify") return;
+            await using var concurrent = database.Scope();
+            await concurrent.ServiceProvider.GetRequiredService<FabDbContext>().Releases.ExecuteUpdateAsync(
+                u => u.SetProperty(r => r.Title, "New.Name"), TestContext.Current.CancellationToken);
+            socket.BeforeReply = null;
+        };
+        await using (var interrupted = database.Scope())
+            await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => interrupted.ServiceProvider.GetRequiredService<ReleaseIdentificationRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken));
+        await IdentifyTurnAsync(database);
+        using var body = System.Text.Json.JsonDocument.Parse(socket.AskingFor("/videos/identify")[1].Body);
+        Assert.Equal("New.Name", body.RootElement.GetProperty("files")[0].GetProperty("filename").GetString());
+        await using var final = database.Scope();
+        var row = await final.ServiceProvider.GetRequiredService<FabDbContext>().Releases.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(IdentificationState.Unknown, row.IdentificationState);
+        Assert.False(row.IdentificationDetailsPending);
+    }
+}

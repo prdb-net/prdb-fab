@@ -192,11 +192,12 @@ Missing readings defer work; a restart or changed key must read remote counters.
 An oldest-slot expiry never creates a full local allowance. Serial transport
 admission debits capacity before sending, including requests with lost answers.
 
-Hourly reserves keep their existing staircase. Monthly reserves are capped at
-10% of the reported limit, protecting essential work without locking half a
-month's allowance away. Background repair and Release Identification additionally
-share pacing: at most half the reported hourly limit and 80% of observed
-remaining monthly capacity spread across another thirty days. A bounded initial
+Hourly reserves keep their existing staircase. Monthly reserves for foreground
+and feed work are capped at 10% of the reported limit. Background repair and
+Release Identification protect at least the ordinary thirty-day idle demand
+as well as that reserve. They share pacing: at most half the reported hourly
+limit and 80% of remaining monthly capacity after ordinary idle demand is
+reserved, spread across another thirty days. A bounded initial
 burst of 1% of the hourly limit (one to twenty requests) makes bootstrap useful;
 credits then accrue only at that conservative pace. Other account clients reduce
 observed counters and hence throughput. This is a bounded target, not a forecast
@@ -225,3 +226,11 @@ Counters and admission update atomically across lanes, reset at UTC midnight,
 and survive restart. Refusals still spend the admitted query. Very small plans
 retain head polling and report a minimum-capacity shortfall instead of reserving
 every request for an impossible complete pass.
+
+
+The ordinary idle demand is checked against the monthly limit as well as the
+hourly limit. An insufficient monthly plan triggers the same documented feed
+shedding and an explicit Status shortfall. Serialized SDK operations cover key
+selection, the unmetered snapshot, parsing and the metered request; this prevents
+a concurrent key change or an older snapshot from restoring capacity over a
+newer response. No transaction spans any of those remote calls.

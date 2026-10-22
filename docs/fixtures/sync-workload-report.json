@@ -1,0 +1,46 @@
+{
+  "fixture": {
+    "rows": 98872,
+    "distinct": 79150,
+    "days": 35,
+    "hourLimit": 1000,
+    "monthLimit": 200000,
+    "otherDaily": 4000
+  },
+  "before": {
+    "identifyRequestsPerDay": 495,
+    "detailRequestsPerDay": 1978,
+    "meteredRequestsPerDay": 2473,
+    "idleCadenceDelaySeconds": 4940
+  },
+  "after": {
+    "identifyRequestsPerDay": 396,
+    "detailRequestsPerDay": 0,
+    "feedSent": 11060,
+    "feedWaited": 0,
+    "backgroundSent": 13860,
+    "backgroundWaited": 580,
+    "remainingBatches": 0,
+    "metered": 24920,
+    "readings": 2965,
+    "peakHourly": 242,
+    "peakMonthly": 158405,
+    "externalRefused": 0,
+    "syntheticHttpLatencyMilliseconds": 100,
+    "payloadBytes": 581515942,
+    "httpMilliseconds": 2788500,
+    "oldestMonthCohortsExpired": 139557
+  },
+  "indexer": {
+    "minimumQueries": 414,
+    "initialTargetQueries": 652,
+    "minutesTo14Days": 413,
+    "minutesTo30Days": 651,
+    "headMaxGapMinutes": 15,
+    "optionalPages": 612,
+    "requiredShortfall": 0
+  },
+  "ordinaryMonthlyDemand": 9480,
+  "baselineMonthlyDemandIncludingCompetition": 203670,
+  "optimizedMonthlyDemandIncludingCompetition": 141360
+}

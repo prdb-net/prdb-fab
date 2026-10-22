@@ -69,6 +69,13 @@ public sealed class ReleaseIdentificationRoutine(
 
         var scope = await context.Installation.Select(row => row.PrdbUserHash).SingleAsync(cancellationToken)
             ?? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(apiKey)));
+        foreach (var release in releases.Where(row => row.IdentificationDetailsPending))
+        {
+            if (release.IdentificationInputKey == InputKey(release.Title, scope) && release.LastIdentifiedAt > identifyAgainBefore) continue;
+            release.IdentificationDetailsPending = false;
+            release.IdentificationAnswerJson = null;
+            release.DetailRetryAt = null;
+        }
         var unasked = releases.Where(row => !row.IdentificationDetailsPending).ToList();
         var groups = unasked.GroupBy(row => InputKey(row.Title, scope), StringComparer.Ordinal).ToArray();
         var remote = new List<IGrouping<string, ReleaseRow>>();
