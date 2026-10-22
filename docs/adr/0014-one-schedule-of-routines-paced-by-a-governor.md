@@ -181,3 +181,23 @@ Status reports baseline completion, the post-apply server bound, observed lag
 and whether fallback repair is active. Cursor progress commits after application;
 a Governor deferral changes neither cursor nor coverage. Missing envelopes do
 not manufacture freshness.
+
+## Amendment: shared hourly and rolling monthly windows
+
+The Governor now admits against **both** account-wide counters. Before work
+starts, and after counters age by a minute, it reads the unmetered `/rate-limit`
+through the generated SDK and the same governed transport. Refresh attempts are
+bounded to once per minute and obey authentication refusal and `Retry-After`.
+Missing readings defer work; a restart or changed key must read remote counters.
+An oldest-slot expiry never creates a full local allowance. Serial transport
+admission debits capacity before sending, including requests with lost answers.
+
+Hourly reserves keep their existing staircase. Monthly reserves are capped at
+10% of the reported limit, protecting essential work without locking half a
+month's allowance away. Background repair and Release Identification additionally
+share pacing: at most half the reported hourly limit and 80% of observed
+remaining monthly capacity spread across another thirty days. A bounded initial
+burst of 1% of the hourly limit (one to twenty requests) makes bootstrap useful;
+credits then accrue only at that conservative pace. Other account clients reduce
+observed counters and hence throughput. This is a bounded target, not a forecast
+of external use or a promise that a particular plan can sustain all demand.

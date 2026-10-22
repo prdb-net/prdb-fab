@@ -19,6 +19,19 @@ internal sealed class PrdbGovernorHandler(PrdbGovernor governor, TimeProvider ti
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        await governor.TransportGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await SendGovernedAsync(request, cancellationToken);
+        }
+        finally
+        {
+            governor.TransportGate.Release();
+        }
+    }
+
+    private async Task<HttpResponseMessage> SendGovernedAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
         var work = governor.Current;
         var verdict = governor.Ask(work);
 
@@ -28,6 +41,7 @@ internal sealed class PrdbGovernorHandler(PrdbGovernor governor, TimeProvider ti
             throw new PrdbDeferredException(work, verdict.Wait, verdict.Reason);
         }
 
+        governor.Debit(work);
         var started = time.GetTimestamp();
         HttpResponseMessage response;
         try

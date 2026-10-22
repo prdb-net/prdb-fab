@@ -31,7 +31,7 @@ public sealed class SyncCostTests
             .SingleAsync(r => r.Routine!.Name == GovernedRoutine.RoutineName, TestContext.Current.CancellationToken);
         Assert.Equal(TimeSpan.FromSeconds(3), run.FinishedAt - run.StartedAt);
         var costs = database.Services.GetRequiredService<PrdbGovernor>().Costs;
-        var request = Assert.Single(costs.Snapshot().Requests);
+        var request = Assert.Single(costs.Snapshot().Requests, r => r.Endpoint == "Verification");
         Assert.Equal(3000, request.ElapsedMilliseconds);
         Assert.True(request.PayloadBytes > 0);
         Assert.Equal(1, request.Requests);

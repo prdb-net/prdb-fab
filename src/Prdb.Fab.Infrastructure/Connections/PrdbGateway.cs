@@ -133,6 +133,7 @@ public sealed class PrdbGateway(
     {
         var client = Client(apiKey);
 
+        await ReadBudgetAsync(client, cancellationToken);
         using var doing = governor.For(work);
 
         return await ask(client, cancellationToken);
@@ -147,6 +148,7 @@ public sealed class PrdbGateway(
     {
         var client = Client(apiKey);
 
+        await ReadBudgetAsync(client, cancellationToken);
         using var doing = governor.For(work);
 
         await act(client, cancellationToken);
@@ -157,12 +159,29 @@ public sealed class PrdbGateway(
     /// and ADR 0020's reason: the key is something a person changes in a form
     /// while the container runs.
     /// </summary>
-    private PrdbClient Client(string apiKey) => PrdbClientFactory.Create(
+    private async Task ReadBudgetAsync(PrdbClient client, CancellationToken cancellationToken)
+    {
+        await governor.RefreshGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!governor.NeedsRefresh) return;
+            governor.BeginRefresh();
+            using var reading = governor.For(PrdbWork.BudgetReading);
+            governor.Observe(await client.RateLimit.GetAsync(cancellationToken: cancellationToken));
+        }
+        finally { governor.RefreshGate.Release(); }
+    }
+
+    private PrdbClient Client(string apiKey)
+    {
+        governor.UseKey(apiKey);
+        return PrdbClientFactory.Create(
         apiKey,
         baseUrl: endpoint.BaseUrl,
         transport: transports.CreateHandler(FabTransports.Prdb),
         retry: PrdbRetryOptions.Disabled,
         timeout: FabTransports.PrdbTimeout);
+    }
 
     /// <summary>
     /// The <c>Retry-After</c> prdb sends with a <c>429</c>, in seconds.
