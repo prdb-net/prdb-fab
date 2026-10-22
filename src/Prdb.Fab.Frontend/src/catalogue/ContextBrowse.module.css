@@ -321,3 +321,22 @@
     max-width: 14rem;
   }
 }
+
+.directory { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; border: 0; }
+.directory li { display: flex; flex-direction: column; align-items: stretch; gap: .75rem; border: 0; padding: 0 0 .75rem; min-width: 0; }
+.directoryVisual { flex: none; display: block; color: inherit; text-decoration: none; }
+.directoryFrame { border: 0; border-radius: 12px; }
+.directoryImage, .actorPortraitImage { object-position: center top; }
+.actorDirectory { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.actorDirectory .directoryFrame { aspect-ratio: 4 / 5; }
+.directoryActions { margin: auto 0 0; justify-content: flex-end; }
+.itemTitle { color: var(--text); font-size: 1rem; text-decoration: none; }
+.itemTitle:hover { color: var(--accent); }
+.filter input { min-width: 0; font: inherit; }
+@media(max-width:600px) {
+  .directory { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1rem; }
+  .directory .directoryVisual { display: block; padding: 0; border: 0; background: transparent; }
+  .itemDetail { font-size: .78rem; }
+  .directoryActions { gap: .4rem; }
+  .directoryActions > * { flex-shrink: 0; }
+}

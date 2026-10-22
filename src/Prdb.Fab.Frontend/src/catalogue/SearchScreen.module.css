@@ -116,9 +116,23 @@
 }
 
 @media (max-width: 620px) {
-  .controls { grid-template-columns: 1fr; }
-  .search { grid-column: auto; }
-  .search span { flex-wrap: wrap; }
-  .search input { flex-basis: 100%; }
-  .controls select { width: 100%; }
+  .screen { padding-top: 1rem; }
+  .heading { align-items: start; gap: .5rem; }
+  .heading span { white-space: nowrap; font-size: .8rem; padding-top: .5rem; }
+  .heading p { font-size: .85rem; }
+  .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .65rem; gap: .65rem; margin: 1rem 0; }
+  .controls label { min-width: 0; }
+  .search { grid-column: 1 / -1; }
+  .search input { min-width: 0; width: 100%; }
+  .controls select { min-width: 0; width: 100%; padding: .6rem .3rem; }
+  .summary { font-size: .8rem; margin-bottom: 1rem; }
+}
+.controls button, .pager button { min-height: 44px; }
+
+@media (max-width: 620px) {
+  .heading { position: relative; }
+  .heading > div { width: 100%; }
+  .heading h1 { padding-right: 8rem; }
+  .heading p { font-size: .8rem; }
+  .heading > span { position: absolute; right: 0; top: .5rem; padding: 0; }
 }

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 
 import { readStatus, runRoutineNow, type StatusState } from '../api/client.ts'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
 import styles from './StatusScreen.module.css'
 
 export function StatusScreen() {
+  const [parameters, setParameters] = useSearchParams()
   const queryClient = useQueryClient()
   const status = useQuery({
     queryKey: ['status'],
@@ -23,13 +24,16 @@ export function StatusScreen() {
   if (status.isError) return <main className={styles.screen}><h1>Status</h1><p>Status could not be read.</p></main>
 
   const answer = status.data
+  const selected = answer.stages.find((stage) => stage.id === parameters.get('stage'))
+    ?? answer.stages.find((stage) => stage.gaps.some((gap) => !gap.cleared))
+    ?? answer.stages[0]
   return (
     <main className={styles.screen}>
       <header className={styles.heading}>
         <div>
           <p className={styles.eyebrow}>The unattended loop</p>
           <h1>Status</h1>
-          <p>Local facts only. This page refreshes every five seconds and makes no remote request.</p>
+          <p>Follow your library from discovery to filing. Updated every five seconds.</p>
         </div>
         <div className={`${styles.gapCount} ${Number(answer.gapCount) === 0 ? styles.healthy : ''}`}>
           <strong>{answer.gapCount}</strong>
@@ -48,20 +52,36 @@ export function StatusScreen() {
         {answer.related.map((link) => <Link key={link.route} to={link.route}>{link.label}</Link>)}
       </nav>
 
-      <DeferredWork stages={answer.stages} />
+      <nav className={styles.stagePicker} aria-label="Loop stages">
+        {answer.stages.map((stage, index) => {
+          const gaps = stage.gaps.filter((gap) => !gap.cleared).length
+          return <button type="button" key={stage.id}
+            aria-pressed={stage.id === selected?.id}
+            onClick={() => {
+              const next = new URLSearchParams(parameters)
+              next.set('stage', stage.id)
+              setParameters(next)
+            }}>
+            <span className={styles.stageNumber}>0{index + 1}</span>
+            <strong>{stage.title}</strong>
+            <span className={gaps ? styles.gapLabel : styles.quiet}>{gaps ? `${gaps} ${gaps === 1 ? 'Gap' : 'Gaps'}` : 'No Gaps'}</span>
+            <span className={styles.quiet}>{stage.brakes.length ? `${stage.brakes.length} ${stage.brakes.length === 1 ? 'Brake' : 'Brakes'}` : 'No Brakes'}</span>
+          </button>
+        })}
+      </nav>
+      <p className={styles.legend}>Gaps need a repair. Brakes are deliberate limits or waits.</p>
+      {runNow.isError && <p className={styles.gapLabel} role="alert">The routine could not be requested. Try again.</p>}
 
-      <div className={styles.loop}>
-        {answer.stages.map((stage, index) => (
+      {selected && (
           <Stage
-            key={stage.id}
-            stage={stage}
-            number={index + 1}
+            key={selected.id}
+            stage={selected}
+            number={answer.stages.indexOf(selected) + 1}
             now={now}
             running={runNow.isPending ? runNow.variables : null}
             onRun={(name, target) => runNow.mutate({ name, target })}
           />
-        ))}
-      </div>
+      )}
     </main>
   )
 }
@@ -91,6 +111,7 @@ function Stage({
       {stage.brakes.filter((condition) => !condition.deferral).map((condition, index) => (
         <Condition condition={condition} key={`${condition.title}-${index}`} />
       ))}
+      <DeferredWork stages={[stage]} />
 
       {stage.facts.length > 0 && <dl className={styles.facts}>
         {stage.facts.map((fact) => <div key={`${fact.label}-${fact.value}`}>
@@ -99,7 +120,9 @@ function Stage({
         </div>)}
       </dl>}
 
-      <div className={styles.routines}>
+      <details className={styles.technical}>
+        <summary>Technical details <span>{stage.routines.length} routines</span></summary>
+        <div className={styles.routines}>
         {stage.routines.map((routine) => {
           const isRunning = running?.name === routine.name && running.target === routine.target
           return <article className={styles.routine} key={`${routine.name}-${routine.target ?? ''}`}>
@@ -127,6 +150,7 @@ function Stage({
           </article>
         })}
       </div>
+      </details>
     </section>
   )
 }
@@ -136,9 +160,9 @@ function DeferredWork({ stages }: { stages: StatusState['stages'] }) {
   const groups = new Map<string, Condition[]>()
   for (const condition of stages.flatMap((stage) => stage.brakes)) {
     if (!condition.deferral) continue
-    // The reason identifies a cause, not the routine or a formatted timestamp.
-    // Different reserve limits and all per-work retry times remain visible.
-    const key = JSON.stringify([condition.deferral.source, condition.deferral.reason])
+    // Group waits by service; each reason, reserve limit and retry time remains
+    // available in the disclosure instead of repeating a card for every target.
+    const key = condition.deferral.source
     const group = groups.get(key) ?? []
     group.push(condition)
     groups.set(key, group)
@@ -148,13 +172,14 @@ function DeferredWork({ stages }: { stages: StatusState['stages'] }) {
   return <section aria-label="Deliberate waits" className={styles.waits}>
     {[...groups].map(([key, conditions]) => {
       const first = conditions[0].deferral!
+      const reasons = new Set(conditions.map((condition) => condition.deferral!.reason))
       const earliest = conditions.reduce((at, condition) =>
         new Date(condition.deferral!.retryAt) < new Date(at) ? condition.deferral!.retryAt : at, first.retryAt)
       return <article key={key} className={`${styles.condition} ${styles.brake}`}>
         <span>Brake</span>
         <div>
           <strong>{first.source === 'prdb' ? 'prdb work is deliberately waiting' : 'Scheduled work is deliberately waiting'}</strong>
-          <p>{first.reason}. Next work may be due at <time dateTime={earliest}>{localTime(earliest)}</time>.</p>
+          <p>{reasons.size === 1 ? first.reason : `${conditions.length} work items are waiting; expand below for their reasons`}. Next work may be due at <time dateTime={earliest}>{localTime(earliest)}</time>.</p>
           <details>
             <summary>{conditions.length} affected {conditions.length === 1 ? 'work item' : 'work items'}</summary>
             <ul className={styles.waitItems}>
@@ -162,6 +187,7 @@ function DeferredWork({ stages }: { stages: StatusState['stages'] }) {
                 const wait = condition.deferral!
                 return <li key={`${condition.stage}-${condition.title}-${wait.target}-${index}`}>
                   <strong>{wait.work}</strong>
+                  <span>{wait.reason}</span>
                   {wait.target && <span className={styles.waitTarget}>{wait.target}</span>}
                   <span>May be due at <time dateTime={wait.retryAt}>{localTime(wait.retryAt)}</time></span>
                   {condition.route && <Link to={condition.route}>Review this choice</Link>}

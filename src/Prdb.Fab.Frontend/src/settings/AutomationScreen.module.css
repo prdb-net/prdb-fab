@@ -16,3 +16,5 @@
 .ruleActions { align-items: flex-end; display: flex; flex: none; flex-direction: column; gap: .35rem; }
 .limitsHeading { color: var(--text-quiet); font-size: 1rem; letter-spacing: .04em; margin: 2.5rem 0 var(--gap); text-transform: uppercase; }
 .range { display: grid; gap: 0 1rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+
+.sectionHeading > a { flex: none; white-space: nowrap; }

@@ -53,8 +53,9 @@ public static class CatalogueEndpoints
             string? search = null,
             int page = 1,
             CatalogueVideoFilter filter = CatalogueVideoFilter.Available,
-            CatalogueVideoSort sort = CatalogueVideoSort.ReleaseDateDescending) =>
-            TypedResults.Ok(await browse.VideosAsync(search, page, filter, sort, cancellationToken)));
+            CatalogueVideoSort sort = CatalogueVideoSort.ReleaseDateDescending,
+            bool favouritesOnly = false) =>
+            TypedResults.Ok(await browse.VideosAsync(search, page, filter, sort, cancellationToken, favouritesOnly)));
 
         // One Video for a Preview (ADR 0060), from local rows only: a person
         // opening a sheet over a grid spends no prdb request, and the grid

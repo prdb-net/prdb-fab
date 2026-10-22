@@ -64,9 +64,9 @@
   cursor: pointer;
   display: inline-flex;
   flex: none;
-  height: 2rem;
+  height: 44px;
   justify-content: center;
-  width: 2rem;
+  width: 44px;
 }
 
 .close:hover {
@@ -317,3 +317,15 @@
   margin: 0;
   padding: 0;
 }
+
+.header { flex: none; }
+.body { flex: 1; min-height: 0; padding-bottom: 1.25rem; }
+.strip { flex-wrap: nowrap; overflow-x: auto; padding: 3px 3px .5rem; scrollbar-width: thin; scroll-snap-type: x proximity; }
+.strip > li { flex: none; scroll-snap-align: start; }
+.actions { border-top: 1px solid var(--border); padding: .9rem 1.25rem calc(.9rem + env(safe-area-inset-bottom)); flex: none; background: var(--surface-raised); }
+.actions > span { width: 100%; }
+.absent { font-size: .9rem; }
+@media (max-width: 52rem) { .sheet { height: 94dvh; } }
+
+.singles { flex-wrap: nowrap; overflow-x: auto; padding: 3px 3px .5rem; scrollbar-width: thin; }
+.singles > li { flex: none; }

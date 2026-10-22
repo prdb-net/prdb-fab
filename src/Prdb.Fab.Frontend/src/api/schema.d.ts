@@ -1761,6 +1761,7 @@ export interface paths {
                     page?: number | string;
                     filter?: components["schemas"]["CatalogueVideoFilter"];
                     sort?: components["schemas"]["CatalogueVideoSort"];
+                    favouritesOnly?: boolean;
                 };
                 header?: never;
                 path?: never;

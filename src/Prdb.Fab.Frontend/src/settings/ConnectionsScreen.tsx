@@ -20,21 +20,21 @@ export function ConnectionsScreen() {
   return (
     <SettingsPage
       title="Connections"
-      lede="Each of these is checked against the service it names before anything is stored, and a check that fails changes nothing."
+      lede="Connect the services that find and download your Videos. Each connection is checked before saving."
     >
       <ul className={styles.groups}>
         <li>
           <Link to="/settings/connections/prdb">prdb</Link>
           <br />
           <span className={styles.detail}>
-            {held?.prdbConfigured ? 'A key is stored.' : 'Not configured.'}
+            {!held ? 'Loading…' : held.prdbConfigured ? 'A key is stored.' : 'Not configured.'}
           </span>
         </li>
         <li>
           <Link to="/settings/connections/sabnzbd">SABnzbd</Link>
           <br />
           <span className={styles.detail}>
-            {held?.sabnzbdConfigured
+            {!held ? 'Loading…' : held.sabnzbdConfigured
               ? `${held.sabnzbdUrl}, category ${held.sabnzbdCategory}.`
               : held?.sabnzbdSkipped
                 ? 'Skipped during setting up, so nothing is downloaded.'
@@ -46,7 +46,7 @@ export function ConnectionsScreen() {
       <h2 className={styles.heading}>Indexers</h2>
       <p className={styles.detail}>
         {Number(held?.indexerCount ?? 0) > 0
-          ? 'Each has its own route, because what points at one of them points at the row rather than at the list.'
+          ? 'Manage your Indexers and their priority below.'
           : held?.indexersSkipped
             ? 'None. This step was skipped during setting up, so nothing is searched for.'
             : 'None, so nothing is searched for.'}
@@ -55,8 +55,8 @@ export function ConnectionsScreen() {
       <IndexerList under="/settings/connections/indexers" reorderable />
 
       <p className={styles.detail}>
-        The order is the rank: when two Indexers offer the same Release, ADR 0008's
-        ranking prefers the one higher up. Moving a row is a save.
+        When Indexers offer the same Release, the one higher in this list is preferred.
+        Reordering saves immediately.
       </p>
 
       <p className={styles.note}>

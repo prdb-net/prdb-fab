@@ -142,20 +142,20 @@ export function ReviewQueueScreen() {
     <header className={styles.heading}>
       <div>
         <h1>Review Queue</h1>
-        <p>Compare one Arriving File with prdb at a time. Select files in the list for bulk dismissal or deletion.</p>
+        <p>Identify files and decide what belongs in your Library.</p>
       </div>
       <span className={styles.quiet}>{reason ? `${matchingCount} matching · ${globalCount} open` : `${globalCount} open`}</span>
     </header>
 
-    <div className={styles.filters}>
+    {(globalCount > 0 || reason) && <div className={styles.filters}>
       <label htmlFor="review-reason">Reason</label>
       <select id="review-reason" name="reason" className={styles.field} value={reason} onChange={(event) => setReason(event.target.value as ArrivingFileReason | '')}>
         <option value="">All reasons</option>
         {reasons.map((value) => <option value={value} key={value}>{reasonLabels[value]}</option>)}
       </select>
-    </div>
+    </div>}
 
-    <div className={styles.selectionBar}>
+    {visibleIds.length > 0 && <div className={styles.selectionBar}>
       <label className={styles.selectAll}>
         <SelectionCheckbox
           ariaLabel="Select every file on this page"
@@ -175,7 +175,7 @@ export function ReviewQueueScreen() {
         </button>
       </div>
       <span className={styles.quiet}>{selected.length} selected{queue.isFetching ? ' · Refreshing…' : ''}</span>
-    </div>
+    </div>}
 
     {feedback && <p className={feedback.tone === 'error' ? styles.error : styles.notice} role="status">{feedback.text}</p>}
     {queue.isError && <p className={styles.error} role="alert">The Review Queue could not be read.</p>}

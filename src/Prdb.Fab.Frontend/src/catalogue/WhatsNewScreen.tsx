@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
 
-import { listWhatsNew, observeWhatsNew } from '../api/client.ts'
+import { listVideos, listWhatsNew, observeWhatsNew, type VideoPage, type WhatsNewPage } from '../api/client.ts'
 import { Grid } from './Grid.tsx'
 import { whatsNewKey } from './state.ts'
 import styles from './BrowseScreen.module.css'
@@ -30,10 +30,24 @@ export function WhatsNewScreen() {
   const location = useLocation()
   const page = readPage(parameters)
   const { openPreview } = usePreview()
+  const latest = parameters.get('order') === 'latest'
+  const favourites = parameters.get('favourites') === 'true'
+  // Ready is the landing default; an explicit false keeps the broader view linkable.
+  const ready = parameters.get('ready') !== 'false'
+  const unfilteredRecent = !latest && !favourites && !ready
+  const change = (name: string, value: string | null) => {
+    const next = new URLSearchParams(parameters)
+    if (value) next.set(name, value)
+    else next.delete(name)
+    next.delete('page')
+    setParameters(next)
+  }
 
-  const videos = useQuery({
-    queryKey: whatsNewKey(page),
-    queryFn: () => listWhatsNew(page),
+  const videos = useQuery<VideoPage | WhatsNewPage>({
+    queryKey: [...whatsNewKey(page), latest, favourites, ready],
+    queryFn: () => unfilteredRecent
+      ? listWhatsNew(page)
+      : listVideos('', page, ready ? 'DownloadReady' : 'All', latest ? 'ReleaseDateDescending' : 'CreatedDescending', favourites),
     // The previous page stays on screen while the next one is read, so paging
     // does not flash the layout away and back.
     placeholderData: (held) => held,
@@ -47,14 +61,15 @@ export function WhatsNewScreen() {
   const pages = Math.max(1, Math.ceil(total / pageSize))
   const shownPage = Number(videos.data?.page ?? page)
   const unavailable = videos.data !== undefined && !videos.isError && !videos.isPlaceholderData && page > pages
-  const checkpointVideoId = videos.data?.checkpointVideoId
-  const checkpointCreatedAt = videos.data?.checkpointCreatedAt
+  const checkpointVideoId = videos.data && 'checkpointVideoId' in videos.data ? videos.data.checkpointVideoId : null
+  const checkpointCreatedAt = videos.data && 'checkpointCreatedAt' in videos.data ? videos.data.checkpointCreatedAt : null
+  const newCount = videos.data && 'newCount' in videos.data ? Number(videos.data.newCount) : 0
 
   useEffect(() => {
-    if (!videos.isPlaceholderData && page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
+    if (unfilteredRecent && !videos.isPlaceholderData && page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
       void observeWhatsNew(checkpointVideoId, checkpointCreatedAt).catch(() => undefined)
     }
-  }, [page, checkpointVideoId, checkpointCreatedAt, videos.isPlaceholderData])
+  }, [page, checkpointVideoId, checkpointCreatedAt, videos.isPlaceholderData, unfilteredRecent])
 
   const goTo = (wanted: number) => {
     const next = new URLSearchParams(parameters)
@@ -80,25 +95,39 @@ export function WhatsNewScreen() {
     <main className={styles.screen} aria-busy={videos.isFetching}>
       <div className={styles.heading}>
         <h1>What&rsquo;s new</h1>
-        {total > 0 && <span className={styles.count}>{total} videos</span>}
-        {Number(videos.data?.newCount ?? 0) > 0 && (
-          <span className={styles.newCount}>{videos.data?.newCount} new since your previous visit</span>
+        {total > 0 && <span className={styles.count}>{total.toLocaleString('en')} videos</span>}
+        {newCount > 0 && (
+          <span className={styles.newCount}>{newCount.toLocaleString('en')} new since your previous visit</span>
         )}
       </div>
 
       <p className={styles.lede}>
-        Browse the catalogue and open a Video to inspect it. Download starts the best
-        eligible Release at your preferred Quality or below; Search opens its Release page.
+        {latest ? 'The latest release dates in your Catalogue.' : 'Recently added to prdb, including newly catalogued older Videos.'}
       </p>
 
+      <div className={styles.discoveryControls}>
+        <div className={styles.segmented} role="group" aria-label="Catalogue order">
+          <button type="button" aria-pressed={!latest} onClick={() => change('order', null)}>Recently added</button>
+          <button type="button" aria-pressed={latest} onClick={() => change('order', 'latest')}>Latest releases</button>
+        </div>
+        <div className={styles.quickFilters} role="group" aria-label="Catalogue filters">
+          <button type="button" aria-pressed={favourites} onClick={() => change('favourites', favourites ? null : 'true')}>Favourites</button>
+          <button type="button" aria-pressed={ready} onClick={() => change('ready', ready ? 'false' : null)}>Ready to download</button>
+        </div>
+      </div>
+      {favourites && <p className={styles.filterHint}>Videos from your favourite Sites or Actors.</p>}
       <PageNotice page={page} pages={pages} pending={videos.isFetching} previousPage={videos.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
 
       {unavailable ? null : total === 0 ? (
-        <p className={styles.empty}>
-          Nothing yet. prdb&rsquo;s catalogue is read in the background from the
-          minute a key is saved, and this fills in as it arrives — there is
-          nothing to press and nothing to wait in front of.
-        </p>
+        <div className={styles.empty}>
+          <strong>{favourites || ready ? 'No Videos match these filters.' : 'Your Catalogue is on its way.'}</strong>
+          <p>{favourites || ready ? 'Try a broader view to see more Videos.' : 'Videos appear here as prdb syncs in the background.'}</p>
+          {(favourites || ready) && <button type="button" onClick={() => {
+            const next = new URLSearchParams(parameters)
+            next.delete('favourites'); next.set('ready', 'false'); next.delete('page')
+            setParameters(next)
+          }}>Clear filters</button>}
+        </div>
       ) : (
         <>
           <Grid

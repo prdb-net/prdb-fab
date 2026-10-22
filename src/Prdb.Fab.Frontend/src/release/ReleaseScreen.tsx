@@ -145,19 +145,19 @@ function ReleaseTable({
         </section>
       )}
 
-      <div className={styles.boundary}>
-        <strong>{page.recentWindow.complete ? 'Recent Window ready.' : 'Recent Window still filling.'}</strong>{' '}
-        Reading or refreshing this table never queries an Indexer. Background Sync keeps the newest{' '}
-        {page.recentWindow.days} days of Catalogue data and an initial {page.recentWindow.indexerInitialDays}-day Indexer target; optional history extends up to 90 days when capacity permits.
-        {!page.recentWindow.complete && ' An empty table is not authoritative until every configured source is complete.'}
-      </div>
-
-      {page.context.kind === 'Video' && (
-        <ManualSearchPanel videoId={page.context.prdbId} held={held} />
-      )}
+      <p className={styles.boundary}>
+        {page.recentWindow.complete
+          ? `The latest ${page.recentWindow.days} Catalogue days are ready. Indexer history expands as capacity permits.`
+          : 'Initial sync is still filling. More Releases may appear.'}
+        {' '}<Link to="/status">View Status</Link>
+      </p>
 
       {page.acquisition && (
         <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
+      )}
+
+      {page.context.kind === 'Video' && (
+        <ManualSearchPanel videoId={page.context.prdbId} held={held} />
       )}
 
       <div className={styles.filters}>
@@ -206,40 +206,37 @@ function ReleaseTable({
           <table>
             <thead>
               <tr>
-                <th>Release</th>
-                <th>Rank</th>
-                <th>Indexer</th>
-                <th>Size</th>
-                <th>First seen</th>
-                <th>Identification State</th>
-                <th>Identification</th>
-                <th>Confidence</th>
-                <th>matchedBy</th>
-                <th>Automation</th>
-                <th>Action</th>
+                <th scope="col">Release</th>
+                <th scope="col">Size</th>
+                <th scope="col">Identification</th>
+                <th scope="col" className={styles.actionColumn}>Action</th>
               </tr>
             </thead>
             <tbody>
               {page.releases.map((release) => (
                 <tr key={String(release.id)}>
-                  <td className={styles.release}>{release.title}</td>
-                  <td>
-                    {rankingLabel(release)}
+                  <td data-label="Release">
+                    <strong className={styles.release}>{release.title}</strong>
+                    <span className={styles.secondary}>
+                      {release.indexer.name} · {release.rankingPosition ? `Rank ${release.rankingPosition}` : rankingLabel(release)}
+                    </span>
+                    <details className={styles.releaseDetails}>
+                      <summary>Release details</summary>
+                      <dl>
+                        <div><dt>First seen</dt><dd>{firstSeen(release.firstSeenAt)}</dd></div>
+                        <div><dt>Indexer rank</dt><dd>{release.indexer.rank}</dd></div>
+                        <div><dt>Matched by</dt><dd>{release.matchedBy ?? 'Not identified'}</dd></div>
+                        <div><dt>Automation</dt><dd>{automationExplanation(release)}</dd></div>
+                      </dl>
+                    </details>
                   </td>
-                  <td>
-                    {release.indexer.name}
-                    <span className={styles.secondary}>rank {release.indexer.rank}</span>
-                  </td>
-                  <td className={styles.nowrap}>{size(release.size)}</td>
-                  <td className={styles.nowrap}>{firstSeen(release.firstSeenAt)}</td>
-                  <td>
+                  <td data-label="Size" className={styles.nowrap}>{size(release.size)}</td>
+                  <td data-label="Identification">
                     <span className={styles.state}>{stateLabel(release.identificationState)}</span>
+                    <span className={styles.secondary}>{release.confidence ?? 'No Confidence'}</span>
+                    {page.context.kind !== 'Video' && identification(release)}
                   </td>
-                  <td>{identification(release)}</td>
-                  <td>{release.confidence ?? '—'}</td>
-                  <td>{release.matchedBy ?? '—'}</td>
-                  <td>{automationExplanation(release)}</td>
-                  <td>
+                  <td data-label="Action" className={styles.actionColumn}>
                     <ReleaseActionCell page={page} release={release} />
                   </td>
                 </tr>
@@ -370,8 +367,8 @@ function ManualSearchPanel({ videoId, held }: { videoId: string; held: boolean }
           <h2>{held ? 'Find another Release' : 'Search Indexers'}</h2>
           <p>
             {held
-              ? 'Use this only if you want another version. Recent Releases still arrive automatically.'
-              : 'Search explicitly for older material or retry now. Recent Releases arrive and flow through Identification automatically.'}
+              ? 'Search for an alternative version.'
+              : 'Missing a Release? Search your Indexers. Daily query budgets still apply.'}
           </p>
         </div>
         <form onSubmit={(event) => {

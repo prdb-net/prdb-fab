@@ -32,13 +32,13 @@ function AutomationOverview() {
   return (
     <SettingsPage
       title="Automation"
-      lede="Enabled rules are independent permissions over matched Wanted Releases. If any rule permits a Release, the bounded background Decide routine may submit it."
+      lede="Choose which Wanted Videos may download automatically. A matching enabled rule grants permission; your limits still apply."
     >
       <section>
         <div className={styles.sectionHeading}>
           <div>
             <h2>Rules</h2>
-            <p>No enabled rule is the global off state.</p>
+            <p>Automatic Downloads stay off until a rule is enabled.</p>
           </div>
           <Link to="/settings/automation/rules/new">Add rule</Link>
         </div>
@@ -201,14 +201,9 @@ function RetryBudgetForm({ held }: { held: AutomationSettingsState }) {
         label="Retry budget, per Video"
         hint={
           <>
-            Default 3. It is spent by every Download of that Video whatever became
-            of it, across every Indexer &mdash; so it is a ceiling on how hard the
-            tool tries for one thing rather than on how much it does at once.
-            Five attempts are absurd against a single Indexer and three are thin
-            against four, and the tool cannot see which case it is in, so this is
-            yours to set. Raising it here affects <strong>every</strong> Video;
-            clearing one Video&rsquo;s spent budget is an action on Status, beside
-            the Brake that raised it.
+            Default 3. Every Download attempt counts, across all Indexers and
+            regardless of outcome. Changing this limit affects every Video.
+            To reset one Video, follow its retry-budget Brake on Status.
           </>
         }
       >
@@ -280,10 +275,8 @@ function CapForm({ held }: { held: AutomationSettingsState }) {
         label="Unfinished automatic Download cap"
         hint={
           <>
-            Default 20. This is SABnzbd in-flight work: how many automatic
-            Downloads may be unfinished there at once. What exceeds it is not
-            dropped &mdash; it waits in the durable work set and resumes as
-            automatic Downloads finish.
+            Default 20. The maximum number of unfinished automatic Downloads
+            in SABnzbd. Additional work waits and resumes as Downloads finish.
           </>
         }
       >

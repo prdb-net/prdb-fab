@@ -103,16 +103,16 @@ export function SearchScreen() {
       <div className={styles.heading}>
         <div>
           <h1>Search</h1>
-          <p>Find a Video in the local prdb Catalogue, then search enabled Indexers from its Release page.</p>
+          <p>Find your next Video in the Catalogue.</p>
         </div>
-        {total > 0 && <span>{total} videos</span>}
+        {total > 0 && <span>{total.toLocaleString('en')} videos</span>}
       </div>
 
       <div className={styles.controls}>
         <form className={styles.search} onSubmit={apply} key={search}>
           <label htmlFor="catalogue-search">Video title</label>
           <span>
-            <input id="catalogue-search" autoFocus name="search" type="search" defaultValue={search} placeholder="Search Video titles…" />
+            <input id="catalogue-search" name="search" type="search" defaultValue={search} placeholder="Search Video titles…" />
             <button type="submit">Search</button>
             {search && <button type="button" onClick={clearSearch}>Clear</button>}
           </span>

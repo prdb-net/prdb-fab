@@ -5,7 +5,7 @@
 .eyebrow { color: var(--accent) !important; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .gapCount { align-items: center; background: color-mix(in srgb, var(--bad) 18%, var(--surface-raised)); border: 1px solid var(--bad); border-radius: var(--radius); display: flex; gap: .6rem; padding: .75rem 1rem; }
 .gapCount strong { font-size: 1.6rem; }
-.gapCount.healthy { background: color-mix(in srgb, var(--ok) 15%, var(--surface-raised)); border-color: var(--ok); }
+.gapCount.healthy { background: var(--surface-raised); border-color: var(--border); }
 .useful { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: 1.5rem 0 .75rem; padding: 1rem; }
 .useful span { color: var(--text-quiet); }
 .related { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
@@ -49,3 +49,32 @@
 .waitItems { display: grid; gap: .8rem; padding-left: 1.2rem; }
 .waitItems li > span, .waitItems li > a { display: block; }
 .waitTarget { color: var(--text-quiet); overflow-wrap: anywhere; }
+
+.stagePicker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+.stagePicker button { text-align: left; display: grid; grid-template-columns: 1fr auto; gap: .25rem .5rem; padding: 1rem; min-height: 108px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); cursor: pointer; }
+.stagePicker button:hover { border-color: var(--accent); }
+.stagePicker button[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); box-shadow: inset 0 2px var(--accent); }
+.stagePicker strong { grid-column: 1 / -1; grid-row: 2; font-size: 1rem; }
+.stageNumber { color: var(--accent); font-size: .75rem; font-weight: 700; grid-column: 1 / -1; }
+.quiet, .legend { color: var(--text-quiet); font-size: .8rem; }
+.gapLabel { color: var(--bad); }
+.legend { margin: .75rem 0 1.5rem; }
+.technical { border-top: 1px solid var(--border); margin-top: 1.5rem; }
+.technical > summary { cursor: pointer; padding: 1rem 0; font-weight: 600; }
+.technical > summary span { color: var(--text-quiet); font-size: .8rem; font-weight: 400; margin-left: .5rem; }
+.routineTop button { min-height: 44px; flex-shrink: 0; }
+.stage { padding: 1.25rem; }
+.facts { gap: 1rem; }
+.facts > div { padding: .65rem .8rem; background: var(--surface); border-radius: 6px; }
+.waits { border: 0; padding: 0; }
+.condition { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .heading { flex-direction: row; gap: .75rem; }
+  .heading p:not(.eyebrow) { font-size: .85rem; }
+  .gapCount { gap: .35rem; padding: .5rem; flex-shrink: 0; }
+  .stagePicker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stagePicker button { padding: .75rem; min-height: 102px; }
+  .stagePicker strong { font-size: .9rem; }
+  .stage { padding: 1rem; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+}
