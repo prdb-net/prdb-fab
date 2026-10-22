@@ -5138,13 +5138,23 @@ export interface components {
             stage: string;
             cleared: boolean;
             route: null | string;
+            deferral?: null | components["schemas"]["StatusDeferral"];
         };
         /** @enum {unknown} */
         StatusConditionKind: "Gap" | "Brake";
+        StatusDeferral: {
+            reason: string;
+            /** Format: date-time */
+            retryAt: string;
+            work: string;
+            target: null | string;
+            source: string;
+        };
         StatusFact: {
             label: string;
             value: string;
             route: null | string;
+            deferral?: null | components["schemas"]["StatusDeferral"];
         };
         StatusLink: {
             label: string;

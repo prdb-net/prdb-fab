@@ -48,6 +48,8 @@ export function StatusScreen() {
         {answer.related.map((link) => <Link key={link.route} to={link.route}>{link.label}</Link>)}
       </nav>
 
+      <DeferredWork stages={answer.stages} />
+
       <div className={styles.loop}>
         {answer.stages.map((stage, index) => (
           <Stage
@@ -86,7 +88,7 @@ function Stage({
       {stage.gaps.map((condition, index) => (
         <Condition condition={condition} key={`${condition.title}-${index}`} />
       ))}
-      {stage.brakes.map((condition, index) => (
+      {stage.brakes.filter((condition) => !condition.deferral).map((condition, index) => (
         <Condition condition={condition} key={`${condition.title}-${index}`} />
       ))}
 
@@ -127,6 +129,56 @@ function Stage({
       </div>
     </section>
   )
+}
+
+function DeferredWork({ stages }: { stages: StatusState['stages'] }) {
+  type Condition = StatusState['stages'][number]['brakes'][number]
+  const groups = new Map<string, Condition[]>()
+  for (const condition of stages.flatMap((stage) => stage.brakes)) {
+    if (!condition.deferral) continue
+    // The reason identifies a cause, not the routine or a formatted timestamp.
+    // Different reserve limits and all per-work retry times remain visible.
+    const key = JSON.stringify([condition.deferral.source, condition.deferral.reason])
+    const group = groups.get(key) ?? []
+    group.push(condition)
+    groups.set(key, group)
+  }
+  if (groups.size === 0) return null
+
+  return <section aria-label="Deliberate waits" className={styles.waits}>
+    {[...groups].map(([key, conditions]) => {
+      const first = conditions[0].deferral!
+      const earliest = conditions.reduce((at, condition) =>
+        new Date(condition.deferral!.retryAt) < new Date(at) ? condition.deferral!.retryAt : at, first.retryAt)
+      return <article key={key} className={`${styles.condition} ${styles.brake}`}>
+        <span>Brake</span>
+        <div>
+          <strong>{first.source === 'prdb' ? 'prdb work is deliberately waiting' : 'Scheduled work is deliberately waiting'}</strong>
+          <p>{first.reason}. Next work may be due at <time dateTime={earliest}>{localTime(earliest)}</time>.</p>
+          <details>
+            <summary>{conditions.length} affected {conditions.length === 1 ? 'work item' : 'work items'}</summary>
+            <ul className={styles.waitItems}>
+              {conditions.map((condition, index) => {
+                const wait = condition.deferral!
+                return <li key={`${condition.stage}-${condition.title}-${wait.target}-${index}`}>
+                  <strong>{wait.work}</strong>
+                  {wait.target && <span className={styles.waitTarget}>{wait.target}</span>}
+                  <span>May be due at <time dateTime={wait.retryAt}>{localTime(wait.retryAt)}</time></span>
+                  {condition.route && <Link to={condition.route}>Review this choice</Link>}
+                </li>
+              })}
+            </ul>
+          </details>
+        </div>
+      </article>
+    })}
+  </section>
+}
+
+function localTime(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+  }).format(new Date(value))
 }
 
 function Condition({ condition }: { condition: StatusState['stages'][number]['gaps'][number] }) {

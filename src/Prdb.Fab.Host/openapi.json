@@ -8830,6 +8830,16 @@
               "null",
               "string"
             ]
+          },
+          "deferral": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StatusDeferral"
+              }
+            ]
           }
         }
       },
@@ -8838,6 +8848,37 @@
           "Gap",
           "Brake"
         ]
+      },
+      "StatusDeferral": {
+        "required": [
+          "reason",
+          "retryAt",
+          "work",
+          "target",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "retryAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "work": {
+            "type": "string"
+          },
+          "target": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "type": "string"
+          }
+        }
       },
       "StatusFact": {
         "required": [
@@ -8857,6 +8898,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "deferral": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StatusDeferral"
+              }
             ]
           }
         }
