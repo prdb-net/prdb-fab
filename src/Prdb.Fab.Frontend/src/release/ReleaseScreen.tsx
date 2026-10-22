@@ -1,3 +1,4 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -194,7 +195,7 @@ function ReleaseTable({
         </label>
       </div>
 
-      {page.releases.length === 0 ? (
+      {current > pages ? null : page.releases.length === 0 ? (
         <ReleaseEmpty
           filtered={Boolean(state || indexer)}
           returnTo={returnTo}
@@ -248,7 +249,8 @@ function ReleaseTable({
         </div>
       )}
 
-      {pages > 1 && (
+      <PageNotice page={current} pages={pages} />
+      {pages > 1 && current <= pages && (
         <nav className={styles.pager}>
           <button type="button" onClick={() => goTo(current - 1)} disabled={current <= 1}>
             Newer

@@ -1,3 +1,4 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -44,17 +45,22 @@ export function WhatsNewScreen() {
   const total = Number(videos.data?.total ?? 0)
   const pageSize = Number(videos.data?.pageSize ?? 24)
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  const shownPage = Number(videos.data?.page ?? page)
+  const unavailable = videos.data !== undefined && !videos.isError && !videos.isPlaceholderData && page > pages
   const checkpointVideoId = videos.data?.checkpointVideoId
   const checkpointCreatedAt = videos.data?.checkpointCreatedAt
 
   useEffect(() => {
-    if (page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
+    if (!videos.isPlaceholderData && page === 1 && checkpointVideoId != null && checkpointCreatedAt) {
       void observeWhatsNew(checkpointVideoId, checkpointCreatedAt).catch(() => undefined)
     }
-  }, [page, checkpointVideoId, checkpointCreatedAt])
+  }, [page, checkpointVideoId, checkpointCreatedAt, videos.isPlaceholderData])
 
   const goTo = (wanted: number) => {
-    setParameters(wanted === 1 ? {} : { page: String(wanted) })
+    const next = new URLSearchParams(parameters)
+    if (wanted === 1) next.delete('page')
+    else next.set('page', String(wanted))
+    setParameters(next)
     window.scrollTo({ top: 0 })
   }
   const here = location.pathname + location.search
@@ -64,14 +70,14 @@ export function WhatsNewScreen() {
   }
 
   if (videos.isError) {
-    return <main className={styles.screen}>
+    return <main className={styles.screen} aria-busy={videos.isFetching}>
       <h1>What&rsquo;s new</h1>
       <Loaded query={videos} of="the latest Videos">{() => null}</Loaded>
     </main>
   }
 
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} aria-busy={videos.isFetching}>
       <div className={styles.heading}>
         <h1>What&rsquo;s new</h1>
         {total > 0 && <span className={styles.count}>{total} videos</span>}
@@ -85,7 +91,9 @@ export function WhatsNewScreen() {
         eligible Release at your preferred Quality or below; Search opens its Release page.
       </p>
 
-      {total === 0 ? (
+      <PageNotice page={page} pages={pages} pending={videos.isFetching} previousPage={videos.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
+
+      {unavailable ? null : total === 0 ? (
         <p className={styles.empty}>
           Nothing yet. prdb&rsquo;s catalogue is read in the background from the
           minute a key is saved, and this fills in as it arrives — there is
@@ -105,23 +113,22 @@ export function WhatsNewScreen() {
             )}
           />
 
-          <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
-
-          {pages > 1 && (
+          {pages > 1 && !unavailable && (
             <nav className={styles.pager}>
-              <button type="button" onClick={() => goTo(page - 1)} disabled={page <= 1}>
+              <button type="button" onClick={() => goTo(page - 1)} disabled={videos.isFetching || shownPage <= 1}>
                 Newer
               </button>
               <span className={styles.where}>
-                Page {page} of {pages}
+                Page {shownPage} of {pages}
               </span>
-              <button type="button" onClick={() => goTo(page + 1)} disabled={page >= pages}>
+              <button type="button" onClick={() => goTo(page + 1)} disabled={videos.isFetching || shownPage >= pages}>
                 Older
               </button>
             </nav>
           )}
         </>
       )}
+      <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
     </main>
   )
 }

@@ -42,3 +42,10 @@
   .condition { flex-direction: column; gap: .2rem; }
   .condition > span { flex-basis: auto; }
 }
+
+.waits { background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem; padding: .5rem; }
+.waits summary { cursor: pointer; margin-top: .4rem; }
+.waits .condition > div { min-width: 0; }
+.waitItems { display: grid; gap: .8rem; padding-left: 1.2rem; }
+.waitItems li > span, .waitItems li > a { display: block; }
+.waitTarget { color: var(--text-quiet); overflow-wrap: anywhere; }

@@ -1,3 +1,4 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -224,16 +225,18 @@ function DownloadList({
         </ConfirmationDialog>
       )}
 
+      <PageNotice page={current} pages={pages} />
       <div className={styles.workspace}>
-        {answer.downloads.length === 0 ? (
+        {current > pages ? null : answer.downloads.length === 0 ? (
           <div className={styles.empty}>
             <strong>{filtered ? 'No Downloads match these filters.' : 'No Downloads yet.'}</strong>
             <p>
               {filtered
                 ? 'Clear the filters to see the complete local history.'
-                : 'Open a wanted Video, then use the Download button on its Release page.'}
+                : 'Downloads appear here after a Release is sent to SABnzbd. Browse Videos to choose a Download.'}
             </p>
-            <Link to={filtered ? '/downloads' : '/wanted'}>{filtered ? 'Clear filters' : 'Go to Wanted'}</Link>
+            <Link to={filtered ? '/downloads' : '/'}>{filtered ? 'Clear filters' : 'Browse Videos'}</Link>
+            {!filtered && <p>Expected a Download? <Link to="/status">Check Status</Link>.</p>}
           </div>
         ) : (
           <ul className={styles.list}>
@@ -266,7 +269,7 @@ function DownloadList({
         )}
       </div>
 
-      {pages > 1 && <nav className={styles.pager}>
+      {pages > 1 && current <= pages && <nav className={styles.pager}>
         <button type="button" onClick={() => goTo(current - 1)} disabled={current <= 1}>Newer</button>
         <span>Page {current} of {pages}</span>
         <button type="button" onClick={() => goTo(current + 1)} disabled={current >= pages}>Older</button>

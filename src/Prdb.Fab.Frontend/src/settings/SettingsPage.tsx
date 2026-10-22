@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate, Outlet, useLocation } from 'react-router'
 
@@ -16,11 +16,12 @@ import { PageLoading } from '../shell/LoadingScreen.tsx'
  *
  * It is also the layout route for the surface, which is what ADR 0058's rail
  * needs: the rail is beside every mask rather than a page in front of them, and
- * it stays mounted, so its reads happen once.
+ * it is mounted only while visible. Its reads share the masks’ query cache.
  */
 export function SettingsGate() {
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
   const location = useLocation()
+  const wide = useSyncExternalStore(subscribeToWidth, isWide, () => false)
 
   if (state.isPending) {
     return <PageLoading label="Loading Settings" />
@@ -38,7 +39,7 @@ export function SettingsGate() {
   return (
     <div className={styles.surface}>
       <div className={atIndex ? styles.railPane : styles.railPaneAside}>
-        <SettingsRail />
+        {(atIndex || wide) && <SettingsRail />}
       </div>
       <div className={atIndex ? styles.maskPaneOnlyWide : styles.maskPane}>
         <Outlet />
@@ -114,4 +115,14 @@ function labelOf(path: string): string {
   }
 
   return known[path.split('?')[0]] ?? 'Back'
+}
+
+// Keep this in step with Settings.module.css. Subscribing also handles a resize
+// while a deep-linked form is open, without starting invisible summary reads.
+const wideQuery = '(width > 52rem)'
+function isWide() { return window.matchMedia(wideQuery).matches }
+function subscribeToWidth(changed: () => void) {
+  const media = window.matchMedia(wideQuery)
+  media.addEventListener('change', changed)
+  return () => media.removeEventListener('change', changed)
 }
