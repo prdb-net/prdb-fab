@@ -98,6 +98,8 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
 
     public DbSet<IndexerWalkStateRow> IndexerWalkStates => Set<IndexerWalkStateRow>();
 
+    public DbSet<IndexerWindowRow> IndexerWindows => Set<IndexerWindowRow>();
+
     public DbSet<ReleaseRow> Releases => Set<ReleaseRow>();
 
     public DbSet<ReleaseCandidateRow> ReleaseCandidates => Set<ReleaseCandidateRow>();
@@ -734,6 +736,14 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(row => row.IndexerId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<IndexerWindowRow>(window =>
+        {
+            window.ToTable("indexer_window", table => table.HasCheckConstraint("CK_indexer_window_days", "Days IN (14,30,90)"));
+            window.HasKey(row => new { row.IndexerId, row.Days });
+            window.Declares(AccountClass.AccountFree);
+            window.HasOne(row => row.Indexer).WithMany().HasForeignKey(row => row.IndexerId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<ReleaseRow>(release =>

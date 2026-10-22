@@ -39,14 +39,14 @@ public sealed class ReleaseIdentificationRoutine(
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        var recentSince = RecentWindow.BeginsAt(now);
+        var recentSince = now.AddDays(-IndexerWindowPolicy.InitialDays);
         var identifyAgainBefore = now - RecentWindow.RevalidateAfter;
         var candidates = await context.Releases
             .AsTracking()
             .Where(row => row.IdentificationDetailsPending
                     && (row.DetailRetryAt == null || row.DetailRetryAt <= now)
                 || !row.IdentificationDetailsPending && (row.IdentificationState == IdentificationState.Awaiting
-                    || row.PostDate >= recentSince
+                    || (row.PostDate >= recentSince || row.VideoId != null && context.WantedVideos.Any(wanted => wanted.VideoId == row.VideoId))
                         && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore)))
             .OrderByDescending(row => row.IdentificationDetailsPending)
             .ThenBy(row => row.IdentificationState == IdentificationState.Awaiting ? 0 : 1)

@@ -14,7 +14,8 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
         int? maxAgeDays,
         IndexerQueryPurpose purpose,
         string? query,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int? offset = null)
     {
         var indexer = await context.Indexers.SingleAsync(row => row.Id == indexerId, cancellationToken);
         _ = await context.IndexerWalkStates
@@ -64,7 +65,7 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
             indexer.Url,
             indexer.ApiKey,
             DiscoveryState.DeserialiseIds(state.ResolvedCategoryIds),
-            page * NewznabGateway.PageSize,
+            offset ?? page * NewznabGateway.PageSize,
             maxAgeDays,
             query,
             cancellationToken: cancellationToken);
@@ -84,8 +85,15 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
         // included even if the user made them after historical work started.
         var manual = await context.ManualSearchIndexers.CountAsync(row => row.IndexerId == indexerId
             && (row.State == ManualSearchIndexerState.Queued || row.State == ManualSearchIndexerState.Searching || row.State == ManualSearchIndexerState.Deferred), cancellationToken);
-        var minimum = state.RecentWindowCompletedAt >= now.AddHours(-24) ? 0
-            : Math.Max(1, state.MinimumPassQueries - (currentDay ? state.MinimumQueriesSpentToday : 0));
+        var minimumProof = await context.IndexerWindows.SingleOrDefaultAsync(row => row.IndexerId == indexerId
+            && row.Days == IndexerWindowPolicy.MinimumDays, cancellationToken);
+        var measuredMinimum = Math.Max(state.MinimumPassQueries, minimumProof?.LastPassQueries ?? 0);
+        var observedReleases = await context.Releases.CountAsync(row => row.IndexerId == indexerId
+            && row.PostDate >= now.AddDays(-IndexerWindowPolicy.MinimumDays), cancellationToken);
+        measuredMinimum = Math.Max(measuredMinimum, (int)Math.Ceiling(observedReleases / 90d));
+        var minimum = minimumProof?.CompletedAt >= now.AddHours(-24)
+            && minimumProof.ProofStartedAt >= now.AddHours(-24) ? 0
+            : Math.Max(1, measuredMinimum - (currentDay ? state.MinimumQueriesSpentToday : 0));
         return IndexerQueryBudget.Plan(indexer.DailyQueryBudget, currentDay ? state.QueriesSpentToday : 0,
             now, state.HeadPagesPerPoll, minimum, wanted, manual);
     }

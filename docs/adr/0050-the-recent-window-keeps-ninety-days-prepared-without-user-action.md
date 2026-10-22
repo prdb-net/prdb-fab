@@ -103,3 +103,33 @@ Reuse retains the original answer timestamp and expires at the existing
 revalidation lifetime. It never extends authority by copying an old answer.
 Changed titles clear the checkpoint; changed account scope cannot reuse it.
 Inline documents are projected once and removed from completed checkpoints.
+
+## Amendment: staged Indexer coverage replaces the fixed daily 90-day obligation
+
+The Catalogue remains ninety days. Indexers now prove the newest **14 days**
+first, extend that pass to the initial **30-day** target, and extend up to
+**90 days** only from protected budget surplus and available downstream
+Identification capacity. An incomplete optional extension is healthy. The
+minimum takes precedence whenever its proof ages, including during expansion.
+Each range has its own durable position, start/completion timestamps and query
+cost. Extending reuses the completed shorter range's anchor rather than starting
+its minimum scan again. A pass that took longer than a day cannot claim a fresh
+proof merely because its final page just completed.
+
+Newznab offsets are not snapshots. Every resumed request overlaps ten rows and
+must rediscover the saved identity anchor before advancing. A missing anchor
+restarts that proof at the head, preserving all cached rows. Head polling stays
+at fifteen minutes beside these passes. Concurrent late visibility can still be
+repaired only by a later pass: the external interface supplies no snapshot or
+change cursor. Legacy completed 90-day proofs initialize all three ranges;
+legacy unfinished numeric offsets lack an identity anchor, so the first anchored
+proof restarts once. The previous cache and legacy progress record are retained.
+
+RecentWindow.Days is unchanged: Catalogue scope and protected cache retention
+still use ninety days. Existing older cached data is not destructively trimmed.
+Daily Identification revalidation covers the thirty-day working set and wanted
+older matches. Other retained older answers are best effort; newly discovered
+older Releases and explicit Screening/search reasons still enter Awaiting once.
+Optional history pauses when existing Identification demand exceeds two distinct
+batches or the local dual-window Governor cannot currently admit background work.
+No additional Automation permission follows from coverage.

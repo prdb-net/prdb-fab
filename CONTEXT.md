@@ -425,10 +425,13 @@ it is neither a complete filmography nor a global Video mirror.
 _Avoid_: Actor sync, Filmography import, Full backfill
 
 **Recent Window**:
-The fixed rolling ninety-day interval Sync keeps prepared from prdb and every
-enabled Indexer, including current Catalogue details and Identification, without
-the user opening a page or asking for a search. Older data remains best effort
-unless something local pins it.
+The fixed rolling ninety-day Catalogue interval Sync keeps prepared from prdb,
+including current details, without the user opening a page. Indexer coverage is
+separate: prove fourteen days first, target thirty, and extend optionally up to
+ninety only from remaining Indexer and downstream Identification capacity.
+Cached older Releases remain; their existence is not a current coverage proof.
+Identification revalidates the thirty-day working set and wanted older matches;
+other retained older answers are best effort until explicitly reconsidered.
 _Avoid_: Backfill window, Lookback, Retention period
 
 **Artwork Cache**:

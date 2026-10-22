@@ -1259,6 +1259,50 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
                 });
 
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IndexerWindowRow", b =>
+                {
+                    b.Property<Guid>("IndexerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Days")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AnchorReleaseId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LastPassQueries")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("OldestPostDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PassQueries")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PassStartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ProofStartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResumeOffset")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("IndexerId", "Days");
+
+                    b.ToTable("indexer_window", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_indexer_window_days", "Days IN (14,30,90)");
+                        });
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
             modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.InstallationRow", b =>
                 {
                     b.Property<int>("Id")
@@ -2509,6 +2553,17 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasOne("Prdb.Fab.Infrastructure.Persistence.IndexerRow", "Indexer")
                         .WithOne()
                         .HasForeignKey("Prdb.Fab.Infrastructure.Persistence.IndexerWalkStateRow", "IndexerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Indexer");
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.IndexerWindowRow", b =>
+                {
+                    b.HasOne("Prdb.Fab.Infrastructure.Persistence.IndexerRow", "Indexer")
+                        .WithMany()
+                        .HasForeignKey("IndexerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -23,9 +23,9 @@ public sealed partial class IndexerWalkTests
     private static readonly Guid IndexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000002");
 
     [Fact]
-    public async Task The_recent_window_commits_each_page_resumes_and_schedules_the_next_full_pass()
+    public async Task The_minimum_window_commits_overlapping_pages_before_extending_the_target()
     {
-        var remote = new PagingIndexer(offset => Feed(offset == 0 ? 100 : 1, offset));
+        var remote = new PagingIndexer(offset => Feed(Math.Min(100, 101 - offset), offset));
         await using var database = await DatabaseAsync(remote);
         await SeedAsync(database);
 
@@ -46,7 +46,7 @@ public sealed partial class IndexerWalkTests
 
             var result = await scope.ServiceProvider.GetRequiredService<IndexerRecentWindowRoutine>()
                 .RunAsync(IndexerId.ToString(), TestContext.Current.CancellationToken);
-            Assert.Equal(RecentWindow.CompleteEvery, result.DueIn);
+            Assert.Equal(TimeSpan.Zero, result.DueIn);
         }
 
         await using (var scope = database.Scope())
@@ -54,15 +54,16 @@ public sealed partial class IndexerWalkTests
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
             Assert.Equal(101, await context.Releases.CountAsync(TestContext.Current.CancellationToken));
             var state = await context.IndexerWalkStates.SingleAsync(TestContext.Current.CancellationToken);
-            Assert.NotNull(state.RecentWindowCompletedAt);
-            Assert.Equal(0, state.RecentWindowResumePage);
+            Assert.Null(state.RecentWindowCompletedAt);
+            Assert.NotNull((await context.IndexerWindows.SingleAsync(w => w.Days == 14, TestContext.Current.CancellationToken)).CompletedAt);
+            Assert.Null((await context.IndexerWindows.SingleAsync(w => w.Days == 30, TestContext.Current.CancellationToken)).CompletedAt);
             Assert.True(await context.Routines.AnyAsync(
                 row => row.Name == DiscoveryRoutineNames.RecentWindow,
                 TestContext.Current.CancellationToken));
         }
 
-        Assert.Equal(["0", "100"], remote.Requests.Select(uri => HttpUtility.ParseQueryString(uri.Query)["offset"]));
-        Assert.All(remote.Requests, uri => Assert.Equal("90", HttpUtility.ParseQueryString(uri.Query)["maxage"]));
+        Assert.Equal(["0", "90"], remote.Requests.Select(uri => HttpUtility.ParseQueryString(uri.Query)["offset"]));
+        Assert.All(remote.Requests, uri => Assert.Equal("14", HttpUtility.ParseQueryString(uri.Query)["maxage"]));
     }
 
     [Fact]
