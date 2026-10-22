@@ -432,7 +432,7 @@ public sealed partial class IdentificationCutTests
     }
 
     [Fact]
-    public async Task Query_budgets_are_per_indexer_and_the_walk_cannot_spend_the_sweep_share()
+    public async Task Tiny_query_budgets_preserve_head_work_and_remain_per_indexer()
     {
         var indexer = new EmptyIndexer("<?xml version=\"1.0\"?><rss><channel /></rss>");
         await using var database = await TestDatabase.CreateAsync(also: services =>
@@ -448,10 +448,10 @@ public sealed partial class IdentificationCutTests
             IndexerId, 0, null, IndexerQueryPurpose.Walk, null,
             TestContext.Current.CancellationToken)).Read);
         Assert.NotNull((await search.PageAsync(
-            IndexerId, 0, null, IndexerQueryPurpose.Walk, null,
+            IndexerId, 0, null, IndexerQueryPurpose.WantedSweep, "A Long Title",
             TestContext.Current.CancellationToken)).DeferredFor);
         Assert.NotNull((await search.PageAsync(
-            IndexerId, 0, null, IndexerQueryPurpose.WantedSweep, "A Long Title",
+            IndexerId, 0, null, IndexerQueryPurpose.Walk, null,
             TestContext.Current.CancellationToken)).Read);
         Assert.NotNull((await search.PageAsync(
             OtherIndexerId, 0, null, IndexerQueryPurpose.Walk, null,

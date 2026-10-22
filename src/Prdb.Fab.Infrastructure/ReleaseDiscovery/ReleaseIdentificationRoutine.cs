@@ -39,15 +39,8 @@ public sealed class ReleaseIdentificationRoutine(
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        var recentSince = now.AddDays(-IndexerWindowPolicy.InitialDays);
         var identifyAgainBefore = now - RecentWindow.RevalidateAfter;
-        var candidates = await context.Releases
-            .AsTracking()
-            .Where(row => row.IdentificationDetailsPending
-                    && (row.DetailRetryAt == null || row.DetailRetryAt <= now)
-                || !row.IdentificationDetailsPending && (row.IdentificationState == IdentificationState.Awaiting
-                    || (row.PostDate >= recentSince || row.VideoId != null && context.WantedVideos.Any(wanted => wanted.VideoId == row.VideoId))
-                        && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore)))
+        var candidates = await WorkSet(now).AsTracking()
             .OrderByDescending(row => row.IdentificationDetailsPending)
             .ThenBy(row => row.IdentificationState == IdentificationState.Awaiting ? 0 : 1)
             .ThenByDescending(row => row.SearchWasReason)
@@ -188,7 +181,19 @@ public sealed class ReleaseIdentificationRoutine(
         await applying.CommitAsync(cancellationToken);
         logger.LogInformation("prdb identified {Count} screened Release name(s).", releases.Count);
 
-        return RunResult.Handled(releases.Count);
+        var remains = await WorkSet(time.GetUtcNow()).AnyAsync(cancellationToken);
+        return RunResult.Handled(releases.Count, remains ? TimeSpan.Zero : Cadence);
+    }
+
+    private IQueryable<ReleaseRow> WorkSet(DateTimeOffset now)
+    {
+        var since = now.AddDays(-IndexerWindowPolicy.InitialDays);
+        var dueBefore = now - RecentWindow.RevalidateAfter;
+        return context.Releases.Where(row => row.IdentificationDetailsPending
+                && (row.DetailRetryAt == null || row.DetailRetryAt <= now)
+            || !row.IdentificationDetailsPending && (row.IdentificationState == IdentificationState.Awaiting
+                || (row.PostDate >= since || row.VideoId != null && context.WantedVideos.Any(wanted => wanted.VideoId == row.VideoId))
+                    && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= dueBefore)));
     }
 
     private static string InputKey(string title, string accountScope) => Convert.ToHexString(SHA256.HashData(
