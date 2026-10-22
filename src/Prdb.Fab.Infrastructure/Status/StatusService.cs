@@ -882,6 +882,9 @@ public sealed class StatusService(
                     PublicationsRoute));
             }
 
+            if (recentWindow.Catalogue.BaselinePhase is { } phase)
+                facts.Add(new("Catalogue baseline", $"{phase}; {recentWindow.Catalogue.BaselineDocuments} full document(s) "
+                    + $"in {recentWindow.Catalogue.BaselinePages} baseline request(s); Catalogue scope remains 90 days", "/status"));
             facts.Add(new(
                 $"Recent Window ({recentWindow.Days} days)",
                 recentWindow.Catalogue.CompletedAt is null

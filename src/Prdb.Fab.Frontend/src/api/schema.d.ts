@@ -4789,6 +4789,17 @@ export interface components {
             /** Format: date-time */
             oldestProvedAt: null | string;
             passInProgress: boolean;
+            baselinePhase?: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            baselinePages: number | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            baselineDocuments: number | string;
         };
         ReleaseCandidate: {
             /** Format: uuid */

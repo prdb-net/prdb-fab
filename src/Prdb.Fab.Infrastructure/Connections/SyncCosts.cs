@@ -24,6 +24,8 @@ public sealed class SyncCosts(TimeProvider time)
         var endpoint = path switch
         {
             "/videos/identify" => "Identify",
+            "/videos/baseline" => "VideoBaseline",
+            "/videos/identify/validate" => "IdentifyValidation",
             "/videos/batch" => "VideoDetails",
             "/rate-limit" => "RateLimit",
             "/user-identity" => "Verification",

@@ -93,6 +93,7 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<VideoDetails>();
         services.AddScoped<CatalogueAvailability>();
         services.AddScoped<VideoChangeCoverage>();
+        services.AddSingleton<VideoSyncGate>();
         services.AddScoped<VideoFeed>();
         Routine<VideoFeedRoutine>(services);
         services.AddScoped<WhatsNew>();

@@ -248,7 +248,11 @@ and extends optionally up to **90 days** only when Indexer and downstream prdb
 capacity allow it. Each range has its own durable coverage proof. A resumed page
 overlaps ten results and must rediscover its stored identity anchor; excessive
 offset drift restarts the proof while retaining cached Releases. Older cache
-rows are retained. The prdb Catalogue still covers ninety days.
+rows are retained. The prdb Catalogue still covers ninety days. SDK 0.22 reads a
+resumable full-document baseline and catches up from its server watermark through
+Video changes. Status reports scan/catch-up/live and actual document/page counts.
+A current feed carries that coverage forward; a lost cursor requests a new
+baseline. Older servers retain bounded summary/detail discovery and repair.
 
 Status shows 14/30/90-day freshness separately, the last successful head poll,
 protected remaining demand and a measured shortfall if the budget cannot sustain

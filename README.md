@@ -110,7 +110,9 @@ including use by other clients. Background Identification and repair are paced
 below essential account/file work; an oldest-slot expiry never resets a full
 allowance. Current inline Video details and exact-input answer reuse reduce
 metered requests. Identify answers survive interrupted detail reads. Catalogue
-scope remains ninety days; routine revalidation covers the 30-day Indexer
+scope remains ninety days: a resumable full-document baseline hands off to
+Video changes, avoiding repeated daily discovery while coverage is current.
+Older servers keep governed summary/detail repair. Routine revalidation covers the 30-day Indexer
 working set and wanted older matches. Status shows actual 14/30/90 proofs,
 remaining distinct inputs, request/byte costs and the reason work waits. It
 reports an unsatisfied minimum or a measured capacity shortfall; incomplete

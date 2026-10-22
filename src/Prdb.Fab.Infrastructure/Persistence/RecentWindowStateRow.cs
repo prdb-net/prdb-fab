@@ -9,6 +9,16 @@ public sealed class RecentWindowStateRow
     public const int TheOnlyRow = 1;
 
     public int Id { get; set; } = TheOnlyRow;
+    // scan -> catch-up -> live. Compatibility uses the older governed reader.
+    public string? BaselinePhase { get; set; }
+    public DateTimeOffset? BaselineFrom { get; set; }
+    public DateTimeOffset? BaselineBefore { get; set; }
+    public DateTimeOffset? BaselineChangesSince { get; set; }
+    public string? BaselineCursor { get; set; }
+    public Guid? BaselineExceptionalVideoId { get; set; }
+    public string? BaselineExceptionalCursor { get; set; }
+    public int BaselinePages { get; set; }
+    public int BaselineDocuments { get; set; }
     public int CatalogueResumePage { get; set; } = 1;
     public DateTimeOffset? CataloguePassStartedAt { get; set; }
     public DateTimeOffset? CatalogueCompletedAt { get; set; }

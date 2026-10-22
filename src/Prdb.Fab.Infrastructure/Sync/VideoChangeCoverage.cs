@@ -46,6 +46,7 @@ public sealed class VideoChangeCoverage(FabDbContext context, TimeProvider time)
     {
         var state = await context.VideoChangeState.AsTracking().SingleOrDefaultAsync(token);
         if (state is null || state.BaselineCompletedAt is not null) return;
+        if (await context.RecentWindowState.AnyAsync(s => s.BaselinePhase == "scan", token)) return;
         state.BaselineCompletedAt = time.GetUtcNow();
         await context.SaveChangesAsync(token);
     }

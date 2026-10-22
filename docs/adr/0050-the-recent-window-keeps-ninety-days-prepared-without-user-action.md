@@ -142,3 +142,31 @@ titles are optimistic concurrency tokens: a response cannot be attached after
 the submitted title changed in another lane. A changed title explicitly clears
 all derived evidence and acquisition state, including fields a concurrent
 Identify response may just have written.
+
+## Amendment: full-document Catalogue baseline and lossless change handoff
+
+SDK 0.22's bounded full-document baseline replaces summary paging plus detail
+hydration for the Catalogue's initial Recent Window. The creation range is
+fixed, half-open and ninety days wide. Each page and its opaque cursor, original
+server `changesSince` watermark and explicit scan/catch-up/live phase commit in
+one SQLite transaction. A lost response replays only the uncommitted page.
+Typed oversized-document escapes keep their ID and continuation durably until
+the ordinary governed detail route succeeds or reports 404; the subsequent
+change feed resolves disappearance and merges.
+
+The Video feed pauses during the scan, then starts inclusively at that server
+watermark with no tie ID. Each change page and its cursor commit together;
+older revisions cannot resurrect known tombstones. Known merge survivors are
+read through governed detail batches. Only after a complete inventory may
+missing in-range rows be marked unavailable; metadata, Library identities and
+older cached rows remain. The baseline and feed serialize their handoff across
+lanes without holding a database transaction across HTTP.
+
+A completed inventory plus a current Video feed proves rolling Catalogue
+membership and details; it replaces unconditional daily rediscovery. Loss of
+that feed cursor, or resumption beyond tombstone retention, invalidates coverage
+and requests a new inventory. A current baseline does not claim coverage for an
+unread pinned older row. Servers without the baseline route retain bounded,
+governed summary/detail discovery and repair, retrying capability on the next
+daily pass. Status names the phase and counts actual full documents and requests.
+Indexer 14/30/90 coverage and all acquisition permissions remain independent.

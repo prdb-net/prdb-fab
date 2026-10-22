@@ -91,3 +91,26 @@ The final migration is one additive upgrade from the released schema. The
 intermediate development migrations were consolidated before publication;
 existing cached Releases and completed legacy proofs survive. An unfinished
 legacy offset lacks an identity anchor and restarts its coverage proof once.
+
+## Published full-document baseline
+
+```
+dotnet test --project tests/Prdb.Fab.Infrastructure.Tests -- --filter-class '*VideoBaselineTests'
+```
+
+The generated SDK 0.22 request builders, real Governor/transport and SQLite
+writers receive 1,000 complete synthetic documents in **one baseline request**,
+then one empty change page establishes live coverage. Summary discovery at 100
+rows/page plus hydration at 50 IDs/request needs **30 requests** for those same
+1,000 new documents, before its equivalent change-feed proof. With a fixed
+100 ms transport latency, those document-transfer round trips alone represent
+100 ms versus 3,000 ms; this is a request-latency model, not a production or SQL
+wall-clock speed claim. The document payload remains complete on both paths.
+
+The fixture also checks lost responses and scope/cursor replay after restart,
+transaction rollback after a partially written page, edits/inserts/deletions and
+merge survivors during catch-up, typed 413 escapes across quota pauses and 404,
+backwards server bounds, stale replay against a tombstone, and lost live cursors.
+No immediate repair duplicates documents covered by the finished inventory.
+The compatibility reader's existing tests still prove the ninety-day boundary
+and bounded resumption when an older server lacks the operation.

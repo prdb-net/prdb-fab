@@ -7192,6 +7192,30 @@
           },
           "passInProgress": {
             "type": "boolean"
+          },
+          "baselinePhase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "baselinePages": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "baselineDocuments": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },

@@ -16,13 +16,14 @@ public sealed class RecentWindowCoverage(FabDbContext context, TimeProvider time
         var freshSince = now - RecentWindow.StaleAfter;
         var recentSince = RecentWindow.BeginsAt(now);
         var dueBefore = now - RecentWindow.RevalidateAfter;
-        var catalogue = await context.RecentWindowState
-            .Select(row => new RecentWindowSource(
-                row.CatalogueCompletedAt != null && row.CatalogueCompletedAt >= freshSince,
-                row.CatalogueCompletedAt,
-                row.CatalogueOldestCreatedAt,
-                row.CataloguePassStartedAt != null))
-            .SingleAsync(cancellationToken);
+        var catalogueState = await context.RecentWindowState.SingleAsync(cancellationToken);
+        var live = catalogueState.BaselinePhase == "live" && await changes.FreshAsync(cancellationToken);
+        var catalogue = new RecentWindowSource(
+            live || catalogueState.BaselinePhase is not ("scan" or "catch-up" or "live")
+                && catalogueState.CatalogueCompletedAt >= freshSince,
+            catalogueState.CatalogueCompletedAt, catalogueState.CatalogueOldestCreatedAt,
+            catalogueState.BaselinePhase is "scan" or "catch-up" || catalogueState.CataloguePassStartedAt != null,
+            catalogueState.BaselinePhase, catalogueState.BaselinePages, catalogueState.BaselineDocuments);
 
         var legacyIndexers = await (from indexer in context.Indexers
                               join state in context.IndexerWalkStates on indexer.Id equals state.IndexerId
@@ -104,7 +105,10 @@ public sealed record RecentWindowSource(
     bool Complete,
     DateTimeOffset? CompletedAt,
     DateTimeOffset? OldestProvedAt,
-    bool PassInProgress);
+    bool PassInProgress,
+    string? BaselinePhase = null,
+    int BaselinePages = 0,
+    int BaselineDocuments = 0);
 
 public sealed record RecentWindowIndexer(
     Guid Id,
