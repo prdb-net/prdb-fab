@@ -103,7 +103,7 @@
 }
 
 .manualSearch select,
-.manualSearch button {
+.manualSearch form button {
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -111,18 +111,18 @@
   padding: 0.5rem 0.7rem;
 }
 
-.manualSearch button {
+.manualSearch form button {
   cursor: pointer;
 }
 
-.manualSearchHeading button {
+.manualSearchHeading form button {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--surface);
   font-weight: 700;
 }
 
-.manualSearch button:disabled {
+.manualSearch form button:disabled {
   cursor: default;
   opacity: 0.65;
 }
@@ -384,7 +384,7 @@
 .manualSearch { background: transparent; border-color: var(--border); }
 .manualSearchHeading h2 { font-size: 1rem; }
 .manualSearchHeading p { color: var(--text-quiet); font-size: .88rem; }
-.manualSearchHeading button { background: var(--surface-raised); color: var(--text); border-color: var(--border); }
+.manualSearchHeading form button { background: var(--surface-raised); color: var(--text); border-color: var(--border); }
 .acquisitionHeading > div:first-child { min-width: 0; overflow-wrap: anywhere; }
 .acquisitionHeading h2 { font-size: 1.25rem; }
 .boundary { background: transparent; padding: 0; border: 0; color: var(--text-quiet); font-size: .88rem; }
@@ -398,3 +398,10 @@
   .filters { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
   .filters select { min-width: 0; width: 100%; }
 }
+
+.heading { margin-bottom: 1.25rem; }
+.heading > div:first-child, .manualSearchHeading > div:first-child { flex: 1; min-width: 0; }
+.count { white-space: nowrap; }
+.manualSearchHeading form { align-items: center; }
+.manualSearch select, .manualSearch form button, .filters select { min-height: 44px; }
+@media (max-width: 760px) { .manualSearchHeading form, .manualSearchHeading > div:first-child { width: 100%; } .manualSearchHeading select, .manualSearchHeading form > button { width: 100%; } }

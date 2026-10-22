@@ -427,3 +427,6 @@
 @media (max-width: 600px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+.filters .filterField { display: grid; gap: .35rem; min-width: 0; }
+.filterField select { min-height: 44px; max-width: 100%; }

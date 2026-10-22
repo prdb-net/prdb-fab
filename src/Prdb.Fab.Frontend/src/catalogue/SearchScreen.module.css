@@ -136,3 +136,7 @@
   .heading p { font-size: .8rem; }
   .heading > span { position: absolute; right: 0; top: .5rem; padding: 0; }
 }
+
+.heading > div:first-child { flex: 1; min-width: 0; width: auto; }
+.heading h1 { padding-right: 0; }
+.heading > span { position: static; flex: none; padding-top: .6rem; }

@@ -1,3 +1,4 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -52,7 +53,7 @@ export function ReleaseScreen() {
   if (!context) {
     return (
       <main className={styles.screen}>
-        <h1>Releases</h1>
+        <InfoHelp label="Releases" heading={<h1>Releases</h1>}>Releases come from your local Indexer Cache. Background sync expands coverage as query budgets allow. <Link to="/status">View sync status</Link>.</InfoHelp>
         <p>Open this table from a Video, Site, or Actor.</p>
       </main>
     )
@@ -124,7 +125,7 @@ function ReleaseTable({
       </Link>
       <div className={styles.heading}>
         <div>
-          <h1>Releases</h1>
+          <InfoHelp label="Releases" heading={<h1>Releases</h1>}>Releases come from your local Indexer Cache. Background sync expands coverage as query budgets allow. <Link to="/status">View sync status</Link>.</InfoHelp>
           <p className={styles.context}>
             For {page.context.kind.toLowerCase()} <strong>{page.context.title}</strong>
           </p>
@@ -137,20 +138,16 @@ function ReleaseTable({
           <div>
             <h2>Already in your Library</h2>
             <p>
-              This Video is stored in {heldQualities.join(', ')}. You do not need to
-              download it again unless you want another version.
+              Stored in {heldQualities.join(', ')}. Download only if you want another version.
             </p>
           </div>
           <Link to={`/library/${page.context.prdbId}`}>View in Library</Link>
         </section>
       )}
 
-      <p className={styles.boundary}>
-        {page.recentWindow.complete
-          ? `The latest ${page.recentWindow.days} Catalogue days are ready. Indexer history expands as capacity permits.`
-          : 'Initial sync is still filling. More Releases may appear.'}
-        {' '}<Link to="/status">View Status</Link>
-      </p>
+      {!page.recentWindow.complete && <p className={styles.boundary}>
+        Initial sync is still filling. More Releases may appear. <Link to="/status">View Status</Link>
+      </p>}
 
       {page.acquisition && (
         <AcquisitionSummary videoId={page.context.prdbId} acquisition={page.acquisition} />
@@ -364,12 +361,9 @@ function ManualSearchPanel({ videoId, held }: { videoId: string; held: boolean }
     <section className={styles.manualSearch}>
       <div className={styles.manualSearchHeading}>
         <div>
-          <h2>{held ? 'Find another Release' : 'Search Indexers'}</h2>
-          <p>
-            {held
-              ? 'Search for an alternative version.'
-              : 'Missing a Release? Search your Indexers. Daily query budgets still apply.'}
-          </p>
+          <InfoHelp label="Search Indexers" heading={<h2>{held ? 'Find another Release' : 'Search Indexers'}</h2>}>
+            Search your enabled Indexers for this Video. Results appear here as they are identified. Daily query budgets still apply.
+          </InfoHelp>
         </div>
         <form onSubmit={(event) => {
           event.preventDefault()
@@ -482,7 +476,7 @@ function AcquisitionSummary({
               <span className={styles.secondary}>Attempt {spent + 1} of {budget}</span>
             </p>
           ) : (
-            <p>No unconsumed eligible Release is currently available.</p>
+            <p>No unused Release is ready to download.</p>
           )}
         </div>
         <div className={styles.acquisitionActions}>
@@ -493,13 +487,13 @@ function AcquisitionSummary({
               label={held ? 'Download another Release' : 'Download best Release'}
             />
           )}
-          <button
+          {spent > 0 && <button
             type="button"
-            disabled={spent === 0 || ask.isPending || reset.isPending}
+            disabled={ask.isPending || reset.isPending}
             onClick={() => ask.mutate()}
           >
             {ask.isPending ? 'Checking…' : 'Reset Download history'}
-          </button>
+          </button>}
         </div>
       </div>
       {ask.data && ask.data.outcome !== 'Ready' && (

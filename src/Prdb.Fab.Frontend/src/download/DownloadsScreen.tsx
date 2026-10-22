@@ -1,3 +1,4 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -141,15 +142,10 @@ function DownloadList({
     <main className={`${styles.screen} ${selectedId ? styles.hasSelection : ''}`}>
       <div className={styles.heading}>
         <div>
-          <h1>Downloads</h1>
-          <p>Local history of what prdb-fab submitted and still follows in SABnzbd.</p>
+          <InfoHelp label="Downloads" heading={<h1>Downloads</h1>}>fab follows jobs submitted to SABnzbd. Stop following ends local tracking; it does not stop or delete the SABnzbd job.</InfoHelp>
+          <p>Track progress and browse your Download history.</p>
         </div>
         <span className={styles.total}>{total} Downloads</span>
-      </div>
-
-      <div className={styles.boundary}>
-        prdb-fab reads SABnzbd but never retries or deletes a SABnzbd job. Stop following changes
-        only this local record.
       </div>
 
       <div className={styles.toolbar}>

@@ -148,11 +148,11 @@ export function ReviewQueueScreen() {
     </header>
 
     {(globalCount > 0 || reason) && <div className={styles.filters}>
-      <label htmlFor="review-reason">Reason</label>
+      <label className={styles.filterField} htmlFor="review-reason">Reason
       <select id="review-reason" name="reason" className={styles.field} value={reason} onChange={(event) => setReason(event.target.value as ArrivingFileReason | '')}>
         <option value="">All reasons</option>
         {reasons.map((value) => <option value={value} key={value}>{reasonLabels[value]}</option>)}
-      </select>
+      </select></label>
     </div>}
 
     {visibleIds.length > 0 && <div className={styles.selectionBar}>
@@ -184,7 +184,7 @@ export function ReviewQueueScreen() {
       <strong>{globalCount > 0 ? 'No Arriving Files match this reason.' : 'Nothing needs review.'}</strong>
       <p>{globalCount > 0
         ? 'Choose another reason to see the files waiting for a decision.'
-        : 'Files that cannot be filed automatically appear here. Nothing needs a decision now.'}</p>
+        : 'Files that need your decision will appear here.'}</p>
       {reason && <p><button className={styles.button} type="button" onClick={() => setReason('')}>Clear reason filter</button></p>}
       {globalCount === 0 && <p><Link to="/library">View Library</Link> · <Link to="/status">Check Status</Link></p>}
     </div>}

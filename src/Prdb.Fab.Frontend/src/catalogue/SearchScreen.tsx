@@ -1,3 +1,4 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { Loaded } from '../ui/Loaded.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
@@ -102,8 +103,8 @@ export function SearchScreen() {
     <main className={styles.screen} aria-busy={videos.isFetching}>
       <div className={styles.heading}>
         <div>
-          <h1>Search</h1>
-          <p>Find your next Video in the Catalogue.</p>
+          <InfoHelp label="Catalogue search" heading={<h1>Search</h1>}>Search reads the locally synced Catalogue. To find more Releases for a Video, open its Release page and choose Search Indexers.</InfoHelp>
+          <p>Find Videos in your Catalogue.</p>
         </div>
         {total > 0 && <span>{total.toLocaleString('en')} videos</span>}
       </div>
@@ -130,8 +131,6 @@ export function SearchScreen() {
           </select>
         </label>
       </div>
-
-      <p className={styles.summary}>{summary(filter, sort, search)}</p>
 
       <PageNotice page={page} pages={pages} pending={videos.isFetching} previousPage={videos.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
 
@@ -177,10 +176,10 @@ function choice<T extends string>(supplied: string | null, choices: readonly T[]
 
 function filterLabel(filter: CatalogueVideoFilter): string {
   const labels: Record<CatalogueVideoFilter, string> = {
-    Available: 'Available to acquire',
-    All: 'All locally known',
-    DownloadReady: 'Best Release ready',
-    NeedsSearch: 'Needs an Indexer search',
+    Available: 'Available',
+    All: 'All Videos',
+    DownloadReady: 'Download ready',
+    NeedsSearch: 'Needs search',
     Wanted: 'Wanted',
     Held: 'In the Library',
     Outstanding: 'Download outstanding',
@@ -198,12 +197,4 @@ function sortLabel(sort: CatalogueVideoSort): string {
     TitleDescending: 'Title Z–A',
   }
   return labels[sort]
-}
-
-function summary(filter: CatalogueVideoFilter, sort: CatalogueVideoSort, search: string): string {
-  const population = filterLabel(filter).toLowerCase()
-  const order = sortLabel(sort).toLowerCase()
-  return search
-    ? `Showing ${population} matching “${search}”, sorted by ${order}.`
-    : `Showing ${population}, sorted by ${order}.`
 }

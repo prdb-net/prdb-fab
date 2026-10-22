@@ -1,0 +1,15 @@
+.heading { margin-bottom: 1.25rem; overflow-wrap: anywhere; }
+.metadata { display: grid; gap: 1rem; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); margin: 0 0 .75rem; }
+.metadata > div, .fileFacts > div { min-width: 0; }
+.metadata dt, .fileFacts dt { color: var(--text-quiet); font-size: .75rem; margin-bottom: .25rem; }
+.metadata dd, .fileFacts dd { margin: 0; overflow-wrap: anywhere; }
+.count { color: var(--text-quiet); font-size: .85em; font-weight: 400; }
+.files { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr)); gap: 1rem; list-style: none; padding: 0; }
+.files > li { min-width: 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-raised); }
+.files h3 { font-size: 1rem; margin: 0 0 1rem; color: var(--accent); }
+.fileFacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: 0 0 1rem; }
+.path { border-top: 1px solid var(--border); padding-top: .5rem; color: var(--text-quiet); font-size: .85rem; }
+.path summary { cursor: pointer; padding: .35rem 0; }
+.path code { display: block; overflow-wrap: anywhere; margin-top: .5rem; color: var(--text); }
+@media (max-width: 700px) { .metadata { grid-template-columns: 1fr 1fr; } .metadata > div:first-child { grid-column: 1 / -1; } .fileFacts { grid-template-columns: 1fr 1fr; } }
+@media (pointer: coarse) { .path summary { min-height: 44px; align-content: center; } }

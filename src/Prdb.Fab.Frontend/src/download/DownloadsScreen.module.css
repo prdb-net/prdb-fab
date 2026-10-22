@@ -605,3 +605,7 @@
   overflow-wrap: anywhere;
   padding: 0.4rem 0.55rem;
 }
+
+.heading { margin-bottom: 1.25rem; }
+.heading > div:first-child { flex: 1; min-width: 0; }
+@media (pointer: coarse) { .segment { min-height: 44px; } }

@@ -1,3 +1,4 @@
+import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -112,12 +113,12 @@ export function SetPasswordScreen() {
         to recover your settings and login password.
       </p>
 
-      <p className={styles.note}>
+      <div className={styles.note}><InfoHelp label="If you forget your password">
         If you forget the password, start the container once with{' '}
         <code>FAB_RESET_PASSWORD=true</code>. This clears the password and all
         sessions while keeping your keys, settings and Library. Remove the
         variable and restart before setting a new password.
-      </p>
+      </InfoHelp></div>
     </main>
   )
 }
