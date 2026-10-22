@@ -110,8 +110,6 @@ export function WantedScreen() {
             )}
           />
 
-
-
           {pages > 1 && !unavailable && (
             <nav className={styles.pager}>
               <button type="button" onClick={() => goTo(page - 1)} disabled={wanted.isFetching || shownPage <= 1}>

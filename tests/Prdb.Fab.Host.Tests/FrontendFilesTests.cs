@@ -49,10 +49,21 @@ public sealed class FrontendFilesTests
                 Assert.True(response.Headers.CacheControl?.NoCache);
             }
 
-            // A revalidated entry document points at the current release.
-            await File.WriteAllTextAsync(Path.Combine(root, "index.html"), "<html>second release with changed assets</html>", TestContext.Current.CancellationToken);
+            // An upgrade must not reuse the old entry document even when the
+            // browser offers its previous validator. Its new asset is served
+            // under its new content hash, independently of the old cache entry.
             client.DefaultRequestHeaders.AcceptEncoding.Clear();
-            Assert.Contains("second release", await client.GetStringAsync("/settings/account", TestContext.Current.CancellationToken));
+            using var previous = await client.GetAsync("/settings/account", TestContext.Current.CancellationToken);
+            Assert.NotNull(previous.Headers.ETag);
+            await File.WriteAllTextAsync(Path.Combine(root, "assets", "index-Zyxw9876.js"), "console.log('new release');", TestContext.Current.CancellationToken);
+            await File.WriteAllTextAsync(Path.Combine(root, "index.html"), "<html><script src='/assets/index-Zyxw9876.js'></script></html>", TestContext.Current.CancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/settings/account");
+            request.Headers.IfNoneMatch.Add(previous.Headers.ETag);
+            using var upgraded = await client.SendAsync(request, TestContext.Current.CancellationToken);
+            Assert.Equal(HttpStatusCode.OK, upgraded.StatusCode);
+            Assert.True(upgraded.Headers.CacheControl?.NoCache);
+            Assert.Contains("index-Zyxw9876.js", await upgraded.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+            Assert.Equal("console.log('new release');", await client.GetStringAsync("/assets/index-Zyxw9876.js", TestContext.Current.CancellationToken));
 
             using var api = await client.GetAsync("/api/access/state", TestContext.Current.CancellationToken);
             Assert.Empty(api.Content.Headers.ContentEncoding);

@@ -5154,7 +5154,6 @@ export interface components {
             label: string;
             value: string;
             route: null | string;
-            deferral?: null | components["schemas"]["StatusDeferral"];
         };
         StatusLink: {
             label: string;

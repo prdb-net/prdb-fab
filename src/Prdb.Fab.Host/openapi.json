@@ -8899,16 +8899,6 @@
               "null",
               "string"
             ]
-          },
-          "deferral": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/StatusDeferral"
-              }
-            ]
           }
         }
       },

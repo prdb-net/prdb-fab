@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json.Serialization;
 
@@ -6,7 +7,6 @@ using Microsoft.OpenApi;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
-using Prdb.Fab.Host.Frontend;
 
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Host.Access;
@@ -16,6 +16,7 @@ using Prdb.Fab.Host.Backup;
 using Prdb.Fab.Host.Catalogue;
 using Prdb.Fab.Host.Connections;
 using Prdb.Fab.Host.Filing;
+using Prdb.Fab.Host.Frontend;
 using Prdb.Fab.Host.Logging;
 using Prdb.Fab.Host.ReleaseDiscovery;
 using Prdb.Fab.Host.Reporting;
@@ -70,6 +71,8 @@ builder.Services.AddFabBackup();
 
 // Only the public frontend enters the compression branch below.
 builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
+builder.Services.Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.Optimal);
+builder.Services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Optimal);
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
 // request gets 401 rather than a redirect.

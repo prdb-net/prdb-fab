@@ -1066,7 +1066,6 @@ public sealed record StatusStage(string Id, string Title, IReadOnlyList<StatusRo
 public sealed record StatusFact(string Label, string Value, string? Route)
 {
     public string? Route { get; init; } = StatusRoutes.Pointing(Route);
-    public StatusDeferral? Deferral { get; init; }
 }
 /// <summary>
 /// Where a Gap or a Brake sends somebody, and where they come back to.

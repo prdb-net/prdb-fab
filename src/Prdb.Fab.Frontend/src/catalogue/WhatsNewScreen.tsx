@@ -113,8 +113,6 @@ export function WhatsNewScreen() {
             )}
           />
 
-
-
           {pages > 1 && !unavailable && (
             <nav className={styles.pager}>
               <button type="button" onClick={() => goTo(page - 1)} disabled={videos.isFetching || shownPage <= 1}>
