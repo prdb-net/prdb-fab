@@ -113,7 +113,7 @@ export function WhatsNewScreen() {
             )}
           />
 
-          <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
+
 
           {pages > 1 && !unavailable && (
             <nav className={styles.pager}>
@@ -130,6 +130,7 @@ export function WhatsNewScreen() {
           )}
         </>
       )}
+      <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
     </main>
   )
 }

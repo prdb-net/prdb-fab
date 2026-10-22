@@ -110,7 +110,7 @@ export function WantedScreen() {
             )}
           />
 
-          <PreviewOverlay returnTo={here} videos={wanted.data?.videos ?? []} />
+
 
           {pages > 1 && !unavailable && (
             <nav className={styles.pager}>
@@ -127,6 +127,7 @@ export function WantedScreen() {
           )}
         </>
       )}
+      <PreviewOverlay returnTo={here} videos={wanted.data?.videos ?? []} />
     </main>
   )
 }
