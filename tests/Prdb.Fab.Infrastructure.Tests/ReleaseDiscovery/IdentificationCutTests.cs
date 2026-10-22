@@ -230,7 +230,7 @@ public sealed partial class IdentificationCutTests
         Assert.True(IsNullOrMissing(files[0], "filesize"));
         Assert.True(IsNullOrMissing(files[0], "osHash"));
         Assert.True(IsNullOrMissing(files[0], "pHash"));
-        Assert.False(body.RootElement.GetProperty("includeVideoDetails").GetBoolean());
+        Assert.True(body.RootElement.GetProperty("includeVideoDetails").GetBoolean());
     }
 
     [Fact]

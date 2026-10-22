@@ -21,6 +21,8 @@ public sealed class ReleaseIdentificationRoutine(
     PrdbGateway prdb,
     VideoDetails details,
     CatalogueRows catalogue,
+    VideoChangeCoverage coverage,
+    PrdbGovernor governor,
     TimeProvider time,
     ILogger<ReleaseIdentificationRoutine> logger) : IRoutine
 {
@@ -74,7 +76,7 @@ public sealed class ReleaseIdentificationRoutine(
             (client, token) => client.Videos.Identify.PostAsync(
                 new IdentifyVideosRequest
                 {
-                    IncludeVideoDetails = false,
+                    IncludeVideoDetails = true,
                     Files =
                     [
                         .. unasked.Select(release => new IdentifyVideoFileDto
@@ -113,6 +115,8 @@ public sealed class ReleaseIdentificationRoutine(
                 {
                     _ = Confidence(answer.Confidence);
                     _ = Rung(answer.MatchedBy);
+                    if (answer.Video?.Id is { } inlineId && inlineId != answer.VideoId)
+                        throw new InvalidOperationException("prdb returned inline details for a different Video.");
                 }
                 release.IdentificationAnswerJson = await KiotaJsonSerializer.SerializeAsStringAsync(answer, false, cancellationToken: cancellationToken);
                 release.IdentificationDetailsPending = true;
@@ -137,7 +141,16 @@ public sealed class ReleaseIdentificationRoutine(
             .Distinct()
             .ToArray();
 
-        await FetchDetailsAsync(apiKey, referencedVideos, releases.Min(row => row.LastIdentifiedAt) ?? now, cancellationToken);
+        foreach (var inline in answers.Select(answer => answer.Video).OfType<VideoDetailDto>()
+            .GroupBy(detail => detail.Id).Select(group => group.First()))
+        {
+            await details.WriteAsync(inline, cancellationToken);
+        }
+        var current = await CurrentDetailsAsync(referencedVideos, cancellationToken);
+        var missing = referencedVideos.Except(current).ToArray();
+        governor.Costs.Identification(unasked.Count, 0, current.Count);
+        await FetchDetailsAsync(apiKey, missing, now, cancellationToken);
+        current = await CurrentDetailsAsync(referencedVideos, cancellationToken);
 
         // A candidate can be omitted by a concurrent upstream deletion. Keep
         // the outside id as a stub so the Candidate edge and its repair pin are
@@ -160,8 +173,7 @@ public sealed class ReleaseIdentificationRoutine(
         foreach (var release in releases)
         {
             var answer = byReference[release.Id.ToString(CultureInfo.InvariantCulture)];
-            if (answer.VideoId is { } matched && !await context.CatalogueVideos.AnyAsync(
-                row => row.PrdbId == matched && row.Available && row.LastReadAt >= (release.LastIdentifiedAt ?? now), cancellationToken))
+            if (answer.VideoId is { } matched && !current.Contains(matched))
             {
                 release.DetailRetryAt = now.AddHours(1);
                 continue;
@@ -176,6 +188,17 @@ public sealed class ReleaseIdentificationRoutine(
         logger.LogInformation("prdb identified {Count} screened Release name(s).", releases.Count);
 
         return RunResult.Handled(releases.Count);
+    }
+
+    private async Task<List<Guid>> CurrentDetailsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        var fresh = await coverage.FreshAsync(cancellationToken);
+        var baseline = fresh ? await context.VideoChangeState.Select(row => (DateTimeOffset?)row.LowerBoundAt)
+            .SingleOrDefaultAsync(cancellationToken) : null;
+        var since = time.GetUtcNow() - RecentWindow.RevalidateAfter;
+        return await context.CatalogueVideos.Where(row => ids.Contains(row.PrdbId) && row.Available
+                && row.LastReadAt != default && (row.LastReadAt > since || fresh && row.ChangesBaselineAt == baseline))
+            .Select(row => row.PrdbId).ToListAsync(cancellationToken);
     }
 
     private async Task FetchDetailsAsync(

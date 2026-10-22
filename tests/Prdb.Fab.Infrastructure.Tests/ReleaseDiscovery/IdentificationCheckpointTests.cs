@@ -75,3 +75,64 @@ public sealed partial class IdentificationCutTests
         Assert.Single(socket.AskingFor("/videos/identify"));
     }
 }
+
+public sealed partial class IdentificationCutTests
+{
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Inline_or_fresh_cached_detail_avoids_a_metered_followup(bool inline)
+    {
+        var videoJson = $$"""{ "id":"{{MatchedVideo}}", "title":"Prepared Video", "actors":[], "images":[], "preNames":[] }""";
+        var socket = new FakePrdbApi().Answers("/videos/identify",
+            "{\"results\":[{\"ref\":\"1\",\"videoId\":\"" + MatchedVideo + "\",\"confidence\":4,\"matchedBy\":3"
+            + (inline ? ",\"video\":" + videoJson : "") + "}]}");
+        await using var database = await TestDatabase.CreateAsync(prdb: socket);
+        await SeedIndexerAsync(database, IndexerId);
+        await SetPrdbKeyAsync(database);
+        await using (var seed = database.Scope())
+        {
+            var context = seed.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Releases.Add(Release("inline", "An.Exact.Release", IdentificationState.Awaiting, database.Time.GetUtcNow()));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            if (!inline)
+                await seed.ServiceProvider.GetRequiredService<Prdb.Fab.Infrastructure.Sync.VideoDetails>().WriteAsync(
+                    new Prdb.Sdk.Generated.Models.VideoDetailDto { Id = MatchedVideo, Title = "Prepared Video" },
+                    TestContext.Current.CancellationToken);
+        }
+        await using var run = database.Scope();
+        await run.ServiceProvider.GetRequiredService<ReleaseIdentificationRoutine>().RunAsync(null, TestContext.Current.CancellationToken);
+        Assert.Empty(socket.AskingFor("/videos/batch"));
+        var release = await run.ServiceProvider.GetRequiredService<FabDbContext>().Releases.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(IdentificationState.Matched, release.IdentificationState);
+        Assert.Equal(IdentificationConfidence.Exact, release.Confidence);
+        Assert.False(release.IdentificationDetailsPending);
+        Assert.Equal(1, database.Services.GetRequiredService<PrdbGovernor>().Costs.Snapshot().DetailFetchesAvoided);
+    }
+
+    [Fact]
+    public async Task An_omitted_match_cannot_use_stale_details_as_current_evidence()
+    {
+        var socket = new FakePrdbApi().Answers("/videos/identify",
+            "{\"results\":[{\"ref\":\"1\",\"videoId\":\"" + MatchedVideo + "\",\"confidence\":4,\"matchedBy\":3}]}")
+            .Answers("/videos/batch", "[]");
+        await using var database = await TestDatabase.CreateAsync(prdb: socket);
+        await SeedIndexerAsync(database, IndexerId);
+        await SetPrdbKeyAsync(database);
+        await using (var seed = database.Scope())
+        {
+            var context = seed.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.CatalogueVideos.Add(new CatalogueVideoRow { PrdbId = MatchedVideo, Title = "Stale", LastReadAt = database.Time.GetUtcNow().AddDays(-2) });
+            context.Releases.Add(Release("omitted", "An.Exact.Release", IdentificationState.Awaiting, database.Time.GetUtcNow()));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        await using var run = database.Scope();
+        await run.ServiceProvider.GetRequiredService<ReleaseIdentificationRoutine>().RunAsync(null, TestContext.Current.CancellationToken);
+        var release = await run.ServiceProvider.GetRequiredService<FabDbContext>().Releases.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.True(release.IdentificationDetailsPending);
+        Assert.Equal(IdentificationState.Awaiting, release.IdentificationState);
+        Assert.False(release.AutomationPending);
+        Assert.Empty((await run.ServiceProvider.GetRequiredService<ReleaseRankings>().ForVideoAsync(MatchedVideo, false, TestContext.Current.CancellationToken))!.Ranked);
+        Assert.Single(socket.AskingFor("/videos/batch"));
+    }
+}
