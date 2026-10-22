@@ -51,7 +51,6 @@ export function LibraryCardActions({ entry, returnTo }: { entry: LibraryCard; re
         queries.invalidateQueries({ queryKey: ['library'] }),
         queries.invalidateQueries({ queryKey: ['library-entry', entry.id] }),
         queries.invalidateQueries({ queryKey: ['catalogue'] }),
-        queries.invalidateQueries({ queryKey: ['catalogue-videos'] }),
         queries.invalidateQueries({ queryKey: ['releases'] }),
         queries.invalidateQueries({ queryKey: ['operation-log'] }),
         queries.invalidateQueries({ queryKey: ['reporting-settings'] }),

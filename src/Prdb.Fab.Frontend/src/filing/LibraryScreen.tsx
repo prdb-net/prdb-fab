@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
@@ -35,7 +36,7 @@ export function LibraryScreen() {
   const quality = parameters.get('quality') ?? ''
   const confirmed = choice(parameters.get('confirmed'), confirmations, '')
   const sort = choice(parameters.get('sort'), sorts, 'FiledAtDescending')
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const library = useQuery({
     queryKey: ['library', search, site, actor, quality, confirmed, sort, page],
     queryFn: () => readLibrary({ search, site, actor, quality, confirmed, sort, page }),
@@ -118,15 +119,17 @@ export function LibraryScreen() {
             {data?.filters.qualities.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
-        <label>
-          Sort by
-          <label className={styles.label} htmlFor="library-confirmed">Verification</label>
+        <label htmlFor="library-confirmed">
+          Verification
           <select id="library-confirmed" name="confirmed" className={styles.field} value={confirmed} onChange={(event) => setFilter('confirmed', event.target.value)}>
             <option value="">Everything held</option>
             <option value="no">Not confirmed</option>
             <option value="yes">Confirmed</option>
           </select>
 
+        </label>
+        <label htmlFor="library-sort">
+          Sort by
           <select id="library-sort" name="sort" className={styles.field} value={sort} onChange={(event) => setFilter('sort', event.target.value)}>
             {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
           </select>

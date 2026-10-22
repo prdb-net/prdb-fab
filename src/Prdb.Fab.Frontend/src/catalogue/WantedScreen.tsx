@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
 
@@ -9,6 +10,7 @@ import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
 import { PreviewOverlay } from './Preview.tsx'
 import { usePreview } from './preview.ts'
+import { Loaded } from '../ui/Loaded.tsx'
 
 /**
  * The wanted list, and where setting up ends.
@@ -26,7 +28,7 @@ export function WantedScreen() {
   // ADR 0036: where in the grid the user is, in the address.
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const { openPreview } = usePreview()
   const here = location.pathname + location.search
 
@@ -49,6 +51,13 @@ export function WantedScreen() {
     return <PageLoading label="Loading Wanted videos" />
   }
 
+  if (wanted.isError) {
+    return <main className={styles.screen}>
+      <h1>Wanted</h1>
+      <Loaded query={wanted} of="the Wanted list">{() => null}</Loaded>
+    </main>
+  }
+
   return (
     <main className={styles.screen}>
       <div className={styles.heading}>
@@ -65,7 +74,8 @@ export function WantedScreen() {
           <summary>How Wanted works</summary>
           <p>
             Videos you already have are marked <strong>In Library</strong>. For the rest,
-            Download opens an eligible Release and Search helps find one.
+            Download starts the best eligible Release at your preferred Quality or below,
+            and Search opens the Release page to inspect or find one.
           </p>
         </details>
       )}

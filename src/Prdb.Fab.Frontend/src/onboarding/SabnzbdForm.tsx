@@ -95,16 +95,15 @@ export function SabnzbdForm({
 
   const chosen = listing?.categories.find((candidate) => candidate.name === category)
   const answered = listing?.outcome === 'Saved'
+  const saved = verdict?.outcome === 'Saved'
   const busy = ask.isPending || save.isPending
 
   /**
-   * This form's submit is never idempotent: before the list is in it asks
-   * SABnzbd for its categories, and afterwards it stores a mapping that is
-   * verified against the filesystem. Neither is a write that can be skipped
-   * because the fields look unchanged, so the dirty gate is not what guards it
-   * here — the completeness of the fields is.
+   * Checking the categories is an act even before anything has been edited.
+   * Once the connection is saved, the verdict marks this draft as clean;
+   * changing any field clears it and offers Save again.
    */
-  const alwaysSomethingToDo = true
+  const somethingToDo = !saved
 
   const incomplete =
     url.trim().length === 0
@@ -116,6 +115,7 @@ export function SabnzbdForm({
       className={formStyles.form}
       onSubmit={(event) => {
         event.preventDefault()
+        if (busy || incomplete || saved) return
         setFailure(null)
 
         if (answered) {
@@ -134,6 +134,7 @@ export function SabnzbdForm({
             id={id}
             className={formStyles.field}
             type="url"
+            disabled={busy}
             placeholder="http://sabnzbd:8080"
             autoComplete="off"
             spellCheck={false}
@@ -167,6 +168,7 @@ export function SabnzbdForm({
             id={id}
             className={formStyles.field}
             type="text"
+            disabled={busy}
             autoComplete="off"
             spellCheck={false}
             value={apiKey}
@@ -198,6 +200,7 @@ export function SabnzbdForm({
               <select
                 id={id}
                 className={formStyles.field}
+                disabled={busy}
                 value={category}
                 onChange={(event) => {
                   setCategory(event.target.value)
@@ -232,6 +235,7 @@ export function SabnzbdForm({
                 id={id}
                 className={formStyles.field}
                 type="text"
+                disabled={busy}
                 placeholder="/downloads/complete"
                 autoComplete="off"
                 spellCheck={false}
@@ -247,10 +251,11 @@ export function SabnzbdForm({
       )}
 
       <SaveBar
-        label={answered ? submitLabel : 'Ask SABnzbd for its categories'}
-        dirty={alwaysSomethingToDo}
+        label={saved ? 'Saved' : answered ? submitLabel : 'Ask SABnzbd for its categories'}
+        dirty={somethingToDo}
         pending={busy}
         disabled={incomplete}
+        unsaved={answered ? undefined : 'Check SABnzbd to choose a category and its folder.'}
         blocked={
           url.trim().length === 0
             ? 'The address is needed before SABnzbd can be asked anything.'
@@ -260,7 +265,10 @@ export function SabnzbdForm({
         }
       >
         {verdict && (
-          <Verdict tone={verdict.outcome === 'Saved' ? 'done' : 'refusal'}>{verdict.detail}</Verdict>
+          <Verdict tone={saved ? 'done' : 'refusal'}>
+            {saved && <>SABnzbd connection saved. </>}
+            {verdict.detail}
+          </Verdict>
         )}
         {failure && <Verdict tone="refusal">{failure}</Verdict>}
       </SaveBar>

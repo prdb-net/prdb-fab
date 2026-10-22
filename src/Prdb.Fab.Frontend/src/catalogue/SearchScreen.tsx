@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import type { FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
@@ -44,10 +45,10 @@ export function SearchScreen() {
     availableSorts,
     search ? 'Relevance' : 'ReleaseDateDescending',
   )
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const { openPreview } = usePreview()
   const videos = useQuery({
-    queryKey: ['catalogue-videos', search, filter, sort, page],
+    queryKey: ['catalogue', 'videos', search, filter, sort, page],
     queryFn: () => listVideos(search, page, filter, sort),
     placeholderData: (held) => held,
   })

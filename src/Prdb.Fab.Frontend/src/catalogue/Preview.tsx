@@ -35,6 +35,25 @@ export function PreviewOverlay({
   returnTo: string
 }) {
   const { open, openPreview, closePreview } = usePreview()
+  const previousVideo = useRef<string | null>(null)
+  const opener = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (open) {
+      if (!previousVideo.current) opener.current = document.activeElement as HTMLElement | null
+      previousVideo.current = open
+    } else if (previousVideo.current) {
+      // Return to the last Video viewed, including after browser Back. The
+      // overlay stays mounted while open, so stepping must not restore focus.
+      const card = document.querySelector<HTMLButtonElement>(
+        `[data-video="${CSS.escape(previousVideo.current)}"]`,
+      )
+      const target = card ?? (opener.current?.isConnected ? opener.current : null)
+      target?.focus({ preventScroll: true })
+      previousVideo.current = null
+      opener.current = null
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -110,7 +129,7 @@ function Preview({
   onClose: () => void
 }) {
   const preview = useQuery({
-    queryKey: ['catalogue-preview', prdbId],
+    queryKey: ['catalogue', 'preview', prdbId],
     queryFn: () => readVideoPreview(prdbId),
     // Stepping back and forth across a page of cards re-reads nothing.
     staleTime: 5 * 60 * 1000,

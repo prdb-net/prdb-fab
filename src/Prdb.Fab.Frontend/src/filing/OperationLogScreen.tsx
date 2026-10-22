@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
@@ -14,7 +15,7 @@ export function OperationLogScreen() {
   const act = acts.find((value) => value === actParameter) ?? ''
   const search = parameters.get('search') ?? ''
   const [searchInput, setSearchInput] = useState(search)
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const log = useQuery({ queryKey: ['operation-log', act, search, page], queryFn: () => readOperationLog({ act, search, page }), placeholderData: (held) => held })
   const data = log.data
   useEffect(() => setSearchInput(search), [search])

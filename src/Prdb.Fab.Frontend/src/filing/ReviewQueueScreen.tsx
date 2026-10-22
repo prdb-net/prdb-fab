@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
@@ -46,7 +47,7 @@ export function ReviewQueueScreen() {
   const [parameters, setParameters] = useSearchParams()
   const reasonValue = parameters.get('reason')
   const reason = reasons.find((value) => value === reasonValue) ?? ''
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const [selected, setSelected] = useState<string[]>([])
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [deleteConfirmation, setDeleteConfirmation] = useState<ReviewSelectionPreview | null>(null)
