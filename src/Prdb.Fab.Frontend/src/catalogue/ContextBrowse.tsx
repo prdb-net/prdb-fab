@@ -261,7 +261,7 @@ function Filter({
 
   return (
     <form className={styles.filter} onSubmit={submit} key={value}>
-      <input name="search" type="search" defaultValue={value} placeholder={placeholder} />
+      <input aria-label={placeholder.replace(/…$/, '')} name="search" type="search" defaultValue={value} placeholder={placeholder} />
       <button type="submit">Apply</button>
       {value && (
         <button type="button" onClick={() => apply('')}>

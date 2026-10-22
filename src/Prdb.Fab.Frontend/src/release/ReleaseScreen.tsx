@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -36,7 +37,7 @@ export function ReleaseScreen() {
   const stateValue = parameters.get('state')
   const state = states.find((value) => value === stateValue)
   const indexer = parameters.get('indexer') ?? undefined
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const releases = useQuery({
     queryKey: ['releases', parameters.toString()],
     queryFn: () => {

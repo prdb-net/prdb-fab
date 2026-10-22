@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 
@@ -22,7 +23,7 @@ export function ActorsScreen() {
   const location = useLocation()
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const scope = parameters.get('scope') === 'all' ? 'All' : 'Favourites'
   const answer = useQuery<ActorPage | ActorVideos>({
     queryKey: actorsKey(id, search, page, scope),

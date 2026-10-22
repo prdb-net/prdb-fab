@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router'
@@ -37,7 +38,7 @@ export function DownloadsScreen() {
   const stateValue = parameters.get('state')
   const state = states.find((value) => value === stateValue)
   const indexer = parameters.get('indexer') ?? undefined
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
 
   // `?download=` selected a Download before there was an address for one. It
   // still arrives from links sent or bookmarked back then.

@@ -1,3 +1,4 @@
+import { readPage } from '../ui/paging.ts'
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
@@ -10,6 +11,7 @@ import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
 import { PreviewOverlay } from './Preview.tsx'
 import { usePreview } from './preview.ts'
+import { Loaded } from '../ui/Loaded.tsx'
 
 /**
  * What's New, and the landing page. ADR 0013 calls it that and it is what the
@@ -25,7 +27,7 @@ export function WhatsNewScreen() {
   // where in it the user is. It costs nothing now and cannot be retrofitted.
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const { openPreview } = usePreview()
 
   const videos = useQuery({
@@ -61,6 +63,13 @@ export function WhatsNewScreen() {
     return <PageLoading label="Loading What’s new" />
   }
 
+  if (videos.isError) {
+    return <main className={styles.screen}>
+      <h1>What&rsquo;s new</h1>
+      <Loaded query={videos} of="the latest Videos">{() => null}</Loaded>
+    </main>
+  }
+
   return (
     <main className={styles.screen}>
       <div className={styles.heading}>
@@ -72,8 +81,8 @@ export function WhatsNewScreen() {
       </div>
 
       <p className={styles.lede}>
-        Browse the catalogue, then open a Video to see Releases already found by background
-        discovery. Downloads start from a Video&rsquo;s Release page.
+        Browse the catalogue and open a Video to inspect it. Download starts the best
+        eligible Release at your preferred Quality or below; Search opens its Release page.
       </p>
 
       {total === 0 ? (
