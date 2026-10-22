@@ -23,7 +23,7 @@ using Xunit;
 
 namespace Prdb.Fab.Infrastructure.Tests.ReleaseDiscovery;
 
-public sealed class IdentificationCutTests
+public sealed partial class IdentificationCutTests
 {
     private static readonly Guid IndexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000011");
     private static readonly Guid OtherIndexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000012");

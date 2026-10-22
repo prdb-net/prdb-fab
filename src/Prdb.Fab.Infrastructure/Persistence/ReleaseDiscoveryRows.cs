@@ -48,6 +48,10 @@ public sealed class ReleaseRow
     public DateTimeOffset FirstSeenAt { get; set; }
     public IdentificationState IdentificationState { get; set; }
     public DateTimeOffset? LastIdentifiedAt { get; set; }
+    /// <summary>Authoritative SDK result, durable before any dependent call.</summary>
+    public string? IdentificationAnswerJson { get; set; }
+    public bool IdentificationDetailsPending { get; set; }
+    public DateTimeOffset? DetailRetryAt { get; set; }
     public long? VideoId { get; set; }
     public CatalogueVideoRow? Video { get; set; }
     public IdentificationConfidence? Confidence { get; set; }

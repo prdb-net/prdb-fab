@@ -79,3 +79,13 @@ new summary placeholders remain due. Indexer and Identification proofs remain
 independent. A missing/lost cursor, incomplete baseline or old caught-up proof
 keeps bounded fallback repair due; it never declares the window complete merely
 because the feed made a request.
+
+## Amendment: Identify answers precede detail hydration
+
+A validated Identify response is saved on each Release before any dependent
+Video detail request. The Release remains Awaiting and cannot enter acquisition
+until required match details exist. A new scope or restart resumes saved results;
+successful detail batches are reused, so a deferred/lost later request cannot
+force another metered Identify call. Omitted match documents retain their saved
+answer and retry details hourly. Candidate identity stubs stay repairable and
+pinned. The JSON checkpoint is disposable cache state and is never exported.

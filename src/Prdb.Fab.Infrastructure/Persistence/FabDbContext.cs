@@ -745,6 +745,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             release.Declares(AccountClass.AccountFree);
             release.HasIndex(row => new { row.IndexerId, row.DerivedReleaseId }).IsUnique();
             release.HasIndex(row => row.IdentificationState);
+            release.HasIndex(row => new { row.IdentificationDetailsPending, row.DetailRetryAt });
             release.HasIndex(row => row.VideoId);
             release.HasIndex(row => row.FirstSeenAt);
             release.HasIndex(row => new { row.PostDate, row.LastIdentifiedAt });

@@ -1784,12 +1784,21 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("DetailRetryAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DownloadUrl")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("FirstSeenAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("IdentificationAnswerJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IdentificationDetailsPending")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("IdentificationState")
                         .IsRequired()
@@ -1849,6 +1858,8 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("SiteId");
 
                     b.HasIndex("VideoId");
+
+                    b.HasIndex("IdentificationDetailsPending", "DetailRetryAt");
 
                     b.HasIndex("IndexerId", "DerivedReleaseId")
                         .IsUnique();

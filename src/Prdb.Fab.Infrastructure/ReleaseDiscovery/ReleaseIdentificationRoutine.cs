@@ -2,6 +2,7 @@ using System.Globalization;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Kiota.Abstractions.Serialization;
 
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Core.ReleaseDiscovery;
@@ -37,10 +38,13 @@ public sealed class ReleaseIdentificationRoutine(
         var identifyAgainBefore = now - RecentWindow.RevalidateAfter;
         var releases = await context.Releases
             .AsTracking()
-            .Where(row => row.IdentificationState == IdentificationState.Awaiting
-                || row.PostDate >= recentSince
-                    && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore))
-            .OrderBy(row => row.IdentificationState == IdentificationState.Awaiting ? 0 : 1)
+            .Where(row => row.IdentificationDetailsPending
+                    && (row.DetailRetryAt == null || row.DetailRetryAt <= now)
+                || !row.IdentificationDetailsPending && (row.IdentificationState == IdentificationState.Awaiting
+                    || row.PostDate >= recentSince
+                        && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= identifyAgainBefore)))
+            .OrderByDescending(row => row.IdentificationDetailsPending)
+            .ThenBy(row => row.IdentificationState == IdentificationState.Awaiting ? 0 : 1)
             .ThenByDescending(row => row.SearchWasReason)
             .ThenBy(row => row.FirstSeenAt)
             .ThenBy(row => row.Id)
@@ -60,7 +64,11 @@ public sealed class ReleaseIdentificationRoutine(
             return RunResult.NothingToDo;
         }
 
-        var response = await prdb.AskAsync(
+        var unasked = releases.Where(row => !row.IdentificationDetailsPending).ToList();
+        var byReference = new Dictionary<string, IdentifyVideoResultDto>(StringComparer.Ordinal);
+        if (unasked.Count > 0)
+        {
+            var response = await prdb.AskAsync(
             apiKey,
             PrdbWork.ReleaseIdentification,
             (client, token) => client.Videos.Identify.PostAsync(
@@ -69,7 +77,7 @@ public sealed class ReleaseIdentificationRoutine(
                     IncludeVideoDetails = false,
                     Files =
                     [
-                        .. releases.Select(release => new IdentifyVideoFileDto
+                        .. unasked.Select(release => new IdentifyVideoFileDto
                         {
                             Ref = release.Id.ToString(CultureInfo.InvariantCulture),
                             Filename = release.Title,
@@ -82,19 +90,46 @@ public sealed class ReleaseIdentificationRoutine(
                 cancellationToken: token),
             cancellationToken);
 
-        var answers = response?.Results ?? throw new InvalidOperationException(
+            var returnedAnswers = response?.Results ?? throw new InvalidOperationException(
             "prdb answered Release Identification without results.");
-        var byReference = answers
+            byReference = returnedAnswers
             .Where(answer => answer.Ref is not null)
             .ToDictionary(answer => answer.Ref!, StringComparer.Ordinal);
 
-        if (answers.Count != releases.Count
-            || releases.Any(release => !byReference.ContainsKey(release.Id.ToString(CultureInfo.InvariantCulture))))
+        if (returnedAnswers.Count != unasked.Count
+            || unasked.Any(release => !byReference.ContainsKey(release.Id.ToString(CultureInfo.InvariantCulture))))
         {
             throw new InvalidOperationException(
                 "prdb did not return exactly one Release Identification result per submitted name.");
         }
 
+
+            // Validate the entire response before making it resumable. The
+            // checkpoint is committed before any dependent remote detail read.
+            foreach (var release in unasked)
+            {
+                var answer = byReference[release.Id.ToString(CultureInfo.InvariantCulture)];
+                if (answer.VideoId is not null)
+                {
+                    _ = Confidence(answer.Confidence);
+                    _ = Rung(answer.MatchedBy);
+                }
+                release.IdentificationAnswerJson = await KiotaJsonSerializer.SerializeAsStringAsync(answer, false, cancellationToken: cancellationToken);
+                release.IdentificationDetailsPending = true;
+                release.LastIdentifiedAt = now;
+                release.IdentificationState = IdentificationState.Awaiting;
+                release.AutomationPending = false;
+                release.VideoId = null;
+            }
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        foreach (var release in releases)
+        {
+            byReference[release.Id.ToString(CultureInfo.InvariantCulture)] =
+                await KiotaJsonSerializer.DeserializeAsync<IdentifyVideoResultDto>(release.IdentificationAnswerJson!, cancellationToken)
+                ?? throw new InvalidOperationException("A saved Identification answer is missing.");
+        }
+        var answers = byReference.Values.ToArray();
         var referencedVideos = answers
             .SelectMany(answer => answer.Candidates ?? [])
             .Concat(answers.Select(answer => answer.VideoId))
@@ -102,7 +137,7 @@ public sealed class ReleaseIdentificationRoutine(
             .Distinct()
             .ToArray();
 
-        await FetchDetailsAsync(apiKey, referencedVideos, cancellationToken);
+        await FetchDetailsAsync(apiKey, referencedVideos, releases.Min(row => row.LastIdentifiedAt) ?? now, cancellationToken);
 
         // A candidate can be omitted by a concurrent upstream deletion. Keep
         // the outside id as a stub so the Candidate edge and its repair pin are
@@ -112,6 +147,7 @@ public sealed class ReleaseIdentificationRoutine(
             await catalogue.VideoAsync(videoId, title: null, releaseDate: null, cancellationToken);
         }
 
+        await using var applying = await context.Database.BeginTransactionAsync(cancellationToken);
         await context.IdentificationOutcomes
             .Where(outcome => outcome.At < now - OutcomeWindow)
             .ExecuteDeleteAsync(cancellationToken);
@@ -124,10 +160,19 @@ public sealed class ReleaseIdentificationRoutine(
         foreach (var release in releases)
         {
             var answer = byReference[release.Id.ToString(CultureInfo.InvariantCulture)];
-            await ApplyAsync(release, answer, now, cancellationToken);
+            if (answer.VideoId is { } matched && !await context.CatalogueVideos.AnyAsync(
+                row => row.PrdbId == matched && row.Available && row.LastReadAt >= (release.LastIdentifiedAt ?? now), cancellationToken))
+            {
+                release.DetailRetryAt = now.AddHours(1);
+                continue;
+            }
+            await ApplyAsync(release, answer, release.LastIdentifiedAt ?? now, cancellationToken);
+            release.IdentificationDetailsPending = false;
+            release.DetailRetryAt = null;
         }
 
         await context.SaveChangesAsync(cancellationToken);
+        await applying.CommitAsync(cancellationToken);
         logger.LogInformation("prdb identified {Count} screened Release name(s).", releases.Count);
 
         return RunResult.Handled(releases.Count);
@@ -136,9 +181,13 @@ public sealed class ReleaseIdentificationRoutine(
     private async Task FetchDetailsAsync(
         string apiKey,
         IReadOnlyCollection<Guid> ids,
+        DateTimeOffset checkpointAt,
         CancellationToken cancellationToken)
     {
-        foreach (var batch in ids.Chunk(CatalogueRead.ABatch))
+        var completed = await context.CatalogueVideos
+            .Where(row => ids.Contains(row.PrdbId) && row.LastReadAt >= checkpointAt)
+            .Select(row => row.PrdbId).ToListAsync(cancellationToken);
+        foreach (var batch in ids.Except(completed).Chunk(CatalogueRead.ABatch))
         {
             var read = await prdb.AskAsync(
                 apiKey,
