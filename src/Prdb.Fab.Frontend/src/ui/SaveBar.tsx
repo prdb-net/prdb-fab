@@ -7,8 +7,8 @@ import styles from './Form.module.css'
  *
  * Three things it settles that were settled differently on every screen. Save
  * is not offered when nothing has been edited, so pressing it always means
- * something. It says *which* of its reasons it is disabled for rather than
- * being inert. And it is sticky: ADR 0036 put this application in library mode
+ * something. Missing required fields get an explanation; unchanged forms need
+ * only the disabled button. And it is sticky: ADR 0036 put this application in library mode
  * with `<BrowserRouter>`, so there is no `useBlocker` to warn on leaving a
  * dirty form — this bar staying visible for as long as there is something
  * unsaved is the answer instead.
@@ -53,15 +53,13 @@ export function SaveBar({
         {pending ? 'Saving…' : label}
       </button>
 
-      <p className={styles.saveState}>
-        {pending
-          ? 'Saving.'
-          : disabled
-            ? blocked ?? 'Something above is not answered yet.'
-            : dirty
-              ? unsaved ?? 'There are unsaved changes.'
-              : 'Nothing has changed.'}
-      </p>
+      {!pending && (disabled || dirty) && (
+        <p className={styles.saveState}>
+          {disabled
+            ? blocked ?? 'Complete the required fields.'
+            : unsaved ?? 'Unsaved changes.'}
+        </p>
+      )}
 
       {children && <div className={styles.saveVerdict}>{children}</div>}
     </div>

@@ -242,8 +242,8 @@ function Preview({
 
           {preview.isError && (
             <p className={styles.problem} role="alert">
-              The rest of this Video could not be read. What is above came from the
-              grid; everything else is on the Release page.
+              Could not load the full Video details. The card information is still
+              available. Close and reopen this preview to try again.
             </p>
           )}
         </div>
@@ -320,8 +320,7 @@ function Gallery({
         </span>
         {coming && (
           <p className={styles.looking}>
-            prdb published no picture of this Video when it was last read. Asking
-            again &mdash; anything it has will appear here.
+            Checking prdb for updated artwork. Available pictures will appear here.
           </p>
         )}
       </div>
@@ -468,7 +467,7 @@ function Contributed({
 
   if (sprites.length === 0 && singles.length === 0) {
     return coming ? (
-      <p className={styles.looking}>Looking for previews people have made of this Video&hellip;</p>
+      <p className={styles.looking}>Loading User Previews&hellip;</p>
     ) : null
   }
 
@@ -826,7 +825,7 @@ function facts(video: VideoCard, preview?: VideoPreview): string {
     held,
     video.wanted ? 'Wanted' : null,
     video.catalogueNotice,
-    video.siteIgnored ? 'Site is ignored in prdb; unignore there to add new Wanted intent' : null,
+    video.siteIgnored ? 'This Site is ignored in prdb. Unignore it there to mark Videos as Wanted.' : null,
   ]
     .filter(Boolean)
     .join(' · ')

@@ -54,43 +54,32 @@ public static class SabnzbdConnection
     public static string Sentence(SabnzbdConnectionOutcome outcome) => outcome switch
     {
         SabnzbdConnectionOutcome.Saved =>
-            "SABnzbd answered, the category is one of its own, and the mapped "
-            + "folder is here and readable.",
+            "SABnzbd connection verified. The selected category exists and its mapped folder is readable.",
 
         SabnzbdConnectionOutcome.WrongKey =>
-            "SABnzbd refused that key. It has to be the full API key from "
-            + "Config \u2192 General \u2014 the NZB key can submit downloads but "
-            + "cannot be used to follow them.",
+            "SABnzbd rejected this key. Use the full API key from Config → General; the NZB key cannot "
+            + "read Download progress.",
 
         SabnzbdConnectionOutcome.AccessDenied =>
-            "SABnzbd refused the request because of where it came from rather "
-            + "than because of the key. Its External internet access setting, "
-            + "under Config \u2192 Special, decides that.",
+            "SABnzbd blocked access from this container. Check External internet access under Config → Special.",
 
         SabnzbdConnectionOutcome.NotSabnzbd =>
-            "Something answered at that address, and it was not SABnzbd's API. "
-            + "The address is the one you open SABnzbd at, without /api on the "
-            + "end.",
+            "This URL did not return a SABnzbd API response. Enter the SABnzbd URL without /api at the end.",
 
         SabnzbdConnectionOutcome.NotRightNow =>
-            "Nothing answered at that address. That is SABnzbd, the port or the "
-            + "network rather than the key.",
+            "Could not reach SABnzbd. Check its URL, port, network access and service status.",
 
         SabnzbdConnectionOutcome.UnknownCategory =>
-            "SABnzbd no longer has that category. It has to be one of its own: "
-            + "one it does not know is not an error there, it quietly becomes "
-            + "Default and the downloads land somewhere this tool is not "
-            + "looking.",
+            "This category no longer exists in SABnzbd. Reload the categories and select one. Unknown "
+            + "categories fall back to Default in SABnzbd.",
 
         SabnzbdConnectionOutcome.DownloadDirectoryMissing =>
-            "There is no such folder in this container. This is the half of the "
-            + "mapping that this tool has to be able to open, so it is a path "
-            + "inside a volume you mounted, not the path SABnzbd shows.",
+            "The completed-download folder does not exist at this path inside the fab container. Check "
+            + "the volume mount and enter its container path.",
 
         SabnzbdConnectionOutcome.DownloadDirectoryUnreadable =>
-            "That folder is here and this container cannot read it. It runs as "
-            + "the PUID and PGID you gave it, and that is who has to be able to "
-            + "read what SABnzbd finished.",
+            "The completed-download folder exists but fab cannot read it. Grant read access to the "
+            + "container user configured by PUID and PGID.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
     };

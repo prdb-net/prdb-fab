@@ -72,7 +72,7 @@ export function IndexerForm({
 
       onSaved?.()
     },
-    onError: () => setFailure('The indexer could not be sent. The tool may have stopped; the log says.'),
+    onError: () => setFailure('Could not confirm the Indexer was saved. Check your connection to fab and try again.'),
   })
 
   const incomplete =
@@ -92,13 +92,8 @@ export function IndexerForm({
       }}
     >
       <Field
-        label="The indexer's API address"
-        hint={
-          <>
-            Usually the site address with <code>/api</code> on the end, but not
-            always &mdash; some serve it somewhere else, so it is asked for whole.
-          </>
-        }
+        label="Indexer API URL"
+        hint="Enter the complete API URL, usually ending in /api."
       >
         {(id) => (
           <input
@@ -118,19 +113,9 @@ export function IndexerForm({
       </Field>
 
       <Field
-        label="Your API key there"
-        hint={
-          <>
-            {indexer ? (
-              <>
-                A key is stored. Leave this empty to keep it &mdash; keys are never
-                sent back to the browser, so there is nothing here to read.{' '}
-              </>
-            ) : null}
-            Checked with a real search rather than with a capabilities call: most
-            indexers answer that one to anybody, so it proves nothing about a key.
-          </>
-        }
+        label="Indexer API key"
+        hint={indexer ? 'A key is stored. Leave empty to keep it.' : 'Find the API key in your Indexer account.'}
+        help="fab tests this key with a search before saving, using one request from your Indexer account."
       >
         {(id) => (
           <input
@@ -148,13 +133,13 @@ export function IndexerForm({
         )}
       </Field>
 
-      <Field label="What to call it">
+      <Field label="Display name">
         {(id) => (
           <input
             id={id}
             className={formStyles.field}
             type="text"
-            placeholder="Its host name"
+            placeholder="Defaults to the hostname"
             autoComplete="off"
             value={name}
             onChange={(event) => {
@@ -172,8 +157,8 @@ export function IndexerForm({
         disabled={incomplete}
         blocked={
           url.trim().length === 0
-            ? 'The address is needed before anything can be checked.'
-            : 'A key is needed to add an indexer, because the check is a real search.'
+            ? 'Enter the Indexer API URL.'
+            : 'Enter an API key to connect this Indexer.'
         }
       >
         {verdict && (

@@ -32,7 +32,8 @@ function AutomationOverview() {
   return (
     <SettingsPage
       title="Automation"
-      lede="Choose which Wanted Videos may download automatically. A matching enabled rule grants permission; your limits still apply."
+      lede="Rules and limits for automatic Downloads."
+      help="Choose which Wanted Videos may download automatically. A matching enabled rule grants permission; your limits still apply."
     >
       <section>
         <div className={styles.sectionHeading}>
@@ -111,7 +112,7 @@ function RuleCard({ rule }: { rule: AutomationRuleView }) {
             <Verdict tone="refusal">{toggle.data.detail}</Verdict>
           )}
           {toggle.isError && (
-            <Verdict tone="refusal">That could not be changed. Nothing was saved.</Verdict>
+            <Verdict tone="refusal">Could not confirm the rule change. Reload to check whether it is enabled.</Verdict>
           )}
         </div>
         <div className={styles.ruleActions}>
@@ -131,7 +132,7 @@ function RuleCard({ rule }: { rule: AutomationRuleView }) {
 /** What a rule permits, in one sentence. */
 function permits(rule: AutomationRuleView, indexers: readonly string[]): string {
   if (indexers.length === 0) {
-    return 'It permits nothing: no Indexer is allowed, so no Release can reach it.'
+    return 'No Indexers selected. This rule cannot permit a Download.'
   }
 
   const where = indexers.length === 1 ? indexers[0] : `${indexers.slice(0, -1).join(', ')} and ${indexers.at(-1)}`
@@ -146,7 +147,7 @@ function permits(rule: AutomationRuleView, indexers: readonly string[]): string 
         ? ` of at most ${maximum}`
         : ' of any size'
 
-  return `Matched Wanted Releases from ${where},${size}.`
+  return `Releases identified as Wanted Videos from ${where},${size}.`
 }
 
 /**
@@ -199,7 +200,7 @@ function RetryBudgetForm({ held }: { held: AutomationSettingsState }) {
     >
       <Field
         label="Retry budget, per Video"
-        hint={
+        help={
           <>
             Default 3. Every Download attempt counts, across all Indexers and
             regardless of outcome. Changing this limit affects every Video.
@@ -229,7 +230,7 @@ function RetryBudgetForm({ held }: { held: AutomationSettingsState }) {
       >
         {save.data && !save.data.saved && <Verdict tone="refusal">{save.data.detail}</Verdict>}
         {save.isError && (
-          <Verdict tone="refusal">The retry budget could not be saved. Nothing was changed.</Verdict>
+          <Verdict tone="refusal">Could not confirm the retry budget was saved. Reload to check its value.</Verdict>
         )}
         {saved && <Verdict tone="done">{save.data?.detail}</Verdict>}
       </SaveBar>
@@ -273,7 +274,7 @@ function CapForm({ held }: { held: AutomationSettingsState }) {
     >
       <Field
         label="Unfinished automatic Download cap"
-        hint={
+        help={
           <>
             Default 20. The maximum number of unfinished automatic Downloads
             in SABnzbd. Additional work waits and resumes as Downloads finish.
@@ -302,7 +303,7 @@ function CapForm({ held }: { held: AutomationSettingsState }) {
       >
         {save.data && !save.data.saved && <Verdict tone="refusal">{save.data.detail}</Verdict>}
         {save.isError && (
-          <Verdict tone="refusal">The cap could not be saved. Nothing was changed.</Verdict>
+          <Verdict tone="refusal">Could not confirm the Download cap was saved. Reload to check its value.</Verdict>
         )}
         {saved && <Verdict tone="done">{save.data?.detail}</Verdict>}
       </SaveBar>
@@ -376,12 +377,12 @@ function AutomationRuleScreen({ id }: { id: string }) {
   if (settings.isError || (!creating && !existing)) {
     return (
       <SettingsPage
-        title="That Automation Rule is not here"
+        title="Automation Rule unavailable"
         back="/settings/automation"
         backLabel="Automation"
       >
         <Verdict tone="refusal">
-          There is no Automation Rule with that address in this installation.
+          The rule could not be loaded. It may have been deleted; return to Automation to check the current rules.
         </Verdict>
       </SettingsPage>
     )
@@ -395,7 +396,8 @@ function AutomationRuleScreen({ id }: { id: string }) {
       title={creating ? 'Add Automation Rule' : existing!.name}
       back="/settings/automation"
       backLabel="Automation"
-      lede="A rule grants permission only. Rules are unordered, and every permitting rule is copied onto a Download's Origin."
+      lede="Choose the Indexers and size limits this rule permits."
+      help="Any matching enabled rule can permit a Download. Rules have no priority order. Each Download records all rules that permitted it in its Origin."
     >
       <form
         className={formStyles.form}
@@ -438,7 +440,8 @@ function AutomationRuleScreen({ id }: { id: string }) {
             where that should have to be worked out. */}
         <Fieldset
           legend="Release size"
-          hint="Either end may be left empty, which is unbounded at that end. Newznab reports the size of the package, so this is what the Indexer says rather than what arrives."
+          hint="Leave either field empty for no limit."
+          help="Sizes are reported by the Indexer for the Release package. They can differ from the final video file size."
         >
           <div className={styles.range}>
             <Field label="At least (GiB)">
@@ -472,12 +475,12 @@ function AutomationRuleScreen({ id }: { id: string }) {
           </div>
         </Fieldset>
 
-        <Fieldset legend="Whether it acts">
+        <Fieldset legend="Rule status">
           <Switch
             checked={selected.enabled}
             onChange={(checked) => update({ enabled: checked })}
             label="Enabled"
-            hint="Disabling is forward-only and does not change existing Downloads."
+            help="Disabling stops this rule permitting new Downloads. Existing Downloads are unchanged."
           />
         </Fieldset>
 
@@ -505,7 +508,7 @@ function AutomationRuleScreen({ id }: { id: string }) {
               disabled={save.isPending || ask.isPending || remove.isPending}
               onClick={() => ask.mutate()}
             >
-              {ask.isPending ? 'Reading what it holds…' : 'Delete rule…'}
+              {ask.isPending ? 'Checking deletion…' : 'Delete rule…'}
             </button>
           </div>
         )}
@@ -521,14 +524,13 @@ function AutomationRuleScreen({ id }: { id: string }) {
           onConfirm={() => remove.mutate()}
         >
           <p>
-            The rule stops permitting anything from now on. Downloads it already
-            permitted are untouched.
+            Deleting this rule stops it from permitting new Downloads.
+            Existing Downloads continue.
           </p>
           <p>
             {Number(confirming.existingOrigins) > 0
-              ? `${confirming.existingOrigins} existing Download Origin member(s) keep the copied rule
-                 name, so "why is this on my disk" still has an answer after the rule is gone.`
-              : 'No Download has been permitted by it yet, so nothing carries its name.'}
+              ? `${confirming.existingOrigins} Download Origin record(s) retain this rule’s name after deletion.`
+              : 'This rule has not permitted any Downloads.'}
           </p>
         </ConfirmationDialog>
       )}

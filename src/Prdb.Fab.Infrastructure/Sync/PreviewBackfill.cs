@@ -166,7 +166,7 @@ public sealed class PreviewBackfill(
             id,
             PreviewBackfillState.Running,
             PreviewBackfillState.Paused,
-            "Paused. Nothing new is taken up and what is already generated waits.",
+            "Paused. Preview generation and submission will resume when you continue this request.",
             settled: false,
             cancellationToken);
 
@@ -238,9 +238,9 @@ public sealed class PreviewBackfill(
         row.State = PreviewBackfillState.Cancelled;
         row.SettledAt = now;
         row.Note = sent == 0
-            ? "Cancelled before anything of it was accepted by prdb."
-            : $"Cancelled. {sent} preview(s) prdb had already accepted stay at prdb: "
-              + "there is no retraction for one.";
+            ? "Cancelled. No accepted submissions were recorded for this request."
+            : $"Cancelled. {sent} accepted preview(s) remain at prdb. "
+              + "Accepted submissions cannot be retracted.";
 
         await context.SaveChangesAsync(cancellationToken);
 
@@ -322,8 +322,8 @@ public sealed class PreviewBackfill(
         request.State = PreviewBackfillState.Finished;
         request.SettledAt = time.GetUtcNow();
         request.Note = request.TakenUp == 0
-            ? "Every eligible Library file had already been published or given up on."
-            : $"Every eligible Library file was taken up: {request.TakenUp} in all.";
+            ? "No additional Library files were eligible for preview generation."
+            : $"Selected all {request.TakenUp} eligible Library file(s) for preview processing.";
 
         await context.SaveChangesAsync(cancellationToken);
 
@@ -360,7 +360,7 @@ public sealed class PreviewBackfill(
         {
             row.State = PreviewBackfillState.Cancelled;
             row.SettledAt = now;
-            row.Note = "The prdb account changed, and the new one never asked for this.";
+            row.Note = "Cancelled because the prdb account changed. Request previews again under the new account.";
         }
 
         await context.SaveChangesAsync(cancellationToken);

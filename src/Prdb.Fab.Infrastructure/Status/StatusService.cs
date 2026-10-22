@@ -559,10 +559,10 @@ public sealed class StatusService(
         {
             conditions.Add(Brake(
                 "Generated previews were submitted and their outcome is unknown",
-                $"{publishing.Uncertain} upload(s) left and were never answered. prdb cannot be asked "
-                + "whether they arrived while moderation keeps them invisible, so they are not sent "
-                + "again unless somebody says so: a second copy would be a duplicate picture nobody "
-                + "can take down.",
+                $"{publishing.Uncertain} upload(s) received no confirmation. prdb may have accepted them, "
+                + "but submissions awaiting moderation cannot be checked. They are not sent again "
+                + "automatically because duplicate previews cannot be retracted. Review each submission "
+                + "to retry or leave it.",
                 "file",
                 PublicationsRoute));
         }
@@ -581,9 +581,8 @@ public sealed class StatusService(
         {
             conditions.Add(Brake(
                 "The Library preview request is paused",
-                $"{publishing.TakenUp} of about {publishing.Selected} file(s) were taken up before it "
-                + "was paused. Nothing of it is generated or sent until it is resumed, and nothing of "
-                + "it has been given up.",
+                $"{publishing.TakenUp} of about {publishing.Selected} file(s) were selected for processing. "
+                + "Generation and submission are paused. Pending work is kept; resume the request to continue.",
                 "file",
                 PublicationsRoute));
         }
@@ -620,9 +619,9 @@ public sealed class StatusService(
 
         conditions.Add(Gap(
             $"{total} library file(s) could not be confirmed",
-            $"{string.Join(", ", parts)}. Nothing has been deleted and nothing will be fetched "
-            + "again over this — a library mounted somewhere else looks the same from here. The "
-            + "entries stay held, so automation will not replace them.",
+            $"{string.Join(", ", parts)}. Check the Library mount, paths and permissions. "
+            + "The records are kept as held, so automation will not download replacements. "
+            + "No files have been deleted.",
             "file",
             "/library?confirmed=no"));
     }
@@ -692,9 +691,9 @@ public sealed class StatusService(
         StatusPublishing publishing)
     {
         if (!state.ReportFulfilments && state.FulfilmentBacklog > 0)
-            conditions.Add(Brake("Fulfilment reporting is off", $"{state.FulfilmentBacklog} local differences are intentionally not sent.", "file", "/settings/reporting"));
+            conditions.Add(Brake("Fulfilment reporting is off", $"{state.FulfilmentBacklog} Fulfilment updates are waiting for reporting to be enabled.", "file", "/settings/reporting"));
         if (!state.ReportConfirmedAssignments && state.ConfirmedAssignmentBacklog > 0)
-            conditions.Add(Brake("Confirmed-assignment reporting is off", $"{state.ConfirmedAssignmentBacklog} human-confirmed assignments are intentionally not sent.", "file", "/settings/reporting"));
+            conditions.Add(Brake("Confirmed-assignment reporting is off", $"{state.ConfirmedAssignmentBacklog} Confirmed Assignments are waiting for reporting to be enabled.", "file", "/settings/reporting"));
 
         // ADR 0064's gate, and the only Brake here that is raised while a
         // channel is switched *on*: the switch says yes and the explanation has
@@ -702,9 +701,9 @@ public sealed class StatusService(
         // somebody has read what would leave.
         if (state.PublishGeneratedPreviews && !state.PreviewPublicationExplained)
             conditions.Add(Brake(
-                "Preview publication is waiting to be explained",
-                "Publishing generated previews is switched on, and nothing is generated or sent until what it "
-                + "publishes has been read.",
+                "Preview publishing needs confirmation",
+                "Publishing is enabled but not yet confirmed. Review what is sent and save Reporting settings "
+                + "to start generating and submitting previews.",
                 "file",
                 "/settings/reporting"));
 
@@ -715,9 +714,8 @@ public sealed class StatusService(
         if (!state.PublishGeneratedPreviews && publishing.Waiting + publishing.Ready > 0)
             conditions.Add(Brake(
                 "Preview publication is off",
-                $"{publishing.Waiting + publishing.Ready} generated preview(s) are intentionally not "
-                + "sent. Nothing of them is given up while the switch is off, and what prdb has "
-                + "already accepted stays at prdb.",
+                $"{publishing.Waiting + publishing.Ready} preview(s) are waiting for generation or submission. "
+                + "Enable publishing to continue pending work. What was already accepted stays at prdb.",
                 "file",
                 "/settings/reporting"));
     }
@@ -734,8 +732,8 @@ public sealed class StatusService(
             if (gate.Total > 0 && admitted == 0)
             {
                 conditions.Add(Brake(
-                    $"The {gate.Gate} Gate admitted nothing",
-                    $"All {gate.Total} named outcomes in the last seven days were outside the configured set.",
+                    $"No identification passed the {gate.Gate} setting",
+                    $"None of the {gate.Total} identification results from the last seven days met this setting. Review the accepted results in Identification settings.",
                     gate.Gate == BeforeDownloadGate.Name ? "decide" : "file",
                     "/settings/identification"));
             }
@@ -860,8 +858,8 @@ public sealed class StatusService(
             facts.Add(new(
                 "Generated previews",
                 publishing.Waiting == 0 && publishing.Ready == 0 && publishing.Submitted == 0
-                    ? "Nothing generated and nothing submitted"
-                    : $"{publishing.Waiting} waiting to be made, {publishing.Ready} waiting to be sent",
+                    ? "No previews pending or submitted"
+                    : $"{publishing.Waiting} waiting for generation, {publishing.Ready} waiting for submission",
                 PublicationsRoute));
 
             if (publishing.Submitted > 0)

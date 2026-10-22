@@ -58,7 +58,7 @@ export function OnboardingScreen() {
 
       await queries.invalidateQueries({ queryKey: accessStateKey })
     },
-    onError: () => setFailure('The step could not be sent. The tool may have stopped; the log says.'),
+    onError: () => setFailure('Could not confirm this setup step. Reload to check your progress.'),
   })
 
   const here = state.data?.nextStep
@@ -111,7 +111,7 @@ export function OnboardingScreen() {
                 disabled={move.isPending}
                 onClick={() => move.mutate({ act: 'skip', step: showing.step })}
               >
-                Skip it anyway
+                Skip for now
               </button>{' '}
               <button className={styles.quiet} type="button" onClick={() => setAsking(false)}>
                 Go back
@@ -201,7 +201,7 @@ export const steps: ReadonlyArray<{
     slug: 'prdb',
     title: 'The prdb API key',
     description:
-      'Mandatory. Without it there is no identification, no wanted list, no artwork and no duplicate detection.',
+      'Required. Connect prdb for Video identification, your Wanted list, artwork and duplicate detection.',
     form: (taken) => <PrdbForm onSaved={taken} />,
   },
   {
@@ -209,22 +209,20 @@ export const steps: ReadonlyArray<{
     slug: 'sabnzbd',
     title: 'SABnzbd',
     description:
-      'Skippable. A tool that cannot download is still a tool that holds a library.',
+      'Connect SABnzbd to download Releases. You can skip this and connect it later.',
     consequence:
-      'Without SABnzbd nothing is downloaded: releases can be found and nothing can be fetched. '
-      + 'The library still works, and this can be filled in later from the settings — but setting '
-      + 'up does not come back to ask.',
+      'Downloads are unavailable until SABnzbd is connected. You can still browse your Library. '
+      + 'Add SABnzbd later in Settings → Connections.',
     form: (taken) => <SabnzbdForm onSaved={taken} />,
   },
   {
     step: 'Indexers',
     slug: 'indexers',
     title: 'Indexers',
-    description: 'Skippable, and one is enough when it is taken.',
+    description: 'Add at least one Indexer to find Releases, or skip and add one later.',
     consequence:
-      'Without an indexer nothing is searched and nothing is downloaded, because there is nowhere '
-      + 'to look. One can be added later from the settings — but setting up does not come back to '
-      + 'ask.',
+      'Release searches and Downloads require an Indexer. '
+      + 'Add one later in Settings → Connections.',
     form: () => (
       <>
         <IndexerForm />
@@ -236,7 +234,7 @@ export const steps: ReadonlyArray<{
     step: 'LibraryRoot',
     slug: 'library',
     title: 'The library root',
-    description: 'Mandatory. It is where filing puts what arrives.',
+    description: 'Required. Choose the directory where identified video files will be filed.',
     form: (taken) => <LibraryRootForm onSaved={taken} />,
   },
   {
@@ -244,8 +242,8 @@ export const steps: ReadonlyArray<{
     slug: 'publishing',
     title: 'Publishing previews',
     description:
-      'The one thing this tool sends out in public. It is on, it can be turned off here, and '
-      + 'nothing is published until this step is answered either way.',
+      'Choose whether to publish previews of newly filed Videos on prdb. '
+      + 'Publishing is selected by default; review your choice before saving.',
     form: (taken) => <PublishingForm onSaved={taken} />,
   },
 ]

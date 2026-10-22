@@ -169,7 +169,7 @@ public sealed class PublicationProgress(
         }
 
         row.State = PreviewPublicationState.Ready;
-        row.Note = "Asked for again by hand, knowing prdb cannot be asked whether the first one arrived.";
+        row.Note = "Retry requested by you. The previous submission may already have been accepted, so this could create a duplicate preview.";
         row.SettledAt = null;
 
         await context.SaveChangesAsync(cancellationToken);
@@ -197,7 +197,7 @@ public sealed class PublicationProgress(
         }
 
         row.State = PreviewPublicationState.Dropped;
-        row.Note = "Left as it lies by hand: whatever prdb did with it, nothing more is sent.";
+        row.Note = "Closed by your decision. The submission outcome remains unknown and this preview will not be sent again.";
         row.SettledAt = time.GetUtcNow();
 
         store.Delete(row.Id);

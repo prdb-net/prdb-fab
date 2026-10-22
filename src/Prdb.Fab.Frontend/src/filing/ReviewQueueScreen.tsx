@@ -34,8 +34,8 @@ const reasonLabels: Record<ArrivingFileReason, string> = {
 }
 
 const reasonDescriptions: Record<ArrivingFileReason, string> = {
-  IdenticalFile: 'Its bytes are already held in the Library.',
-  UnreadableQuality: 'The file probe could not determine a quality.',
+  IdenticalFile: 'An identical file is already in the Library.',
+  UnreadableQuality: 'The file could not be assigned a Quality from its measured resolution.',
   Unidentified: 'No video was identified strongly enough to file this automatically.',
   Duplicate: 'The Library already holds this video at the same quality.',
   EntryMissing: 'The recorded Library copy is no longer present on disk.',
@@ -450,7 +450,7 @@ function Picker({ idPrefix, candidates, disabled, onPick }: { idPrefix: string; 
     <div className={styles.pickerHeading}>
       <div>
         <label htmlFor={inputId}>File as a prdb video</label>
-        <span>Search live by title or performer. Choose one result to resume the normal filing checks.</span>
+        <span>Search prdb by title or Actor. Choose the Video this file belongs to; fab will then check whether it can be filed.</span>
       </div>
       {total > 0 && <span className={styles.quiet}>{live ? `${resultStart}–${resultEnd} of ${total}` : `${total} suggested`}</span>}
     </div>
@@ -574,13 +574,13 @@ function codecLabel(codec: string) {
 const automaticIdentification: Record<string, string | null> = {
   Assigned: null,
   NotNeeded: null,
-  NoEvidence: 'Nobody has published a preview made from this exact file, so there was nothing to identify it by.',
+  NoEvidence: 'No published preview matches this file’s osHash. Preview evidence could not identify it.',
   Conflicting:
-    'Previews made from this exact file are published under more than one Video, so nothing was chosen. Both are among the candidates below.',
+    'Previews with this file’s osHash point to different Videos. Review the candidates below and choose the correct Video.',
   OutsideTheCandidates:
-    'A preview made from this exact file names a Video that prdb did not list among its own candidates. prdb’s list stands.',
+    'A preview with this file’s osHash points to a Video outside prdb’s candidates. It was not used for automatic identification.',
   WaitingForTheCatalogue:
-    'A preview made from this exact file names a Video the catalogue has no details for yet. It will be read shortly.',
+    'A preview with this file’s osHash identifies a Video whose details have not synced yet. Identification is waiting for those Catalogue details.',
 }
 
 /**
@@ -593,7 +593,7 @@ const automaticIdentification: Record<string, string | null> = {
 function FilePictures({ pictures }: { pictures: ReviewQueueEntry['pictures'] }) {
   return (
     <figure className={styles.filePictures}>
-      <figcaption>Pictures other people made from this exact file</figcaption>
+      <figcaption>User Previews matching this file’s osHash</figcaption>
       <div>
         {pictures.map((picture) => (
           <img

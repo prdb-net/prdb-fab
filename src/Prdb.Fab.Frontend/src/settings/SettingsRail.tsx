@@ -82,7 +82,7 @@ export function SettingsRail() {
       <Group to="/settings/automation" icon="automation" label="Automation" marks={pointedAt}>
         {automation.data
           ? automation.data.rules.length === 0
-            ? 'No rules, so nothing is automatic'
+            ? 'No rules; automatic Downloads off'
             : `${automation.data.rules.length} rule(s), ${automation.data.rules.filter((rule) => rule.enabled).length} enabled`
           : null}
       </Group>
@@ -134,7 +134,7 @@ export function SettingsRail() {
       </Group>
 
       <Group to="/settings/backup" icon="backup" label="Backup" marks={pointedAt}>
-        One readable file, credentials included
+        Export settings and credentials
       </Group>
 
       {/* Nothing to say, and it says nothing. */}
@@ -264,7 +264,7 @@ function gateLabel(gate: string): string {
  */
 function channels(state: ReportingSettingsState): string {
   if (state.publishGeneratedPreviews && !state.previewPublicationExplained) {
-    return 'Publishing waits to be answered'
+    return 'Confirm publishing settings'
   }
 
   const on = [

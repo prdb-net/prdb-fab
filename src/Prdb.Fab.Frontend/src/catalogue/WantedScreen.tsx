@@ -88,8 +88,8 @@ export function WantedScreen() {
 
       {wanted.data?.recentWindowFilling && (
         <p className={styles.working}>
-          A complete read of prdb&rsquo;s 90-day Recent Window is running in the
-          background. What is already here works, and the rest fills in.
+          Syncing prdb updates from the last 90 days. You can browse and download
+          available Videos while the sync continues.
         </p>
       )}
 
@@ -142,16 +142,15 @@ function empty(feedHasRun: boolean) {
     <>
       <p>Nothing is on your wanted list.</p>
       <p>
-        Mark a video as wanted in prdb and it appears here on the next read,
-        which is a few minutes away rather than a restart.
+        Mark a Video as Wanted in prdb. It will appear here after the next
+        background sync.
       </p>
     </>
   ) : (
     <>
       <p>Your wanted list has not been read yet.</p>
       <p>
-        The first read happens shortly after the key is saved. Nothing here is
-        waiting on you.
+        The first sync starts automatically after your prdb key is saved.
       </p>
     </>
   )

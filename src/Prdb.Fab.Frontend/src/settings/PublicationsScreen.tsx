@@ -40,7 +40,8 @@ export function PublicationsScreen() {
   return (
     <SettingsPage
       title="Published previews"
-      lede="What this installation has generated for prdb, what it has submitted, and what is still owed. Submitted is not published: a preview prdb accepted is waiting for a moderator until a read endpoint shows it."
+      lede="Track generated previews, submissions and moderation."
+      help="Submitted previews await moderation. A preview is marked publicly shown only after prdb confirms that it is visible."
       back="/settings/reporting"
       backLabel="Reporting settings"
     >
@@ -61,9 +62,8 @@ function Publications({ held }: { held: PublicationProgressState }) {
   if (!held.connected) {
     return (
       <Verdict tone="warning">
-        There is no prdb account configured, so nothing is generated and nothing
-        is published. <Link to="/settings/connections/prdb">The prdb connection</Link> is
-        where that is set.
+        <Link to="/settings/connections/prdb">Connect your prdb account</Link> to
+        generate and publish previews.
       </Verdict>
     )
   }
@@ -72,19 +72,16 @@ function Publications({ held }: { held: PublicationProgressState }) {
     <>
       {!held.publishing && (
         <Verdict tone="warning">
-          Publishing generated previews is switched off. Nothing new is generated
-          or sent, and nothing already made is given up.{' '}
-          <Link to="/settings/reporting">Reporting settings</Link> is where the
-          switch is.
+          Preview publishing is off. Existing previews are kept, but no new ones
+          are generated or sent. Enable publishing in{' '}
+          <Link to="/settings/reporting">Reporting settings</Link> to resume.
         </Verdict>
       )}
 
       {held.publishing && !held.explained && (
         <Verdict tone="warning">
-          Publishing is switched on and what it sends has not been read yet.
-          Nothing is generated or published until{' '}
-          <Link to="/settings/reporting">the Reporting settings</Link> have been
-          saved once.
+          Publishing is enabled but not yet confirmed. Review what is sent and save{' '}
+          <Link to="/settings/reporting">Reporting settings</Link> to start.
         </Verdict>
       )}
 
@@ -94,7 +91,7 @@ function Publications({ held }: { held: PublicationProgressState }) {
 
       <LibraryRequest held={held} onSettled={settle} />
 
-      <h2 className={settingsStyles.heading}>Uploads nobody can account for</h2>
+      <h2 className={settingsStyles.heading}>Submissions with an unknown outcome</h2>
 
       <Uncertain held={held} onSettled={settle} />
     </>
@@ -111,13 +108,13 @@ function Publications({ held }: { held: PublicationProgressState }) {
 function Tally({ tally }: { tally: PublicationTally }) {
   const uncertain = Number(tally.uncertain)
   const counts: [string, number, string | undefined, boolean][] = [
-    ['Waiting to be made', Number(tally.waiting), 'A file is owed a sheet.', false],
-    ['Waiting to be sent', Number(tally.ready), 'Made, validated, queued.', false],
-    ['Submitted', Number(tally.submitted), 'Accepted by prdb; a moderator decides.', false],
+    ['Waiting to be made', Number(tally.waiting), 'Queued for preview generation.', false],
+    ['Waiting to be sent', Number(tally.ready), 'Generated and ready to submit.', false],
+    ['Submitted', Number(tally.submitted), 'Accepted by prdb; awaiting moderation.', false],
     ['Publicly shown', Number(tally.shown), 'prdb is showing it to everyone.', false],
-    ['Outcome unknown', uncertain, 'Sent, unanswered, never resent.', uncertain > 0],
-    ['Declined', Number(tally.refused), 'prdb considered it and said no.', false],
-    ['Given up', Number(tally.dropped), 'Nothing left this machine.', false],
+    ['Outcome unknown', uncertain, 'No response received. Waiting for your decision.', uncertain > 0],
+    ['Declined', Number(tally.refused), 'prdb declined the submission.', false],
+    ['Closed', Number(tally.dropped), 'No further submissions will be attempted.', false],
   ]
 
   return (
@@ -220,15 +217,13 @@ function LibraryRequest({
           <p>
             {Number(held.offer.eligible) === 0 ? (
               <>
-                No file the Library already holds is waiting for a preview.
-                Everything eligible has been published, submitted or given up on.
+                No additional Library files are eligible for preview generation.
               </>
             ) : (
               <>
-                <strong>{Number(held.offer.eligible)}</strong> file(s) the Library already
-                holds could have a preview generated and published. Files filed
-                from now on are published on their own; these are not, and never
-                will be unless this is asked for.
+                <strong>{Number(held.offer.eligible)}</strong> existing Library file(s) are eligible for previews.
+                Request them here; enabling publishing alone does not include
+                files already in the Library.
               </>
             )}
           </p>
@@ -255,21 +250,19 @@ function LibraryRequest({
           onConfirm={() => ask.mutate()}
         >
           <p>
-            One JPEG grid of small pictures per file, with a WebVTT saying which
-            picture is which second, submitted to prdb under your account against
-            the Video the file is filed as and the file&rsquo;s osHash.{' '}
-            <strong>The video file itself never leaves</strong>, and neither does
-            its name, its path or its sound.
+            For each file, fab submits a JPEG Sprite Sheet and WebVTT timestamps to
+            prdb under your account, linked to its Video and osHash.{' '}
+            <strong>The video file, filename, path and audio are not sent.</strong>
           </p>
           <p>
-            Each one is <strong>shown in public</strong> once a moderator has
-            seen it, and <strong>prdb has no retraction</strong> for one it has
-            accepted. This can be paused or cancelled at any time; cancelling
-            stops what has not been sent and takes back nothing that has.
+            Previews become <strong>public after moderation approval</strong>.
+            <strong> Accepted submissions cannot be retracted through prdb.</strong>
+            {' '}You can pause or cancel pending work; this does not retract
+            previews already submitted.
           </p>
           <p>
-            It runs in the background at about one file a minute, well behind
-            everything a person is waiting for.
+            Previews are processed in the background at about one file per minute.
+            Interactive requests take priority.
           </p>
         </ConfirmationDialog>
       )}
@@ -284,15 +277,13 @@ function LibraryRequest({
           onConfirm={() => cancel.mutate(request.id)}
         >
           <p>
-            Everything this request selected that has not been sent is given up:
-            the files still waiting to be made, and the previews already made and
-            queued. Their generated bytes go with them.
+            Pending preview generation and submissions for this request will be
+            cancelled. Generated previews that have not been sent will be deleted.
+            Your video files are kept.
           </p>
           <p>
-            <strong>What prdb has already accepted stays at prdb.</strong> There
-            is no retraction for a submission, whether a moderator has shown it
-            yet or not. An upload whose outcome is unknown is left as it is —
-            cancelling a request is not an answer to that question.
+            <strong>What prdb has already accepted stays at prdb.</strong> Accepted submissions cannot be retracted, including those awaiting
+            moderation. Submissions with an unknown outcome still need your decision.
           </p>
         </ConfirmationDialog>
       )}
@@ -319,8 +310,8 @@ function Request({ request }: { request: PublicationRequest }) {
       </div>
 
       <p className={settingsStyles.detail}>
-        {takenUp} of about {selected} file(s) taken up
-        {remaining > 0 && <>, {remaining} still eligible</>}. Asked for at{' '}
+        {takenUp} of about {selected} file(s) selected for processing
+        {remaining > 0 && <>, {remaining} still eligible</>}. Requested at{' '}
         {request.requestedAt}.
       </p>
 
@@ -365,7 +356,7 @@ function Uncertain({
   if (held.uncertain.length === 0) {
     return (
       <p className={settingsStyles.detail}>
-        Every upload that left was answered. Nothing is waiting on a decision.
+        No submissions have an unknown outcome.
       </p>
     )
   }
@@ -373,10 +364,9 @@ function Uncertain({
   return (
     <>
       <p>
-        Each of these left this machine and nothing came back saying what became
-        of it. prdb cannot be asked: a submission in moderation is not publicly
-        visible, so its absence from every endpoint proves nothing. They are
-        never sent again on their own.
+        No confirmation was received for these submissions. prdb may have
+        accepted them, but previews awaiting moderation cannot be checked.
+        To avoid duplicates, fab waits for your decision before sending again.
       </p>
 
       <ul className={styles.uncertain}>
@@ -418,7 +408,7 @@ function Row({
       <p>
         <span className={styles.hash}>{row.osHash}</span>{' '}
         <span className={styles.when}>
-          {row.at ? `left at ${row.at}` : 'left at an unrecorded time'}
+          {row.at ? `sent at ${row.at}` : 'submission time unknown'}
         </span>
       </p>
 
@@ -448,19 +438,17 @@ function Row({
           onConfirm={() => { setAsking(false); onAgain() }}
         >
           <p>
-            The first submission may have arrived. prdb offers nothing that
-            recognises a second copy as the same submission, so if it did, this
-            puts <strong>two pictures of the same file</strong> in your public
-            gallery &mdash; and there is no retraction for either.
+            prdb may already have accepted the first submission. Sending again
+            risks <strong>publishing a duplicate preview</strong>. Neither
+            accepted submission can be retracted through prdb.
           </p>
           <p>
-            If it did not arrive, this is the only thing that publishes it.
-            Nothing else will.
+            Choose Send it again to retry, or Leave it as it is to stop retrying.
           </p>
           {!row.holds && (
             <p>
-              The generated pair is no longer on disk, so the same picture is
-              decoded again from the same file before it goes.
+              The generated preview is no longer on disk. It will be regenerated
+              from the video file before submission.
             </p>
           )}
         </ConfirmationDialog>

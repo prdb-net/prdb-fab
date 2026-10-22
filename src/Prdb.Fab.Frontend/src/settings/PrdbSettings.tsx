@@ -21,7 +21,8 @@ export function PrdbSettings() {
   return (
     <SettingsPage
       title="prdb"
-      lede="Where the catalogue, the wanted list and the artwork come from. Saving re-checks the key against prdb, and a key it refuses is not stored."
+      lede="Connect your prdb account."
+      help="prdb supplies the Catalogue, Wanted list and artwork. Saving verifies the API key; a rejected key is not stored."
       back="/settings/connections"
       backLabel="Connections"
     >

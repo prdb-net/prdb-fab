@@ -80,11 +80,9 @@ export function RestoreScreen({ onBack }: { onBack: () => void }) {
     <main className={styles.screen}>
       <h1>prdb-fab</h1>
       <p className={styles.lede}>
-        Restore a backup into this installation. It has to be empty &mdash; a
-        restore replaces an installation rather than joining one &mdash; and what
-        comes back is every setting, every key and the record of what was
-        downloaded and filed. Not the videos themselves, and not the caches: all
-        of that is fetched again.
+        Restore settings, API keys, the login password and Download and Library
+        records into an empty installation. Video files are not included:
+        mount your existing files at the paths you confirm below. Caches are rebuilt.
       </p>
 
       <form
@@ -200,8 +198,8 @@ export function RestoreScreen({ onBack }: { onBack: () => void }) {
 
       {fileName && !summary && (
         <p className={styles.note}>
-          {fileName} is ready to be read. Nothing is written until the roots
-          below have been answered.
+          {fileName} is selected. Read the backup to review its contents and
+          confirm the storage paths before restoring.
         </p>
       )}
 

@@ -37,7 +37,7 @@ export function ConnectionsScreen() {
             {!held ? 'Loading…' : held.sabnzbdConfigured
               ? `${held.sabnzbdUrl}, category ${held.sabnzbdCategory}.`
               : held?.sabnzbdSkipped
-                ? 'Skipped during setting up, so nothing is downloaded.'
+                ? 'Skipped during setup. Connect SABnzbd to enable Downloads.'
                 : 'Not configured.'}
           </span>
         </li>
@@ -48,8 +48,8 @@ export function ConnectionsScreen() {
         {Number(held?.indexerCount ?? 0) > 0
           ? 'Manage your Indexers and their priority below.'
           : held?.indexersSkipped
-            ? 'None. This step was skipped during setting up, so nothing is searched for.'
-            : 'None, so nothing is searched for.'}
+            ? 'Skipped during setup. Add an Indexer to find Releases.'
+            : 'No Indexers configured. Add one to find Releases.'}
       </p>
 
       <IndexerList under="/settings/connections/indexers" reorderable />
