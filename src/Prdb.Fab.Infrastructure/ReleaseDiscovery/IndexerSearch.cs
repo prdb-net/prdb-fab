@@ -91,9 +91,15 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
         var observedReleases = await context.Releases.CountAsync(row => row.IndexerId == indexerId
             && row.PostDate >= now.AddDays(-IndexerWindowPolicy.MinimumDays), cancellationToken);
         measuredMinimum = Math.Max(measuredMinimum, (int)Math.Ceiling(observedReleases / 90d));
-        var minimum = minimumProof?.CompletedAt >= now.AddHours(-24)
-            && minimumProof.ProofStartedAt >= now.AddHours(-24) ? 0
-            : Math.Max(1, measuredMinimum - (currentDay ? state.MinimumQueriesSpentToday : 0));
+        var fresh = minimumProof is not null && IndexerRecentWindowRoutine.Fresh(minimumProof, now);
+        var expires = minimumProof?.ProofStartedAt + IndexerWindowPolicy.FreshFor;
+        var neededToday = !fresh || expires <= today.AddDays(1);
+        // Reserve the next minimum pass before it expires, even while today's
+        // shorter proof is still fresh. Abandoned queries are not progress.
+        var progressed = minimumProof?.PassStartedAt is not null && minimumProof.ResumeOffset > 0
+            ? 1 + Math.Max(0, minimumProof.ResumeOffset - NewznabGateway.PageSize) / (NewznabGateway.PageSize - IndexerWindowPolicy.ResumeOverlap)
+            : 0;
+        var minimum = neededToday ? Math.Max(1, measuredMinimum - progressed) : 0;
         return IndexerQueryBudget.Plan(indexer.DailyQueryBudget, currentDay ? state.QueriesSpentToday : 0,
             now, state.HeadPagesPerPoll, minimum, wanted, manual) with { MinimumDailyCost = measuredMinimum };
     }

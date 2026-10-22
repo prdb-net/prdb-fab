@@ -50,7 +50,7 @@ public sealed class IndexerRecentWindowRoutine(FabDbContext context, IndexerSear
         if (due.Days == 90 && (!governor.HasReading || !governor.Ask(PrdbWork.ReleaseIdentification).Sends
             || await context.Releases.Where(row => row.IdentificationState == IdentificationState.Awaiting
                 || row.IdentificationDetailsPending).Select(row => row.Title).Distinct().CountAsync(cancellationToken) > ReleaseIdentificationRoutine.BatchSize * 2))
-            return RunResult.Deferred(TimeSpan.FromMinutes(1), "Optional Indexer history waits for downstream Identification capacity.");
+            return RunResult.Deferred(Earlier(TimeSpan.FromMinutes(1), MinimumDueIn(windows, now)), "Optional Indexer history waits for downstream Identification capacity.");
 
         if (due.PassStartedAt is null)
         {
@@ -71,7 +71,7 @@ public sealed class IndexerRecentWindowRoutine(FabDbContext context, IndexerSear
         var offset = Math.Max(0, due.ResumeOffset - IndexerWindowPolicy.ResumeOverlap);
         var searched = await search.PageAsync(indexerId, 0, due.Days, purpose, null, cancellationToken, offset);
         if (searched.DeferredFor is { } wait)
-            return RunResult.Deferred(wait, $"Indexer {due.Days}-day coverage waits for protected Daily Query Budget.");
+            return RunResult.Deferred(due.Days == 14 ? wait : Earlier(wait, MinimumDueIn(windows, now)), $"Indexer {due.Days}-day coverage waits for protected Daily Query Budget.");
         var read = searched.Read!;
         if (read.Refusal is not null) return RunResult.Failed("The Indexer refused its coverage pass.", read.RetryAfter);
         due.PassQueries++;
@@ -109,7 +109,16 @@ public sealed class IndexerRecentWindowRoutine(FabDbContext context, IndexerSear
         if (due.Days == 90 && complete) legacy.RecentWindowCompletedAt = now;
         await context.SaveChangesAsync(cancellationToken);
         var remains = windows.Any(row => !Fresh(row, now));
-        return RunResult.Discovered(returned, write.Added, remains ? TimeSpan.Zero : IndexerWindowPolicy.FreshFor);
+        return RunResult.Discovered(returned, write.Added, remains ? TimeSpan.Zero : MinimumDueIn(windows, now));
+    }
+
+    private static TimeSpan Earlier(TimeSpan left, TimeSpan right) => left <= right ? left : right;
+    private static TimeSpan MinimumDueIn(IReadOnlyList<IndexerWindowRow> windows, DateTimeOffset now)
+    {
+        var minimum = windows.Single(row => row.Days == 14);
+        var at = minimum.ProofStartedAt ?? minimum.CompletedAt ?? now;
+        var wait = at + IndexerWindowPolicy.FreshFor - now + TimeSpan.FromSeconds(1);
+        return wait > TimeSpan.Zero ? wait : TimeSpan.FromSeconds(1);
     }
 
     internal static bool Fresh(IndexerWindowRow row, DateTimeOffset now) =>

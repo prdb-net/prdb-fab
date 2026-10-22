@@ -234,3 +234,11 @@ shedding and an explicit Status shortfall. Serialized SDK operations cover key
 selection, the unmetered snapshot, parsing and the metered request; this prevents
 a concurrent key change or an older snapshot from restoring capacity over a
 newer response. No transaction spans any of those remote calls.
+
+A minimum proof that will expire before the next UTC midnight reserves its next
+pass in advance. Only committed range progress reduces that reservation;
+abandoned attempts and yesterday's spent counter cannot stand in for progress.
+A deferred larger range wakes no later than minimum-proof expiry, and even a
+completed optional pass schedules the next check from the minimum's proof time.
+This prevents search/history reservations or a midnight wait from starving a
+minimum that the configured Daily Query Budget can actually sustain.

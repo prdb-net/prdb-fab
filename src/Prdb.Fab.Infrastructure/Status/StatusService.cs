@@ -98,7 +98,7 @@ public sealed class StatusService(
         {
             if (!indexerBudgets.TryGetValue(indexer.Id, out var budget)) continue;
             var headPages = walkStates.Single(row => row.IndexerId == indexer.Id).HeadPagesPerPoll;
-            var dailyRequired = headPages * IndexerQueryBudget.PollsPerDay + Math.Max(1, budget.MinimumDailyCost);
+            var dailyRequired = Math.Clamp(headPages, 1, 10) * IndexerQueryBudget.PollsPerDay + Math.Max(1, budget.MinimumDailyCost);
             if (dailyRequired > indexer.DailyQueryBudget)
                 conditions.Add(Gap($"{indexer.Name}'s Daily Query Budget cannot sustain the minimum",
                     $"At least {dailyRequired} queries/day are needed for measured head polling and 14-day coverage; "

@@ -130,3 +130,40 @@ public sealed partial class IndexerWalkTests
         }
     }
 }
+
+public sealed partial class IndexerWalkTests
+{
+    [Fact]
+    public async Task A_larger_range_wait_cannot_sleep_past_the_next_required_minimum_pass()
+    {
+        var remote = new RangeIndexer();
+        await using var database = await TestDatabase.CreateAsync(also: services =>
+            services.AddHttpClient(FabTransports.Indexers).ConfigurePrimaryHttpMessageHandler(() => remote));
+        await SeedAsync(database);
+        await RangeTurnAsync(database);
+        await RangeTurnAsync(database);
+        await using (var seed = database.Scope())
+        {
+            var context = seed.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Indexers.ExecuteUpdateAsync(u => u.SetProperty(r => r.DailyQueryBudget, 110), TestContext.Current.CancellationToken);
+            var video = new CatalogueVideoRow { PrdbId = Guid.NewGuid(), Title = "A Searchable Wanted Title" };
+            context.CatalogueVideos.Add(video);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            context.WantedVideos.Add(new WantedVideoRow { VideoId = video.Id, SinceAt = database.Time.GetUtcNow() });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        database.Time.Advance(TimeSpan.FromHours(15)); // Next UTC midnight; minimum expires at 09:00.
+        var waited = await RangeTurnAsync(database);
+        Assert.Null(waited.Outcome);
+        Assert.Equal(TimeSpan.FromHours(9) + TimeSpan.FromSeconds(1), waited.DueIn);
+        await using (var check = database.Scope())
+        {
+            var plan = await check.ServiceProvider.GetRequiredService<IndexerSearch>().BudgetAsync(IndexerId, TestContext.Current.CancellationToken);
+            Assert.Equal(2, plan.MinimumReserve); // Protected before the proof expires.
+            Assert.Equal(0, plan.RequiredShortfall);
+        }
+        database.Time.Advance(waited.DueIn!.Value);
+        await RangeTurnAsync(database);
+        Assert.Equal("14", HttpUtility.ParseQueryString(remote.Requests.Last().Query)["maxage"]);
+    }
+}
