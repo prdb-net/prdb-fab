@@ -54,9 +54,9 @@ credential, and the field to set one is offered only while no password exists.
 Whoever reaches the tool first sets it, so start it on a network you control.
 After that it walks you through your prdb key, SABnzbd, your indexers and your
 library root, checking each one against the real service before it stores it.
-Setting up ends on your wanted list, with the first **90-day Recent Window**
-already filling behind it — there is nothing to wait in front of. Status shows
-when prdb and every enabled Indexer have completed that first proof.
+Setting up ends on your wanted list while the ninety-day Catalogue and staged
+Indexer coverage fill in the background. Status shows each source's actual
+proof, starting with the Indexer 14-day minimum and 30-day initial target.
 
 **Over plain `http` the password travels across the network in the clear.** On a
 LAN you control that is the ordinary way to run this; reaching it from anywhere
@@ -75,10 +75,10 @@ prdb through the same governed connection used by the background sync.
 
 Each enabled indexer is also walked continuously. Releases enter a local,
 disposable cache, are screened against the catalogue, and prdb is asked to
-identify their names. The newest **90 days** are a standing local guarantee:
-prdb Catalogue details, every enabled Indexer's Releases and prdb
-Identification are filled and revalidated in the background without a page
-first being opened. A shared **Releases** table opens from
+identify their names. The Catalogue keeps ninety days prepared. Indexers prove
+14 days first, target 30 days, and extend optionally up to 90 only when budgets
+allow it; Identification follows that working set. All of this runs without a
+page first being opened. A shared **Releases** table opens from
 all four browse surfaces and shows the Indexer, size, first seen time,
 Identification State, Confidence and `matchedBy`. Ambiguous answers remain
 Candidates and a Site-Only Match remains a Site — neither is presented as a
@@ -95,12 +95,26 @@ discarded to hold the ceiling. The cache may exceed its ceiling when protecting
 those rows requires it.
 
 Each newly added Indexer starts with a **1,000-request Daily Query Budget**.
-When there is searchable Wanted work, half of that budget, capped at 480
-requests, is reserved for the Wanted Sweep; the rest is shared by Manual Search
-and the continuous Indexer Walk. A resumable full 90-day pass runs beside the
-head walk and repeats at least daily, so late Indexer visibility and outages do
-not leave permanent holes. Its first pass may cost hundreds of queries or
-continue on a later day. It never spends past that Indexer's daily budget.
+Head polling every fifteen minutes and the measured cost of the newest **14
+days** have protected capacity. A fresh installation proves those 14 days first,
+then extends to its initial **30-day target**. Optional history up to 90 days
+runs only from surplus Indexer budget and downstream prdb capacity. Wanted Sweep
+and Manual Search take precedence over optional history, with reservations based
+on actual bounded search demand. Existing older cache rows are retained.
+Resumed pages overlap and verify a Release identity anchor because Newznab
+offsets move as its results change. An interrupted pass resumes; an absent
+anchor restarts its proof without dropping cached data.
+
+The prdb Governor reads both **hourly and rolling monthly account-wide budgets**,
+including use by other clients. Background Identification and repair are paced
+below essential account/file work; an oldest-slot expiry never resets a full
+allowance. Current inline Video details and exact-input answer reuse reduce
+metered requests. Identify answers survive interrupted detail reads. Catalogue
+scope remains ninety days; routine revalidation covers the 30-day Indexer
+working set and wanted older matches. Status shows actual 14/30/90 proofs,
+remaining distinct inputs, request/byte costs and the reason work waits. It
+reports an unsatisfied minimum or a measured capacity shortfall; incomplete
+optional history alone is healthy. See [the measurement recipe](docs/sync-measurements.md).
 
 **Status** lays the whole unattended loop out as Sync (prdb), Sync (Indexers),
 Match, Decide, Download and File. Its headline counts only **Gaps** that need a

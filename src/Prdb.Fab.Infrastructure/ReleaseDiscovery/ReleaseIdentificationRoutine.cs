@@ -185,16 +185,7 @@ public sealed class ReleaseIdentificationRoutine(
         return RunResult.Handled(releases.Count, remains ? TimeSpan.Zero : Cadence);
     }
 
-    private IQueryable<ReleaseRow> WorkSet(DateTimeOffset now)
-    {
-        var since = now.AddDays(-IndexerWindowPolicy.InitialDays);
-        var dueBefore = now - RecentWindow.RevalidateAfter;
-        return context.Releases.Where(row => row.IdentificationDetailsPending
-                && (row.DetailRetryAt == null || row.DetailRetryAt <= now)
-            || !row.IdentificationDetailsPending && (row.IdentificationState == IdentificationState.Awaiting
-                || (row.PostDate >= since || row.VideoId != null && context.WantedVideos.Any(wanted => wanted.VideoId == row.VideoId))
-                    && (row.LastIdentifiedAt == null || row.LastIdentifiedAt <= dueBefore)));
-    }
+    private IQueryable<ReleaseRow> WorkSet(DateTimeOffset now) => ReleaseIdentificationWork.Current(context, now);
 
     private static string InputKey(string title, string accountScope) => Convert.ToHexString(SHA256.HashData(
         JsonSerializer.SerializeToUtf8Bytes(new { Version = 1, Scope = accountScope, Evidence = new IdentificationInput(title) })));

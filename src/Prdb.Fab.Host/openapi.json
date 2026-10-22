@@ -5508,6 +5508,63 @@
           }
         }
       },
+      "IndexerRangeCoverage": {
+        "required": [
+          "days",
+          "fresh",
+          "completedAt",
+          "proofStartedAt",
+          "oldestProvedAt",
+          "resumeOffset",
+          "passInProgress"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fresh": {
+            "type": "boolean"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "proofStartedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "oldestProvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "resumeOffset": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "passInProgress": {
+            "type": "boolean"
+          }
+        }
+      },
       "IndexerSettingsRequest": {
         "required": [
           "enabled",
@@ -7022,6 +7079,24 @@
                 "$ref": "#/components/schemas/VideoChangeProgress"
               }
             ]
+          },
+          "indexerInitialDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 30
+          },
+          "identificationInputsDue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -7062,6 +7137,22 @@
           },
           "passInProgress": {
             "type": "boolean"
+          },
+          "ranges": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/IndexerRangeCoverage"
+            }
+          },
+          "headLastSucceededAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },

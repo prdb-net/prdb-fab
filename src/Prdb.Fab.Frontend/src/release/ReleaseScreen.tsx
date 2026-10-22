@@ -146,7 +146,7 @@ function ReleaseTable({
       <div className={styles.boundary}>
         <strong>{page.recentWindow.complete ? 'Recent Window ready.' : 'Recent Window still filling.'}</strong>{' '}
         Reading or refreshing this table never queries an Indexer. Background Sync keeps the newest{' '}
-        {page.recentWindow.days} days of Catalogue, Indexer and Identification data prepared.
+        {page.recentWindow.days} days of Catalogue data and an initial {page.recentWindow.indexerInitialDays}-day Indexer target; optional history extends up to 90 days when capacity permits.
         {!page.recentWindow.complete && ' An empty table is not authoritative until every configured source is complete.'}
       </div>
 

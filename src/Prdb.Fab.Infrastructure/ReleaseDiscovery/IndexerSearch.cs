@@ -95,7 +95,7 @@ public sealed class IndexerSearch(FabDbContext context, NewznabGateway gateway, 
             && minimumProof.ProofStartedAt >= now.AddHours(-24) ? 0
             : Math.Max(1, measuredMinimum - (currentDay ? state.MinimumQueriesSpentToday : 0));
         return IndexerQueryBudget.Plan(indexer.DailyQueryBudget, currentDay ? state.QueriesSpentToday : 0,
-            now, state.HeadPagesPerPoll, minimum, wanted, manual);
+            now, state.HeadPagesPerPoll, minimum, wanted, manual) with { MinimumDailyCost = measuredMinimum };
     }
 
 }

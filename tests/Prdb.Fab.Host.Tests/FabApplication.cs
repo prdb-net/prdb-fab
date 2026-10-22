@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
+using Prdb.Fab.Infrastructure.Connections;
 
 namespace Prdb.Fab.Host.Tests;
 

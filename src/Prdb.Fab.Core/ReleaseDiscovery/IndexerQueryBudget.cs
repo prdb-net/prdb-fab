@@ -4,6 +4,7 @@ namespace Prdb.Fab.Core.ReleaseDiscovery;
 public sealed record IndexerBudgetPlan(int DailyBudget, int Spent, int HeadReserve,
     int MinimumReserve, int SearchReserve)
 {
+    public int MinimumDailyCost { get; init; }
     public int Remaining => Math.Max(0, DailyBudget - Spent);
     public int RequiredShortfall => Math.Max(0, HeadReserve + MinimumReserve - Remaining);
     public int AvailableFor(IndexerQueryPurpose purpose) => Math.Max(0, Remaining - (purpose switch

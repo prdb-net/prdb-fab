@@ -254,3 +254,21 @@ dismiss*.
 **Keep the name "sync status".** Rejected: `CONTEXT.md` defines Sync as catching
 up with what prdb, the indexers and SABnzbd say, and more than half of what the
 page carries is not that.
+
+## Amendment: staged coverage and shared quota evidence
+
+Status reads independent Indexer proofs for 14/30/90 days, the 30-day initial
+target and the last successful head poll. Only an unsatisfied/stale minimum is
+a coverage Gap; incomplete optional history is normal work and may be deferred
+by the Governor or protected Indexer budget. A measured required-demand shortfall
+names the configured Daily Query Budget and the lower-bound query deficit.
+Catalogue coverage stays ninety days and is displayed separately.
+
+Both prdb windows show account-wide remaining counters, observation time,
+freshness and oldest-slot expiry semantics. Current deferrals retain their
+actual reason and due time. Request/byte/HTTP-time counters and exact-input
+reuse are local bounded diagnostics with an explicit process interval. Remaining
+distinct inputs and Release row counts are separate. Throughput requires a
+minimum observation interval and input sample; no completion time is claimed
+while future shared account demand is unknown. Page polling reads local state
+only and never refreshes a remote quota reading.
