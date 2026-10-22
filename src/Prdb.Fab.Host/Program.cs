@@ -5,6 +5,8 @@ using Microsoft.OpenApi;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.ResponseCompression;
+using Prdb.Fab.Host.Frontend;
 
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Host.Access;
@@ -65,6 +67,9 @@ builder.Services.AddFabFiling();
 builder.Services.AddFabReporting();
 builder.Services.AddFabSync();
 builder.Services.AddFabBackup();
+
+// Only the public frontend enters the compression branch below.
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
 // ADR 0010: a browser session is the only credential, and an unauthenticated
 // request gets 401 rather than a redirect.
@@ -182,8 +187,12 @@ if (!readingTheEndpoints)
 // with it, so ADR 0034's second documented instruction folds into its first.
 app.UseSerilogRequestLogging(options => options.GetLevel = (_, _, _) => Serilog.Events.LogEventLevel.Debug);
 
-app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseWhen(context => !context.Request.Path.StartsWithSegments("/api"), frontend =>
+{
+    frontend.UseResponseCompression();
+    frontend.UseDefaultFiles();
+    frontend.UseStaticFiles(FrontendFiles.Options);
+});
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -227,7 +236,7 @@ app.MapBackup();
 app.MapFallback("/api/{*rest}", () => Results.NotFound());
 
 // Anonymous, and it has to be: this is the page that shows the sign-in form.
-app.MapFallbackToFile("index.html").AllowAnonymous();
+app.MapFallbackToFile("index.html", FrontendFiles.Options).AllowAnonymous();
 
 app.Run();
 
