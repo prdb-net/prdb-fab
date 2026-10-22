@@ -1,6 +1,9 @@
+import { Loaded } from '../ui/Loaded.tsx'
+import { PageNotice } from '../ui/PageNotice.tsx'
+import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useLocation, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 
 import { type LibraryEntrySort, readLibrary } from '../api/client.ts'
 import browseStyles from '../catalogue/BrowseScreen.module.css'
@@ -35,7 +38,7 @@ export function LibraryScreen() {
   const quality = parameters.get('quality') ?? ''
   const confirmed = choice(parameters.get('confirmed'), confirmations, '')
   const sort = choice(parameters.get('sort'), sorts, 'FiledAtDescending')
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const library = useQuery({
     queryKey: ['library', search, site, actor, quality, confirmed, sort, page],
     queryFn: () => readLibrary({ search, site, actor, quality, confirmed, sort, page }),
@@ -43,8 +46,15 @@ export function LibraryScreen() {
   })
   const data = library.data
   const total = Number(data?.total ?? 0)
+  const filtered = Boolean(search || site || actor || quality || confirmed)
+  // These filter options describe the whole held Library, not just this page.
+  const hasHeldEntries = total > 0 || (data?.filters.qualities.length ?? 0) > 0
+  const cleared = new URLSearchParams(parameters)
+  for (const key of ['search', 'site', 'actor', 'quality', 'confirmed', 'page']) cleared.delete(key)
   const pageSize = Number(data?.pageSize ?? 48)
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  const shownPage = Number(library.data?.page ?? page)
+  const unavailable = library.data !== undefined && !library.isError && !library.isPlaceholderData && page > pages
   useEffect(() => setSearchInput(search), [search])
   useEffect(() => {
     if (searchInput === search) return
@@ -83,7 +93,7 @@ export function LibraryScreen() {
   }
 
   return (
-    <main className={browseStyles.screen}>
+    <main className={browseStyles.screen} aria-busy={library.isFetching}>
       <div className={browseStyles.heading}>
         <h1>Library</h1>
         {total > 0 && <span className={browseStyles.count}>{total} videos</span>}
@@ -118,32 +128,45 @@ export function LibraryScreen() {
             {data?.filters.qualities.map((item) => <option key={item}>{item}</option>)}
           </select>
         </label>
-        <label>
-          Sort by
-          <label className={styles.label} htmlFor="library-confirmed">Verification</label>
+        <label htmlFor="library-confirmed">
+          Verification
           <select id="library-confirmed" name="confirmed" className={styles.field} value={confirmed} onChange={(event) => setFilter('confirmed', event.target.value)}>
             <option value="">Everything held</option>
             <option value="no">Not confirmed</option>
             <option value="yes">Confirmed</option>
           </select>
 
+        </label>
+        <label htmlFor="library-sort">
+          Sort by
           <select id="library-sort" name="sort" className={styles.field} value={sort} onChange={(event) => setFilter('sort', event.target.value)}>
             {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
           </select>
         </label>
       </div>
-      {library.isError && <p className={styles.error}>The Library could not be read.</p>}
-      {data?.entries.length === 0
-        ? <p className={browseStyles.empty}>No held Library Entries match these filters.</p>
+      <Loaded query={library} of="the Library">{() => null}</Loaded>
+      <PageNotice page={page} pages={pages} pending={library.isFetching} previousPage={library.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
+      {unavailable ? null : data?.entries.length === 0
+        ? <div className={browseStyles.empty}>
+          <strong>{hasHeldEntries ? 'No held Library Entries match these filters.' : 'No Library Entries yet.'}</strong>
+          <p>{hasHeldEntries
+            ? 'Clear the filters to see what the Library holds.'
+            : 'Identified video files are filed here after a Download completes.'}</p>
+          {filtered && <p><Link to={{ pathname: '/library', search: cleared.toString() }}>Clear filters</Link></p>}
+          {!hasHeldEntries && <>
+            <p><Link to="/">Browse Videos</Link> · <Link to="/downloads">View Downloads</Link></p>
+            <p>Expected something here? <Link to="/status">Check Status</Link>.</p>
+          </>}
+        </div>
         : <LibraryGrid
           entries={data?.entries ?? []}
           action={(entry) => <LibraryCardActions entry={entry} returnTo={location.pathname + location.search} />}
         />}
-      {pages > 1 && (
+      {pages > 1 && !unavailable && (
         <nav className={browseStyles.pager}>
-          <button type="button" disabled={page <= 1} onClick={() => goTo(page - 1)}>Previous</button>
-          <span className={browseStyles.where}>Page {page} of {pages}</span>
-          <button type="button" disabled={page >= pages} onClick={() => goTo(page + 1)}>Next</button>
+          <button type="button" disabled={library.isFetching || shownPage <= 1} onClick={() => goTo(page - 1)}>Previous</button>
+          <span className={browseStyles.where}>Page {shownPage} of {pages}</span>
+          <button type="button" disabled={library.isFetching || shownPage >= pages} onClick={() => goTo(page + 1)}>Next</button>
         </nav>
       )}
     </main>

@@ -652,7 +652,15 @@ public sealed class StatusService(
                 $"{Label(row.Name)} is deliberately waiting",
                 $"{row.LastDeferredReason} It may be due again at {row.DeferredUntil:u}.",
                 StageOf(row.Name),
-                OwnerRoute(row.Name, row.Target)));
+                OwnerRoute(row.Name, row.Target)) with
+            {
+                Deferral = new StatusDeferral(
+                    row.LastDeferredReason ?? "The routine is waiting for a governing limit.",
+                    row.DeferredUntil!.Value,
+                    Label(row.Name),
+                    row.Target,
+                    UsesPrdb(row.Name) ? "prdb" : "Schedule"),
+            });
         }
     }
 
@@ -1040,6 +1048,14 @@ public sealed class StatusService(
 
     private static string Label(string name) => name switch
     {
+        ActorProfileRoutine.RoutineName => "Actor profiles",
+        ActorDrainRoutine.RoutineName => "Actor catalogue drain",
+        RecentCatalogueRoutine.RoutineName => "Catalogue Recent Window",
+        CatalogueRepairRoutine.RoutineName => "Catalogue Repair",
+        PreviewPictureRoutine.RoutineName => "Preview pictures",
+        ActorVideoLoadRoutine.RoutineName => "Actor Catalogue Fill",
+        PreviewGenerationRoutine.RoutineName => "Preview generation",
+        PreviewUploadRoutine.RoutineName => "Preview upload",
         DiscoveryRoutineNames.Caps => "Indexer capabilities",
         DiscoveryRoutineNames.Walk => "Indexer walk",
         DiscoveryRoutineNames.RecentWindow => "Indexer Recent Window",
@@ -1050,6 +1066,10 @@ public sealed class StatusService(
         DiscoveryRoutineNames.Identification => "Release identification",
         LibraryVerificationRoutine.RoutineName => "Library verification",
         AutomaticDecisionRoutine.RoutineName => "Automatic decisions",
+        "prdb.videos.changes" => "Video changes",
+        "prdb.user-previews.preview" => "Video user previews",
+        "prdb.user-previews.library" => "Library user previews",
+        "prdb.user-previews.changes" => "User preview changes",
         _ => name,
     };
 
@@ -1130,7 +1150,9 @@ public sealed record StatusCondition(StatusConditionKind Kind, string Title, str
     /// added later cannot forget it.
     /// </summary>
     public string? Route { get; init; } = StatusRoutes.Pointing(Route);
+    public StatusDeferral? Deferral { get; init; }
 }
+public sealed record StatusDeferral(string Reason, DateTimeOffset RetryAt, string Work, string? Target, string Source);
 public sealed record StatusRoutine(string Name, string? Target, string Label, string Stage, DateTimeOffset DueAt, DateTimeOffset? LastSuccessAt, DateTimeOffset? LastFailureAt, int ConsecutiveFailures, bool BackingOff, int? WorkSetSize, DateTimeOffset? LastCompletedAt, int? ResultsSeen, int? RowsAdded, DateTimeOffset? LastRunNowAt, RunNowOutcome? LastRunNowOutcome, string? LastRunNowDetail, bool RunNowPending);
 public sealed record StatusGateTally(string Gate, int Total, IReadOnlyList<StatusNamedCount> Outcomes);
 public sealed record StatusNamedCount(string Name, int Count, bool Admitted = false);

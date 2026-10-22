@@ -1,3 +1,5 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
+import { readPage } from '../ui/paging.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -36,7 +38,7 @@ export function ReleaseScreen() {
   const stateValue = parameters.get('state')
   const state = states.find((value) => value === stateValue)
   const indexer = parameters.get('indexer') ?? undefined
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const releases = useQuery({
     queryKey: ['releases', parameters.toString()],
     queryFn: () => {
@@ -193,7 +195,7 @@ function ReleaseTable({
         </label>
       </div>
 
-      {page.releases.length === 0 ? (
+      {current > pages ? null : page.releases.length === 0 ? (
         <ReleaseEmpty
           filtered={Boolean(state || indexer)}
           returnTo={returnTo}
@@ -247,7 +249,8 @@ function ReleaseTable({
         </div>
       )}
 
-      {pages > 1 && (
+      <PageNotice page={current} pages={pages} />
+      {pages > 1 && current <= pages && (
         <nav className={styles.pager}>
           <button type="button" onClick={() => goTo(current - 1)} disabled={current <= 1}>
             Newer

@@ -1,3 +1,5 @@
+import { PageNotice } from '../ui/PageNotice.tsx'
+import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
 
@@ -9,6 +11,7 @@ import { PageLoading } from '../shell/LoadingScreen.tsx'
 import { CardActions } from './CardActions.tsx'
 import { PreviewOverlay } from './Preview.tsx'
 import { usePreview } from './preview.ts'
+import { Loaded } from '../ui/Loaded.tsx'
 
 /**
  * The wanted list, and where setting up ends.
@@ -26,7 +29,7 @@ export function WantedScreen() {
   // ADR 0036: where in the grid the user is, in the address.
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const { openPreview } = usePreview()
   const here = location.pathname + location.search
 
@@ -39,9 +42,14 @@ export function WantedScreen() {
   const total = Number(wanted.data?.total ?? 0)
   const pageSize = Number(wanted.data?.pageSize ?? 24)
   const pages = Math.max(1, Math.ceil(total / pageSize))
+  const shownPage = Number(wanted.data?.page ?? page)
+  const unavailable = wanted.data !== undefined && !wanted.isError && !wanted.isPlaceholderData && page > pages
 
   const goTo = (to: number) => {
-    setParameters(to === 1 ? {} : { page: String(to) })
+    const next = new URLSearchParams(parameters)
+    if (to === 1) next.delete('page')
+    else next.set('page', String(to))
+    setParameters(next)
     window.scrollTo({ top: 0 })
   }
 
@@ -49,8 +57,15 @@ export function WantedScreen() {
     return <PageLoading label="Loading Wanted videos" />
   }
 
+  if (wanted.isError) {
+    return <main className={styles.screen} aria-busy={wanted.isFetching}>
+      <h1>Wanted</h1>
+      <Loaded query={wanted} of="the Wanted list">{() => null}</Loaded>
+    </main>
+  }
+
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} aria-busy={wanted.isFetching}>
       <div className={styles.heading}>
         <h1>Wanted</h1>
         {total > 0 && <span className={styles.count}>{total} videos</span>}
@@ -65,7 +80,8 @@ export function WantedScreen() {
           <summary>How Wanted works</summary>
           <p>
             Videos you already have are marked <strong>In Library</strong>. For the rest,
-            Download opens an eligible Release and Search helps find one.
+            Download starts the best eligible Release at your preferred Quality or below,
+            and Search opens the Release page to inspect or find one.
           </p>
         </details>
       )}
@@ -77,7 +93,9 @@ export function WantedScreen() {
         </p>
       )}
 
-      {total === 0 ? (
+      <PageNotice page={page} pages={pages} pending={wanted.isFetching} previousPage={wanted.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
+
+      {unavailable ? null : total === 0 ? (
         <div className={styles.empty}>{empty(wanted.data?.feedHasRun === true)}</div>
       ) : (
         <>
@@ -92,23 +110,22 @@ export function WantedScreen() {
             )}
           />
 
-          <PreviewOverlay returnTo={here} videos={wanted.data?.videos ?? []} />
-
-          {pages > 1 && (
+          {pages > 1 && !unavailable && (
             <nav className={styles.pager}>
-              <button type="button" onClick={() => goTo(page - 1)} disabled={page <= 1}>
+              <button type="button" onClick={() => goTo(page - 1)} disabled={wanted.isFetching || shownPage <= 1}>
                 Newer
               </button>
               <span className={styles.where}>
-                Page {page} of {pages}
+                Page {shownPage} of {pages}
               </span>
-              <button type="button" onClick={() => goTo(page + 1)} disabled={page >= pages}>
+              <button type="button" onClick={() => goTo(page + 1)} disabled={wanted.isFetching || shownPage >= pages}>
                 Older
               </button>
             </nav>
           )}
         </>
       )}
+      <PreviewOverlay returnTo={here} videos={wanted.data?.videos ?? []} />
     </main>
   )
 }

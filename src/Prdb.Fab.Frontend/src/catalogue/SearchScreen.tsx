@@ -1,3 +1,6 @@
+import { Loaded } from '../ui/Loaded.tsx'
+import { PageNotice } from '../ui/PageNotice.tsx'
+import { readPage } from '../ui/paging.ts'
 import type { FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useLocation, useSearchParams } from 'react-router'
@@ -44,15 +47,17 @@ export function SearchScreen() {
     availableSorts,
     search ? 'Relevance' : 'ReleaseDateDescending',
   )
-  const page = Math.max(1, Number(parameters.get('page') ?? '1') || 1)
+  const page = readPage(parameters)
   const { openPreview } = usePreview()
   const videos = useQuery({
-    queryKey: ['catalogue-videos', search, filter, sort, page],
+    queryKey: ['catalogue', 'videos', search, filter, sort, page],
     queryFn: () => listVideos(search, page, filter, sort),
     placeholderData: (held) => held,
   })
   const total = Number(videos.data?.total ?? 0)
   const pages = Math.max(1, Math.ceil(total / Number(videos.data?.pageSize ?? 24)))
+  const shownPage = Number(videos.data?.page ?? page)
+  const unavailable = videos.data !== undefined && !videos.isError && !videos.isPlaceholderData && page > pages
 
   const apply = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -94,7 +99,7 @@ export function SearchScreen() {
   if (videos.isPending && !videos.data) return <PageLoading label="Searching the Catalogue" />
 
   return (
-    <main className={styles.screen}>
+    <main className={styles.screen} aria-busy={videos.isFetching}>
       <div className={styles.heading}>
         <div>
           <h1>Search</h1>
@@ -128,9 +133,11 @@ export function SearchScreen() {
 
       <p className={styles.summary}>{summary(filter, sort, search)}</p>
 
+      <PageNotice page={page} pages={pages} pending={videos.isFetching} previousPage={videos.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
+
       {videos.isError ? (
-        <p className={styles.empty}>The local Catalogue could not be searched.</p>
-      ) : total === 0 ? (
+        <Loaded query={videos} of="the local Catalogue">{() => null}</Loaded>
+      ) : unavailable ? null : total === 0 ? (
         <div className={styles.empty}>
           <p>No locally known Videos match this search and filter.</p>
           {filter !== 'All' && (
@@ -153,11 +160,11 @@ export function SearchScreen() {
 
       <PreviewOverlay returnTo={here} videos={videos.data?.videos ?? []} />
 
-      {pages > 1 && (
+      {pages > 1 && !unavailable && (
         <nav className={styles.pager}>
-          <button type="button" onClick={() => goTo(page - 1)} disabled={page <= 1}>Previous</button>
-          <span>Page {page} of {pages}</span>
-          <button type="button" onClick={() => goTo(page + 1)} disabled={page >= pages}>Next</button>
+          <button type="button" onClick={() => goTo(page - 1)} disabled={videos.isFetching || shownPage <= 1}>Previous</button>
+          <span>Page {shownPage} of {pages}</span>
+          <button type="button" onClick={() => goTo(page + 1)} disabled={videos.isFetching || shownPage >= pages}>Next</button>
         </nav>
       )}
     </main>

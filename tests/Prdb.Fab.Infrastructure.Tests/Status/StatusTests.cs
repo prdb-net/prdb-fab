@@ -17,6 +17,50 @@ namespace Prdb.Fab.Infrastructure.Tests.Status;
 public sealed class StatusTests
 {
     [Fact]
+    public async Task Deferral_causes_targets_and_retry_times_are_local_facts_and_expire_on_the_next_read()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var retry = database.Time.GetUtcNow().AddMinutes(10);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            foreach (var (name, target, reason) in new[]
+            {
+                ("prdb.actor-profiles", (string?)null, "the hourly budget is spent"),
+                ("prdb.user-previews.preview", "video-a", "the hourly budget is spent"),
+                ("prdb.user-previews.preview", "video-b", "a distinct reserve limit"),
+            })
+            {
+                context.Routines.Add(new RoutineRow
+                {
+                    Name = name, Target = target, Lane = Lane.Sync,
+                    DueAt = retry, DeferredUntil = retry, LastDeferredReason = reason,
+                });
+            }
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        await using var reading = database.Scope();
+        var service = reading.ServiceProvider.GetRequiredService<StatusService>();
+        var before = await service.ReadAsync(TestContext.Current.CancellationToken);
+        var waits = before.Stages.SelectMany(stage => stage.Brakes).Where(brake => brake.Deferral is not null).ToArray();
+        Assert.Equal(3, waits.Length);
+        Assert.Equal(2, waits.Count(brake => brake.Deferral!.Reason == "the hourly budget is spent"));
+        Assert.All(waits, brake =>
+        {
+            Assert.Equal(StatusConditionKind.Brake, brake.Kind);
+            Assert.Equal(retry, brake.Deferral!.RetryAt);
+            Assert.Equal("prdb", brake.Deferral.Source);
+            Assert.Equal("/settings/connections/prdb?from=/status", brake.Route);
+        });
+        Assert.Contains(waits, brake => brake.Deferral!.Target == "video-a");
+        Assert.Contains(waits, brake => brake.Deferral!.Target == "video-b" && brake.Deferral.Reason == "a distinct reserve limit");
+        database.Time.Advance(TimeSpan.FromMinutes(11));
+        var after = await service.ReadAsync(TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(after.Stages.SelectMany(stage => stage.Brakes), brake => brake.Deferral is not null);
+        Assert.Equal(before.GapCount, after.GapCount);
+    }
+
+    [Fact]
     public async Task Incomplete_recent_window_sources_are_visible_as_gaps()
     {
         await using var database = await TestDatabase.CreateAsync();
