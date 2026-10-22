@@ -121,7 +121,7 @@ public sealed class RoutineStore(
             context.RoutineRuns.Add(new RoutineRunRow
             {
                 RoutineId = routine.Id,
-                StartedAt = now,
+                StartedAt = result.StartedAt ?? now,
                 FinishedAt = now,
                 Outcome = result.Outcome!.Value,
                 ItemsHandled = result.ItemsHandled,

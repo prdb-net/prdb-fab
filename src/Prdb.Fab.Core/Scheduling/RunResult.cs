@@ -43,6 +43,9 @@ public sealed record RunResult
     /// </summary>
     public RunOutcome? Outcome { get; }
 
+    /// <summary>The actual start of a scheduled turn, supplied by its runner.</summary>
+    public DateTimeOffset? StartedAt { get; init; }
+
     /// <summary>How much of its work set the run got through.</summary>
     public int ItemsHandled { get; }
 

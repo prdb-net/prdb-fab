@@ -50,6 +50,8 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
 
     private readonly Lock gate = new();
 
+    public SyncCosts Costs { get; } = new(time);
+
     private PrdbBudget? reading;
     private DateTimeOffset readAt;
     private DateTimeOffset? spentUntil;
