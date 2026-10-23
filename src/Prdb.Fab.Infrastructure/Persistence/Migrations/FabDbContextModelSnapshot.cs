@@ -851,6 +851,12 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<string>("PlannedPath")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PreviewDetail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreviewEvidence")
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("Probed")
                         .HasColumnType("INTEGER");
 
@@ -862,6 +868,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("SourcePath")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ValidatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

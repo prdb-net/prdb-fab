@@ -1,0 +1,7 @@
+.files { list-style: none; padding: 0; display: grid; gap: 1rem; }
+.files li { border: 1px solid var(--border); border-radius: .5rem; padding: 1rem; min-width: 0; }
+.files code { display: block; overflow-wrap: anywhere; font-size: .85rem; }
+.files p { margin: .5rem 0; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1rem 0; }
+.selection { display: flex; align-items: baseline; gap: .65rem; }
+.selection input { flex-shrink: 0; }

@@ -186,20 +186,31 @@ public sealed class FilingRoutine(
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<bool> PrepareAsync(
-        ArrivingFileRow arrival,
-        string root,
-        CancellationToken cancellationToken)
+    private async Task<bool> PrepareAsync(ArrivingFileRow arrival, string root, CancellationToken cancellationToken)
+    {
+        var plan = await PlanAsync(arrival, root, cancellationToken);
+        if (plan.Reason is { } reason)
+        {
+            await StopAsync(arrival, reason, cancellationToken);
+            return false;
+        }
+        arrival.IntendedPath = plan.Path;
+        arrival.State = ArrivingFileState.Filing;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>The same read-only plan used by the collection preview and actual Filing.</summary>
+    public async Task<FilingPlan> PlanAsync(ArrivingFileRow arrival, string root, CancellationToken cancellationToken)
     {
         if (arrival.VideoId is not { } videoId || arrival.QualityLabel is not { } quality)
         {
-            throw new InvalidOperationException("An Arriving File reached Filing without a Video and Quality.");
+            return new(null, arrival.VideoId is null ? ArrivingFileReason.Unidentified : ArrivingFileReason.UnreadableQuality, "The file needs identification or a readable Quality.");
         }
 
         if (await IsIdenticalAsync(arrival, cancellationToken))
         {
-            await StopAsync(arrival, ArrivingFileReason.IdenticalFile, cancellationToken);
-            return false;
+            return new(null, ArrivingFileReason.IdenticalFile, "IdenticalFile");
         }
 
         var entry = await context.LibraryEntries
@@ -226,15 +237,13 @@ public sealed class FilingRoutine(
 
             if (recorded is DirectoryState.Absent or DirectoryState.NotADirectory)
             {
-                await StopAsync(arrival, ArrivingFileReason.EntryMissing, cancellationToken);
-                return false;
+                return new(null, ArrivingFileReason.EntryMissing, "EntryMissing");
             }
 
             held = await PresentFilesAsync(videoId, cancellationToken);
             if (held.Any(file => string.Equals(file.QualityLabel, quality, StringComparison.Ordinal)))
             {
-                await StopAsync(arrival, ArrivingFileReason.Duplicate, cancellationToken);
-                return false;
+                return new(null, ArrivingFileReason.Duplicate, "Duplicate");
             }
         }
 
@@ -255,10 +264,7 @@ public sealed class FilingRoutine(
 
         PreflightRelabels(held, intended, quality);
 
-        arrival.IntendedPath = intended;
-        arrival.State = ArrivingFileState.Filing;
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
+        return new(intended, null, "Move into the Library");
     }
 
     private async Task<bool> ExecuteAsync(ArrivingFileRow arrival, CancellationToken cancellationToken)
@@ -705,3 +711,5 @@ public sealed class FilingRoutine(
         OccupiedDirectory,
     }
 }
+
+public sealed record FilingPlan(string? Path, ArrivingFileReason? Reason, string Detail);

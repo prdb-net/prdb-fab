@@ -149,7 +149,7 @@ public sealed class CollectionScanTests : IDisposable
         await RunAsync(database);
         await using var read = database.Scope();
         var held = read.ServiceProvider.GetRequiredService<FabDbContext>();
-        Assert.Equal("Preview", (await held.CollectionPreparations.SingleAsync(Token)).Phase);
+        Assert.Equal("Planning", (await held.CollectionPreparations.SingleAsync(Token)).Phase);
         Assert.Equal(confidence == 4 ? ArrivingFileState.AwaitingFiling : ArrivingFileState.AwaitingIdentification,
             (await held.ArrivingFiles.SingleAsync(Token)).State);
         Assert.Equal(confidence == 5 ? 1 : 0, await held.ArrivingFileCandidates.CountAsync(Token));

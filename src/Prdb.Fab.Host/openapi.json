@@ -2370,6 +2370,98 @@
         }
       }
     },
+    "/api/collection": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionPreviewPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collection/start": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collection/approve": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/identification": {
       "get": {
         "tags": [
@@ -4424,6 +4516,249 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "CollectionAct": {
+        "required": [
+          "accepted",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "CollectionApprovalRequest": {
+        "required": [
+          "revision",
+          "moveIds",
+          "leaveIds",
+          "allReady",
+          "leaveUnresolved"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "moveIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "leaveIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "allReady": {
+            "type": "boolean"
+          },
+          "leaveUnresolved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionPreviewFile": {
+        "required": [
+          "id",
+          "sourcePath",
+          "sizeBytes",
+          "videoId",
+          "title",
+          "confidence",
+          "quality",
+          "destination",
+          "detail",
+          "approved",
+          "left"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcePath": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "videoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IdentificationConfidence"
+              }
+            ]
+          },
+          "quality": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "destination": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "left": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionPreviewPage": {
+        "required": [
+          "phase",
+          "revision",
+          "error",
+          "page",
+          "pageSize",
+          "total",
+          "ready",
+          "unresolved",
+          "approved",
+          "left",
+          "files"
+        ],
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ready": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unresolved": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "approved": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "left": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionPreviewFile"
+            }
+          }
+        }
+      },
+      "CollectionStartRequest": {
+        "required": [
+          "directories"
+        ],
+        "type": "object",
+        "properties": {
+          "directories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

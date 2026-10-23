@@ -13,6 +13,15 @@ public static class FilingEndpoints
 {
     public static void MapFiling(this IEndpointRouteBuilder routes)
     {
+        var collection = routes.MapGroup("/api/collection").WithTags("Filing");
+        collection.MapGet("/", async (CollectionPreview preview, CancellationToken cancellationToken, int page = 1) =>
+            TypedResults.Ok(await preview.ReadAsync(page, cancellationToken)));
+        collection.MapPost("/start", async (CollectionStartRequest request, CollectionPreparation preparation, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await preparation.StartAsync(request.Directories, cancellationToken)));
+        collection.MapPost("/approve", async (CollectionApprovalRequest request, CollectionPreview preview, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await preview.ApproveAsync(request.Revision, request.MoveIds, request.LeaveIds,
+                request.AllReady, request.LeaveUnresolved, cancellationToken)));
+
         var group = routes.MapGroup("/api/settings/identification").WithTags("Filing");
 
         group.MapGet("/", async (
@@ -188,3 +197,7 @@ public sealed record LibraryEntryDeleteRequest(IReadOnlyList<Guid> VideoFileIds)
 public sealed record ReviewSelectionRequest(IReadOnlyList<Guid> ArrivingFileIds);
 public sealed record FileAsRequest(Guid VideoId);
 public sealed record ReviewQueueCount(int Open);
+
+public sealed record CollectionStartRequest(IReadOnlyList<string> Directories);
+public sealed record CollectionApprovalRequest(long Revision, IReadOnlyList<Guid> MoveIds,
+    IReadOnlyList<Guid> LeaveIds, bool AllReady, bool LeaveUnresolved);

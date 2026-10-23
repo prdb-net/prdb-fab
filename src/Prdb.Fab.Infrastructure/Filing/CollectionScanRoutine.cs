@@ -18,7 +18,7 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
         var preparation = await context.CollectionPreparations.AsTracking().SingleOrDefaultAsync(cancellationToken);
-        if (preparation is null || preparation.Phase is "Ready" or "Importing" or "Preview") return RunResult.NothingToDo;
+        if (preparation is null || preparation.Phase is "Ready" or "Importing" or "Preview" or "Planning" or "Validating") return RunResult.NothingToDo;
         var roots = await context.CollectionRoots.ToListAsync(cancellationToken);
         if (roots.Count == 0) return RunResult.Failed("Collection preparation has no Scan Directories.");
         try
@@ -105,7 +105,7 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
                 }
                 await context.SaveChangesAsync(cancellationToken);
                 preparation.Phase = changed || await context.CollectionWalks.AnyAsync(row => !row.Verified, cancellationToken) ? "Inventory"
-                    : await context.CollectionFiles.AnyAsync(row => row.LeftAt == null, cancellationToken) ? "Preview" : "Ready";
+                    : await context.CollectionFiles.AnyAsync(row => row.LeftAt == null, cancellationToken) ? "Planning" : "Ready";
             }
             preparation.Error = null;
             await context.SaveChangesAsync(cancellationToken);
@@ -167,6 +167,9 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
                 held.ApprovedAt = null;
                 held.ApprovedEvidence = null;
                 held.PlannedPath = null;
+                held.PreviewEvidence = null;
+                held.PreviewDetail = null;
+                held.ValidatedAt = null;
                 held.SizeBytes = file.Length;
                 held.LastWriteAt = new DateTimeOffset(file.LastWriteTimeUtc, TimeSpan.Zero);
                 preparation.Revision++;

@@ -2760,6 +2760,121 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionPreviewPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CollectionStartRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CollectionApprovalRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/identification": {
         parameters: {
             query?: never;
@@ -4127,6 +4242,58 @@ export interface components {
             sessionsEnded: number | string;
             /** Format: int32 */
             retryAfterSeconds: null | number | string;
+        };
+        CollectionAct: {
+            accepted: boolean;
+            detail: string;
+        };
+        CollectionApprovalRequest: {
+            /** Format: int64 */
+            revision: number | string;
+            moveIds: string[];
+            leaveIds: string[];
+            allReady: boolean;
+            leaveUnresolved: boolean;
+        };
+        CollectionPreviewFile: {
+            /** Format: uuid */
+            id: string;
+            sourcePath: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: uuid */
+            videoId: null | string;
+            title: null | string;
+            confidence: null | components["schemas"]["IdentificationConfidence"];
+            quality: null | string;
+            destination: null | string;
+            detail: string;
+            approved: boolean;
+            left: boolean;
+        };
+        CollectionPreviewPage: {
+            phase: string;
+            /** Format: int64 */
+            revision: number | string;
+            error: null | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            ready: number | string;
+            /** Format: int32 */
+            unresolved: number | string;
+            /** Format: int32 */
+            approved: number | string;
+            /** Format: int32 */
+            left: number | string;
+            files: components["schemas"]["CollectionPreviewFile"][];
+        };
+        CollectionStartRequest: {
+            directories: string[];
         };
         ConfiguredIndexer: {
             /** Format: uuid */

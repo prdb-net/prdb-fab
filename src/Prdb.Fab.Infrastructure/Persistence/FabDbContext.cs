@@ -1089,6 +1089,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<CollectionFileRow>(entity =>
         {
             entity.ToTable("collection_file");
+            entity.Property(row => row.ValidatedAt).HasConversion(UtcTimestamp);
             entity.HasKey(row => row.Id);
             entity.Declares(AccountClass.AccountFree);
             entity.Property(row => row.LastWriteAt).HasConversion(UtcTimestamp);

@@ -392,7 +392,10 @@ public sealed record BackupCollectionFile(
     DateTimeOffset? ApprovedAt,
     DateTimeOffset? LeftAt,
     BackupPath? PlannedPath,
-    string? ApprovedEvidence);
+    string? ApprovedEvidence,
+    string? PreviewEvidence = null,
+    string? PreviewDetail = null,
+    DateTimeOffset? ValidatedAt = null);
 
 public sealed record BackupAutopilotBaseline(
     string UserHash,

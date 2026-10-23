@@ -871,3 +871,15 @@ function parameters(values: Record<string, string | undefined>): URLSearchParams
 
   return answer
 }
+
+export type CollectionPreviewPage = Schema['CollectionPreviewPage']
+export type CollectionApprovalRequest = Schema['CollectionApprovalRequest']
+export function readCollectionPreview(page = 1): Promise<CollectionPreviewPage> {
+  return fetch(`/api/collection?page=${page}`).then(json<CollectionPreviewPage>)
+}
+export function startCollection(directories: string[]): Promise<Schema['CollectionAct']> {
+  return post('/api/collection/start', { directories })
+}
+export function approveCollection(request: CollectionApprovalRequest): Promise<Schema['CollectionAct']> {
+  return post('/api/collection/approve', request)
+}

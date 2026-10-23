@@ -459,6 +459,9 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
             LeftAt = row.LeftAt,
             PlannedPath = row.PlannedPath is null ? null : roots.Absolute(row.PlannedPath),
             ApprovedEvidence = row.ApprovedEvidence,
+            PreviewEvidence = row.PreviewEvidence,
+            PreviewDetail = row.PreviewDetail,
+            ValidatedAt = null,
         }));
 
         context.AutopilotBaselines.AddRange((document.AutopilotBaselines ?? []).Select(row => new AutopilotBaselineRow

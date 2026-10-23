@@ -41,6 +41,9 @@ public sealed class CollectionFileRow
     public DateTimeOffset? LeftAt { get; set; }
     public string? PlannedPath { get; set; }
     public string? ApprovedEvidence { get; set; }
+    public string? PreviewEvidence { get; set; }
+    public string? PreviewDetail { get; set; }
+    public DateTimeOffset? ValidatedAt { get; set; }
 }
 
 /// <summary>One completed Wanted baseline per account; never refilled.</summary>
