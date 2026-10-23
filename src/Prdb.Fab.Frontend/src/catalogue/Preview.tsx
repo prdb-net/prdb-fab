@@ -558,6 +558,7 @@ function Sprite({ preview, title }: { preview: UserPreviewCard; title: string })
       <div
         aria-label={`${title} — a preview strip somebody made`}
         className={`${styles.tile} ${sheet && tile ? '' : styles.tileEmpty}`}
+        data-sfw-image=""
         ref={frame}
         role="img"
         style={sheet && tile ? position(preview, tile, sheet) : undefined}
