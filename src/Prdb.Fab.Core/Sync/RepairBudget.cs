@@ -7,23 +7,9 @@ namespace Prdb.Fab.Core.Sync;
 /// response said about the hourly window.
 /// </summary>
 /// <remarks>
-/// <para>
-/// ADR 0013 steers the repair pass by a request budget rather than by a
-/// cadence, because the numeric value of the rate limit is in no prdb document
-/// and only arrives on the responses the tool is already getting — so a budget
-/// is the only control that can be sized against a limit discovered while
-/// running. ADR 0014 gives that budget its number: whatever holds hourly usage
-/// under half of the discovered limit, which is
-/// <see cref="PrdbBudget.ReserveFor"/> for <see cref="PrdbWork.Repair"/>.
-/// </para>
-/// <para>
-/// The governor already refuses a repair request that would cross that line, so
-/// what this adds is the other half of ADR 0014's sentence: <strong>at least
-/// one request per run</strong>. Repair is last in the order of precedence, and
-/// arithmetic that rounded its allowance down to zero on a small plan would
-/// stall it forever without anything failing — which is the silent shape
-/// ADR 0018 is built to make visible and is cheaper not to create.
-/// </para>
+/// The turn is bounded independently of quota admission. The Governor protects
+/// the 20% account reserve and upcoming feed demand before each request, so this
+/// estimate never grants permission to cross a shared account limit.
 /// </remarks>
 public static class RepairBudget
 {

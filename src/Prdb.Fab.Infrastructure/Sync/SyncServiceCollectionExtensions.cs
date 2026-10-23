@@ -80,6 +80,7 @@ public static class SyncServiceCollectionExtensions
         services.TryAddScoped<PublicationProgress>();
 
         services.AddScoped<SiteFeed>();
+        Routine<PrdbAccountRoutine>(services);
         Routine<SiteFeedRoutine>(services);
         services.AddScoped<ActorFeed>();
         services.AddScoped<UserPreviewFeed>();

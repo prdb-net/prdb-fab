@@ -264,11 +264,10 @@ public sealed class UserPreviewContractTests
     /// is what lets a routine leave every durable row exactly as it was.
     /// </summary>
     [Fact]
-    public async Task A_short_budget_defers_a_user_preview_read_while_a_preview_still_goes()
+    public async Task A_short_budget_defers_both_preview_paths_at_the_account_reserve()
     {
-        // Twelve per cent of the hour left: above Preview's eight and below the
-        // thirty-five this population is held back at.
-        var prdb = new FakePrdbApi { Hourly = (Limit: 100, Remaining: 12, ResetInSeconds: 60) }
+        // The last twenty percent is reserved across both preview paths.
+        var prdb = new FakePrdbApi { Hourly = (Limit: 100, Remaining: 20, ResetInSeconds: 60) }
             .Answers(ByVideo(AVideo), "[]");
 
         await using var database = await CreateAsync(prdb);
@@ -286,14 +285,11 @@ public sealed class UserPreviewContractTests
 
         Assert.Equal(PrdbWork.UserPreviews, deferred.Work);
 
-        // And the interactive half of the same population still goes, which is
-        // the whole point of giving it the Preview precedence.
-        var still = await AskAsync(
+        await Assert.ThrowsAsync<PrdbDeferredException>(() => AskAsync(
             database,
             PrdbWork.Preview,
-            (client, token) => client.Videos[AVideo].UserImages.GetAsync(cancellationToken: token));
+            (client, token) => client.Videos[AVideo].UserImages.GetAsync(cancellationToken: token)));
 
-        Assert.NotNull(still);
     }
 
     private static async Task<Prdb.Sdk.Generated.Models.VideoUserImageDto> ChangedAsync(TestDatabase database)

@@ -399,9 +399,8 @@ public sealed class PreviewDeliveryTests
     [Fact]
     public async Task A_short_budget_defers_the_upload_and_writes_nothing()
     {
-        // Thirty-eight per cent of the hour left: above the five a write is held
-        // back at and below the forty an upload is.
-        var prdb = new FakePrdbApi { Hourly = (Limit: 100, Remaining: 38, ResetInSeconds: 60) }
+        // Twenty percent of the hour remains: the shared account reserve.
+        var prdb = new FakePrdbApi { Hourly = (Limit: 100, Remaining: 20, ResetInSeconds: 60) }
             .AnswersCreated(Submissions, Accepted());
 
         await using var database = await CreateAsync(prdb);
@@ -427,9 +426,9 @@ public sealed class PreviewDeliveryTests
         // One request, not two: the deferral happened before anything left.
         Assert.Single(prdb.AskingFor(Submissions));
 
-        // And what the reserve exists to protect is untouched.
-        Assert.True(new PrdbBudget(100, 38, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Writes));
-        Assert.True(new PrdbBudget(100, 38, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Identification));
+        // Other unattended work also preserves this reserve.
+        Assert.False(new PrdbBudget(100, 20, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Writes));
+        Assert.False(new PrdbBudget(100, 20, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Identification));
     }
 
     /// <summary>

@@ -396,12 +396,12 @@ public sealed class StatusService(
             conditions.Add(Gap("SABnzbd is not configured", "Downloads cannot start until this connection is configured.", "download", "/settings/connections/sabnzbd"));
         if (installation.IndexersSkipped)
             conditions.Add(Gap("No Indexer is configured", "Release discovery has nowhere to search.", "sync-indexers", "/settings/connections"));
-        if (installation.PlanShortSince is { } since)
-            conditions.Add(Gap("The prdb plan cannot carry the schedule", $"Lower-priority sync work has been reduced since {since:u}.", "sync-prdb", "/settings/connections/prdb"));
-        if (governor.Snapshot().Monthly is { } month && !IdleProfile.CarriedByMonthly(month.Limit))
-            conditions.Add(Gap("The rolling monthly plan cannot carry the ordinary schedule",
-                $"The ordinary idle schedule needs about {IdleProfile.RequestsInThirtyDays:F0} requests per 30 days; "
-                + $"the shared monthly limit is {month.Limit}. Lower-priority feeds are reduced and background work waits.",
+        var quota = governor.Snapshot();
+        var multiplier = IdleProfile.CadenceMultiplier(quota.Hourly?.Limit, quota.Monthly?.Limit);
+        if (multiplier > 1)
+            conditions.Add(Brake("prdb polling is adapted to this plan",
+                $"Recurring polls run {multiplier:F1} times less often to fit the reported limits. "
+                + "20% of each shared account window is reserved; background work keeps capacity for those polls.",
                 "sync-prdb", "/settings/connections/prdb"));
         if (governor.RefusedWith is { } status)
             conditions.Add(Gap("prdb refused the API key", $"prdb returned {status}; unattended requests remain stopped until a key works.", "sync-prdb", "/settings/connections/prdb"));
@@ -447,7 +447,7 @@ public sealed class StatusService(
             && coverage.Indexers.All(indexer => indexer.Complete)
             && coverage.IdentificationsDue > 0)
         {
-            conditions.Add(Gap(
+            conditions.Add(Brake(
                 "Recent Release Identification is still being prepared",
                 $"{coverage.IdentificationsDue} recent Release(s) are due for prdb Identification.",
                 "match",
@@ -851,6 +851,12 @@ public sealed class StatusService(
             var quota = governor.Snapshot();
             var costs = governor.Costs.Snapshot();
             facts.Add(new("prdb connection", string.IsNullOrWhiteSpace(installation.PrdbApiKey) ? "Not configured" : governor.RefusedWith is null ? "Configured" : $"Refused with {governor.RefusedWith}", "/settings/connections/prdb"));
+            facts.Add(new("prdb subscription", governor.Subscriptions is { } subscriptions
+                ? $"{subscriptions}; observed {governor.IdentityReadAt:u}"
+                : "Waiting for the scheduled account check; limits are read independently", null));
+            facts.Add(new("Automatic budget", "20% of both account windows is reserved. Limits come from prdb; no manual quota setting is needed.", null));
+            var multiplier = IdleProfile.CadenceMultiplier(quota.Hourly?.Limit, quota.Monthly?.Limit);
+            facts.Add(new("Recurring polling", $"{multiplier:F1}× the ordinary intervals; approximately {IdleProfile.ScheduledRequestsPerWindow / multiplier:F0} requests per 31 days including preview interest and account checks", null));
             facts.Add(new("Hourly account budget", QuotaText(quota.Hourly, quota), null));
             facts.Add(new("Rolling monthly account budget", QuotaText(quota.Monthly, quota), null));
             var admission = governor.Ask(PrdbWork.ReleaseIdentification);
@@ -1069,6 +1075,7 @@ public sealed class StatusService(
 
     private static string Label(string name) => name switch
     {
+        PrdbAccountRoutine.RoutineName => "prdb account and subscription",
         ActorProfileRoutine.RoutineName => "Actor profiles",
         ActorDrainRoutine.RoutineName => "Actor catalogue drain",
         RecentCatalogueRoutine.RoutineName => "Catalogue Recent Window",

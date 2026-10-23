@@ -47,6 +47,11 @@ public sealed class RoutineRegistrar(
 
                 if (exists)
                 {
+                    // Subscription labels are process-local. Refresh once after
+                    // restart through the ordinary governed schedule.
+                    if (routine is Prdb.Fab.Infrastructure.Sync.PrdbAccountRoutine)
+                        await context.Routines.Where(row => row.Name == routine.Name && row.Target == target)
+                            .ExecuteUpdateAsync(set => set.SetProperty(row => row.DueAt, now), cancellationToken);
                     continue;
                 }
 

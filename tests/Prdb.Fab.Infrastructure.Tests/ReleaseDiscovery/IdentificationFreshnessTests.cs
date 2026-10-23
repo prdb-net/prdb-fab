@@ -104,7 +104,7 @@ public sealed partial class IdentificationCutTests
         db.Time.Advance(TimeSpan.FromHours(23));
         socket.BeforeReply = ask =>
         {
-            if (ask.Uri.AbsolutePath == "/videos/identify/validate") socket.Hourly = (100, 50, 60);
+            if (ask.Uri.AbsolutePath == "/videos/identify/validate") socket.Hourly = (100, 20, 60);
             return Task.CompletedTask;
         };
         await Assert.ThrowsAsync<PrdbDeferredException>(() => IdentifyTurnAsync(db));

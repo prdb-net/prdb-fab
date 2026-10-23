@@ -242,3 +242,45 @@ A deferred larger range wakes no later than minimum-proof expiry, and even a
 completed optional pass schedules the next check from the minimum's proof time.
 This prevents search/history reservations or a midnight wait from starving a
 minimum that the configured Daily Query Budget can actually sustain.
+
+## Amendment: discovered plans, automatic polling and a useful initial burst
+
+The fixed-cadence rejection and the previous reserve staircase are superseded.
+The API now publishes subscriptions through `/user-identity` and authoritative
+hourly and rolling **31-day** counters through the unmetered `/rate-limit`.
+Package titles describe the account; they never select numeric limits. Server
+configuration can override package defaults. Key verification records the title;
+a daily scheduled account read refreshes it, and startup schedules that read
+again because the displayed identity is process-local. A changed key clears
+both the old identity and all local pacing state.
+
+All unattended calls preserve **20% of each reported limit**, including arrived
+file work. Explicit key verification remains available to recover a connection.
+There is no manual quota field. Background repair and Release Identification
+additionally preserve the adapted recurring demand (one hour in the hourly
+window, one day in the monthly window). Reserving another full month on top of
+usage already inside the rolling counter would starve small plans after expiry. Serial admission, lost-response
+debits, shared counters, refresh bounds and Retry-After remain mandatory.
+
+Recurring polling is multiplied by the larger of one, hourly demand divided by
+40% of the hourly limit, and 31-day demand divided by 40% of the monthly limit.
+The forecast includes the account read and an interested user-preview feed.
+This preserves the relative feed cadences and leaves space for useful work even
+on Plus; simply slowing three low-priority feeds could not make its 1,000-request
+monthly plan sustainable. Work-set checks and paginated continuations are not
+slowed by this multiplier; every network request still passes admission.
+
+The background rate is the smaller of the hourly and 31-day capacities after
+20% reserve and recurring demand. It is calculated from the reported **limits**,
+not by repeatedly spreading a shrinking remaining balance across a new month.
+The initial credit is bounded by 200 requests, 20% of the hourly limit and 2% of
+remaining monthly headroom after reserves. Subsequent credit accrues at that
+rate. A restart may offer that bounded credit again, but never bypasses remote
+counters or reservations. This is a pacing target, not a forecast of another
+client's future consumption. An oversized continuing backlog can still wait.
+
+Status reports the observed subscription, both actual limits, the reserve and
+polling multiplier. Adapting to a small plan is a Brake rather than a Gap. A
+pending Release Identification backlog is also a Brake with its visible count;
+failed routines still independently raise Gaps. No complete coverage or completed
+identification is claimed merely because a wait is deliberate.

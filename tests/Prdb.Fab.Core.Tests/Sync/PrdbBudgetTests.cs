@@ -1,152 +1,37 @@
 using Prdb.Fab.Core.Sync;
-
 using Xunit;
 
 namespace Prdb.Fab.Core.Tests.Sync;
 
-/// <summary>
-/// ADR 0014's governor, as the rule that reads a budget nobody was given the
-/// number of.
-/// </summary>
 public sealed class PrdbBudgetTests
 {
-    /// <summary>
-    /// The order of precedence, exercised as what it is for: as the budget
-    /// runs down, the kinds of work stop in ADR 0014's order and not in
-    /// another one.
-    /// </summary>
-    [Fact]
-    public void Work_is_given_up_in_the_stated_order()
+    [Theory]
+    [InlineData(1000, 200)]
+    [InlineData(100, 20)]
+    [InlineData(6, 2)]
+    public void Every_unattended_request_preserves_twenty_percent(int limit, int reserve)
     {
-        var order = Enum.GetValues<PrdbWork>();
-
-        // At every level of a spent budget, whatever is still admitted is a
-        // prefix of the order: nothing lower may be sent while something above
-        // it is being held back.
-        for (var remaining = 0; remaining <= 1000; remaining += 10)
+        foreach (var work in Enum.GetValues<PrdbWork>().Except([PrdbWork.Verification, PrdbWork.BudgetReading]))
         {
-            var budget = new PrdbBudget(Limit: 1000, remaining, TimeSpan.FromMinutes(1));
-
-            var admitted = order.Select(budget.Admits).ToArray();
-
-            Assert.Equal(
-                admitted.OrderByDescending(yes => yes),
-                admitted);
+            Assert.False(new PrdbBudget(limit, reserve, TimeSpan.Zero).Admits(work));
+            Assert.True(new PrdbBudget(limit, reserve + 1, TimeSpan.Zero).Admits(work));
         }
     }
 
-    /// <summary>
-    /// ADR 0014's one number: repair may spend whatever holds hourly usage
-    /// under half of the limit.
-    /// </summary>
     [Fact]
-    public void Repair_stops_at_half_the_limit()
+    public void Explicit_key_checks_remain_a_recovery_path()
     {
-        Assert.True(new PrdbBudget(1000, 501, TimeSpan.Zero).Admits(PrdbWork.Repair));
-        Assert.False(new PrdbBudget(1000, 500, TimeSpan.Zero).Admits(PrdbWork.Repair));
-
-        // And it is a share rather than a count, so a small plan is bounded the
-        // same way rather than being bounded out of existence.
-        Assert.True(new PrdbBudget(20, 11, TimeSpan.Zero).Admits(PrdbWork.Repair));
-        Assert.False(new PrdbBudget(20, 10, TimeSpan.Zero).Admits(PrdbWork.Repair));
+        var budget = new PrdbBudget(1000, 1, TimeSpan.Zero);
+        Assert.True(budget.Admits(PrdbWork.Verification));
+        Assert.True(budget.Admits(PrdbWork.BudgetReading));
+        Assert.False(budget.Admits(PrdbWork.Identification));
     }
 
-    /// <summary>
-    /// The two nothing is held back from: a person waiting on a key, and a file
-    /// that has arrived and cannot be filed until prdb answers. Everything else
-    /// has stopped long before this.
-    /// </summary>
     [Fact]
-    public void The_last_request_of_the_hour_goes_to_an_arrived_file()
+    public void Waits_respect_oldest_slot_expiry_and_do_not_assume_a_full_reset()
     {
-        var almostSpent = new PrdbBudget(1000, 1, TimeSpan.FromMinutes(5));
-
-        Assert.True(almostSpent.Admits(PrdbWork.Verification));
-        Assert.True(almostSpent.Admits(PrdbWork.Identification));
-        Assert.False(almostSpent.Admits(PrdbWork.Writes));
-        Assert.False(almostSpent.Admits(PrdbWork.Repair));
-    }
-
-    /// <summary>
-    /// ADR 0060's request has a place in the order rather than a place of its
-    /// own: below a write, which is a queued obligation, and above every feed,
-    /// because somebody is sitting in front of it.
-    /// </summary>
-    [Fact]
-    public void A_preview_gives_up_after_a_write_and_before_a_feed()
-    {
-        var limit = 1000;
-
-        Assert.True(new PrdbBudget(limit, 81, TimeSpan.Zero).Admits(PrdbWork.Preview));
-        Assert.False(new PrdbBudget(limit, 80, TimeSpan.Zero).Admits(PrdbWork.Preview));
-
-        // Where a Preview has stopped, a write has not; where a feed has
-        // stopped, a Preview has not.
-        var betweenTheTwo = new PrdbBudget(limit, 90, TimeSpan.Zero);
-
-        Assert.True(betweenTheTwo.Admits(PrdbWork.Writes));
-        Assert.True(betweenTheTwo.Admits(PrdbWork.Preview));
-        Assert.False(betweenTheTwo.Admits(PrdbWork.UserFeeds));
-    }
-
-    /// <summary>
-    /// ADR 0064: an upload is a queued obligation and is nothing like a small
-    /// one to send, so it gives up long before a Fulfilment does and below
-    /// every feed — which is the whole argument for taking it out of
-    /// <c>Writes</c>, held as a number rather than as prose.
-    /// </summary>
-    [Fact]
-    public void A_publication_gives_up_long_before_a_fulfilment_does()
-    {
-        var limit = 1000;
-
-        Assert.True(new PrdbBudget(limit, 401, TimeSpan.Zero).Admits(PrdbWork.Publications));
-        Assert.False(new PrdbBudget(limit, 400, TimeSpan.Zero).Admits(PrdbWork.Publications));
-
-        // A backlog of uploads has stopped here; the small queued obligations
-        // the reserve at five per cent exists for are untouched, and so is
-        // everything a person notices.
-        var short_ = new PrdbBudget(limit, 380, TimeSpan.Zero);
-
-        Assert.False(short_.Admits(PrdbWork.Publications));
-        Assert.True(short_.Admits(PrdbWork.Writes));
-        Assert.True(short_.Admits(PrdbWork.Preview));
-        Assert.True(short_.Admits(PrdbWork.UserPreviews));
-
-        // And it still outranks the repair pass, which spends only what is left
-        // above half.
-        var half = new PrdbBudget(limit, 450, TimeSpan.Zero);
-
-        Assert.True(half.Admits(PrdbWork.Publications));
-        Assert.False(half.Admits(PrdbWork.Repair));
-    }
-
-    /// <summary>And a spent one admits nothing at all.</summary>
-    [Fact]
-    public void A_spent_budget_admits_nothing()
-    {
-        var spent = new PrdbBudget(1000, 0, TimeSpan.FromMinutes(5));
-
-        Assert.All(Enum.GetValues<PrdbWork>(), work => Assert.False(spent.Admits(work)));
-    }
-
-    /// <summary>
-    /// What a deferred routine waits. Never less than a minute, or a lane
-    /// refused at the bottom of the staircase comes back every tick to be
-    /// refused again; otherwise the soonest a slot can free up, which is what
-    /// prdb reports.
-    /// </summary>
-    [Fact]
-    public void A_deferral_waits_for_a_slot_and_never_less_than_a_minute()
-    {
-        var soon = new PrdbBudget(1000, 0, TimeSpan.FromSeconds(2));
-        Assert.Equal(PrdbBudget.ShortestWait, soon.WaitBefore(PrdbWork.Repair));
-
-        var later = new PrdbBudget(1000, 0, TimeSpan.FromMinutes(41));
-        Assert.Equal(TimeSpan.FromMinutes(41), later.WaitBefore(PrdbWork.Repair));
-
-        // Nothing waits for what it is allowed to do.
-        var thin = new PrdbBudget(1000, 5, TimeSpan.FromMinutes(41));
-        Assert.Equal(TimeSpan.Zero, thin.WaitBefore(PrdbWork.Identification));
+        Assert.Equal(TimeSpan.FromMinutes(1), new PrdbBudget(100, 20, TimeSpan.FromSeconds(2)).WaitBefore(PrdbWork.Repair));
+        Assert.Equal(TimeSpan.FromMinutes(41), new PrdbBudget(100, 20, TimeSpan.FromMinutes(41)).WaitBefore(PrdbWork.Repair));
+        Assert.Equal(TimeSpan.Zero, new PrdbBudget(100, 21, TimeSpan.FromMinutes(41)).WaitBefore(PrdbWork.Identification));
     }
 }

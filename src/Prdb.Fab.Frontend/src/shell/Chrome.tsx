@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router'
 
 import { readAccessState, readReviewQueueCount } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
+import { useSfwMode } from './useSfwMode.ts'
 import styles from './Chrome.module.css'
 
 type IconName =
@@ -54,6 +55,7 @@ const primaryMobile = [discover[0], discover[1], work[0], work[1]]
  * remains the whole page, as settled by ADR 0010.
  */
 export function Chrome({ children }: { children: ReactNode }) {
+  const sfw = useSfwMode()
   const state = useQuery({ queryKey: accessStateKey, queryFn: readAccessState })
   const review = useQuery({
     queryKey: ['review-queue-count'],
@@ -110,9 +112,12 @@ export function Chrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${sfw.enabled ? styles.sfw : ''}`}>
       <aside className={styles.sidebar}>
-        <Brand />
+        <div className={styles.brandRow}>
+          <Brand />
+          <SfwButton enabled={sfw.enabled} onToggle={sfw.toggle} />
+        </div>
         <nav aria-label="Primary navigation">
           <NavigationGroup
             activeTo={contextDestination}
@@ -143,6 +148,7 @@ export function Chrome({ children }: { children: ReactNode }) {
 
       <header className={styles.mobileTop}>
         <Brand />
+        <SfwButton enabled={sfw.enabled} onToggle={sfw.toggle} />
       </header>
 
       <div className={styles.content}>{children}</div>
@@ -238,6 +244,25 @@ export function Chrome({ children }: { children: ReactNode }) {
         </div>
       )}
     </div>
+  )
+}
+
+function SfwButton({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      aria-label="SFW mode"
+      aria-pressed={enabled}
+      className={styles.sfwButton}
+      onClick={onToggle}
+      title={enabled ? 'Turn off SFW mode to show images' : 'Turn on SFW mode to blur images'}
+      type="button"
+    >
+      <svg aria-hidden="true" className={styles.icon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6l-8-3Z" />
+        {enabled && <path d="m8 12 3 3 5-6" />}
+      </svg>
+      <span>SFW</span>
+    </button>
   )
 }
 

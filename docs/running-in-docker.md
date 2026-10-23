@@ -8,8 +8,10 @@ the way.
 > service it names, then keeps local catalogues of what prdb and your indexers
 > say. It discovers and identifies Releases, submits a selected one to SABnzbd,
 > follows the job, and files safely identified Video Files into the library.
-> Status explains the whole loop, and two opt-in reporting channels can send
-> local facts back to prdb. Permission rules can run that same Download path
+> Status explains the whole loop, and three independently configurable reporting
+> channels can send local facts and published previews back to prdb. Reporting
+> defaults to on; preview publishing also requires saving its explanation form.
+> Permission rules can run that same Download path
 > unattended for matched Wanted Videos.
 
 ## The quickstart
@@ -44,7 +46,7 @@ no user name and no default credential, and the field you set it in is only
 offered while no password exists. Whoever reaches the tool first sets it, so
 start it on a network you control and set it before you do anything else.
 
-After that it takes you through four steps, and each one is stored the moment it
+After that it takes you through five steps, and each one is stored the moment it
 is answered. Closing the tab costs nothing: it resumes where it was.
 
 1. **Your prdb API key.** Required. Without it there is no identification, no
@@ -57,8 +59,12 @@ is answered. Closing the tab costs nothing: it resumes where it was.
    searched for. Each is checked with a real search rather than with a
    capabilities call, because most indexers answer that one to anybody.
 4. **The library root**, the directory this tool files into. Required. It is the
-   only directory the tool writes to, and it must be writable by the user the
-   container runs as.
+   destination for your organised library and must be writable by the user the
+   container runs as. Keep it separate from the download directory.
+5. **Publishing previews.** Review whether previews of newly filed Videos should
+   be published on prdb. Publishing is selected by default, but nothing is
+   generated or sent until you save this choice. These previews can become
+   public; see [Publishing previews](publishing-previews.md).
 
 Each connection is checked against the real service before it is accepted, and
 one that fails is not stored — there is no *continue anyway*, because a wrong
@@ -192,10 +198,13 @@ it, so prdb's Governor, an Indexer's Daily Query Budget, permanent refusals and
 an empty work set still cannot be bypassed. A second click cannot overlap the
 first request, and the accepted, deferred or refused result stays visible.
 
-Reporting is enabled by default under **Settings → Reporting**. Its two
+Reporting is enabled by default under **Settings → Reporting**. Its three
 switches are independent: one reports Fulfilments for locally held Wanted
-Videos, and one reports file-to-Video assignments that a person explicitly
-confirmed in the Review Queue. Switching a channel off stops outbound reports
+Videos, one reports file-to-Video assignments that a person explicitly
+confirmed in the Review Queue, and one publishes generated previews on prdb.
+Preview publishing also requires saving the explanation form during setup or
+in Settings; the existing Library is selected only by an explicit request.
+Switching a channel off stops new outbound reports
 from that channel while leaving its pending local differences intact. It does
 not retract reports prdb already accepted. The exact fields and boundaries are
 documented in [privacy.md](privacy.md).
@@ -485,10 +494,8 @@ count on Status, with a filter on the Library behind it.
 
 ## Stopping and updating
 
-`docker stop` sends `SIGTERM`, which the tool receives directly and acts on: it
-finishes what it is in the middle of rather than being killed once the timeout
-runs out. That will matter more later, when what it is in the middle of is
-moving one of your files.
+`docker stop` sends `SIGTERM` directly to the application to begin shutdown.
+Interrupted filing resumes from its recorded state when the container starts again.
 
 To update, pull the new version and recreate the container. The schema is
 migrated at startup, and a migration that cannot be applied stops the tool

@@ -7,12 +7,12 @@ commit messages, branch names and PR descriptions. No exceptions.
 
 ## Where the project stands
 
-This is an early repository. What exists is the foundation and nothing on top of
-it: the projects, the database, the schedule, the logging, the API contract and
-the image. `VISION.md` describes what the tool is meant to become — something
-that finds, fetches and files videos on its own — and, just as usefully, what it
-is not. It is the best place to check whether an idea belongs here before
-spending an evening on it.
+prdb-fab is pre-1.0 software with a working discovery, download and library-filing
+loop, Wanted automation, review tools, reporting, and backup and restore. The
+[README](README.md) introduces the current features;
+[How it works](docs/how-it-works.md) explains their behaviour in detail.
+`VISION.md` describes the project's direction and boundaries, including ideas
+that are not implemented yet. Check it before proposing a substantial change.
 
 **`docs/adr/` is the other half of that.** Every decision that shapes this tool
 is written down there with its argument, including the ones that were rejected

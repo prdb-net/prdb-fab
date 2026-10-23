@@ -169,7 +169,7 @@ public sealed class StatusTests
             status.Stages.Single(stage => stage.Id == "sync-prdb").Gaps,
             gap => gap.Title == "Recent Catalogue details are still being prepared");
         Assert.Contains(
-            status.Stages.Single(stage => stage.Id == "match").Gaps,
+            status.Stages.Single(stage => stage.Id == "match").Brakes,
             gap => gap.Title == "Recent Release Identification is still being prepared");
     }
 

@@ -27,7 +27,7 @@ public sealed class DualBudgetTests
     [Fact]
     public async Task Concurrent_lanes_reserve_capacity_and_a_rolling_expiry_does_not_reset_it()
     {
-        var socket = new AccountSocket { Hour = 11, Month = 900 };
+        var socket = new AccountSocket { Hour = 21, Month = 900 };
         await using var database = await CreateAsync(socket);
         await using var scope = database.Scope();
         var gateway = scope.ServiceProvider.GetRequiredService<PrdbGateway>();
@@ -50,10 +50,10 @@ public sealed class DualBudgetTests
         socket.Month = 1;
         Assert.False(await TryAsync());
         Assert.Equal(1, socket.Metered);
-        // Arrived-file work can use that one slot.
-        await gateway.AskAsync("test-key", PrdbWork.Identification,
-            (client, token) => client.UserIdentity.GetAsync(cancellationToken: token), TestContext.Current.CancellationToken);
-        Assert.Equal(2, socket.Metered);
+        // Arrived-file work protects the same 20% reserve.
+        await Assert.ThrowsAsync<PrdbDeferredException>(() => gateway.AskAsync("test-key", PrdbWork.Identification,
+            (client, token) => client.UserIdentity.GetAsync(cancellationToken: token), TestContext.Current.CancellationToken));
+        Assert.Equal(1, socket.Metered);
     }
 
     [Fact]

@@ -80,6 +80,8 @@ public sealed class PrdbGateway(
                 return new PrdbCheck(PrdbConnectionOutcome.NotRightNow, null, null);
             }
 
+            governor.ObserveIdentity(identity);
+
             logger.LogInformation("The prdb key was checked and prdb accepted it.");
 
             return new PrdbCheck(PrdbConnectionOutcome.Saved, userHash, null);

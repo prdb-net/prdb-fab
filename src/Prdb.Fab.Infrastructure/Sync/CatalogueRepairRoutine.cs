@@ -34,8 +34,8 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// <strong>Steered by a request budget and not by a cadence.</strong> The
 /// cadence below is ADR 0032's idle tick for the bulk lane — how often to take
 /// the next turn rather than how often to act — and what a turn costs is
-/// <see cref="RepairBudget"/>'s to say. The governor holds the line at half the
-/// hourly limit; this holds the other half of ADR 0014's sentence, which is
+/// <see cref="RepairBudget"/>'s to say. The governor protects account reserves
+/// and recurring demand; this retains ADR 0014's minimum, which is
 /// that a small plan still asks once rather than computing itself down to
 /// nothing while repair sits last in the order of precedence.
 /// </para>
