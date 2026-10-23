@@ -98,17 +98,19 @@ and a confirmed reset of that Video's local history.
 
 ## Wanted automation
 
-**Settings → Automation** adds unordered permission rules over the Wanted list.
-A rule names its allowed enabled Indexers and optional minimum and maximum
-Release size. There is no global switch: with no enabled rule, automation is
-off. Enabling or changing a rule schedules a catch-up over already matched
-Wanted Releases without a preview; the configured cap on unfinished automatic
-Downloads (20 by default) bounds how much can be in SABnzbd at once, and the
-remainder waits durably. The before-download Identification gate, an open
-Review Queue entry, a held Library Video and the per-Video retry budget remain
-independent brakes. No rule uses a favourite or a Quality parsed from a Release
-name. See [Automation safety](automation.md) for the complete safety and
-Wanted-removal behaviour.
+Fresh setup offers **Recent Wanted autopilot** after inventory and a previewed
+import of the existing collection. It freezes the newest 100 eligible missing
+Wanted Videos released within 90 UTC calendar dates, then admits new recent
+Wanted intent. The initial selection is never refilled, and unknown/future dates
+are excluded. All enabled Indexers participate. Existing installations adopt
+this workflow explicitly in **Settings → Automation**.
+
+Custom rules remain independent permissions for broader Wanted acquisition.
+Turning off the supplied policy leaves custom rules unchanged. Every automatic
+submission rechecks collection readiness, Wanted, held files, candidate holds,
+Confidence, retry budget and the unfinished-Download cap (20 by default).
+See [Automation safety](automation.md) for the collection decisions, limits and
+Wanted-removal behavior.
 
 ## Filing, review and cleanup
 

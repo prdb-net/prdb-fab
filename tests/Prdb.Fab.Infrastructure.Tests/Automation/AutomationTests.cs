@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Acquisition;
+using Prdb.Fab.Core.Access;
+using Prdb.Fab.Core.Catalogue;
+using Prdb.Fab.Core.Filing;
+using Prdb.Fab.Infrastructure.Tests.Sync;
 using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Core.Connections;
 using Prdb.Fab.Core.ReleaseDiscovery;
@@ -322,6 +326,139 @@ public sealed class AutomationTests
         }
     }
 
+    [Fact]
+    public async Task Prepared_collection_starts_at_most_100_missing_wanted_with_cap_20_then_only_new_intent()
+    {
+        var token = TestContext.Current.CancellationToken;
+        var api = new FakePrdbApi();
+        var sab = new SabnzbdHandler();
+        await using var database = await TestDatabase.CreateAsync(prdb: api, also: services =>
+        {
+            services.AddSingleton<IProbeProcess>(new CollectionProbe());
+            services.AddHttpClient(FabTransports.Sabnzbd).ConfigurePrimaryHttpMessageHandler(() => sab);
+            services.AddHttpClient(FabTransports.Indexers).ConfigurePrimaryHttpMessageHandler(() => new NzbHandler());
+        });
+        var first = await SeedAsync(database, pending: true);
+        var library = Path.Combine(database.Location.DataDirectory, "library");
+        Directory.CreateDirectory(library);
+        var source = Path.Combine(library, "existing.mkv");
+        await File.WriteAllBytesAsync(source, new byte[200_000], token);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var now = database.Time.GetUtcNow();
+            await context.Installation.ExecuteUpdateAsync(update => update.SetProperty(row => row.OnboardingStep, OnboardingStep.Complete)
+                .SetProperty(row => row.PrdbUserHash, "account").SetProperty(row => row.PrdbApiKey, "fixture")
+                .SetProperty(row => row.LibraryRoot, library).SetProperty(row => row.SabnzbdUrl, "http://sabnzbd.invalid")
+                .SetProperty(row => row.SabnzbdApiKey, "fixture").SetProperty(row => row.SabnzbdCategory, "xxx"), token);
+            context.FeedCursors.Add(new() { Feed = Feed.WantedVideos, Cursor = FeedPosition.CaughtUpAt(now).Stored });
+            await context.CatalogueVideos.ExecuteUpdateAsync(update => update.SetProperty(row => row.ReleaseDate, DateOnly.FromDateTime(now.DateTime))
+                .SetProperty(row => row.LastReadAt, now), token);
+            for (var i = 0; i < 110; i++) await AddRecentAsync(context, first.IndexerId, now, now.AddDays(-2), i);
+            await context.SaveChangesAsync(token);
+            Assert.True((await scope.ServiceProvider.GetRequiredService<AutopilotSettings>().StartAsync(true, [], token)).Accepted);
+            var direct = await scope.ServiceProvider.GetRequiredService<PersonDownloads>().AutomaticDownloadAsync(Guid.NewGuid(), first.VideoId,
+                (await context.Releases.OrderBy(row => row.Id).FirstAsync(token)).Id, token);
+            Assert.NotEqual(DownloadOutcome.Submitted, direct?.Outcome);
+        }
+        for (var i = 0; i < 3; i++)
+        {
+            await using var scope = database.Scope();
+            await scope.ServiceProvider.GetRequiredService<CollectionScanRoutine>().RunAsync(null, token);
+            await scope.ServiceProvider.GetRequiredService<AutomaticDecisionRoutine>().RunAsync(null, token);
+        }
+        Assert.DoesNotContain("addfile", sab.Modes);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var arrival = await context.ArrivingFiles.SingleAsync(token);
+            api.Answers("/videos/identify", System.Text.Json.JsonSerializer.Serialize(new { results = new[] { new {
+                @ref = arrival.Id.ToString("D"), videoId = first.VideoId, confidence = 4, matchedBy = 0,
+                video = new { id = first.VideoId, title = "Existing scene", site = new { id = Guid.NewGuid(), title = "Site" } } } } }));
+            await scope.ServiceProvider.GetRequiredService<ArrivalIdentificationRoutine>().RunAsync(null, token);
+        }
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<CollectionScanRoutine>().RunAsync(null, token);
+            await scope.ServiceProvider.GetRequiredService<CollectionPlanningRoutine>().RunAsync(null, token);
+            var preview = scope.ServiceProvider.GetRequiredService<CollectionPreview>();
+            var page = await preview.ReadAsync(1, token);
+            Assert.Equal("Preview", page.Phase);
+            await scope.ServiceProvider.GetRequiredService<AutomaticDecisionRoutine>().RunAsync(null, token);
+            Assert.DoesNotContain("addfile", sab.Modes);
+            Assert.True((await preview.ApproveAsync(page.Revision, [], [], true, false, token)).Accepted);
+        }
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<CollectionImportRoutine>().RunAsync(null, token);
+            await scope.ServiceProvider.GetRequiredService<AutomaticDecisionRoutine>().RunAsync(null, token);
+            Assert.DoesNotContain("addfile", sab.Modes);
+            await scope.ServiceProvider.GetRequiredService<FilingRoutine>().RunAsync(null, token);
+        }
+        await using (var scope = database.Scope())
+        {
+            await scope.ServiceProvider.GetRequiredService<CollectionImportRoutine>().RunAsync(null, token);
+            await scope.ServiceProvider.GetRequiredService<WantedAutopilot>().ReconcileAsync(token);
+            Assert.Equal(100, await scope.ServiceProvider.GetRequiredService<FabDbContext>().AutopilotMemberships.CountAsync(row => row.Admitted, token));
+        }
+        for (var batch = 0; batch < 5; batch++)
+        {
+            for (var turn = 0; turn < 6; turn++)
+            {
+                await using var scope = database.Scope();
+                await scope.ServiceProvider.GetRequiredService<AutomaticDecisionRoutine>().RunAsync(null, token);
+            }
+            await using var complete = database.Scope();
+            var context = complete.ServiceProvider.GetRequiredService<FabDbContext>();
+            var active = await context.Downloads.AsTracking().Where(row => row.State == DownloadState.Outstanding).ToListAsync(token);
+            Assert.Equal(20, active.Count);
+            foreach (var download in active)
+            {
+                download.State = DownloadState.Collected;
+                context.LibraryEntries.Add(new() { VideoId = download.VideoId, EntryDirectory = Path.Combine(library, download.VideoId.ToString()) });
+            }
+            await context.SaveChangesAsync(token);
+            await complete.ServiceProvider.GetRequiredService<WantedAutopilot>().ReconcileAsync(token);
+        }
+        Assert.Equal(100, sab.Modes.Count(mode => mode == "addfile"));
+        database.Time.Advance(TimeSpan.FromMinutes(10));
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await AddRecentAsync(context, first.IndexerId, database.Time.GetUtcNow(), database.Time.GetUtcNow(), 999);
+            await context.SaveChangesAsync(token);
+            await scope.ServiceProvider.GetRequiredService<WantedAutopilot>().ReconcileAsync(token);
+        }
+        for (var i = 0; i < 8; i++)
+        {
+            await using var scope = database.Scope();
+            await scope.ServiceProvider.GetRequiredService<AutomaticDecisionRoutine>().RunAsync(null, token);
+            Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<WantedAutopilot>().ReconcileAsync(token));
+        }
+        Assert.Equal(101, sab.Modes.Count(mode => mode == "addfile"));
+        Assert.False(File.Exists(source));
+    }
+
+    private static async Task AddRecentAsync(FabDbContext context, Guid indexer, DateTimeOffset now, DateTimeOffset since, int number)
+    {
+        var token = TestContext.Current.CancellationToken;
+        var video = new CatalogueVideoRow { PrdbId = Guid.NewGuid(), Title = "Recent scene " + number,
+            ReleaseDate = DateOnly.FromDateTime(now.DateTime).AddDays(-(number % 60)), LastReadAt = now };
+        context.CatalogueVideos.Add(video);
+        await context.SaveChangesAsync(token);
+        context.WantedVideos.Add(new() { VideoId = video.Id, SinceAt = since });
+        context.Releases.Add(new() { IndexerId = indexer, DerivedReleaseId = "release-" + number, RawGuid = "release-" + number,
+            Title = "Recent scene " + number, Size = 1000, Categories = "[]", PostDate = now, PubDate = now, FirstSeenAt = now,
+            DownloadUrl = "https://indexer.invalid/nzb/" + number, IdentificationState = IdentificationState.Matched,
+            LastIdentifiedAt = now, VideoId = video.Id, Confidence = IdentificationConfidence.Exact, MatchedBy = IdentificationRung.ReleaseName, AutomationPending = true });
+    }
+
+    private sealed class CollectionProbe : IProbeProcess
+    {
+        public Task<ProbeProcessResult> RunAsync(string path, CancellationToken cancellationToken) => Task.FromResult(new ProbeProcessResult(0,
+            """{"streams":[{"width":1920,"height":1080,"codec_name":"h264"}],"format":{"duration":"60"}}""", "", false));
+    }
+
     private static async Task<Seeded> SeedAsync(TestDatabase database, bool pending)
     {
         var indexerId = Guid.Parse("0198ec28-1c00-7000-8000-000000000071");
@@ -407,7 +544,7 @@ public sealed class AutomationTests
             var body = mode switch
             {
                 "get_cats" => "{\"categories\":[\"xxx\"]}",
-                "addfile" => "{\"status\":true,\"nzo_ids\":[\"automatic-nzo\"]}",
+                "addfile" => System.Text.Json.JsonSerializer.Serialize(new { status = true, nzo_ids = new[] { Modes.Count(mode => mode == "addfile") == 1 ? "automatic-nzo" : "automatic-nzo-" + Modes.Count } }),
                 _ => "{}",
             };
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)

@@ -42,7 +42,7 @@ queue** with the reason and available evidence.
 | --- | --- |
 | **Discover what you want** | Browse new videos, Sites and Actors with artwork and previews. Manage your favourites and Wanted list through your prdb account. |
 | **Find and choose releases** | Search across your Newznab indexers, compare releases and see identification confidence before downloading. Download from a catalogue card or pick an exact release. |
-| **Let Wanted do the work** | Enable automation rules for your Wanted videos, with allowed indexers and release-size limits. Automation stays off until you enable a rule. |
+| **Let Wanted do the work** | Prepare your existing collection, then automatically download a fixed selection of up to 100 recent missing Wanted videos and new recent additions. Custom rules remain available. |
 | **Follow every download** | Track SABnzbd progress and failures in one place. If a release fails, prdb-fab can try another within its retry limit. |
 | **Build a Jellyfin library** | Identified files move into organised folders with metadata and artwork. Metadata corrections from prdb keep the library up to date. |
 | **Keep control of your files** | Review unidentified files and duplicates before deciding what happens to them. Different qualities can share one library entry; duplicates are never silently deleted. |
@@ -102,8 +102,8 @@ docker compose up -d
 
 Open `http://your-nas:8080` in your browser, replacing `your-nas` with your
 server's hostname or IP address. Set your password, connect prdb, SABnzbd and
-your indexers, choose the library folder, and review the preview-publishing
-choice. Connections and preferences can be changed later in **Settings**.
+your indexers, choose the library folder, review the collection/autopilot defaults,
+and review the preview-publishing choice. Connections and preferences can be changed later in **Settings**.
 
 Set the first password on a trusted network. Use HTTPS through a reverse proxy
 if you access the application remotely.
@@ -115,9 +115,14 @@ preferred available release, or open **Releases** to compare and choose one.
 The initial catalogue and indexer sync runs in the background; **Status** shows
 its progress. Use **Search Indexers** on a video to request a search.
 
-When you are ready for unattended downloads, add a rule in
-**Settings → Automation**. Rules apply to Wanted videos and can immediately
-start matching downloads already found. See [how automation works](docs/automation.md).
+Fresh setup prepares the existing collection before starting **Recent Wanted
+autopilot**. Review the proposed moves on Wanted; approved files leave their
+source and enter the sorted Library. Empty storage needs no import confirmation.
+The supplied policy selects up to the newest 100 eligible missing Wanted videos
+released within 90 UTC calendar dates, then admits new recent Wanted intent.
+The initial selection is never refilled. You can opt out during setup or switch
+the policy off in **Settings → Automation**. Existing installations keep their
+current behavior and can adopt it explicitly there. See [how automation works](docs/automation.md).
 
 ## A few things to know
 

@@ -370,7 +370,7 @@ it protects against. Cross-filesystem moves are copy-verify-delete, nothing is
 filed on a failed lookup, and every move and every deletion is logged with what
 it was and why. That log is readable from the first release, because a tool that
 moves files unattended has to be able to say what it moved; the undo it also
-makes possible belongs to scan directories, which come later. A button is easier
+makes possible remains a later extension; collection import currently requires a concrete preview and approval. A button is easier
 to press than a command is to type, so a web UI raises the stakes rather than
 lowering them.
 
@@ -456,10 +456,10 @@ Deliberately after that, not before:
   release files what identifies well enough to act on and queues the rest for
   the user; lowering that bar until nothing is left over is the later step.
   Filing itself, and the layout it files into, are in the first release.
-- **Scan directories.** Absorbing a collection that existed before this tool
-  needs a dry run, an undo across thousands of files, and a review queue that
-  survives that volume — a second product beside the download loop, and the
-  most dangerous thing the tool will ever do.
+- **Bulk undo for collection imports.** Scan directories now have bounded
+  inventory, a concrete preview, explicit approval and the ordinary safe Filing
+  pipeline (ADR 0065). A general undo across thousands of moves remains later
+  work; the Operation Log records every completed move.
 - **Notifications**, so an unattended tool can say something went wrong without
   the user thinking to look.
 - **Perceptual hashes and thumbnails for unknown files**, optionally submitted
@@ -485,8 +485,9 @@ at the start is worth being able to see.
 
 - ~~How far automation should go on its own before the first release, and what
   the smallest useful rule set looks like.~~ **Settled** by ADR 0007: automation
-  is a set of unordered permissions over the wanted list, off until a rule
-  exists, with ADR 0046 recording every rule that permitted a download.
+  is a set of unordered permissions over the wanted list, with ADR 0046
+  recording every permitting rule. ADR 0065 adds a bounded supplied permission
+  during fresh setup, after preparation of the existing collection.
 - ~~What the review queue holds and how an entry leaves it, given that an
   undecided file also holds up the cleanup of the directory it sits in.~~
   **Settled** by ADR 0022: one unmoved file with one reason and two exits, plus

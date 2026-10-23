@@ -50,8 +50,10 @@ public sealed class CollectionPlanningRoutine(FabDbContext context, FilingRoutin
                 {
                     var plan = await filing.PlanAsync(arrival, root, cancellationToken);
                     file.PlannedPath = plan.Path;
-                    if (plan.Path != null && await context.CollectionFiles.AnyAsync(other => other.Id != file.Id
-                        && other.LeftAt == null && other.PlannedPath == plan.Path, cancellationToken))
+                    if (plan.Path != null && (context.CollectionFiles.Local.Any(other => other.Id != file.Id
+                        && other.LeftAt == null && other.PlannedPath == plan.Path)
+                        || await context.CollectionFiles.AnyAsync(other => other.Id != file.Id
+                        && other.LeftAt == null && other.PlannedPath == plan.Path, cancellationToken)))
                     {
                         file.PlannedPath = null;
                         plan = new(null, null, "Another scanned file has this destination. Select one copy; leave or resolve the other.");

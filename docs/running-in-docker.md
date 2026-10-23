@@ -61,7 +61,11 @@ is answered. Closing the tab costs nothing: it resumes where it was.
 4. **The library root**, the directory this tool files into. Required. It is the
    destination for your organised library and must be writable by the user the
    container runs as. Keep it separate from the download directory.
-5. **Publishing previews.** Review whether previews of newly filed Videos should
+5. **Your collection and Wanted.** The Library root is scanned automatically;
+   optionally add other mounted collection directories. Review Recent Wanted
+   autopilot's default selection and opt out if desired. After setup, Wanted
+   links to the import preview. No files move before approval.
+6. **Publishing previews.** Review whether previews of newly filed Videos should
    be published on prdb. Publishing is selected by default, but nothing is
    generated or sent until you save this choice. These previews can become
    public; see [Publishing previews](publishing-previews.md).
@@ -85,22 +89,20 @@ extension and reports only what each source has actually proved.
 
 ## Automation, Downloads and the SABnzbd boundary
 
-Automation is off until at least one rule is enabled under **Settings →
-Automation**. Every rule is an independent permission over matched Wanted
-Videos: it selects allowed enabled Indexers and optional minimum and maximum
-Release size. Rules are unordered, may overlap, and never deny another rule.
-They do not use favourite Sites, favourite Actors, or a Quality guessed from a
-Release name.
+Fresh setup supplies Recent Wanted autopilot with an opt-out. It waits for the
+existing collection inventory, required preview decisions and approved moves,
+then freezes the newest 100 eligible missing Wanted Videos released within 90
+UTC calendar dates. That selection is never refilled; new recent Wanted intent
+can join later. Empty storage needs no import confirmation. Upgrading preserves
+existing choices; adopt the workflow explicitly in Settings → Automation.
 
-Enabling or changing a rule immediately schedules a catch-up over matching
-Releases already in the cache. There is no preview. The catch-up uses the same
-background Decide work set as newly identified Releases and newly Wanted
-Videos, and the default cap permits at most 20 unfinished automatic Downloads
-in SABnzbd at once. Further work waits durably. Before every submission the
-Video must still be Wanted, absent from the Library in every Quality, free of an
-open Review Queue entry, inside the before-download named confidence set, and
-within its three-attempt Retry Budget. Status and the Release view explain a
-gate, rule, cap or other deliberate non-act.
+All enabled Indexers participate. Custom rules remain separate advanced
+permissions and can allow older or additional Wanted Videos. Turning off the
+supplied policy does not turn those rules off. Every automatic submission
+rechecks held Videos, pending file/candidate holds, Confidence, current intent,
+the default three-attempt Retry Budget and the cap of 20 unfinished automatic
+Downloads. Preparation blocks all automatic submissions until its work completes.
+The settings request only queues work; it never submits a Download itself.
 
 Disabling a rule is forward-only. Deleting one asks for confirmation; existing
 Downloads keep the copied rule name in their Origin. If a Video leaves Wanted,

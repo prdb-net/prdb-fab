@@ -174,6 +174,34 @@ public sealed class CollectionImportTests : IDisposable
         Assert.Single(await read.ServiceProvider.GetRequiredService<FabDbContext>().VideoFiles.ToListAsync(Token));
     }
 
+    [Fact]
+    public async Task Two_scanned_copies_cannot_both_receive_the_same_destination_in_one_preview_batch()
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        await SeedAsync(db);
+        await using var scope = db.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        var existing = await context.CollectionFiles.AsTracking().SingleAsync(Token);
+        var arrival = await context.ArrivingFiles.SingleAsync(Token);
+        existing.PreviewEvidence = null;
+        existing.PlannedPath = null;
+        var path = Path.Combine(root, "second.mkv");
+        await File.WriteAllTextAsync(path, "second content", Token);
+        var id = Guid.NewGuid();
+        context.CollectionFiles.Add(new() { Id = id, RootId = existing.RootId, SourcePath = path, SizeBytes = 14,
+            LastWriteAt = File.GetLastWriteTimeUtc(path), Probed = true });
+        context.ArrivingFiles.Add(new() { Id = id, SourcePath = path, ArrivedName = "second.mkv", SizeBytes = 14,
+            VideoId = arrival.VideoId, QualityLabel = arrival.QualityLabel, State = ArrivingFileState.AwaitingFiling });
+        await context.CollectionPreparations.ExecuteUpdateAsync(update => update.SetProperty(row => row.Phase, "Planning"), Token);
+        await context.SaveChangesAsync(Token);
+        await scope.ServiceProvider.GetRequiredService<CollectionPlanningRoutine>().RunAsync(null, Token);
+        var page = await scope.ServiceProvider.GetRequiredService<CollectionPreview>().ReadAsync(1, Token);
+        Assert.Equal(1, page.Ready);
+        Assert.Equal(1, page.Unresolved);
+        Assert.True(File.Exists(path));
+        Assert.True(File.Exists(existing.SourcePath));
+    }
+
     private async Task<Guid> SeedAsync(TestDatabase db, bool inLibrary = false)
     {
         await using var scope = db.Scope();
