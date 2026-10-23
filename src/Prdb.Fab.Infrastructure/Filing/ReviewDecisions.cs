@@ -90,6 +90,9 @@ public sealed class ReviewDecisions(
         arrival.Reason = null;
         arrival.State = ArrivingFileState.AwaitingFiling;
         arrival.IntendedPath = null;
+        var collectionFile = await context.CollectionFiles.AsTracking().SingleOrDefaultAsync(file => file.Id == arrival.Id, cancellationToken);
+        if (collectionFile is not null)
+            await CollectionChanges.ReplanAsync(context, collectionFile, "Review the confirmed Identification and its destination.", cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
         return new ReviewDecisionVerdict(
@@ -113,6 +116,9 @@ public sealed class ReviewDecisions(
         arrival.Reason = null;
         arrival.State = ArrivingFileState.AwaitingFiling;
         arrival.IntendedPath = null;
+        var collectionFile = await context.CollectionFiles.AsTracking().SingleOrDefaultAsync(file => file.Id == arrival.Id, cancellationToken);
+        if (collectionFile is not null)
+            await CollectionChanges.ReplanAsync(context, collectionFile, "Review the confirmed Identification and its destination.", cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
 
         return new ReviewDecisionVerdict(
@@ -130,6 +136,8 @@ public sealed class ReviewDecisions(
             return Changed();
         }
 
+        if (arrival.DownloadId is null)
+            return new(ReviewDecisionOutcome.CannotAct, "Leave this duplicate in the collection preview, or keep the existing Library copy. Collection import does not replace held files.");
         var filed = await context.VideoFiles
             .AsNoTracking()
             .Where(row => row.LibraryEntryVideoId == videoId && row.QualityLabel == quality)

@@ -29,6 +29,8 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<LibrarySettings>();
         services.AddScoped<CollectionPreparation>();
         services.AddScoped<CollectionPreview>();
+        services.AddScoped<CollectionImportRoutine>();
+        services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectionImportRoutine>());
         services.AddScoped<CollectionPlanningRoutine>();
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectionPlanningRoutine>());
         services.AddScoped<CollectionScanRoutine>();

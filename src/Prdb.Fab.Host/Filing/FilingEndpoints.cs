@@ -16,6 +16,7 @@ public static class FilingEndpoints
         var collection = routes.MapGroup("/api/collection").WithTags("Filing");
         collection.MapGet("/", async (CollectionPreview preview, CancellationToken cancellationToken, int page = 1) =>
             TypedResults.Ok(await preview.ReadAsync(page, cancellationToken)));
+        collection.MapPost("/retry", (CollectionPreparation preparation, CancellationToken cancellationToken) => preparation.RetryAsync(cancellationToken));
         collection.MapPost("/start", async (CollectionStartRequest request, CollectionPreparation preparation, CancellationToken cancellationToken) =>
             TypedResults.Ok(await preparation.StartAsync(request.Directories, cancellationToken)));
         collection.MapPost("/approve", async (CollectionApprovalRequest request, CollectionPreview preview, CancellationToken cancellationToken) =>

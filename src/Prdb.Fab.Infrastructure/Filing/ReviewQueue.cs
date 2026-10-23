@@ -125,6 +125,8 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
                 Reason = $"Review Queue: {row.Reason}",
                 At = now,
             });
+            var collectionFile = await context.CollectionFiles.AsTracking().SingleOrDefaultAsync(file => file.Id == row.Id, cancellationToken);
+            if (collectionFile is not null) collectionFile.LeftAt = now;
             context.ArrivingFiles.Remove(row);
             await context.SaveChangesAsync(cancellationToken);
         }
@@ -146,6 +148,7 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
         }
 
         var selected = preview.Files.Select(file => file.Id).ToArray();
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var removed = await context.ArrivingFiles
             .Where(row => selected.Contains(row.Id)
                 && row.Reason != null
@@ -153,6 +156,12 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
                     selected.Contains(candidate.Id) && candidate.Reason != null) == selected.Length)
             .ExecuteDeleteAsync(cancellationToken);
 
+        if (removed == selected.Length)
+        {
+            await context.CollectionFiles.Where(file => selected.Contains(file.Id))
+                .ExecuteUpdateAsync(update => update.SetProperty(file => file.LeftAt, time.GetUtcNow()), cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
         return removed == selected.Length
             ? new ReviewSelectionVerdict(
                 ReviewSelectionOutcome.Dismissed,

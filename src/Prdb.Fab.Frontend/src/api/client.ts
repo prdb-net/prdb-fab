@@ -883,3 +883,5 @@ export function startCollection(directories: string[]): Promise<Schema['Collecti
 export function approveCollection(request: CollectionApprovalRequest): Promise<Schema['CollectionAct']> {
   return post('/api/collection/approve', request)
 }
+
+export function retryCollection(): Promise<Schema['CollectionAct']> { return post('/api/collection/retry') }

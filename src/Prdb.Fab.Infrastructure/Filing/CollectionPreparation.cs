@@ -6,6 +6,15 @@ namespace Prdb.Fab.Infrastructure.Filing;
 /// <summary>Starts explicit collection work. Reading a page never starts a scan.</summary>
 public sealed class CollectionPreparation(FabDbContext context, TimeProvider time)
 {
+    public async Task<CollectionAct> RetryAsync(CancellationToken cancellationToken = default)
+    {
+        if (!await context.CollectionPreparations.AnyAsync(cancellationToken)) return new(false, "Start collection preparation first.");
+        if (await context.ArrivingFiles.AnyAsync(row => row.DownloadId == null && row.State == Core.Filing.ArrivingFileState.Filing, cancellationToken))
+            return new(false, "A move is already in progress. It must finish or recover before rescanning.");
+        await CollectionChanges.RescanAsync(context, "Rechecking the collection; previous unfinished approvals must be reviewed again.", cancellationToken);
+        return new(true, "The collection is being checked again.");
+    }
+
     public async Task<CollectionAct> StartAsync(IReadOnlyCollection<string> directories,
         CancellationToken cancellationToken = default)
     {

@@ -20,7 +20,8 @@ public sealed class CollectionPlanningRoutine(FabDbContext context, FilingRoutin
         var root = await context.Installation.Select(row => row.LibraryRoot).SingleAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(root)) return RunResult.Failed("Configure the Library root before preparing an import.");
         var files = await context.CollectionFiles.AsTracking()
-            .Where(row => row.LeftAt == null && row.PreviewEvidence == null)
+            .Where(row => row.LeftAt == null && row.PreviewEvidence == null
+                && !context.ArrivingFiles.Any(arrival => arrival.Id == row.Id && arrival.State == ArrivingFileState.Filed))
             .OrderBy(row => row.Id).Take(25).ToListAsync(cancellationToken);
         foreach (var file in files)
         {
@@ -40,6 +41,12 @@ public sealed class CollectionPlanningRoutine(FabDbContext context, FilingRoutin
                 {
                     var plan = await filing.PlanAsync(arrival, root, cancellationToken);
                     file.PlannedPath = plan.Path;
+                    if (plan.Path != null && await context.CollectionFiles.AnyAsync(other => other.Id != file.Id
+                        && other.LeftAt == null && other.PlannedPath == plan.Path, cancellationToken))
+                    {
+                        file.PlannedPath = null;
+                        plan = new(null, null, "Another scanned file has this destination. Select one copy; leave or resolve the other.");
+                    }
                     file.PreviewDetail = plan.Detail;
                 }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -51,7 +58,8 @@ public sealed class CollectionPlanningRoutine(FabDbContext context, FilingRoutin
         }
         preparation.Revision++;
         await context.SaveChangesAsync(cancellationToken);
-        if (!await context.CollectionFiles.AnyAsync(row => row.LeftAt == null && row.PreviewEvidence == null, cancellationToken))
+        if (!await context.CollectionFiles.AnyAsync(row => row.LeftAt == null && row.PreviewEvidence == null
+                && !context.ArrivingFiles.Any(arrival => arrival.Id == row.Id && arrival.State == ArrivingFileState.Filed), cancellationToken))
         {
             preparation.Phase = "Preview";
             await context.SaveChangesAsync(cancellationToken);

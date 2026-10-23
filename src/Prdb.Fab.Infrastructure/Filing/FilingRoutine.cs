@@ -62,21 +62,31 @@ public sealed class FilingRoutine(
             return RunResult.Handled(1);
         }
 
-        var root = await AvailableLibraryRootAsync(cancellationToken);
-
-        if (arrival.State == ArrivingFileState.AwaitingFiling
-            && !await PrepareAsync(arrival, root, cancellationToken))
+        try
         {
+            var root = await AvailableLibraryRootAsync(cancellationToken);
+
+            if (arrival.State == ArrivingFileState.AwaitingFiling
+                && !await PrepareAsync(arrival, root, cancellationToken))
+            {
+                return RunResult.Handled(1);
+            }
+
+            if (!await ExecuteAsync(arrival, cancellationToken))
+            {
+                return RunResult.Handled(1);
+            }
+
+            logger.LogInformation("Filed one Arriving File into the Library.");
             return RunResult.Handled(1);
         }
-
-        if (!await ExecuteAsync(arrival, cancellationToken))
+        catch (Exception error) when (arrival.DownloadId is null && error is IOException or UnauthorizedAccessException)
         {
-            return RunResult.Handled(1);
+            var preparation = await context.CollectionPreparations.AsTracking().SingleAsync(cancellationToken);
+            preparation.Error = "An approved file could not be moved safely. Restore source/destination access; Filing will retry. Recheck the preview if its destination changed.";
+            await context.SaveChangesAsync(cancellationToken);
+            return RunResult.Failed(preparation.Error);
         }
-
-        logger.LogInformation("Filed one Arriving File into the Library.");
-        return RunResult.Handled(1);
     }
 
     private async Task ReplaceAsync(
@@ -189,6 +199,23 @@ public sealed class FilingRoutine(
     private async Task<bool> PrepareAsync(ArrivingFileRow arrival, string root, CancellationToken cancellationToken)
     {
         var plan = await PlanAsync(arrival, root, cancellationToken);
+        if (arrival.DownloadId is null)
+        {
+            var file = await context.CollectionFiles.AsTracking().SingleAsync(row => row.Id == arrival.Id, cancellationToken);
+            var scanRoot = await context.CollectionRoots.Where(row => row.Id == file.RootId).Select(row => row.Path).SingleAsync(cancellationToken);
+            CollectionPaths.RequireContained(arrival.SourcePath, scanRoot);
+            if (!CollectionChanges.SourceMatches(file, arrival, mover))
+            {
+                await CollectionChanges.RescanAsync(context, "A source changed before Filing. Review the updated inventory.", cancellationToken);
+                return false;
+            }
+            if (file.ApprovedAt == null || file.ValidatedAt == null || file.ApprovedEvidence != CollectionEvidence.Of(file, arrival)
+                || plan.Path != file.PlannedPath || plan.Reason != null)
+            {
+                await CollectionChanges.ReplanAsync(context, file, "The approved destination or Identification changed.", cancellationToken);
+                return false;
+            }
+        }
         if (plan.Reason is { } reason)
         {
             await StopAsync(arrival, reason, cancellationToken);

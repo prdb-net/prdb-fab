@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { approveCollection, readCollectionPreview, startCollection, type CollectionPreviewPage } from '../api/client.ts'
+import { approveCollection, readCollectionPreview, startCollection, retryCollection, type CollectionPreviewPage } from '../api/client.ts'
 import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
 import { Field, formStyles } from '../ui/Form.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
@@ -18,6 +18,7 @@ export function CollectionScreen() {
   const preview = useQuery({ queryKey: ['collection', page], queryFn: () => readCollectionPreview(page), refetchInterval: 5000 })
   const refresh = () => { setSelected(new Set()); void queries.invalidateQueries({ queryKey: ['collection'] }) }
   const start = useMutation({ mutationFn: () => startCollection(directories.split('\n').map(value => value.trim()).filter(Boolean)), onSuccess: refresh })
+  const retry = useMutation({ mutationFn: retryCollection, onSuccess: refresh })
   const approve = useMutation({
     mutationFn: () => approveCollection({
       revision: confirm!.revision,
@@ -52,6 +53,7 @@ export function CollectionScreen() {
       {held && held.phase !== 'NotStarted' && <>
         <p role="status"><strong>{phaseName(held.phase)}</strong> · {held.total} files · {held.ready} with a destination · {held.unresolved} need a decision · {held.approved} approved · {held.left} left in place</p>
         {held.error && <Verdict tone="refusal">{held.error}</Verdict>}
+        {(held.error || held.phase === 'Preview') && <button className={formStyles.button} disabled={retry.isPending} onClick={() => retry.mutate()}>Recheck collection and prepare a new preview</button>}
         {held.phase === 'Ready' && <Verdict tone="done">Collection preparation is complete. Wanted automation can proceed when its Connections and Wanted list are ready.</Verdict>}
         <p>Approved files move into the sorted Library. Across filesystems, prdb-fab copies, verifies and then deletes the source. Duplicates and unresolved files stay in place until you decide.</p>
         {Number(held.unresolved) > 0 && <p><Link to="/review-queue">Resolve unidentified files in the Review Queue</Link>, or explicitly leave them in place. An unidentified file cannot reliably prevent a later duplicate Download.</p>}
@@ -78,6 +80,7 @@ export function CollectionScreen() {
           <button className={formStyles.button} disabled={page * Number(held.pageSize) >= Number(held.total)} onClick={() => { setPage(page + 1); setSelected(new Set()) }}>Next</button>
         </nav>
       </>}
+      {retry.data && <Verdict tone={retry.data.accepted ? 'done' : 'refusal'}>{retry.data.detail}</Verdict>}
       {start.data && <Verdict tone={start.data.accepted ? 'done' : 'refusal'}>{start.data.detail}</Verdict>}
       {approve.data && <Verdict tone={approve.data.accepted ? 'done' : 'refusal'}>{approve.data.detail}</Verdict>}
       {(start.isError || approve.isError) && <Verdict tone="refusal">Could not confirm the action. Reload to check its current state.</Verdict>}

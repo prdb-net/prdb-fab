@@ -51,7 +51,8 @@ public sealed class CollectionPreview(FabDbContext context, TimeProvider time)
         var preparation = await context.CollectionPreparations.AsTracking().SingleOrDefaultAsync(cancellationToken);
         if (preparation is null || preparation.Revision != revision || preparation.Phase != "Preview" || preparation.Error != null)
             return new(false, "The preview changed or preparation is incomplete. Review the current preview.");
-        var files = await context.CollectionFiles.AsTracking().Where(row => row.LeftAt == null).ToListAsync(cancellationToken);
+        var files = await context.CollectionFiles.AsTracking().Where(row => row.LeftAt == null
+            && !context.ArrivingFiles.Any(arrival => arrival.Id == row.Id && arrival.State == ArrivingFileState.Filed)).ToListAsync(cancellationToken);
         var ids = files.Select(row => row.Id).ToArray();
         var arrivals = await context.ArrivingFiles.Where(row => ids.Contains(row.Id)).ToDictionaryAsync(row => row.Id, cancellationToken);
         if (files.Any(file => !arrivals.TryGetValue(file.Id, out var arrival)
@@ -84,7 +85,11 @@ public sealed class CollectionPreview(FabDbContext context, TimeProvider time)
             // This is an explicit dismissal, including any candidate holds.
             await context.ArrivingFiles.Where(row => row.Id == file.Id).ExecuteDeleteAsync(cancellationToken);
         }
-        if (files.All(file => file.LeftAt != null || file.ApprovedAt != null)) preparation.Phase = "Validating";
+        if (files.All(file => file.LeftAt != null || file.ApprovedAt != null))
+        {
+            preparation.Phase = "Validating";
+            await context.CollectionWalks.ExecuteUpdateAsync(update => update.SetProperty(row => row.Verified, false), cancellationToken);
+        }
         preparation.Revision++;
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
