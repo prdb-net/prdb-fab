@@ -218,3 +218,12 @@ an answer.
 adds a supplied bounded Wanted permission after a previewed collection import.
 It describes the setup, controls and fair search ordering that amend this
 ADR; existing custom permissions and their safety checks remain in force.
+
+The implementation records every attempted title query, including empty and refused
+answers, and waits at least 15 minutes before retrying that pair. A governor
+deferral is not an attempt. Four of five places first serve recent admitted
+missing Wanted Videos; one remains available to other Wanted intent. Within
+each group, never-searched and least-recently-attempted titles lead, then newer
+Release Dates and stable IDs. This explicitly replaces the earlier rule that
+an empty answer must not change ordering. Automatic decisions likewise reserve
+one place for other work while prioritizing admitted Videos.

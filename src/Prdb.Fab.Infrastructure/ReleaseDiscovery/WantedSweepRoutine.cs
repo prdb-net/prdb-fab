@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Automation;
 
 namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 
@@ -11,6 +12,7 @@ namespace Prdb.Fab.Infrastructure.ReleaseDiscovery;
 public sealed class WantedSweepRoutine(
     FabDbContext context,
     IndexerSearch search,
+    WantedAutopilot autopilot,
     ReleaseRows releases,
     TimeProvider time,
     ILogger<WantedSweepRoutine> logger) : IRoutine, ITargetedRoutine
@@ -41,20 +43,30 @@ public sealed class WantedSweepRoutine(
             return RunResult.NothingToDo;
         }
 
+        var account = await context.Installation.Select(row => row.PrdbUserHash).SingleAsync(cancellationToken);
+        var policyEnabled = await context.AutomationRules.AnyAsync(row => row.SuppliedWanted && row.Enabled, cancellationToken);
+        var priority = policyEnabled ? autopilot.AdmittedVideos(account).Select(row => row.Id) : context.CatalogueVideos.Where(row => false).Select(row => row.Id);
+        var retryBefore = time.GetUtcNow() - Cadence;
         var ordered = await (
                 from wanted in context.WantedVideos
                 join state in context.WantedVideoSweepStates.Where(row => row.IndexerId == indexerId)
                     on wanted.VideoId equals state.VideoId into states
                 from state in states.DefaultIfEmpty()
-                orderby state.LastSearchedAt, wanted.VideoId
-                select new DueWanted(wanted.VideoId, wanted.Video!.Title, state))
+                where state == null || state.LastSearchedAt <= retryBefore
+                orderby state.LastSearchedAt, wanted.Video!.ReleaseDate descending, wanted.Video!.PrdbId
+                select new DueWanted(wanted.VideoId, wanted.Video!.Title, state,
+                    priority.Contains(wanted.VideoId)
+                    && !context.LibraryEntries.Any(entry => entry.VideoId == wanted.Video!.PrdbId)
+                    && !context.Downloads.Any(download => download.VideoId == wanted.Video!.PrdbId
+                        && (download.State == Core.Acquisition.DownloadState.Outstanding || download.State == Core.Acquisition.DownloadState.Completed))))
             .ToListAsync(cancellationToken);
-
-        var due = ordered
-            .Select(wanted => wanted with { Query = WantedSearchTitle.Of(wanted.Title) })
-            .Where(wanted => WantedSearchTitle.IsSearchable(wanted.Query))
-            .Take(VideosPerRun)
-            .ToArray();
+        var searchable = ordered.Select(wanted => wanted with { Query = WantedSearchTitle.Of(wanted.Title) })
+            .Where(wanted => WantedSearchTitle.IsSearchable(wanted.Query)).ToArray();
+        // Reserve one of the five queries for other Wanted intent. Null/oldest
+        // attempt first makes empty answers rotate through both groups fairly.
+        var due = searchable.Where(row => row.Priority).Take(VideosPerRun - 1)
+            .Concat(searchable.Where(row => !row.Priority).Take(1))
+            .Concat(searchable).DistinctBy(row => row.VideoId).Take(VideosPerRun).ToArray();
 
         if (due.Length == 0)
         {
@@ -85,6 +97,7 @@ public sealed class WantedSweepRoutine(
             var read = searched.Read!;
             if (read.Refusal is not null)
             {
+                await RecordAttemptAsync(wanted, indexerId, cancellationToken);
                 return RunResult.Failed("The indexer refused a Wanted Sweep search.", read.RetryAfter);
             }
 
@@ -98,27 +111,7 @@ public sealed class WantedSweepRoutine(
             rowsAdded += write.Added;
             searchedCount++;
 
-            // ADR 0024: an empty answer changes no ordering state. The oldest,
-            // hardest-to-find video stays at the front rather than being
-            // penalised for exactly the absence this sweep exists to revisit.
-            if (read.Releases.Count + read.DroppedWithoutIdentity == 0)
-            {
-                continue;
-            }
-
-            var state = wanted.State;
-            if (state is null)
-            {
-                state = new WantedVideoSweepStateRow
-                {
-                    VideoId = wanted.VideoId,
-                    IndexerId = indexerId,
-                };
-                context.WantedVideoSweepStates.Add(state);
-            }
-
-            state.LastSearchedAt = time.GetUtcNow();
-            await context.SaveChangesAsync(cancellationToken);
+            await RecordAttemptAsync(wanted, indexerId, cancellationToken);
         }
 
         logger.LogInformation(
@@ -130,9 +123,23 @@ public sealed class WantedSweepRoutine(
         return RunResult.Discovered(resultsSeen, rowsAdded);
     }
 
+    private async Task RecordAttemptAsync(DueWanted wanted, Guid indexerId, CancellationToken token)
+    {
+        var state = wanted.State;
+        if (state is null)
+        {
+            state = new() { VideoId = wanted.VideoId, IndexerId = indexerId };
+            context.WantedVideoSweepStates.Add(state);
+        }
+        else context.WantedVideoSweepStates.Update(state);
+        state.LastSearchedAt = time.GetUtcNow();
+        await context.SaveChangesAsync(token);
+    }
+
     private sealed record DueWanted(
         long VideoId,
         string Title,
         WantedVideoSweepStateRow? State,
+        bool Priority,
         string Query = "");
 }
