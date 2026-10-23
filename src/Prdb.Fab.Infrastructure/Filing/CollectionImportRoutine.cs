@@ -47,11 +47,32 @@ public sealed class CollectionImportRoutine(FabDbContext context, FilingRoutine 
                     .OrderBy(row => row.Id).Take(5).ToListAsync(cancellationToken))
                 {
                     var arrival = await context.ArrivingFiles.SingleOrDefaultAsync(row => row.Id == file.Id, cancellationToken);
-                    if (arrival?.State == ArrivingFileState.Filed) { file.ValidatedAt = time.GetUtcNow(); continue; }
+                    if (arrival?.State == ArrivingFileState.Filed)
+                    {
+                        var held = await context.VideoFiles.Where(row => row.LibraryEntryVideoId == arrival.VideoId && row.QualityLabel == arrival.QualityLabel).ToListAsync(cancellationToken);
+                        if (!held.Any(row => File.Exists(row.FiledPath) && mover.Matches(row.FiledPath, row.SizeBytes, row.OsHash)))
+                            throw new IOException("A previously imported file could not be verified in the Library.");
+                        file.ValidatedAt = time.GetUtcNow();
+                        continue;
+                    }
                     if (arrival is null || file.ApprovedAt == null || file.ApprovedEvidence != CollectionEvidence.Of(file, arrival))
                     {
                         await CollectionChanges.ReplanAsync(context, file, "Identification changed. Review the updated preview.", cancellationToken);
                         return RunResult.Handled(1);
+                    }
+                    if (arrival.State == ArrivingFileState.Filing && arrival.IntendedPath == file.PlannedPath)
+                    {
+                        CollectionPaths.RequireSafeDestination(file.PlannedPath!, library!);
+                        var targetMatches = File.Exists(file.PlannedPath) && mover.Matches(file.PlannedPath!, arrival.SizeBytes, arrival.OsHash);
+                        if (File.Exists(file.SourcePath))
+                        {
+                            CollectionPaths.RequireContained(file.SourcePath, roots[file.RootId].Path);
+                            if (!CollectionChanges.SourceMatches(file, arrival, mover))
+                                throw new IOException("The source of an interrupted move changed.");
+                        }
+                        else if (!targetMatches) throw new IOException("An interrupted move has neither its verified source nor target.");
+                        file.ValidatedAt = time.GetUtcNow();
+                        continue;
                     }
                     CollectionPaths.RequireContained(file.SourcePath, roots[file.RootId].Path);
                     if (!CollectionChanges.SourceMatches(file, arrival, mover))
@@ -70,6 +91,8 @@ public sealed class CollectionImportRoutine(FabDbContext context, FilingRoutine 
                 await context.SaveChangesAsync(cancellationToken);
                 if (await context.CollectionFiles.AnyAsync(row => row.LeftAt == null && row.ValidatedAt == null, cancellationToken))
                     return RunResult.Handled(1);
+                if (await context.VideoFiles.AnyAsync(file => !context.LibraryVerifications.Any(answer => answer.VideoFileId == file.Id), cancellationToken))
+                    return RunResult.NothingToDo;
                 preparation.Phase = "Importing";
                 preparation.Error = null;
             }

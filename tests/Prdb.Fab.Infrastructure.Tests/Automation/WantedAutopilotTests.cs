@@ -133,6 +133,43 @@ public sealed class WantedAutopilotTests
         Assert.Equal("/settings/library/collection?from=/status", condition.Route);
     }
 
+    [Fact]
+    public async Task Changing_accounts_establishes_a_new_baseline_and_returning_preserves_the_original_selection()
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        await SeedAsync(db, 110);
+        await ReconcileAsync(db);
+        await using (var scope = db.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await scope.ServiceProvider.GetRequiredService<AccountScopedRows>().DropAsync(Token);
+            await context.Installation.ExecuteUpdateAsync(update => update.SetProperty(row => row.PrdbUserHash, "second-account"), Token);
+        }
+        Assert.Equal(0, await ReconcileAsync(db));
+        await using (var scope = db.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var videos = await context.CatalogueVideos.ToListAsync(Token);
+            context.WantedVideos.AddRange(videos.Select(video => new WantedVideoRow { VideoId = video.Id, SinceAt = db.Time.GetUtcNow().AddDays(-10) }));
+            context.FeedCursors.Add(new() { Feed = Feed.WantedVideos, Cursor = FeedPosition.CaughtUpAt(db.Time.GetUtcNow()).Stored });
+            await context.SaveChangesAsync(Token);
+        }
+        await ReconcileAsync(db);
+        await using (var scope = db.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            Assert.Equal(2, await context.AutopilotBaselines.CountAsync(Token));
+            Assert.Equal(100, await context.AutopilotMemberships.CountAsync(row => row.UserHash == "second-account" && row.Admitted, Token));
+            await scope.ServiceProvider.GetRequiredService<WantedAutopilot>().SetEnabledAsync(false, Token);
+            await context.Installation.ExecuteUpdateAsync(update => update.SetProperty(row => row.PrdbUserHash, "fixture-account"), Token);
+            Assert.False((await context.AutomationRules.SingleAsync(row => row.SuppliedWanted, Token)).Enabled);
+            await scope.ServiceProvider.GetRequiredService<WantedAutopilot>().SetEnabledAsync(true, Token);
+        }
+        Assert.Equal(0, await ReconcileAsync(db));
+        await using var read = db.Scope();
+        Assert.Equal(100, await read.ServiceProvider.GetRequiredService<FabDbContext>().AutopilotMemberships.CountAsync(row => row.UserHash == "fixture-account" && row.Admitted, Token));
+    }
+
     private static async Task<int> ReconcileAsync(TestDatabase db)
     {
         await using var scope = db.Scope();

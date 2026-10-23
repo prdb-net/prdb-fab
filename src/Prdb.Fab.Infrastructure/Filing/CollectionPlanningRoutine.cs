@@ -32,6 +32,15 @@ public sealed class CollectionPlanningRoutine(FabDbContext context, FilingRoutin
                 await context.SaveChangesAsync(cancellationToken);
                 return RunResult.Failed(preparation.Error);
             }
+            if (arrival.State == ArrivingFileState.Filing && file.ApprovedAt != null && file.PlannedPath == arrival.IntendedPath
+                && file.ApprovedEvidence == CollectionEvidence.Of(file, arrival))
+            {
+                file.PreviewEvidence = file.ApprovedEvidence;
+                file.PreviewDetail = "Resuming the previously approved move after source and target verification.";
+                continue;
+            }
+            if (arrival.VideoId is { } videoId && !await context.CatalogueVideos.AnyAsync(video => video.PrdbId == videoId && video.Site != null, cancellationToken))
+                return RunResult.NothingToDo;
             file.PlannedPath = null;
             if (arrival.Reason is { } reason)
                 file.PreviewDetail = reason.ToString();

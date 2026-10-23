@@ -106,7 +106,7 @@ internal static class CollectionEvidence
         {
             file.SourcePath, file.SizeBytes, file.LastWriteAt, file.PlannedPath,
             arrival.VideoId, arrival.QualityLabel, arrival.OsHash, arrival.Confidence,
-            arrival.Reason, arrival.State,
+            arrival.Reason,
         }))));
 }
 

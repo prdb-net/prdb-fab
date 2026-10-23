@@ -78,6 +78,22 @@ internal static class CollectionPaths
             || path.StartsWith(normalized + Path.DirectorySeparatorChar, StringComparison.Ordinal);
     }
 
+    public static void RequireSafeDestination(string path, string root)
+    {
+        if (!Within(path, root)) throw new IOException("The destination is outside the configured Library root.");
+        for (var here = path; ; here = Path.GetDirectoryName(here)!)
+        {
+            try
+            {
+                if (File.GetAttributes(here).HasFlag(FileAttributes.ReparsePoint))
+                    throw new IOException("A symbolic link replaced part of the destination path.");
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
+            if (string.Equals(here, Path.TrimEndingDirectorySeparator(root), StringComparison.Ordinal)) break;
+        }
+    }
+
     public static void RequireDirectory(string path, string root)
     {
         RequireContained(path, root);

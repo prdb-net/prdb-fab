@@ -78,7 +78,7 @@ public sealed class WantedAutopilot(FabDbContext context, TimeProvider time, Aut
             var video = row.Video!;
             if (!initial && video.LastReadAt == default && video.Available) continue;
             members.TryGetValue(video.PrdbId, out var member);
-            if (!initial && member is not null && row.SinceAt <= member.WantedSinceAt) continue;
+            if (!initial && member is not null && (row.SinceAt <= member.WantedSinceAt || row.SinceAt <= baseline!.BaselineAt)) continue;
             var admitted = initial ? chosen.Contains(video.PrdbId)
                 : row.SinceAt > baseline!.BaselineAt && Eligible(video);
             if (member is null)

@@ -104,8 +104,9 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
                     }
                 }
                 await context.SaveChangesAsync(cancellationToken);
+                var verificationPending = await context.VideoFiles.AnyAsync(file => !context.LibraryVerifications.Any(answer => answer.VideoFileId == file.Id), cancellationToken);
                 preparation.Phase = changed || await context.CollectionWalks.AnyAsync(row => !row.Verified, cancellationToken) ? "Inventory"
-                    : await context.CollectionFiles.AnyAsync(row => row.LeftAt == null, cancellationToken) ? "Planning" : "Ready";
+                    : await context.CollectionFiles.AnyAsync(row => row.LeftAt == null, cancellationToken) ? "Planning" : verificationPending ? "Inventory" : "Ready";
             }
             preparation.Error = null;
             await context.SaveChangesAsync(cancellationToken);
@@ -147,7 +148,8 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
             }
             if (!VideoFiles.IsSupported(entry.Name)
                 || await context.VideoFiles.AnyAsync(row => row.FiledPath == path, cancellationToken)
-                || await context.ArrivingFiles.AnyAsync(row => row.DownloadId != null && row.SourcePath == path, cancellationToken)) continue;
+                || await context.ArrivingFiles.AnyAsync(row => (row.DownloadId != null && row.SourcePath == path)
+                    || row.IntendedPath == path, cancellationToken)) continue;
             var file = (FileInfo)entry;
             var held = await context.CollectionFiles.AsTracking().SingleOrDefaultAsync(row => row.SourcePath == path, cancellationToken);
             if (held is null)

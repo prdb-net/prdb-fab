@@ -72,6 +72,8 @@ public sealed class FilingRoutine(
                 return RunResult.Handled(1);
             }
 
+            if (arrival.DownloadId is null)
+                CollectionPaths.RequireSafeDestination(arrival.IntendedPath!, root);
             if (!await ExecuteAsync(arrival, cancellationToken))
             {
                 return RunResult.Handled(1);
@@ -199,6 +201,7 @@ public sealed class FilingRoutine(
     private async Task<bool> PrepareAsync(ArrivingFileRow arrival, string root, CancellationToken cancellationToken)
     {
         var plan = await PlanAsync(arrival, root, cancellationToken);
+        if (plan.Path != null && arrival.DownloadId is null) CollectionPaths.RequireSafeDestination(plan.Path, root);
         if (arrival.DownloadId is null)
         {
             var file = await context.CollectionFiles.AsTracking().SingleAsync(row => row.Id == arrival.Id, cancellationToken);

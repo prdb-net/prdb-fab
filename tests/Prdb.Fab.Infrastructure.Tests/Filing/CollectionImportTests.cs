@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Prdb.Fab.Core.Filing;
+using Prdb.Fab.Core.Backup;
+using Prdb.Fab.Infrastructure.Backup;
 using Prdb.Fab.Infrastructure.Filing;
 using Prdb.Fab.Infrastructure.Persistence;
 using Xunit;
@@ -115,6 +117,61 @@ public sealed class CollectionImportTests : IDisposable
         var contextAfter = read.ServiceProvider.GetRequiredService<FabDbContext>();
         Assert.Single(await contextAfter.VideoFiles.ToListAsync(Token));
         Assert.Single(await contextAfter.OperationLogEntries.Where(row => row.Act == "Filed").ToListAsync(Token));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Restore_rechecks_inventory_and_resumes_only_the_unchanged_approved_move(bool targetAlreadyMoved)
+    {
+        await using var source = await TestDatabase.CreateAsync();
+        await SeedAsync(source);
+        await ApproveAsync(source);
+        if (targetAlreadyMoved) await RunImportAsync(source);
+        BackupDocument document;
+        CatalogueVideoRow video;
+        await using (var scope = source.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            video = await context.CatalogueVideos.Include(row => row.Site).SingleAsync(Token);
+            if (targetAlreadyMoved)
+            {
+                var arrival = await context.ArrivingFiles.AsTracking().SingleAsync(Token);
+                arrival.State = ArrivingFileState.Filing;
+                arrival.IntendedPath = (await context.CollectionFiles.SingleAsync(Token)).PlannedPath;
+                Directory.CreateDirectory(Path.GetDirectoryName(arrival.IntendedPath!)!);
+                File.Move(arrival.SourcePath, arrival.IntendedPath!);
+                await context.SaveChangesAsync(Token);
+            }
+            document = await scope.ServiceProvider.GetRequiredService<Backups>().ReadAsync(Token);
+        }
+        await using var restored = await TestDatabase.CreateAsync();
+        await using (var scope = restored.Scope())
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<Restores>().ApplyAsync(BackupJson.Write(document), new RestoreRoots(Path.Combine(root, "library"), null), Token);
+            Assert.Equal(RestoreOutcome.Restored, result.Outcome);
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            Assert.Equal("Inventory", (await context.CollectionPreparations.SingleAsync(Token)).Phase);
+            var site = new CatalogueSiteRow { PrdbId = video.Site!.PrdbId, Title = video.Site.Title };
+            context.CatalogueSites.Add(site);
+            context.CatalogueVideos.Add(new() { PrdbId = video.PrdbId, Title = video.Title, ReleaseDate = video.ReleaseDate, Site = site });
+            await context.SaveChangesAsync(Token);
+            Assert.Equal(Prdb.Fab.Core.Scheduling.RunResult.NothingToDo,
+                await scope.ServiceProvider.GetRequiredService<FilingRoutine>().RunAsync(null, Token));
+        }
+        for (var i = 0; i < 8; i++)
+        {
+            await using var scope = restored.Scope();
+            await scope.ServiceProvider.GetRequiredService<CollectionScanRoutine>().RunAsync(null, Token);
+            await scope.ServiceProvider.GetRequiredService<CollectionPlanningRoutine>().RunAsync(null, Token);
+            await scope.ServiceProvider.GetRequiredService<CollectionImportRoutine>().RunAsync(null, Token);
+        }
+        Assert.Equal("Importing", await PhaseAsync(restored));
+        await RunFilingAsync(restored);
+        await RunImportAsync(restored);
+        Assert.Equal("Ready", await PhaseAsync(restored));
+        await using var read = restored.Scope();
+        Assert.Single(await read.ServiceProvider.GetRequiredService<FabDbContext>().VideoFiles.ToListAsync(Token));
     }
 
     private async Task<Guid> SeedAsync(TestDatabase db, bool inLibrary = false)
