@@ -6,6 +6,7 @@ import { ConfirmationDialog } from '../ui/ConfirmationDialog.tsx'
 import { Field, formStyles } from '../ui/Form.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
+import { AutopilotPanel } from './AutopilotPanel.tsx'
 import styles from './CollectionScreen.module.css'
 
 export function CollectionScreen() {
@@ -35,6 +36,7 @@ export function CollectionScreen() {
     setLeaveUnresolved(false)
     setConfirm({ action, revision: held.revision, ids: [...selected], ready: Number(held.ready), unresolved: Number(held.unresolved) })
   }
+  const empty = held !== undefined && Number(held.total) === 0
   const usable = held?.phase === 'Preview' && !held.error
   return (
     <SettingsPage title="Prepare the existing collection" back="/settings/library" backLabel="Library settings"
@@ -51,18 +53,30 @@ export function CollectionScreen() {
         </form>
       )}
       {held && held.phase !== 'NotStarted' && <>
-        <p role="status"><strong>{phaseName(held.phase)}</strong> · {held.total} files · {held.ready} with a destination · {held.unresolved} need a decision · {held.approved} approved · {held.left} left in place</p>
+        <p role="status"><strong>{phaseName(held.phase)}</strong>{!empty && <> · {held.total} files · {held.ready} with a destination · {held.unresolved} need a decision · {held.approved} approved · {held.left} left in place</>}</p>
         {held.error && <Verdict tone="refusal">{held.error}</Verdict>}
         {(held.error || held.phase === 'Preview') && <button className={formStyles.button} disabled={retry.isPending} onClick={() => retry.mutate()}>Recheck collection and prepare a new preview</button>}
-        {held.phase === 'Ready' && <Verdict tone="done">Collection preparation is complete. Wanted automation can proceed when its Connections and Wanted list are ready. <Link to="/settings/automation">View automatic download status</Link>.</Verdict>}
-        <p>Approved files move into the sorted Library. Across filesystems, prdb-fab copies, verifies and then deletes the source. Duplicates and unresolved files stay in place until you decide.</p>
+        {empty && held.phase !== 'Ready' && !held.error && <div className={styles.emptyState}>
+          <h2>Checking for existing files</h2>
+          <p>No files to import have been found so far. The check is still running and this page updates automatically.</p>
+          <p>If there are no files to import, preparation finishes automatically. There is nothing to approve or click. You can leave this page while the check continues.</p>
+          <Link to="/settings/automation">View automatic download status</Link>
+        </div>}
+        {held.phase === 'Ready' && <>
+          <Verdict tone="done">{empty
+            ? 'No files to import. The collection check is complete; no approval is needed.'
+            : 'Collection preparation is complete. All required import decisions have been handled.'}</Verdict>
+          <AutopilotPanel />
+          <p><Link className={`${formStyles.button} ${formStyles.primaryButton}`} to="/downloads">View downloads</Link></p>
+        </>}
+        {!empty && held.phase !== 'Ready' && <p>Approved files move into the sorted Library. Across filesystems, prdb-fab copies, verifies and then deletes the source. Duplicates and unresolved files stay in place until you decide.</p>}
         {Number(held.unresolved) > 0 && <p><Link to="/review-queue">Resolve unidentified files in the Review Queue</Link>, or explicitly leave them in place. An unidentified file cannot reliably prevent a later duplicate Download.</p>}
-        {usable && <div className={styles.actions}>
+        {usable && !empty && <div className={styles.actions}>
           <button className={formStyles.button} disabled={Number(held.ready) === 0 && Number(held.unresolved) === 0} onClick={() => showConfirmation('all')}>Review whole collection…</button>
           <button className={formStyles.button} disabled={selected.size === 0} onClick={() => showConfirmation('selected')}>Import selected…</button>
           <button className={formStyles.button} disabled={selected.size === 0} onClick={() => showConfirmation('leave')}>Leave selected in place…</button>
         </div>}
-        <ul className={styles.files}>{held.files.map(file => <li key={file.id}>
+        {held.files.length > 0 && <ul className={styles.files}>{held.files.map(file => <li key={file.id}>
           <label className={styles.selection}>
             {usable && !file.left && !file.approved && <input type="checkbox" checked={selected.has(file.id)} onChange={event => {
               const next = new Set(selected); if (event.target.checked) next.add(file.id); else next.delete(file.id); setSelected(next)
@@ -73,17 +87,17 @@ export function CollectionScreen() {
           <p>{file.quality ?? 'Quality unknown'} · {file.confidence ?? 'No identification'} · {(Number(file.sizeBytes) / 1024 ** 3).toFixed(2)} GiB</p>
           {file.destination && <p>Move to <code>{file.destination}</code></p>}
           <p>{file.detail}</p>
-        </li>)}</ul>
-        <nav className={styles.actions} aria-label="Collection pages">
-          <button className={formStyles.button} disabled={page <= 1} onClick={() => { setPage(page - 1); setSelected(new Set()) }}>Previous</button>
+        </li>)}</ul>}
+        {(Number(held.total) > Number(held.pageSize) || page > 1) && <nav className={styles.actions} aria-label="Collection file pages">
+          <button className={formStyles.button} disabled={page <= 1} onClick={() => { setPage(page - 1); setSelected(new Set()) }}>Previous files</button>
           <span>Page {page} of {Math.max(1, Math.ceil(Number(held.total) / Number(held.pageSize)))}</span>
-          <button className={formStyles.button} disabled={page * Number(held.pageSize) >= Number(held.total)} onClick={() => { setPage(page + 1); setSelected(new Set()) }}>Next</button>
-        </nav>
+          <button className={formStyles.button} disabled={page * Number(held.pageSize) >= Number(held.total)} onClick={() => { setPage(page + 1); setSelected(new Set()) }}>More files</button>
+        </nav>}
       </>}
       {retry.data && <Verdict tone={retry.data.accepted ? 'done' : 'refusal'}>{retry.data.detail}</Verdict>}
       {start.data && <Verdict tone={start.data.accepted ? 'done' : 'refusal'}>{start.data.detail}</Verdict>}
       {approve.data && <Verdict tone={approve.data.accepted ? 'done' : 'refusal'}>{approve.data.detail}</Verdict>}
-      {(start.isError || approve.isError) && <Verdict tone="refusal">Could not confirm the action. Reload to check its current state.</Verdict>}
+      {(start.isError || approve.isError || retry.isError) && <Verdict tone="refusal">Could not confirm the action. Reload to check its current state.</Verdict>}
       {confirm && held && <ConfirmationDialog title={confirm?.action === 'leave' ? 'Leave these files in place?' : 'Approve collection import?'}
         confirmLabel={confirm?.action === 'leave' ? 'Leave selected files' : 'Approve this selection'} busy={approve.isPending}
         onCancel={() => setConfirm(null)} onConfirm={() => approve.mutate()}>
