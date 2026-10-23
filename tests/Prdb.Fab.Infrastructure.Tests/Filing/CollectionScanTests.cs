@@ -161,6 +161,29 @@ public sealed class CollectionScanTests : IDisposable
         Assert.True(File.Exists(Path.Combine(Existing, "first.mkv")));
     }
 
+    [Fact]
+    public async Task A_disappeared_file_can_be_explicitly_left_but_its_directory_must_still_be_readable()
+    {
+        var path = Path.Combine(Existing, "vanished.mkv");
+        await File.WriteAllTextAsync(path, "fixture", Token);
+        await using var database = await TestDatabase.CreateAsync();
+        await StartAsync(database);
+        await RunAsync(database);
+        File.Delete(path);
+        for (var i = 0; i < 6; i++) await RunAsync(database);
+        await using var scope = database.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        await scope.ServiceProvider.GetRequiredService<CollectionPlanningRoutine>().RunAsync(null, Token);
+        var preview = scope.ServiceProvider.GetRequiredService<CollectionPreview>();
+        var page = await preview.ReadAsync(1, Token);
+        Assert.Equal("Preview", page.Phase);
+        Assert.Equal(1, page.Unresolved);
+        Assert.Equal(ProbeOutcome.SourceMissing, (await context.ArrivingFiles.SingleAsync(Token)).ProbeOutcome);
+        Assert.True((await preview.ApproveAsync(page.Revision, [], [], false, true, Token)).Accepted);
+        await scope.ServiceProvider.GetRequiredService<CollectionImportRoutine>().RunAsync(null, Token);
+        Assert.Equal("Ready", (await context.CollectionPreparations.SingleAsync(Token)).Phase);
+    }
+
     private async Task StartAsync(TestDatabase database, string[]? directories = null)
     {
         await using var scope = database.Scope();

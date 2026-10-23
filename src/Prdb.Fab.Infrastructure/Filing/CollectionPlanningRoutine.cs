@@ -43,7 +43,7 @@ public sealed class CollectionPlanningRoutine(FabDbContext context, FilingRoutin
                 return RunResult.NothingToDo;
             file.PlannedPath = null;
             if (arrival.Reason is { } reason)
-                file.PreviewDetail = reason.ToString();
+                file.PreviewDetail = arrival.ProbeOutcome == ProbeOutcome.SourceMissing ? "Source file is missing; restore it and recheck, or explicitly leave this record." : reason.ToString();
             else
             {
                 try

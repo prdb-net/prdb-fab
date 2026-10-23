@@ -54,6 +54,23 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
                 foreach (var file in files)
                 {
                     var root = roots.Single(row => row.Id == file.RootId);
+                    // A missing individual file is a reviewable exception. A
+                    // missing/unreadable directory remains an incomplete inventory.
+                    CollectionPaths.RequireDirectory(Path.GetDirectoryName(file.SourcePath)!, root.Path);
+                    if (!File.Exists(file.SourcePath))
+                    {
+                        context.ArrivingFiles.Add(new()
+                        {
+                            Id = file.Id, SourcePath = file.SourcePath, ArrivedName = Path.GetFileName(file.SourcePath),
+                            SizeBytes = file.SizeBytes, State = ArrivingFileState.AwaitingIdentification,
+                            IsOnDisk = false, ProbeOutcome = ProbeOutcome.SourceMissing,
+                            ProbeError = "The source file disappeared before it could be read.", Reason = ArrivingFileReason.UnreadableQuality,
+                        });
+                        file.Probed = true;
+                        preparation.Revision++;
+                        await context.SaveChangesAsync(cancellationToken);
+                        continue;
+                    }
                     CollectionPaths.RequireContained(file.SourcePath, root.Path);
                     var before = new FileInfo(file.SourcePath);
                     var size = before.Length;
