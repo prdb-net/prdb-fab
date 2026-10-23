@@ -115,6 +115,7 @@ function labelOf(path: string): string {
     '/library': 'Library',
     '/review-queue': 'Review queue',
     '/settings': 'Settings',
+    '/settings/automation': 'Automation',
   }
 
   return known[path.split('?')[0]] ?? 'Back'

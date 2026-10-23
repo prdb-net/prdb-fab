@@ -65,3 +65,14 @@ unfinished moves. Disabling and deletion remain durable. Membership and baseline
 are stamped by account; a newly encountered account needs its own complete
 baseline. Credential rotation within the account never resets selection. None
 of this expands the separate Catalogue or Indexer coverage promises of ADR 0050.
+
+## Guided Automation surface
+
+Automation leads with the three steps: check the existing collection, review
+and import, then download Wanted. The current step and next action are visible
+before advanced controls. Adoption shows the configured Library folder and
+one action that starts preparation and grants the supplied permission after
+preparation; optional additional folders stay collapsed. Successful adoption
+opens collection progress directly. A link never leads back to the page already
+being viewed. Custom rules and limits remain available under Advanced settings,
+with the count of enabled custom rules visible even while collapsed.

@@ -33,14 +33,16 @@ function AutomationOverview() {
   return (
     <SettingsPage
       title="Automation"
-      lede="Rules and limits for automatic Downloads."
-      help="Choose which Wanted Videos may download automatically. A matching enabled rule grants permission; your limits still apply."
+      lede="Check your collection once, then let Wanted download automatically."
+      help="The guided setup checks existing files before automatic downloads start. Custom rules and download limits are optional advanced settings."
     >
       <AutopilotPanel controls />
+      <details className={styles.advanced}>
+        <summary>Advanced settings · custom rules and limits{settings.data && settings.data.rules.some(rule => rule.enabled) ? ` · ${settings.data.rules.filter(rule => rule.enabled).length} active rule(s)` : ''}</summary>
       <section>
         <div className={styles.sectionHeading}>
           <div>
-            <h2>Custom rules · Advanced</h2>
+            <h2>Custom rules</h2>
             <p>Custom rules grant independent permission, including older or additional Videos. Turning off the supplied policy does not turn these rules off.</p>
           </div>
           <Link to="/settings/automation/rules/new">Add rule</Link>
@@ -64,6 +66,7 @@ function AutomationOverview() {
       <Loaded query={settings} of="the Automation limits">
         {(held) => <Limits held={held} />}
       </Loaded>
+      </details>
     </SettingsPage>
   )
 }

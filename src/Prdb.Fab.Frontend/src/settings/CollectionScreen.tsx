@@ -54,7 +54,7 @@ export function CollectionScreen() {
         <p role="status"><strong>{phaseName(held.phase)}</strong> · {held.total} files · {held.ready} with a destination · {held.unresolved} need a decision · {held.approved} approved · {held.left} left in place</p>
         {held.error && <Verdict tone="refusal">{held.error}</Verdict>}
         {(held.error || held.phase === 'Preview') && <button className={formStyles.button} disabled={retry.isPending} onClick={() => retry.mutate()}>Recheck collection and prepare a new preview</button>}
-        {held.phase === 'Ready' && <Verdict tone="done">Collection preparation is complete. Wanted automation can proceed when its Connections and Wanted list are ready.</Verdict>}
+        {held.phase === 'Ready' && <Verdict tone="done">Collection preparation is complete. Wanted automation can proceed when its Connections and Wanted list are ready. <Link to="/settings/automation">View automatic download status</Link>.</Verdict>}
         <p>Approved files move into the sorted Library. Across filesystems, prdb-fab copies, verifies and then deletes the source. Duplicates and unresolved files stay in place until you decide.</p>
         {Number(held.unresolved) > 0 && <p><Link to="/review-queue">Resolve unidentified files in the Review Queue</Link>, or explicitly leave them in place. An unidentified file cannot reliably prevent a later duplicate Download.</p>}
         {usable && <div className={styles.actions}>
