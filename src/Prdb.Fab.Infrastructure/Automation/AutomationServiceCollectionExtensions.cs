@@ -11,6 +11,7 @@ public static class AutomationServiceCollectionExtensions
         services.AddScoped<AutomationRuleSettings>();
         services.AddScoped<AutomaticEligibility>();
         services.AddScoped<WantedAutopilot>();
+        services.AddScoped<AutopilotSettings>();
         services.AddScoped<WantedAutopilotRoutine>();
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<WantedAutopilotRoutine>());
         services.AddScoped<AutomaticDecisionRoutine>();

@@ -2124,6 +2124,81 @@
         }
       }
     },
+    "/api/settings/automation/autopilot": {
+      "get": {
+        "tags": [
+          "Automation"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotSwitchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/autopilot/start": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/automation": {
       "get": {
         "tags": [
@@ -3972,6 +4047,8 @@
       "AutomationDecisionReason": {
         "enum": [
           "CollectionPreparation",
+          "WantedBaseline",
+          "OutsideRecentWanted",
           "NotWanted",
           "ConfidenceGate",
           "Size",
@@ -4271,6 +4348,116 @@
             "items": {
               "$ref": "#/components/schemas/AutomationIndexer"
             }
+          }
+        }
+      },
+      "AutopilotStartRequest": {
+        "required": [
+          "enabled",
+          "directories"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "directories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AutopilotState": {
+        "required": [
+          "present",
+          "enabled",
+          "phase",
+          "detail",
+          "actionRoute",
+          "initialAdmitted",
+          "admitted",
+          "excluded",
+          "enabledCustomRules",
+          "downloadCap",
+          "retryBudget"
+        ],
+        "type": "object",
+        "properties": {
+          "present": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "actionRoute": {
+            "type": "string"
+          },
+          "initialAdmitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "admitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "excluded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enabledCustomRules": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "downloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AutopilotSwitchRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
           }
         }
       },
@@ -6820,6 +7007,7 @@
           "LibraryRoot",
           "Publishing",
           "Complete",
+          "Collection",
           null
         ]
       },

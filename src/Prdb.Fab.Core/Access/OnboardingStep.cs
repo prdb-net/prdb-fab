@@ -50,4 +50,7 @@ public enum OnboardingStep
     /// behind is a Gap, carried on the connection rather than here.
     /// </summary>
     Complete,
+
+    /// <summary>Explain the supplied policy and queue the existing collection inventory.</summary>
+    Collection,
 }

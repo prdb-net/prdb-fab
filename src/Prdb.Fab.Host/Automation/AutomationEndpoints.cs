@@ -10,6 +10,12 @@ public static class AutomationEndpoints
     {
         var group = routes.MapGroup("/api/settings/automation").WithTags("Automation");
 
+        group.MapGet("/autopilot", (AutopilotSettings settings, CancellationToken token) => settings.ReadAsync(token));
+        group.MapPost("/autopilot/start", (AutopilotStartRequest request, AutopilotSettings settings, CancellationToken token) =>
+            settings.StartAsync(request.Enabled, request.Directories, token));
+        group.MapPost("/autopilot", (AutopilotSwitchRequest request, AutopilotSettings settings, CancellationToken token) =>
+            settings.SetEnabledAsync(request.Enabled, token));
+
         group.MapGet("/", async (
             AutomationRuleSettings settings,
             CancellationToken cancellationToken) =>
@@ -106,3 +112,6 @@ public sealed record AutomationRuleRequest(
     long? MinimumSize,
     long? MaximumSize,
     IReadOnlyList<Guid> AllowedIndexerIds);
+
+public sealed record AutopilotStartRequest(bool Enabled, IReadOnlyList<string> Directories);
+public sealed record AutopilotSwitchRequest(bool Enabled);

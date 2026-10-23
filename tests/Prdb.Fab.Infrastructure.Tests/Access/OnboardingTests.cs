@@ -110,6 +110,7 @@ public sealed class OnboardingTests
     [Theory]
     [InlineData(OnboardingStep.PrdbKey)]
     [InlineData(OnboardingStep.LibraryRoot)]
+    [InlineData(OnboardingStep.Collection)]
     public async Task A_mandatory_step_cannot_be_skipped(OnboardingStep step)
     {
         await using var database = await TestDatabase.CreateAsync();

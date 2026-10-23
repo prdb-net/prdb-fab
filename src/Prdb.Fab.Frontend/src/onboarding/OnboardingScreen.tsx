@@ -15,6 +15,7 @@ import { accessStateKey } from '../access/state.ts'
 import { connectionsKey } from './state.ts'
 import { IndexerForm } from './IndexerForm.tsx'
 import { IndexerList } from './IndexerList.tsx'
+import { CollectionSetupForm } from './CollectionSetupForm.tsx'
 import { LibraryRootForm } from './LibraryRootForm.tsx'
 import { PrdbForm } from './PrdbForm.tsx'
 import { PublishingForm } from './PublishingForm.tsx'
@@ -236,6 +237,13 @@ export const steps: ReadonlyArray<{
     title: 'The library root',
     description: 'Required. Choose the directory where identified video files will be filed.',
     form: (taken) => <LibraryRootForm onSaved={taken} />,
+  },
+  {
+    step: 'Collection',
+    slug: 'collection',
+    title: 'Your collection and Wanted',
+    description: 'Prepare existing files and start with useful automatic Download defaults.',
+    form: (taken) => <CollectionSetupForm onSaved={taken} />,
   },
   {
     step: 'Publishing',

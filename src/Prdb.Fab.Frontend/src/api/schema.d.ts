@@ -2444,6 +2444,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/automation/autopilot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutopilotState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutopilotSwitchRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/autopilot/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutopilotStartRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/automation": {
         parameters: {
             query?: never;
@@ -4148,7 +4245,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        AutomationDecisionReason: "CollectionPreparation" | "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
+        AutomationDecisionReason: "CollectionPreparation" | "WantedBaseline" | "OutsideRecentWanted" | "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
         AutomationIndexer: {
             /** Format: uuid */
             id: string;
@@ -4217,6 +4314,32 @@ export interface components {
             retryBudget: number | string;
             rules: components["schemas"]["AutomationRuleView"][];
             indexers: components["schemas"]["AutomationIndexer"][];
+        };
+        AutopilotStartRequest: {
+            enabled: boolean;
+            directories: string[];
+        };
+        AutopilotState: {
+            present: boolean;
+            enabled: boolean;
+            phase: string;
+            detail: string;
+            actionRoute: string;
+            /** Format: int32 */
+            initialAdmitted: number | string;
+            /** Format: int32 */
+            admitted: number | string;
+            /** Format: int32 */
+            excluded: number | string;
+            /** Format: int32 */
+            enabledCustomRules: number | string;
+            /** Format: int32 */
+            downloadCap: number | string;
+            /** Format: int32 */
+            retryBudget: number | string;
+        };
+        AutopilotSwitchRequest: {
+            enabled: boolean;
         };
         /** @enum {unknown} */
         BackupRoot: "None" | "Library" | "Downloads" | null;
@@ -4815,7 +4938,7 @@ export interface components {
         /** @enum {unknown} */
         OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";
         /** @enum {unknown} */
-        OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Publishing" | "Complete" | null;
+        OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Publishing" | "Complete" | "Collection" | null;
         OnboardingStepRequest: {
             step: components["schemas"]["OnboardingStep"];
         };

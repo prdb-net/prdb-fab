@@ -22,6 +22,7 @@ public static class OnboardingPath
         OnboardingStep.Sabnzbd,
         OnboardingStep.Indexers,
         OnboardingStep.LibraryRoot,
+        OnboardingStep.Collection,
         OnboardingStep.Publishing,
         OnboardingStep.Complete,
     ];

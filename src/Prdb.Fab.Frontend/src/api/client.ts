@@ -885,3 +885,10 @@ export function approveCollection(request: CollectionApprovalRequest): Promise<S
 }
 
 export function retryCollection(): Promise<Schema['CollectionAct']> { return post('/api/collection/retry') }
+
+export type AutopilotState = Schema['AutopilotState']
+export function readAutopilot(): Promise<AutopilotState> { return fetch('/api/settings/automation/autopilot').then(json<AutopilotState>) }
+export function startAutopilot(enabled: boolean, directories: string[]): Promise<Schema['CollectionAct']> {
+  return post('/api/settings/automation/autopilot/start', { enabled, directories })
+}
+export function switchAutopilot(enabled: boolean): Promise<Schema['CollectionAct']> { return post('/api/settings/automation/autopilot', { enabled }) }

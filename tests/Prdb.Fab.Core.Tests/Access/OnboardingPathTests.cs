@@ -20,6 +20,7 @@ public sealed class OnboardingPathTests
                 OnboardingStep.Sabnzbd,
                 OnboardingStep.Indexers,
                 OnboardingStep.LibraryRoot,
+                OnboardingStep.Collection,
                 OnboardingStep.Publishing,
                 OnboardingStep.Complete,
             ],
@@ -45,7 +46,8 @@ public sealed class OnboardingPathTests
         Assert.Equal(OnboardingStep.Sabnzbd, OnboardingPath.After(OnboardingStep.PrdbKey));
         Assert.Equal(OnboardingStep.Indexers, OnboardingPath.After(OnboardingStep.Sabnzbd));
         Assert.Equal(OnboardingStep.LibraryRoot, OnboardingPath.After(OnboardingStep.Indexers));
-        Assert.Equal(OnboardingStep.Publishing, OnboardingPath.After(OnboardingStep.LibraryRoot));
+        Assert.Equal(OnboardingStep.Collection, OnboardingPath.After(OnboardingStep.LibraryRoot));
+        Assert.Equal(OnboardingStep.Publishing, OnboardingPath.After(OnboardingStep.Collection));
         Assert.Equal(OnboardingStep.Complete, OnboardingPath.After(OnboardingStep.Publishing));
     }
 
