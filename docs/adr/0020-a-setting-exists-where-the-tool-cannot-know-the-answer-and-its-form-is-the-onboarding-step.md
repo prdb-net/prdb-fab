@@ -259,3 +259,10 @@ gaps and duplicates appear and then need a resolution rule nobody asked for.
   both lean on without ever naming, and **Daily Query Budget**, which needs a
   name because the tool now has three budgets — prdb's rate limit, the retry
   budget per video, and this one.
+
+## Amendment: supplied Wanted permission and collection preparation
+
+[ADR 0065](0065-wanted-autopilot-waits-for-a-previewed-collection-import.md)
+adds a supplied bounded Wanted permission after a previewed collection import.
+It describes the setup, controls and fair search ordering that amend this
+ADR; existing custom permissions and their safety checks remain in force.

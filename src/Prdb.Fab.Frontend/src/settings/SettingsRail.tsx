@@ -4,6 +4,7 @@ import { NavLink, useLocation } from 'react-router'
 import {
   listIndexers,
   readAutomationSettings,
+  readAutopilot,
   readConnections,
   readDownloadSettings,
   readIdentificationSettings,
@@ -36,6 +37,7 @@ import styles from './Settings.module.css'
 export function SettingsRail() {
   const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
   const indexers = useQuery({ queryKey: indexersKey, queryFn: listIndexers })
+  const autopilot = useQuery({ queryKey: ['autopilot'], queryFn: readAutopilot })
   const automation = useQuery({ queryKey: ['automation-settings'], queryFn: readAutomationSettings })
   const identification = useQuery({
     queryKey: ['identification-settings'],
@@ -80,10 +82,8 @@ export function SettingsRail() {
       ))}
 
       <Group to="/settings/automation" icon="automation" label="Automation" marks={pointedAt}>
-        {automation.data
-          ? automation.data.rules.length === 0
-            ? 'No rules; automatic Downloads off'
-            : `${automation.data.rules.length} rule(s), ${automation.data.rules.filter((rule) => rule.enabled).length} enabled`
+        {autopilot.data && automation.data
+          ? `Recent Wanted ${autopilot.data.present ? autopilot.data.enabled ? 'on' : 'off' : 'not set up'}; ${automation.data.rules.filter(rule => rule.enabled).length} custom rule(s) enabled`
           : null}
       </Group>
 

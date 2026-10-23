@@ -131,8 +131,12 @@ release matching a wanted video appears on any configured indexer, the tool can
 fetch it without being asked, which is the entire reason to run an unattended
 service rather than search by hand.
 
-Automation is off until the user turns it on, and it is scoped: by site, by
-actor, by the wanted list, with quality and size limits. Every automatic
+Fresh setup supplies bounded automation over recent Wanted Videos, after the
+existing collection has been scanned and approved imports have finished. The
+initial selection is limited to the newest 100 eligible missing Videos released
+within 90 days, followed by new recent Wanted intent. It can be disabled, and
+custom rules remain available for deliberate broader acquisition. Existing
+installations adopt this default explicitly. Every automatic
 decision is written down with the rule that caused it, so "why is this on my
 disk" always has an answer.
 
@@ -176,8 +180,7 @@ existing collection someone accumulated before installing this, sitting on a NAS
 share. Everything in them that identifies against prdb can be taken into the
 sorted library. That first bulk run over thousands of files is a different
 problem from a handful of new downloads a day, and both have to work — which is
-why scanning is not in the first release, while the shape of the tool allows for
-it from the start.
+why scanning is durable, bounded work and precedes the first automatic Download.
 
 Files are moved, not copied — the download directory is meant to empty itself.
 Where source and target sit on different filesystems, a move is a copy, a
@@ -367,7 +370,7 @@ it protects against. Cross-filesystem moves are copy-verify-delete, nothing is
 filed on a failed lookup, and every move and every deletion is logged with what
 it was and why. That log is readable from the first release, because a tool that
 moves files unattended has to be able to say what it moved; the undo it also
-makes possible belongs to scan directories, which come later. A button is easier
+makes possible remains a later extension; collection import currently requires a concrete preview and approval. A button is easier
 to press than a command is to type, so a web UI raises the stakes rather than
 lowering them.
 
@@ -453,10 +456,10 @@ Deliberately after that, not before:
   release files what identifies well enough to act on and queues the rest for
   the user; lowering that bar until nothing is left over is the later step.
   Filing itself, and the layout it files into, are in the first release.
-- **Scan directories.** Absorbing a collection that existed before this tool
-  needs a dry run, an undo across thousands of files, and a review queue that
-  survives that volume — a second product beside the download loop, and the
-  most dangerous thing the tool will ever do.
+- **Bulk undo for collection imports.** Scan directories now have bounded
+  inventory, a concrete preview, explicit approval and the ordinary safe Filing
+  pipeline (ADR 0065). A general undo across thousands of moves remains later
+  work; the Operation Log records every completed move.
 - **Notifications**, so an unattended tool can say something went wrong without
   the user thinking to look.
 - **Perceptual hashes and thumbnails for unknown files**, optionally submitted
@@ -482,8 +485,9 @@ at the start is worth being able to see.
 
 - ~~How far automation should go on its own before the first release, and what
   the smallest useful rule set looks like.~~ **Settled** by ADR 0007: automation
-  is a set of unordered permissions over the wanted list, off until a rule
-  exists, with ADR 0046 recording every rule that permitted a download.
+  is a set of unordered permissions over the wanted list, with ADR 0046
+  recording every permitting rule. ADR 0065 adds a bounded supplied permission
+  during fresh setup, after preparation of the existing collection.
 - ~~What the review queue holds and how an entry leaves it, given that an
   undecided file also holds up the cleanup of the directory it sits in.~~
   **Settled** by ADR 0022: one unmoved file with one reason and two exits, plus

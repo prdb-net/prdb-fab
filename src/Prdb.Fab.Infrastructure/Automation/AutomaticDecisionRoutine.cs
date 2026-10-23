@@ -14,6 +14,7 @@ namespace Prdb.Fab.Infrastructure.Automation;
 public sealed class AutomaticDecisionRoutine(
     FabDbContext context,
     ReleaseRankings rankings,
+    WantedAutopilot autopilot,
     AutomaticEligibility eligibility,
     PersonDownloads downloads,
     TimeProvider time) : IRoutine
@@ -27,7 +28,10 @@ public sealed class AutomaticDecisionRoutine(
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
-        var videoIds = await ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
+        var account = await context.Installation.Select(row => row.PrdbUserHash).SingleAsync(cancellationToken);
+        var enabled = await context.AutomationRules.AnyAsync(row => row.SuppliedWanted && row.Enabled, cancellationToken);
+        var priority = enabled ? autopilot.AdmittedVideos(account).Select(row => row.Id) : context.CatalogueVideos.Where(row => false).Select(row => row.Id);
+        var work = ReleaseIdentificationWork.WithCurrentAuthority(context, time.GetUtcNow())
             .Where(row => row.AutomationPending
                 && row.VideoId != null
                 && row.IdentificationState == IdentificationState.Matched)
@@ -38,11 +42,16 @@ public sealed class AutomaticDecisionRoutine(
                 LastDecisionAt = group.Min(row => row.AutomationDecisionAt),
                 FirstSeenAt = group.Min(row => row.FirstSeenAt),
             })
-            .OrderBy(row => row.LastDecisionAt ?? row.FirstSeenAt)
-            .ThenBy(row => row.VideoId)
-            .Take(BatchSize)
-            .Select(row => row.VideoId)
-            .ToListAsync(cancellationToken);
+            .OrderByDescending(row => priority.Contains(row.VideoId))
+            .ThenBy(row => row.LastDecisionAt)
+            .ThenByDescending(row => context.CatalogueVideos.Where(video => video.Id == row.VideoId).Select(video => video.ReleaseDate).FirstOrDefault())
+            .ThenBy(row => row.VideoId);
+        var videoIds = await work.Take(BatchSize).Select(row => row.VideoId).ToListAsync(cancellationToken);
+        if (videoIds.Count == BatchSize && await priority.CountAsync(id => videoIds.Contains(id), cancellationToken) == BatchSize)
+        {
+            var other = await work.Where(row => !priority.Contains(row.VideoId)).Select(row => (long?)row.VideoId).FirstOrDefaultAsync(cancellationToken);
+            if (other is { } id) videoIds[^1] = id;
+        }
         if (videoIds.Count == 0) return RunResult.NothingToDo;
 
         var now = time.GetUtcNow();

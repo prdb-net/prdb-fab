@@ -125,6 +125,8 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
                 Reason = $"Review Queue: {row.Reason}",
                 At = now,
             });
+            var collectionFile = await context.CollectionFiles.AsTracking().SingleOrDefaultAsync(file => file.Id == row.Id, cancellationToken);
+            if (collectionFile is not null) collectionFile.LeftAt = now;
             context.ArrivingFiles.Remove(row);
             await context.SaveChangesAsync(cancellationToken);
         }
@@ -146,6 +148,7 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
         }
 
         var selected = preview.Files.Select(file => file.Id).ToArray();
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var removed = await context.ArrivingFiles
             .Where(row => selected.Contains(row.Id)
                 && row.Reason != null
@@ -153,6 +156,12 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
                     selected.Contains(candidate.Id) && candidate.Reason != null) == selected.Length)
             .ExecuteDeleteAsync(cancellationToken);
 
+        if (removed == selected.Length)
+        {
+            await context.CollectionFiles.Where(file => selected.Contains(file.Id))
+                .ExecuteUpdateAsync(update => update.SetProperty(file => file.LeftAt, time.GetUtcNow()), cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
         return removed == selected.Length
             ? new ReviewSelectionVerdict(
                 ReviewSelectionOutcome.Dismissed,
@@ -169,7 +178,7 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
             .AsNoTracking()
             .Where(row => row.Id == arrival.DownloadId)
             .Select(row => new ReviewDownload(row.Id, row.SubmittedName))
-            .SingleAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
         var indexer = await context.Indexers
             .AsNoTracking()
             .Where(row => row.Id == arrival.IndexerId)
@@ -180,7 +189,7 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
             .Where(row => row.IndexerId == arrival.IndexerId
                 && row.DerivedReleaseId == arrival.DerivedReleaseId)
             .Select(row => row.Title)
-            .SingleOrDefaultAsync(cancellationToken) ?? download.Name;
+            .SingleOrDefaultAsync(cancellationToken) ?? download?.Name ?? arrival.ArrivedName;
         var video = await VideoAsync(arrival.VideoId, cancellationToken);
         var candidates = await context.ArrivingFileCandidates
             .AsNoTracking()
@@ -380,7 +389,7 @@ public sealed record ReviewQueueEntry(
     ReviewVideo? Video,
     IReadOnlyList<ReviewVideo> Candidates,
     ReviewFiledFile? FiledFile,
-    ReviewDownload Download,
+    ReviewDownload? Download,
     string Release,
     string Indexer,
     /// <summary>

@@ -46,7 +46,9 @@ public sealed class OnboardingPathTests : IDisposable
         Assert.Equal("LibraryRoot", (await TakeAsync(client, "Indexers")).NextStep);
 
         await SaveLibraryRootAsync(client);
-        Assert.Equal("Publishing", (await TakeAsync(client, "LibraryRoot")).NextStep);
+        Assert.Equal("Collection", (await TakeAsync(client, "LibraryRoot")).NextStep);
+        await AnswerCollectionAsync(client);
+        Assert.Equal("Publishing", (await TakeAsync(client, "Collection")).NextStep);
 
         await AnswerPublishingAsync(client);
         Assert.Equal("Complete", (await TakeAsync(client, "Publishing")).NextStep);
@@ -76,6 +78,8 @@ public sealed class OnboardingPathTests : IDisposable
 
         await SaveLibraryRootAsync(client);
         await TakeAsync(client, "LibraryRoot");
+        await AnswerCollectionAsync(client);
+        await TakeAsync(client, "Collection");
         await AnswerPublishingAsync(client);
         await TakeAsync(client, "Publishing");
 
@@ -180,6 +184,8 @@ public sealed class OnboardingPathTests : IDisposable
         await SkipAsync(client, "Indexers");
         await SaveLibraryRootAsync(client);
         await TakeAsync(client, "LibraryRoot");
+        await AnswerCollectionAsync(client);
+        await TakeAsync(client, "Collection");
         await AnswerPublishingAsync(client);
         await TakeAsync(client, "Publishing");
 
@@ -212,6 +218,8 @@ public sealed class OnboardingPathTests : IDisposable
         await SkipAsync(client, "Indexers");
         await SaveLibraryRootAsync(client);
         await TakeAsync(client, "LibraryRoot");
+        await AnswerCollectionAsync(client);
+        await TakeAsync(client, "Collection");
 
         var refused = await TakeAsync(client, "Publishing");
 
@@ -240,6 +248,8 @@ public sealed class OnboardingPathTests : IDisposable
         await SkipAsync(client, "Indexers");
         await SaveLibraryRootAsync(client);
         await TakeAsync(client, "LibraryRoot");
+        await AnswerCollectionAsync(client);
+        await TakeAsync(client, "Collection");
 
         await AnswerPublishingAsync(client, publish: false);
 
@@ -347,6 +357,15 @@ public sealed class OnboardingPathTests : IDisposable
     /// settings are saved, whichever way the switch is left, and saving is what
     /// records that the explanation has been in front of somebody.
     /// </summary>
+    private static async Task AnswerCollectionAsync(HttpClient client)
+    {
+        using var response = await client.PostAsJsonAsync("/api/settings/automation/autopilot/start",
+            new { enabled = true, directories = Array.Empty<string>() }, TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        var answer = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>(TestContext.Current.CancellationToken);
+        Assert.True(answer.GetProperty("accepted").GetBoolean(), answer.ToString());
+    }
+
     private static async Task AnswerPublishingAsync(HttpClient client, bool publish = true)
     {
         using var response = await client.PostAsJsonAsync(

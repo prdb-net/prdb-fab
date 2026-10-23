@@ -24,6 +24,7 @@ import { SettingsGate } from './settings/SettingsPage.tsx'
 import { SettingsScreen } from './settings/SettingsScreen.tsx'
 import { ReportingScreen } from './settings/ReportingScreen.tsx'
 import { PublicationsScreen } from './settings/PublicationsScreen.tsx'
+import { CollectionScreen } from './settings/CollectionScreen.tsx'
 import { AutomationScreen } from './settings/AutomationScreen.tsx'
 import { DownloadSettingsScreen } from './settings/DownloadSettingsScreen.tsx'
 import { Chrome } from './shell/Chrome.tsx'
@@ -162,6 +163,7 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="automation" element={<AutomationScreen />} />
                 <Route path="automation/rules/:id" element={<AutomationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
+                <Route path="library/collection" element={<CollectionScreen />} />
                 <Route path="reporting" element={<ReportingScreen />} />
                 <Route path="reporting/publications" element={<PublicationsScreen />} />
                 <Route path="backup" element={<BackupScreen />} />

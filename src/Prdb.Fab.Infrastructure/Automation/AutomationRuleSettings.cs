@@ -133,6 +133,7 @@ public sealed class AutomationRuleSettings(FabDbContext context, TimeProvider ti
             context.AutomationRules.Add(rule);
         }
 
+        if (rule.SuppliedWanted) return AutomationRuleVerdict.Invalid(id, "Use the Recent Wanted autopilot control to change the supplied policy.");
         rule.Name = name!.Trim();
         rule.Enabled = enabled;
         rule.MinimumSize = minimumSize;
@@ -158,7 +159,7 @@ public sealed class AutomationRuleSettings(FabDbContext context, TimeProvider ti
     {
         var rule = await context.AutomationRules
             .AsNoTracking()
-            .Where(row => row.Id == id)
+            .Where(row => row.Id == id && !row.SuppliedWanted)
             .Select(row => new { row.Id, row.Name })
             .SingleOrDefaultAsync(cancellationToken);
         if (rule is null) return null;
@@ -200,6 +201,7 @@ public sealed class AutomationRuleSettings(FabDbContext context, TimeProvider ti
     {
         var rules = await context.AutomationRules
             .AsNoTracking()
+            .Where(row => !row.SuppliedWanted)
             .OrderBy(row => row.Name)
             .ThenBy(row => row.Id)
             .ToListAsync(cancellationToken);

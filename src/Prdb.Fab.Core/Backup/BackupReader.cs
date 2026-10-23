@@ -110,6 +110,16 @@ public static class BackupReader
             // it existed describes an installation that has submitted nothing,
             // which is an empty section rather than a missing decision — the
             // ordinary shape of a step, and the reason this one is two lines.
+            [4] = envelope =>
+            {
+                envelope["collectionPreparations"] = new JsonArray();
+                envelope["collectionRoots"] = new JsonArray();
+                envelope["collectionFiles"] = new JsonArray();
+                envelope["autopilotBaselines"] = new JsonArray();
+                envelope["autopilotMemberships"] = new JsonArray();
+                envelope["formatVersion"] = 5;
+            },
+
             [3] = envelope =>
             {
                 envelope["previewPublications"] = new JsonArray();

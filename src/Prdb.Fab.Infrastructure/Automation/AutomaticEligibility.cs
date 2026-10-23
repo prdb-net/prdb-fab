@@ -11,7 +11,7 @@ using Prdb.Fab.Core.Catalogue;
 namespace Prdb.Fab.Infrastructure.Automation;
 
 /// <summary>Reads every current fact ADR 0007 requires before Ranking.</summary>
-public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites ignores)
+public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites ignores, WantedAutopilot autopilot)
 {
     public async Task<IReadOnlyDictionary<long, AutomaticReleaseEligibility>> ForVideoAsync(
         Guid videoId,
@@ -19,6 +19,10 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
         CancellationToken cancellationToken = default)
     {
         if (releases.Count == 0) return new Dictionary<long, AutomaticReleaseEligibility>();
+
+        if (await context.CollectionPreparations.AnyAsync(row => row.Phase != "Ready", cancellationToken))
+            return releases.ToDictionary(release => release.Id,
+                _ => AutomaticReleaseEligibility.Waiting(AutomationDecisionReason.CollectionPreparation));
 
         var localVideoId = await context.CatalogueVideos
             .Where(row => row.PrdbId == videoId)
@@ -37,8 +41,8 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
         var wanted = await context.WantedVideos.AnyAsync(row => row.VideoId == localVideoId, cancellationToken);
         var held = await context.LibraryEntries.AnyAsync(row => row.VideoId == videoId, cancellationToken);
         var review = await context.ArrivingFiles.AnyAsync(
-            row => row.VideoId == videoId && row.Reason != null,
-            cancellationToken);
+            row => row.VideoId == videoId && row.State != ArrivingFileState.Filed,
+            cancellationToken) || await context.ArrivingFileCandidates.AnyAsync(row => row.VideoId == videoId, cancellationToken);
         var admissions = await context.GateAdmissions
             .Where(row => row.Gate == BeforeDownloadGate.Name)
             .Select(row => row.Confidence)
@@ -61,6 +65,11 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
             row => !row.OriginIsPerson && row.State == DownloadState.Outstanding,
             cancellationToken);
 
+        var account = await context.Installation.Select(row => row.PrdbUserHash).SingleAsync(cancellationToken);
+        var policyWaiting = !await context.CollectionPreparations.AnyAsync(row => row.Phase == "Ready", cancellationToken)
+            || !await context.AutopilotBaselines.AnyAsync(row => row.UserHash == account, cancellationToken);
+        var policyAdmitted = !policyWaiting && await autopilot.AdmittedVideos(account).AnyAsync(row => row.PrdbId == videoId, cancellationToken);
+        var enabledIndexers = (await context.Indexers.Where(row => row.Enabled).Select(row => row.Id).ToListAsync(cancellationToken)).ToHashSet();
         var admitted = admissions.ToHashSet();
         var result = new Dictionary<long, AutomaticReleaseEligibility>();
         foreach (var release in releases)
@@ -90,10 +99,15 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
                 .Where(edge => edge.IndexerId == release.IndexerId)
                 .Select(edge => edge.AutomationRuleId)
                 .ToHashSet();
-            var indexerRules = rules.Where(rule => indexerRuleIds.Contains(rule.Id)).ToArray();
+            var indexerRules = rules.Where(rule => rule.SuppliedWanted
+                ? policyAdmitted && enabledIndexers.Contains(release.IndexerId)
+                : indexerRuleIds.Contains(rule.Id)).ToArray();
             if (indexerRules.Length == 0)
             {
-                result[release.Id] = AutomaticReleaseEligibility.Refused(AutomationDecisionReason.IndexerNotAllowed);
+                result[release.Id] = rules.Any(rule => rule.SuppliedWanted)
+                    ? policyWaiting ? AutomaticReleaseEligibility.Waiting(AutomationDecisionReason.WantedBaseline)
+                        : AutomaticReleaseEligibility.Refused(AutomationDecisionReason.OutsideRecentWanted)
+                    : AutomaticReleaseEligibility.Refused(AutomationDecisionReason.IndexerNotAllowed);
                 continue;
             }
 

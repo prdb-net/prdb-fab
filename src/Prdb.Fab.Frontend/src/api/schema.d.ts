@@ -2444,6 +2444,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/automation/autopilot/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutopilotSelection"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/autopilot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutopilotState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutopilotSwitchRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/settings/automation/autopilot/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AutopilotStartRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/automation": {
         parameters: {
             query?: never;
@@ -2751,6 +2885,156 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionPreviewPage"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CollectionStartRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CollectionApprovalRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
                 };
             };
         };
@@ -3998,7 +4282,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
+        AutomationDecisionReason: "CollectionPreparation" | "WantedBaseline" | "OutsideRecentWanted" | "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
         AutomationIndexer: {
             /** Format: uuid */
             id: string;
@@ -4068,6 +4352,58 @@ export interface components {
             rules: components["schemas"]["AutomationRuleView"][];
             indexers: components["schemas"]["AutomationIndexer"][];
         };
+        AutopilotSelectedVideo: {
+            /** Format: uuid */
+            videoId: string;
+            title: null | string;
+            initial: boolean;
+            state: string;
+        };
+        AutopilotSelection: {
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            videos: components["schemas"]["AutopilotSelectedVideo"][];
+        };
+        AutopilotStartRequest: {
+            enabled: boolean;
+            directories: string[];
+        };
+        AutopilotState: {
+            present: boolean;
+            enabled: boolean;
+            phase: string;
+            detail: string;
+            actionRoute: string;
+            /** Format: int32 */
+            initialAdmitted: number | string;
+            /** Format: int32 */
+            admitted: number | string;
+            /** Format: int32 */
+            excluded: number | string;
+            /** Format: int32 */
+            enabledCustomRules: number | string;
+            /** Format: int32 */
+            downloadCap: number | string;
+            /** Format: int32 */
+            retryBudget: number | string;
+            /** Format: int32 */
+            initialHeld: number | string;
+            /** Format: int32 */
+            newAdmitted: number | string;
+            /** Format: int32 */
+            collectionTotal: number | string;
+            /** Format: int32 */
+            collectionFiled: number | string;
+            /** Format: int32 */
+            collectionLeft: number | string;
+        };
+        AutopilotSwitchRequest: {
+            enabled: boolean;
+        };
         /** @enum {unknown} */
         BackupRoot: "None" | "Library" | "Downloads" | null;
         BackupSummary: {
@@ -4127,6 +4463,58 @@ export interface components {
             sessionsEnded: number | string;
             /** Format: int32 */
             retryAfterSeconds: null | number | string;
+        };
+        CollectionAct: {
+            accepted: boolean;
+            detail: string;
+        };
+        CollectionApprovalRequest: {
+            /** Format: int64 */
+            revision: number | string;
+            moveIds: string[];
+            leaveIds: string[];
+            allReady: boolean;
+            leaveUnresolved: boolean;
+        };
+        CollectionPreviewFile: {
+            /** Format: uuid */
+            id: string;
+            sourcePath: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            /** Format: uuid */
+            videoId: null | string;
+            title: null | string;
+            confidence: null | components["schemas"]["IdentificationConfidence"];
+            quality: null | string;
+            destination: null | string;
+            detail: string;
+            approved: boolean;
+            left: boolean;
+        };
+        CollectionPreviewPage: {
+            phase: string;
+            /** Format: int64 */
+            revision: number | string;
+            error: null | string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            ready: number | string;
+            /** Format: int32 */
+            unresolved: number | string;
+            /** Format: int32 */
+            approved: number | string;
+            /** Format: int32 */
+            left: number | string;
+            files: components["schemas"]["CollectionPreviewFile"][];
+        };
+        CollectionStartRequest: {
+            directories: string[];
         };
         ConfiguredIndexer: {
             /** Format: uuid */
@@ -4613,7 +5001,7 @@ export interface components {
         /** @enum {unknown} */
         OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";
         /** @enum {unknown} */
-        OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Publishing" | "Complete" | null;
+        OnboardingStep: "Password" | "PrdbKey" | "Sabnzbd" | "Indexers" | "LibraryRoot" | "Publishing" | "Complete" | "Collection" | null;
         OnboardingStepRequest: {
             step: components["schemas"]["OnboardingStep"];
         };
@@ -4986,7 +5374,7 @@ export interface components {
             video: null | components["schemas"]["ReviewVideo"];
             candidates: components["schemas"]["ReviewVideo"][];
             filedFile: null | components["schemas"]["ReviewFiledFile"];
-            download: components["schemas"]["ReviewDownload"];
+            download: null | components["schemas"]["ReviewDownload"];
             release: string;
             indexer: string;
             automaticIdentification: components["schemas"]["PreviewHashOutcome"];

@@ -29,6 +29,9 @@ public sealed class FilingRoutine(
     {
         var arrival = await context.ArrivingFiles
             .AsTracking()
+            .Where(row => row.DownloadId != null || context.CollectionFiles.Any(file =>
+                file.Id == row.Id && file.ApprovedAt != null && file.LeftAt == null)
+                && context.CollectionPreparations.Any(preparation => preparation.Phase == "Importing"))
             .Where(row => (row.Reason == null
                 && (row.State == ArrivingFileState.Filing
                     || (row.State == ArrivingFileState.AwaitingFiling
@@ -59,21 +62,33 @@ public sealed class FilingRoutine(
             return RunResult.Handled(1);
         }
 
-        var root = await AvailableLibraryRootAsync(cancellationToken);
-
-        if (arrival.State == ArrivingFileState.AwaitingFiling
-            && !await PrepareAsync(arrival, root, cancellationToken))
+        try
         {
+            var root = await AvailableLibraryRootAsync(cancellationToken);
+
+            if (arrival.State == ArrivingFileState.AwaitingFiling
+                && !await PrepareAsync(arrival, root, cancellationToken))
+            {
+                return RunResult.Handled(1);
+            }
+
+            if (arrival.DownloadId is null)
+                CollectionPaths.RequireSafeDestination(arrival.IntendedPath!, root);
+            if (!await ExecuteAsync(arrival, cancellationToken))
+            {
+                return RunResult.Handled(1);
+            }
+
+            logger.LogInformation("Filed one Arriving File into the Library.");
             return RunResult.Handled(1);
         }
-
-        if (!await ExecuteAsync(arrival, cancellationToken))
+        catch (Exception error) when (arrival.DownloadId is null && error is IOException or UnauthorizedAccessException)
         {
-            return RunResult.Handled(1);
+            var preparation = await context.CollectionPreparations.AsTracking().SingleAsync(cancellationToken);
+            preparation.Error = "An approved file could not be moved safely. Restore source/destination access; Filing will retry. Recheck the preview if its destination changed.";
+            await context.SaveChangesAsync(cancellationToken);
+            return RunResult.Failed(preparation.Error);
         }
-
-        logger.LogInformation("Filed one Arriving File into the Library.");
-        return RunResult.Handled(1);
     }
 
     private async Task ReplaceAsync(
@@ -134,7 +149,7 @@ public sealed class FilingRoutine(
 
             var temporary = Path.Combine(
                 entry.EntryDirectory,
-                FiledPaths.TemporaryName(arrival.DownloadId));
+                FiledPaths.TemporaryName(arrival.DownloadId ?? arrival.Id));
             await mover.CopyAndVerifyAsync(arrival.SourcePath, temporary, cancellationToken);
             File.Move(temporary, intended, overwrite: true);
         }
@@ -183,20 +198,49 @@ public sealed class FilingRoutine(
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<bool> PrepareAsync(
-        ArrivingFileRow arrival,
-        string root,
-        CancellationToken cancellationToken)
+    private async Task<bool> PrepareAsync(ArrivingFileRow arrival, string root, CancellationToken cancellationToken)
+    {
+        var plan = await PlanAsync(arrival, root, cancellationToken);
+        if (plan.Path != null && arrival.DownloadId is null) CollectionPaths.RequireSafeDestination(plan.Path, root);
+        if (arrival.DownloadId is null)
+        {
+            var file = await context.CollectionFiles.AsTracking().SingleAsync(row => row.Id == arrival.Id, cancellationToken);
+            var scanRoot = await context.CollectionRoots.Where(row => row.Id == file.RootId).Select(row => row.Path).SingleAsync(cancellationToken);
+            CollectionPaths.RequireContained(arrival.SourcePath, scanRoot);
+            if (!CollectionChanges.SourceMatches(file, arrival, mover))
+            {
+                await CollectionChanges.RescanAsync(context, "A source changed before Filing. Review the updated inventory.", cancellationToken);
+                return false;
+            }
+            if (file.ApprovedAt == null || file.ValidatedAt == null || file.ApprovedEvidence != CollectionEvidence.Of(file, arrival)
+                || plan.Path != file.PlannedPath || plan.Reason != null)
+            {
+                await CollectionChanges.ReplanAsync(context, file, "The approved destination or Identification changed.", cancellationToken);
+                return false;
+            }
+        }
+        if (plan.Reason is { } reason)
+        {
+            await StopAsync(arrival, reason, cancellationToken);
+            return false;
+        }
+        arrival.IntendedPath = plan.Path;
+        arrival.State = ArrivingFileState.Filing;
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    /// <summary>The same read-only plan used by the collection preview and actual Filing.</summary>
+    public async Task<FilingPlan> PlanAsync(ArrivingFileRow arrival, string root, CancellationToken cancellationToken)
     {
         if (arrival.VideoId is not { } videoId || arrival.QualityLabel is not { } quality)
         {
-            throw new InvalidOperationException("An Arriving File reached Filing without a Video and Quality.");
+            return new(null, arrival.VideoId is null ? ArrivingFileReason.Unidentified : ArrivingFileReason.UnreadableQuality, "The file needs identification or a readable Quality.");
         }
 
         if (await IsIdenticalAsync(arrival, cancellationToken))
         {
-            await StopAsync(arrival, ArrivingFileReason.IdenticalFile, cancellationToken);
-            return false;
+            return new(null, ArrivingFileReason.IdenticalFile, "IdenticalFile");
         }
 
         var entry = await context.LibraryEntries
@@ -223,15 +267,13 @@ public sealed class FilingRoutine(
 
             if (recorded is DirectoryState.Absent or DirectoryState.NotADirectory)
             {
-                await StopAsync(arrival, ArrivingFileReason.EntryMissing, cancellationToken);
-                return false;
+                return new(null, ArrivingFileReason.EntryMissing, "EntryMissing");
             }
 
             held = await PresentFilesAsync(videoId, cancellationToken);
             if (held.Any(file => string.Equals(file.QualityLabel, quality, StringComparison.Ordinal)))
             {
-                await StopAsync(arrival, ArrivingFileReason.Duplicate, cancellationToken);
-                return false;
+                return new(null, ArrivingFileReason.Duplicate, "Duplicate");
             }
         }
 
@@ -252,10 +294,7 @@ public sealed class FilingRoutine(
 
         PreflightRelabels(held, intended, quality);
 
-        arrival.IntendedPath = intended;
-        arrival.State = ArrivingFileState.Filing;
-        await context.SaveChangesAsync(cancellationToken);
-        return true;
+        return new(intended, null, "Move into the Library");
     }
 
     private async Task<bool> ExecuteAsync(ArrivingFileRow arrival, CancellationToken cancellationToken)
@@ -347,7 +386,7 @@ public sealed class FilingRoutine(
 
         if (targetState == Node.Missing)
         {
-            var temporary = Path.Combine(entryDirectory, FiledPaths.TemporaryName(arrival.DownloadId));
+            var temporary = Path.Combine(entryDirectory, FiledPaths.TemporaryName(arrival.DownloadId ?? arrival.Id));
             File.Delete(temporary);
             var move = FilingMoves.For(Directories.OnTheSameFilesystem(arrival.SourcePath, entryDirectory));
             await mover.MoveAsync(arrival.SourcePath, intended, temporary, move, cancellationToken);
@@ -702,3 +741,5 @@ public sealed class FilingRoutine(
         OccupiedDirectory,
     }
 }
+
+public sealed record FilingPlan(string? Path, ArrivingFileReason? Reason, string Detail);

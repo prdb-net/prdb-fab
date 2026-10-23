@@ -30,8 +30,8 @@ public sealed class VideoFileRow
 public sealed class ArrivingFileRow
 {
     public Guid Id { get; set; }
-    public Guid DownloadId { get; set; }
-    public Guid IndexerId { get; set; }
+    public Guid? DownloadId { get; set; }
+    public Guid? IndexerId { get; set; }
     public string DerivedReleaseId { get; set; } = string.Empty;
     public string SourcePath { get; set; } = string.Empty;
     public string ArrivedName { get; set; } = string.Empty;

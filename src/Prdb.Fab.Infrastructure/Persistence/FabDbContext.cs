@@ -19,6 +19,13 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {
+    public DbSet<CollectionPreparationRow> CollectionPreparations => Set<CollectionPreparationRow>();
+    public DbSet<CollectionRootRow> CollectionRoots => Set<CollectionRootRow>();
+    public DbSet<CollectionWalkRow> CollectionWalks => Set<CollectionWalkRow>();
+    public DbSet<CollectionFileRow> CollectionFiles => Set<CollectionFileRow>();
+    public DbSet<AutopilotBaselineRow> AutopilotBaselines => Set<AutopilotBaselineRow>();
+    public DbSet<AutopilotMembershipRow> AutopilotMemberships => Set<AutopilotMembershipRow>();
+
     public DbSet<RoutineRow> Routines => Set<RoutineRow>();
 
     public DbSet<RoutineRunRow> RoutineRuns => Set<RoutineRunRow>();
@@ -1055,6 +1062,59 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
                 new GateAdmissionRow { Gate = AfterDownloadGate.Name, Confidence = IdentificationConfidence.Strong });
         });
 
+        builder.Entity<CollectionPreparationRow>(entity =>
+        {
+            entity.ToTable("collection_preparation");
+            entity.HasKey(row => row.Id);
+            entity.Declares(AccountClass.AccountFree);
+            entity.Property(row => row.StartedAt).HasConversion(UtcTimestamp);
+        });
+
+        builder.Entity<CollectionRootRow>(entity =>
+        {
+            entity.ToTable("collection_root");
+            entity.HasKey(row => row.Id);
+            entity.Declares(AccountClass.AccountFree);
+            entity.HasIndex(row => row.Path).IsUnique();
+        });
+
+        builder.Entity<CollectionWalkRow>(entity =>
+        {
+            entity.ToTable("collection_walk");
+            entity.Property(row => row.LastWriteAt).HasConversion(UtcTimestamp);
+            entity.HasKey(row => row.Path);
+            entity.Declares(AccountClass.AccountFree);
+        });
+
+        builder.Entity<CollectionFileRow>(entity =>
+        {
+            entity.ToTable("collection_file");
+            entity.Property(row => row.ValidatedAt).HasConversion(UtcTimestamp);
+            entity.HasKey(row => row.Id);
+            entity.Declares(AccountClass.AccountFree);
+            entity.Property(row => row.LastWriteAt).HasConversion(UtcTimestamp);
+            entity.Property(row => row.ApprovedAt).HasConversion(UtcTimestamp);
+            entity.Property(row => row.LeftAt).HasConversion(UtcTimestamp);
+            entity.HasIndex(row => row.SourcePath).IsUnique();
+            entity.HasIndex(row => new { row.Probed, row.LeftAt });
+        });
+
+        builder.Entity<AutopilotBaselineRow>(entity =>
+        {
+            entity.ToTable("autopilot_baseline");
+            entity.HasKey(row => row.UserHash);
+            entity.Declares(AccountClass.AccountStamped);
+            entity.Property(row => row.BaselineAt).HasConversion(UtcTimestamp);
+        });
+
+        builder.Entity<AutopilotMembershipRow>(entity =>
+        {
+            entity.ToTable("autopilot_membership");
+            entity.HasKey(row => new { row.UserHash, row.VideoId });
+            entity.Declares(AccountClass.AccountStamped);
+            entity.Property(row => row.WantedSinceAt).HasConversion(UtcTimestamp);
+        });
+
         // Exportability is table-wide. Cache is the safe default; the two
         // tables that contain irreplaceable configuration opt into the backup.
         foreach (var entity in builder.Model.GetEntityTypes())
@@ -1062,6 +1122,11 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             entity.SetAnnotation(ExportClassDeclarations.Annotation, ExportClass.NotExported);
         }
 
+        builder.Entity<CollectionPreparationRow>().Declares(ExportClass.Exported);
+        builder.Entity<CollectionRootRow>().Declares(ExportClass.Exported);
+        builder.Entity<CollectionFileRow>().Declares(ExportClass.Exported);
+        builder.Entity<AutopilotBaselineRow>().Declares(ExportClass.Exported);
+        builder.Entity<AutopilotMembershipRow>().Declares(ExportClass.Exported);
         builder.Entity<InstallationRow>().Declares(ExportClass.Exported);
         builder.Entity<IndexerRow>().Declares(ExportClass.Exported);
         builder.Entity<DownloadRow>().Declares(ExportClass.Exported);

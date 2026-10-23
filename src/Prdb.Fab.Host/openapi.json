@@ -2124,6 +2124,114 @@
         }
       }
     },
+    "/api/settings/automation/autopilot/selection": {
+      "get": {
+        "tags": [
+          "Automation"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotSelection"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/autopilot": {
+      "get": {
+        "tags": [
+          "Automation"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotSwitchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings/automation/autopilot/start": {
+      "post": {
+        "tags": [
+          "Automation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/automation": {
       "get": {
         "tags": [
@@ -2366,6 +2474,117 @@
           },
           "404": {
             "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/collection": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionPreviewPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collection/retry": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collection/start": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collection/approve": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
           }
         }
       }
@@ -3860,6 +4079,9 @@
       },
       "AutomationDecisionReason": {
         "enum": [
+          "CollectionPreparation",
+          "WantedBaseline",
+          "OutsideRecentWanted",
           "NotWanted",
           "ConfidenceGate",
           "Size",
@@ -4162,6 +4384,229 @@
           }
         }
       },
+      "AutopilotSelectedVideo": {
+        "required": [
+          "videoId",
+          "title",
+          "initial",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "initial": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "AutopilotSelection": {
+        "required": [
+          "page",
+          "pageSize",
+          "total",
+          "videos"
+        ],
+        "type": "object",
+        "properties": {
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutopilotSelectedVideo"
+            }
+          }
+        }
+      },
+      "AutopilotStartRequest": {
+        "required": [
+          "enabled",
+          "directories"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "directories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AutopilotState": {
+        "required": [
+          "present",
+          "enabled",
+          "phase",
+          "detail",
+          "actionRoute",
+          "initialAdmitted",
+          "admitted",
+          "excluded",
+          "enabledCustomRules",
+          "downloadCap",
+          "retryBudget",
+          "initialHeld",
+          "newAdmitted",
+          "collectionTotal",
+          "collectionFiled",
+          "collectionLeft"
+        ],
+        "type": "object",
+        "properties": {
+          "present": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "actionRoute": {
+            "type": "string"
+          },
+          "initialAdmitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "admitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "excluded": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enabledCustomRules": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "downloadCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "initialHeld": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "newAdmitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collectionTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collectionFiled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collectionLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "AutopilotSwitchRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
       "BackupRoot": {
         "enum": [
           "None",
@@ -4423,6 +4868,249 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "CollectionAct": {
+        "required": [
+          "accepted",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "CollectionApprovalRequest": {
+        "required": [
+          "revision",
+          "moveIds",
+          "leaveIds",
+          "allReady",
+          "leaveUnresolved"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "moveIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "leaveIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "allReady": {
+            "type": "boolean"
+          },
+          "leaveUnresolved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionPreviewFile": {
+        "required": [
+          "id",
+          "sourcePath",
+          "sizeBytes",
+          "videoId",
+          "title",
+          "confidence",
+          "quality",
+          "destination",
+          "detail",
+          "approved",
+          "left"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcePath": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "videoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IdentificationConfidence"
+              }
+            ]
+          },
+          "quality": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "destination": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "left": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionPreviewPage": {
+        "required": [
+          "phase",
+          "revision",
+          "error",
+          "page",
+          "pageSize",
+          "total",
+          "ready",
+          "unresolved",
+          "approved",
+          "left",
+          "files"
+        ],
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ready": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unresolved": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "approved": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "left": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionPreviewFile"
+            }
+          }
+        }
+      },
+      "CollectionStartRequest": {
+        "required": [
+          "directories"
+        ],
+        "type": "object",
+        "properties": {
+          "directories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6465,6 +7153,7 @@
           "LibraryRoot",
           "Publishing",
           "Complete",
+          "Collection",
           null
         ]
       },
@@ -8120,7 +8809,14 @@
             ]
           },
           "download": {
-            "$ref": "#/components/schemas/ReviewDownload"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewDownload"
+              }
+            ]
           },
           "release": {
             "type": "string"

@@ -381,6 +381,7 @@ public sealed partial class IdentificationCutTests
             Assert.Equal(1, result.RowsAdded);
         }
 
+        database.Time.Advance(TimeSpan.FromMinutes(15));
         await using (var scope = database.Scope())
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
@@ -412,7 +413,7 @@ public sealed partial class IdentificationCutTests
     }
 
     [Fact]
-    public async Task A_fruitless_wanted_sweep_does_not_demote_the_video()
+    public async Task A_fruitless_wanted_sweep_records_its_attempt_for_fair_rotation()
     {
         var indexer = new EmptyIndexer("<?xml version=\"1.0\"?><rss><channel /></rss>");
         await using var database = await TestDatabase.CreateAsync(also: services =>
@@ -427,8 +428,42 @@ public sealed partial class IdentificationCutTests
         }
 
         await using var check = database.Scope();
-        Assert.Empty(await check.ServiceProvider.GetRequiredService<FabDbContext>()
+        Assert.Single(await check.ServiceProvider.GetRequiredService<FabDbContext>()
             .WantedVideoSweepStates.ToListAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Empty_or_refused_queries_rotate_through_recent_admissions_before_retrying(bool refuse)
+    {
+        var indexer = new EmptyIndexer("<rss><channel /></rss>", refuse);
+        await using var database = await TestDatabase.CreateAsync(also: services =>
+            services.AddHttpClient(FabTransports.Indexers).ConfigurePrimaryHttpMessageHandler(() => indexer));
+        await SeedIndexerAsync(database, IndexerId, withWalkState: true);
+        for (var i = 0; i < 9; i++) await SeedWantedAsync(database, $"Recent Missing Title {i}", database.Time.GetUtcNow());
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            await context.Installation.ExecuteUpdateAsync(update => update.SetProperty(row => row.PrdbUserHash, "account"), TestContext.Current.CancellationToken);
+            context.AutomationRules.Add(new() { Id = Guid.NewGuid(), Name = "Supplied", Enabled = true, SuppliedWanted = true });
+            var videos = await context.CatalogueVideos.AsTracking().OrderBy(v => v.Id).ToListAsync(TestContext.Current.CancellationToken);
+            for (var i = 0; i < videos.Count; i++)
+            {
+                videos[i].ReleaseDate = DateOnly.FromDateTime(database.Time.GetUtcNow().DateTime).AddDays(-i);
+                context.AutopilotMemberships.Add(new() { UserHash = "account", VideoId = videos[i].PrdbId, Admitted = true });
+            }
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        for (var i = 0; i < (refuse ? 9 : 2); i++)
+        {
+            await using var scope = database.Scope();
+            await scope.ServiceProvider.GetRequiredService<WantedSweepRoutine>().RunAsync(IndexerId.ToString("D"), TestContext.Current.CancellationToken);
+        }
+        var titles = indexer.Requests.Select(uri => HttpUtility.ParseQueryString(uri.Query)["q"]).ToArray();
+        Assert.Equal(9, titles.Distinct().Count());
+        Assert.Equal("Recent Missing Title 0", titles[0]);
+        Assert.Equal("Recent Missing Title 8", titles[^1]);
     }
 
     [Fact]
@@ -631,7 +666,7 @@ public sealed partial class IdentificationCutTests
             """;
     }
 
-    private sealed class EmptyIndexer(string response) : HttpMessageHandler
+    private sealed class EmptyIndexer(string response, bool refuse = false) : HttpMessageHandler
     {
         public List<Uri> Requests { get; } = [];
 
@@ -640,7 +675,7 @@ public sealed partial class IdentificationCutTests
             CancellationToken cancellationToken)
         {
             Requests.Add(request.RequestUri!);
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return Task.FromResult(new HttpResponseMessage(refuse ? HttpStatusCode.Forbidden : HttpStatusCode.OK)
             {
                 Content = new StringContent(response, Encoding.UTF8, "application/xml"),
             });

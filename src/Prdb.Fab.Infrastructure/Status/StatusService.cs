@@ -27,7 +27,8 @@ public sealed class StatusService(
     VideoChangeCoverage videoChanges,
     IRoutineStore routineStore,
     IndexerSearch indexerSearch,
-    TimeProvider time)
+    TimeProvider time,
+    AutopilotSettings autopilotSettings)
 {
     private static readonly string[] StageOrder = ["sync-prdb", "sync-indexers", "match", "decide", "download", "file"];
 
@@ -62,7 +63,7 @@ public sealed class StatusService(
             .Select(row => row.AutomationRuleId)
             .Distinct()
             .ToListAsync(cancellationToken);
-        foreach (var rule in automationRules.Where(rule => !rulesWithIndexers.Contains(rule.Id)))
+        foreach (var rule in automationRules.Where(rule => !rule.SuppliedWanted && !rulesWithIndexers.Contains(rule.Id)))
         {
             // A deleted last Indexer leaves the rule visible and off. This is
             // the observable safety state even for databases changed by an
@@ -88,7 +89,17 @@ public sealed class StatusService(
         // would let them disagree on a page whose whole job is to be believed.
         var publishing = await PublishingAsync(cancellationToken);
 
+        var autopilot = await autopilotSettings.ReadAsync(cancellationToken);
+        var preparation = await context.CollectionPreparations.SingleOrDefaultAsync(cancellationToken);
         var conditions = new List<StatusCondition>();
+        if (preparation is { Phase: not "Ready" })
+            conditions.Add(preparation.Error is { } error
+                ? Gap("Collection preparation needs attention", error, "file", "/settings/library/collection")
+                : Brake("Collection preparation holds automatic Downloads", autopilot.Detail, "decide", "/settings/library/collection"));
+        if (autopilot.Present && autopilot.Phase is "Connections" or "WantedBaseline")
+            conditions.Add(autopilot.Phase == "Connections"
+                ? Gap("Wanted autopilot is waiting for a Connection", autopilot.Detail, "decide", autopilot.ActionRoute)
+                : Brake("Wanted autopilot is waiting for its baseline", autopilot.Detail, "decide", autopilot.ActionRoute));
         AddInstallationGaps(conditions, installation, governor);
         AddRecentWindowGaps(conditions, installation, recentCoverage);
         AddRoutineGaps(conditions, routines, runs, indexers);
@@ -151,6 +162,7 @@ public sealed class StatusService(
             installation,
             automationRules,
             automaticDecisions,
+            autopilot,
             recentCoverage,
             governor,
             publishing,
@@ -749,6 +761,9 @@ public sealed class StatusService(
         {
             var (title, detail, route) = decision.Reason switch
             {
+                AutomationDecisionReason.CollectionPreparation => ("Collection preparation holds automatic Downloads", "Finish the inventory, preview decisions and approved import.", "/settings/library/collection"),
+                AutomationDecisionReason.WantedBaseline => ("The initial Wanted selection is not ready", "Complete collection preparation and wait for the account's Wanted baseline and metadata.", "/wanted"),
+                AutomationDecisionReason.OutsideRecentWanted => ("Videos are outside the supplied Wanted permission", "Older, unknown-date, future or unselected backlog stays manually actionable. The frozen initial selection is never refilled.", "/wanted"),
                 AutomationDecisionReason.VideoUnavailable => ("Unavailable Catalogue Videos held automatic Downloads", "prdb deleted or no longer returns these Videos. Held files and historic identities are retained.", "/library"),
                 AutomationDecisionReason.SiteIgnored => ("Ignored Sites held automatic Downloads", "Unignore the Site in prdb to allow new Favourite or Wanted intent. Existing files and manual Downloads are kept.", "/sites"),
                 AutomationDecisionReason.ConfidenceGate => ("The BeforeDownload Gate held Releases", "Change the fixed named confidence set to reconsider them.", "/settings/identification"),
@@ -823,6 +838,7 @@ public sealed class StatusService(
         InstallationRow installation,
         IReadOnlyList<AutomationRuleRow> automationRules,
         IReadOnlyList<StatusAutomaticDecision> automaticDecisions,
+        AutopilotState autopilot,
         RecentWindowCoverageState recentWindow,
         PrdbGovernor governor,
         StatusPublishing publishing,
@@ -957,6 +973,8 @@ public sealed class StatusService(
         }
         if (id == "decide")
         {
+            facts.Add(new("Recent Wanted autopilot", autopilot.Detail, autopilot.ActionRoute));
+            facts.Add(new("Frozen initial selection", $"{autopilot.InitialHeld} of {autopilot.InitialAdmitted} in Library; {autopilot.NewAdmitted} later admissions; {autopilot.Excluded} excluded recorded intents. No refill.", "/settings/automation"));
             facts.Add(new(
                 "Automation Rules",
                 $"{automationRules.Count(rule => rule.Enabled)} enabled, {automationRules.Count(rule => !rule.Enabled)} disabled. No enabled rule is the off state.",
@@ -1049,9 +1067,9 @@ public sealed class StatusService(
         var value when value.StartsWith("prdb.", StringComparison.Ordinal) => "sync-prdb",
         DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.RecentWindow or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep => "sync-indexers",
         DiscoveryRoutineNames.Screening or DiscoveryRoutineNames.BackwardsSearch or DiscoveryRoutineNames.Identification or ArrivalIdentificationRoutine.RoutineName => "match",
-        AutomaticDecisionRoutine.RoutineName => "decide",
+        AutomaticDecisionRoutine.RoutineName or WantedAutopilotRoutine.RoutineName => "decide",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName => "download",
-        CollectingRoutine.RoutineName or FilingRoutine.RoutineName or TidyUpRoutine.RoutineName or ReportingRoutine.RoutineName or LibraryVerificationRoutine.RoutineName => "file",
+        CollectingRoutine.RoutineName or FilingRoutine.RoutineName or TidyUpRoutine.RoutineName or ReportingRoutine.RoutineName or LibraryVerificationRoutine.RoutineName or CollectionScanRoutine.RoutineName or CollectionPlanningRoutine.RoutineName or CollectionImportRoutine.RoutineName => "file",
         _ => "decide",
     };
 
@@ -1092,7 +1110,8 @@ public sealed class StatusService(
         var value when UsesPrdb(value) => "/settings/connections/prdb",
         DiscoveryRoutineNames.Caps or DiscoveryRoutineNames.Walk or DiscoveryRoutineNames.RecentWindow or DiscoveryRoutineNames.CatchUp or DiscoveryRoutineNames.WantedSweep when target is not null => $"/settings/connections/indexers/{target}",
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName or CollectingRoutine.RoutineName => "/settings/connections/sabnzbd",
-        AutomaticDecisionRoutine.RoutineName => "/settings/automation",
+        AutomaticDecisionRoutine.RoutineName or WantedAutopilotRoutine.RoutineName => "/settings/automation",
+        CollectionScanRoutine.RoutineName or CollectionPlanningRoutine.RoutineName or CollectionImportRoutine.RoutineName => "/settings/library/collection",
         _ => null,
     };
 }

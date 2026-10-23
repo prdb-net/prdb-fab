@@ -19,6 +19,7 @@ import { Loaded } from '../ui/Loaded.tsx'
 import { SaveBar } from '../ui/SaveBar.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
 import styles from './AutomationScreen.module.css'
+import { AutopilotPanel } from './AutopilotPanel.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 
 export function AutomationScreen() {
@@ -35,11 +36,12 @@ function AutomationOverview() {
       lede="Rules and limits for automatic Downloads."
       help="Choose which Wanted Videos may download automatically. A matching enabled rule grants permission; your limits still apply."
     >
+      <AutopilotPanel controls />
       <section>
         <div className={styles.sectionHeading}>
           <div>
-            <h2>Rules</h2>
-            <p>Automatic Downloads stay off until a rule is enabled.</p>
+            <h2>Custom rules · Advanced</h2>
+            <p>Custom rules grant independent permission, including older or additional Videos. Turning off the supplied policy does not turn these rules off.</p>
           </div>
           <Link to="/settings/automation/rules/new">Add rule</Link>
         </div>
@@ -47,7 +49,7 @@ function AutomationOverview() {
         <Loaded query={settings} of="the Automation settings">
           {(held) =>
             held.rules.length === 0 ? (
-              <p className={styles.empty}>No rules yet. Automatic Downloads are off.</p>
+              <p className={styles.empty}>No custom rules. The supplied policy is controlled above.</p>
             ) : (
               <ul className={styles.rules}>
                 {held.rules.map((rule) => (

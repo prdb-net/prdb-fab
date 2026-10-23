@@ -369,6 +369,7 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
             Enabled = row.Enabled,
             MinimumSize = row.MinimumSize,
             MaximumSize = row.MaximumSize,
+            SuppliedWanted = row.SuppliedWanted,
         }));
 
         context.AutomationRuleIndexers.AddRange(
@@ -429,6 +430,54 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
                 AutomationRuleId = row.AutomationRuleId,
                 RuleName = row.RuleName,
             }));
+
+        context.CollectionPreparations.AddRange((document.CollectionPreparations ?? []).Select(row => new CollectionPreparationRow
+        {
+            Id = row.Id,
+            Phase = "Inventory",
+            Revision = row.Revision + 1,
+            StartedAt = row.StartedAt,
+            Error = row.Error,
+        }));
+
+        context.CollectionRoots.AddRange((document.CollectionRoots ?? []).Select(row => new CollectionRootRow
+        {
+            Id = row.Id,
+            Path = roots.Absolute(row.Path)!,
+            IsLibrary = row.IsLibrary,
+        }));
+
+        context.CollectionFiles.AddRange((document.CollectionFiles ?? []).Select(row => new CollectionFileRow
+        {
+            Id = row.Id,
+            RootId = row.RootId,
+            SourcePath = roots.Absolute(row.SourcePath)!,
+            SizeBytes = row.SizeBytes,
+            LastWriteAt = row.LastWriteAt,
+            Probed = row.Probed,
+            ApprovedAt = row.ApprovedAt,
+            LeftAt = row.LeftAt,
+            PlannedPath = row.PlannedPath is null ? null : roots.Absolute(row.PlannedPath),
+            ApprovedEvidence = row.ApprovedEvidence,
+            PreviewEvidence = row.PreviewEvidence,
+            PreviewDetail = row.PreviewDetail,
+            ValidatedAt = null,
+        }));
+
+        context.AutopilotBaselines.AddRange((document.AutopilotBaselines ?? []).Select(row => new AutopilotBaselineRow
+        {
+            UserHash = row.UserHash,
+            BaselineAt = row.BaselineAt,
+        }));
+
+        context.AutopilotMemberships.AddRange((document.AutopilotMemberships ?? []).Select(row => new AutopilotMembershipRow
+        {
+            UserHash = row.UserHash,
+            VideoId = row.VideoId,
+            WantedSinceAt = row.WantedSinceAt,
+            Admitted = row.Admitted,
+            InitialBatch = row.InitialBatch,
+        }));
 
         context.ArrivingFiles.AddRange(document.ArrivingFiles.Select(row => new ArrivingFileRow
         {

@@ -27,6 +27,14 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<VideoProbe>();
         services.AddScoped<IdentificationSettings>();
         services.AddScoped<LibrarySettings>();
+        services.AddScoped<CollectionPreparation>();
+        services.AddScoped<CollectionPreview>();
+        services.AddScoped<CollectionImportRoutine>();
+        services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectionImportRoutine>());
+        services.AddScoped<CollectionPlanningRoutine>();
+        services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectionPlanningRoutine>());
+        services.AddScoped<CollectionScanRoutine>();
+        services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectionScanRoutine>());
         services.AddScoped<ReviewQueue>();
         services.AddScoped<ReviewFileContactSheet>();
         services.AddScoped<ReviewVideoSearch>();

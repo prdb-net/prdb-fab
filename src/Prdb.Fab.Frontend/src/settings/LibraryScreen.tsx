@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -22,6 +23,7 @@ export function LibrarySettingsScreen() {
       title="Library"
       lede="Choose where Videos are filed and how leftovers are cleaned up."
     >
+      <p><Link to="/settings/library/collection">Prepare or review the existing collection</Link></p>
       <Loaded query={settings} of="the Library settings">
         {(held) => (
           <>

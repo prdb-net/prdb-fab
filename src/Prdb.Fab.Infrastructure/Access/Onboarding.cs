@@ -130,6 +130,7 @@ public sealed class Onboarding(FabDbContext context, ILogger<Onboarding> logger)
         OnboardingStep.PrdbKey => Task.FromResult(installation.PrdbApiKey is { Length: > 0 }),
         OnboardingStep.Sabnzbd => Task.FromResult(installation.SabnzbdApiKey is { Length: > 0 }),
         OnboardingStep.Indexers => context.Indexers.AnyAsync(cancellationToken),
+        OnboardingStep.Collection => context.AutomationRules.AnyAsync(row => row.SuppliedWanted, cancellationToken),
         OnboardingStep.LibraryRoot => Task.FromResult(installation.LibraryRoot is { Length: > 0 }),
 
         // ADR 0064: the step is answered once somebody has saved the form,

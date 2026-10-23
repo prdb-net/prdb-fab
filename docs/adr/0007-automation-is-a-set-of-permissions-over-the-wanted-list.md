@@ -79,3 +79,10 @@ from being followed without promising control over SABnzbd's queue.
   identically for a manual download, and carries its own switch.
 - The sync status page gains a second silent-failure diagnosis beside ADR
   0006's: how many releases were held back by size limits or by the cap.
+
+## Amendment: supplied Wanted permission and collection preparation
+
+[ADR 0065](0065-wanted-autopilot-waits-for-a-previewed-collection-import.md)
+adds a supplied bounded Wanted permission after a previewed collection import.
+It describes the setup, controls and fair search ordering that amend this
+ADR; existing custom permissions and their safety checks remain in force.

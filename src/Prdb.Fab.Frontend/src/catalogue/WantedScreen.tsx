@@ -1,3 +1,4 @@
+import { AutopilotPanel } from '../settings/AutopilotPanel.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
 import { useQuery } from '@tanstack/react-query'
@@ -71,6 +72,7 @@ export function WantedScreen() {
         {total > 0 && <span className={styles.count}>{total} videos</span>}
       </div>
 
+      <AutopilotPanel />
       <p className={styles.lede}>
         Your prdb Wanted list. Changes made here are written back to the connected account.
       </p>

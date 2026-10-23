@@ -204,3 +204,10 @@ twice for one fact, and as a way to end up with two answers that disagree.
 - Reaching this over plain http on an untrusted network sends the password in
   the clear, and the documentation says so plainly rather than implying the
   cookie flags help.
+
+## Amendment: supplied Wanted permission and collection preparation
+
+[ADR 0065](0065-wanted-autopilot-waits-for-a-previewed-collection-import.md)
+adds a supplied bounded Wanted permission after a previewed collection import.
+It describes the setup, controls and fair search ordering that amend this
+ADR; existing custom permissions and their safety checks remain in force.

@@ -337,7 +337,7 @@ public sealed class Indexers(
         // permitted indexer left is one that can never act, and ADR 0020 wants
         // it saying so rather than quietly permitting nothing.
         var disabled = await context.AutomationRules
-            .Where(rule => rule.Enabled
+            .Where(rule => !rule.SuppliedWanted && rule.Enabled
                 && !context.AutomationRuleIndexers.Any(edge => edge.AutomationRuleId == rule.Id))
             .ExecuteUpdateAsync(update => update.SetProperty(rule => rule.Enabled, false), cancellationToken);
 
