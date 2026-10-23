@@ -8120,7 +8120,14 @@
             ]
           },
           "download": {
-            "$ref": "#/components/schemas/ReviewDownload"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewDownload"
+              }
+            ]
           },
           "release": {
             "type": "string"

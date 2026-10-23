@@ -211,3 +211,10 @@ an answer.
   local cache, so it adds no load to the title search that ticket is sizing.
 - `CONTEXT.md`'s **Wanted Sweep** is sharpened to say what it searches with and
   that its results are identified like everything else.
+
+## Amendment: supplied Wanted permission and collection preparation
+
+[ADR 0065](0065-wanted-autopilot-waits-for-a-previewed-collection-import.md)
+adds a supplied bounded Wanted permission after a previewed collection import.
+It describes the setup, controls and fair search ordering that amend this
+ADR; existing custom permissions and their safety checks remain in force.

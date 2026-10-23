@@ -6,6 +6,7 @@ public sealed class AutomationRuleRow
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public bool Enabled { get; set; }
+    public bool SuppliedWanted { get; set; }
     public long? MinimumSize { get; set; }
     public long? MaximumSize { get; set; }
 }

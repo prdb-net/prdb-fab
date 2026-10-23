@@ -583,3 +583,17 @@ Turning a backup back into a working installation, on an installation that
 holds nothing yet.
 _Avoid_: Import, Recovery, Migration
 
+
+### Preparing automatic acquisition
+
+**Collection Preparation**:
+The durable inventory, Identification, preview and approved import of the
+existing collection. Automatic acquisition waits until required work and
+explicit decisions are complete. Empty verified storage completes without an
+empty approval; an unreadable directory never does.
+
+**Wanted Autopilot**:
+The supplied permission for recent Wanted Videos: a frozen initial selection
+of at most 100 missing Videos, then new recent Wanted intent. Its 90-date
+Release Date interval is independent of Catalogue and Indexer coverage.
+Disabling it does not disable a separate custom Automation Rule.

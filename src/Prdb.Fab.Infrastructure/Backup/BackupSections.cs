@@ -29,6 +29,11 @@ public static class BackupSections
     /// <summary>The exported row type, and the section of the document it becomes.</summary>
     public static IReadOnlyDictionary<Type, string> Carried { get; } = new Dictionary<Type, string>
     {
+        [typeof(CollectionPreparationRow)] = nameof(BackupDocument.CollectionPreparations),
+        [typeof(CollectionRootRow)] = nameof(BackupDocument.CollectionRoots),
+        [typeof(CollectionFileRow)] = nameof(BackupDocument.CollectionFiles),
+        [typeof(AutopilotBaselineRow)] = nameof(BackupDocument.AutopilotBaselines),
+        [typeof(AutopilotMembershipRow)] = nameof(BackupDocument.AutopilotMemberships),
         [typeof(InstallationRow)] = nameof(BackupDocument.Installation),
         [typeof(GateAdmissionRow)] = nameof(BackupDocument.GateAdmissions),
         [typeof(IndexerRow)] = nameof(BackupDocument.Indexers),

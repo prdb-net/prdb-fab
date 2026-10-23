@@ -308,7 +308,7 @@ function ReviewDetail({
           <ComparisonFact label="Runtime">{entry.runtimeSeconds != null ? formatDuration(Number(entry.runtimeSeconds)) : 'Unknown'}</ComparisonFact>
           <ComparisonFact label="File">{[entry.quality, entry.width && entry.height ? `${entry.width}×${entry.height}` : null, entry.videoCodec ? codecLabel(entry.videoCodec) : null, formatBytes(entry.sizeBytes)].filter(Boolean).join(' · ')}</ComparisonFact>
           <ComparisonFact label="Release">{entry.release}</ComparisonFact>
-          <ComparisonFact label="Download">{entry.download.name}</ComparisonFact>
+          <ComparisonFact label="Download">{entry.download?.name ?? "Existing collection"}</ComparisonFact>
           <ComparisonFact label="Indexer">{entry.indexer}</ComparisonFact>
         </dl>
       </div>

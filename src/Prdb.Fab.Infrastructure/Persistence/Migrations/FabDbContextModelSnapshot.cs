@@ -142,13 +142,13 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("DownloadId")
+                    b.Property<Guid?>("DownloadId")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Height")
                         .HasColumnType("INTEGER");
 
-                    b.Property<Guid>("IndexerId")
+                    b.Property<Guid?>("IndexerId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("IntendedPath")
@@ -267,6 +267,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("SuppliedWanted")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name");
@@ -275,6 +278,49 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.AutopilotBaselineRow", b =>
+                {
+                    b.Property<string>("UserHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("BaselineAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserHash");
+
+                    b.ToTable("autopilot_baseline", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountStamped")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.AutopilotMembershipRow", b =>
+                {
+                    b.Property<string>("UserHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("VideoId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Admitted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("InitialBatch")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("WantedSinceAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserHash", "VideoId");
+
+                    b.ToTable("autopilot_membership", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountStamped")
                         .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
                 });
 
@@ -778,6 +824,130 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAtUtc", "Id");
 
                     b.ToTable("catalogue_video", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.CollectionFileRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovedEvidence")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastWriteAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LeftAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlannedPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Probed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("RootId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourcePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourcePath")
+                        .IsUnique();
+
+                    b.HasIndex("Probed", "LeftAt");
+
+                    b.ToTable("collection_file", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.CollectionPreparationRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Phase")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("collection_preparation", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.CollectionRootRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsLibrary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Path")
+                        .IsUnique();
+
+                    b.ToTable("collection_root", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.CollectionWalkRow", b =>
+                {
+                    b.Property<string>("Path")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AfterName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Completed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("RootId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Path");
+
+                    b.ToTable("collection_walk", (string)null);
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")

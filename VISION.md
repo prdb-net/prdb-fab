@@ -131,8 +131,12 @@ release matching a wanted video appears on any configured indexer, the tool can
 fetch it without being asked, which is the entire reason to run an unattended
 service rather than search by hand.
 
-Automation is off until the user turns it on, and it is scoped: by site, by
-actor, by the wanted list, with quality and size limits. Every automatic
+Fresh setup supplies bounded automation over recent Wanted Videos, after the
+existing collection has been scanned and approved imports have finished. The
+initial selection is limited to the newest 100 eligible missing Videos released
+within 90 days, followed by new recent Wanted intent. It can be disabled, and
+custom rules remain available for deliberate broader acquisition. Existing
+installations adopt this default explicitly. Every automatic
 decision is written down with the rule that caused it, so "why is this on my
 disk" always has an answer.
 
@@ -176,8 +180,7 @@ existing collection someone accumulated before installing this, sitting on a NAS
 share. Everything in them that identifies against prdb can be taken into the
 sorted library. That first bulk run over thousands of files is a different
 problem from a handful of new downloads a day, and both have to work — which is
-why scanning is not in the first release, while the shape of the tool allows for
-it from the start.
+why scanning is durable, bounded work and precedes the first automatic Download.
 
 Files are moved, not copied — the download directory is meant to empty itself.
 Where source and target sit on different filesystems, a move is a copy, a

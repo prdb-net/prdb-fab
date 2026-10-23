@@ -58,7 +58,7 @@ public sealed class ReviewDecisions(
             ?? await context.Downloads
                 .Where(row => row.Id == arrival.DownloadId)
                 .Select(row => row.SubmittedName)
-                .SingleAsync(cancellationToken);
+                .SingleOrDefaultAsync(cancellationToken) ?? arrival.ArrivedName;
         var assignment = await context.ConfirmedAssignments
             .AsTracking()
             .SingleOrDefaultAsync(row => row.OsHash == arrival.OsHash

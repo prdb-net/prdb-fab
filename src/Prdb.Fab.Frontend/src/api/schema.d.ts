@@ -4986,7 +4986,7 @@ export interface components {
             video: null | components["schemas"]["ReviewVideo"];
             candidates: components["schemas"]["ReviewVideo"][];
             filedFile: null | components["schemas"]["ReviewFiledFile"];
-            download: components["schemas"]["ReviewDownload"];
+            download: null | components["schemas"]["ReviewDownload"];
             release: string;
             indexer: string;
             automaticIdentification: components["schemas"]["PreviewHashOutcome"];

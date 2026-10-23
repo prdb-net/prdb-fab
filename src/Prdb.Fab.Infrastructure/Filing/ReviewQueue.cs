@@ -169,7 +169,7 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
             .AsNoTracking()
             .Where(row => row.Id == arrival.DownloadId)
             .Select(row => new ReviewDownload(row.Id, row.SubmittedName))
-            .SingleAsync(cancellationToken);
+            .SingleOrDefaultAsync(cancellationToken);
         var indexer = await context.Indexers
             .AsNoTracking()
             .Where(row => row.Id == arrival.IndexerId)
@@ -180,7 +180,7 @@ public sealed class ReviewQueue(FabDbContext context, PreviewHashEvidence eviden
             .Where(row => row.IndexerId == arrival.IndexerId
                 && row.DerivedReleaseId == arrival.DerivedReleaseId)
             .Select(row => row.Title)
-            .SingleOrDefaultAsync(cancellationToken) ?? download.Name;
+            .SingleOrDefaultAsync(cancellationToken) ?? download?.Name ?? arrival.ArrivedName;
         var video = await VideoAsync(arrival.VideoId, cancellationToken);
         var candidates = await context.ArrivingFileCandidates
             .AsNoTracking()
@@ -380,7 +380,7 @@ public sealed record ReviewQueueEntry(
     ReviewVideo? Video,
     IReadOnlyList<ReviewVideo> Candidates,
     ReviewFiledFile? FiledFile,
-    ReviewDownload Download,
+    ReviewDownload? Download,
     string Release,
     string Indexer,
     /// <summary>

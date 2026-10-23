@@ -29,6 +29,9 @@ public sealed class FilingRoutine(
     {
         var arrival = await context.ArrivingFiles
             .AsTracking()
+            .Where(row => row.DownloadId != null || context.CollectionFiles.Any(file =>
+                file.Id == row.Id && file.ApprovedAt != null && file.LeftAt == null)
+                && context.CollectionPreparations.Any(preparation => preparation.Phase == "Importing"))
             .Where(row => (row.Reason == null
                 && (row.State == ArrivingFileState.Filing
                     || (row.State == ArrivingFileState.AwaitingFiling
@@ -134,7 +137,7 @@ public sealed class FilingRoutine(
 
             var temporary = Path.Combine(
                 entry.EntryDirectory,
-                FiledPaths.TemporaryName(arrival.DownloadId));
+                FiledPaths.TemporaryName(arrival.DownloadId ?? arrival.Id));
             await mover.CopyAndVerifyAsync(arrival.SourcePath, temporary, cancellationToken);
             File.Move(temporary, intended, overwrite: true);
         }
@@ -347,7 +350,7 @@ public sealed class FilingRoutine(
 
         if (targetState == Node.Missing)
         {
-            var temporary = Path.Combine(entryDirectory, FiledPaths.TemporaryName(arrival.DownloadId));
+            var temporary = Path.Combine(entryDirectory, FiledPaths.TemporaryName(arrival.DownloadId ?? arrival.Id));
             File.Delete(temporary);
             var move = FilingMoves.For(Directories.OnTheSameFilesystem(arrival.SourcePath, entryDirectory));
             await mover.MoveAsync(arrival.SourcePath, intended, temporary, move, cancellationToken);

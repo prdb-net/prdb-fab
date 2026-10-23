@@ -71,7 +71,12 @@ public sealed record BackupDocument(
     IReadOnlyList<BackupOperationLogEntry> OperationLog,
     IReadOnlyList<BackupAccountPreferenceWrite> AccountPreferenceWrites,
     IReadOnlyList<BackupIdentificationFlag> IdentificationFlags,
-    IReadOnlyList<BackupPreviewPublication> PreviewPublications);
+    IReadOnlyList<BackupPreviewPublication> PreviewPublications,
+    IReadOnlyList<BackupCollectionPreparation>? CollectionPreparations = null,
+    IReadOnlyList<BackupCollectionRoot>? CollectionRoots = null,
+    IReadOnlyList<BackupCollectionFile>? CollectionFiles = null,
+    IReadOnlyList<BackupAutopilotBaseline>? AutopilotBaselines = null,
+    IReadOnlyList<BackupAutopilotMembership>? AutopilotMemberships = null);
 
 /// <summary>
 /// The one Installation row. Its key is not in the document: ADR 0033 leaves
@@ -208,7 +213,8 @@ public sealed record BackupAutomationRule(
     string Name,
     bool Enabled,
     long? MinimumSize,
-    long? MaximumSize);
+    long? MaximumSize,
+    bool SuppliedWanted = false);
 
 public sealed record BackupAutomationRuleIndexer(Guid AutomationRuleId, Guid IndexerId);
 
@@ -277,8 +283,8 @@ public sealed record BackupDownloadOriginRule(
 /// <param name="IntendedPath">Under the Library, and only while Filing.</param>
 public sealed record BackupArrivingFile(
     Guid Id,
-    Guid DownloadId,
-    Guid IndexerId,
+    Guid? DownloadId,
+    Guid? IndexerId,
     string DerivedReleaseId,
     BackupPath SourcePath,
     string ArrivedName,
@@ -363,3 +369,38 @@ public sealed record BackupAccountPreferenceWrite(
     DateTimeOffset RequestedAt,
     string? LastFailure,
     bool Blocked);
+
+public sealed record BackupCollectionPreparation(
+    int Id,
+    string Phase,
+    long Revision,
+    DateTimeOffset StartedAt,
+    string? Error);
+
+public sealed record BackupCollectionRoot(
+    Guid Id,
+    BackupPath Path,
+    bool IsLibrary);
+
+public sealed record BackupCollectionFile(
+    Guid Id,
+    Guid RootId,
+    BackupPath SourcePath,
+    long SizeBytes,
+    DateTimeOffset LastWriteAt,
+    bool Probed,
+    DateTimeOffset? ApprovedAt,
+    DateTimeOffset? LeftAt,
+    BackupPath? PlannedPath,
+    string? ApprovedEvidence);
+
+public sealed record BackupAutopilotBaseline(
+    string UserHash,
+    DateTimeOffset BaselineAt);
+
+public sealed record BackupAutopilotMembership(
+    string UserHash,
+    Guid VideoId,
+    DateTimeOffset WantedSinceAt,
+    bool Admitted,
+    bool InitialBatch);
