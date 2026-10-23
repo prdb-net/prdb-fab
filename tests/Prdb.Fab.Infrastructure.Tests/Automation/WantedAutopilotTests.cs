@@ -115,6 +115,24 @@ public sealed class WantedAutopilotTests
         Assert.False((await eligibility.ForVideoAsync(fresh, choices, Token))[1].Eligible);
     }
 
+    [Theory]
+    [InlineData("Inventory", null, "Brake")]
+    [InlineData("Preview", null, "Brake")]
+    [InlineData("Importing", null, "Brake")]
+    [InlineData("Inventory", "The mounted collection is unreadable.", "Gap")]
+    public async Task Preparation_status_names_its_action_and_distinguishes_storage_failure(string phase, string? error, string kind)
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        await SeedAsync(db, 0);
+        await using var scope = db.Scope();
+        var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+        await context.CollectionPreparations.ExecuteUpdateAsync(update => update.SetProperty(row => row.Phase, phase).SetProperty(row => row.Error, error), Token);
+        var status = await scope.ServiceProvider.GetRequiredService<Prdb.Fab.Infrastructure.Status.StatusService>().ReadAsync(Token);
+        var condition = status.Stages.SelectMany(stage => stage.Gaps.Concat(stage.Brakes)).First(row => row.Title.StartsWith("Collection preparation", StringComparison.Ordinal));
+        Assert.Equal(kind, condition.Kind.ToString());
+        Assert.Equal("/settings/library/collection?from=/status", condition.Route);
+    }
+
     private static async Task<int> ReconcileAsync(TestDatabase db)
     {
         await using var scope = db.Scope();

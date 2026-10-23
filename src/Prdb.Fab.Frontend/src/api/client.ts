@@ -892,3 +892,7 @@ export function startAutopilot(enabled: boolean, directories: string[]): Promise
   return post('/api/settings/automation/autopilot/start', { enabled, directories })
 }
 export function switchAutopilot(enabled: boolean): Promise<Schema['CollectionAct']> { return post('/api/settings/automation/autopilot', { enabled }) }
+
+export function readAutopilotSelection(page: number): Promise<Schema['AutopilotSelection']> {
+  return fetch(`/api/settings/automation/autopilot/selection?page=${page}`).then(json<Schema['AutopilotSelection']>)
+}

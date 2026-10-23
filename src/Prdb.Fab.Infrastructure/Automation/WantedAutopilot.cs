@@ -88,7 +88,7 @@ public sealed class WantedAutopilot(FabDbContext context, TimeProvider time, Aut
             }
             member.WantedSinceAt = row.SinceAt;
             member.Admitted = admitted;
-            member.InitialBatch = initial;
+            if (initial) member.InitialBatch = admitted;
             changed++;
         }
         if (initial) context.AutopilotBaselines.Add(new() { UserHash = account, BaselineAt = position.At });

@@ -2124,6 +2124,39 @@
         }
       }
     },
+    "/api/settings/automation/autopilot/selection": {
+      "get": {
+        "tags": [
+          "Automation"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotSelection"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings/automation/autopilot": {
       "get": {
         "tags": [
@@ -4351,6 +4384,74 @@
           }
         }
       },
+      "AutopilotSelectedVideo": {
+        "required": [
+          "videoId",
+          "title",
+          "initial",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "initial": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "AutopilotSelection": {
+        "required": [
+          "page",
+          "pageSize",
+          "total",
+          "videos"
+        ],
+        "type": "object",
+        "properties": {
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutopilotSelectedVideo"
+            }
+          }
+        }
+      },
       "AutopilotStartRequest": {
         "required": [
           "enabled",
@@ -4381,7 +4482,12 @@
           "excluded",
           "enabledCustomRules",
           "downloadCap",
-          "retryBudget"
+          "retryBudget",
+          "initialHeld",
+          "newAdmitted",
+          "collectionTotal",
+          "collectionFiled",
+          "collectionLeft"
         ],
         "type": "object",
         "properties": {
@@ -4441,6 +4547,46 @@
             "format": "int32"
           },
           "retryBudget": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "initialHeld": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "newAdmitted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collectionTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collectionFiled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collectionLeft": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

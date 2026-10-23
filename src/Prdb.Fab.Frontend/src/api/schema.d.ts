@@ -2444,6 +2444,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/automation/autopilot/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutopilotSelection"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/automation/autopilot": {
         parameters: {
             query?: never;
@@ -4315,6 +4352,22 @@ export interface components {
             rules: components["schemas"]["AutomationRuleView"][];
             indexers: components["schemas"]["AutomationIndexer"][];
         };
+        AutopilotSelectedVideo: {
+            /** Format: uuid */
+            videoId: string;
+            title: null | string;
+            initial: boolean;
+            state: string;
+        };
+        AutopilotSelection: {
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            total: number | string;
+            videos: components["schemas"]["AutopilotSelectedVideo"][];
+        };
         AutopilotStartRequest: {
             enabled: boolean;
             directories: string[];
@@ -4337,6 +4390,16 @@ export interface components {
             downloadCap: number | string;
             /** Format: int32 */
             retryBudget: number | string;
+            /** Format: int32 */
+            initialHeld: number | string;
+            /** Format: int32 */
+            newAdmitted: number | string;
+            /** Format: int32 */
+            collectionTotal: number | string;
+            /** Format: int32 */
+            collectionFiled: number | string;
+            /** Format: int32 */
+            collectionLeft: number | string;
         };
         AutopilotSwitchRequest: {
             enabled: boolean;

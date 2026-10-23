@@ -10,6 +10,7 @@ public static class AutomationEndpoints
     {
         var group = routes.MapGroup("/api/settings/automation").WithTags("Automation");
 
+        group.MapGet("/autopilot/selection", (int? page, AutopilotSettings settings, CancellationToken token) => settings.SelectionAsync(page ?? 1, token));
         group.MapGet("/autopilot", (AutopilotSettings settings, CancellationToken token) => settings.ReadAsync(token));
         group.MapPost("/autopilot/start", (AutopilotStartRequest request, AutopilotSettings settings, CancellationToken token) =>
             settings.StartAsync(request.Enabled, request.Directories, token));
