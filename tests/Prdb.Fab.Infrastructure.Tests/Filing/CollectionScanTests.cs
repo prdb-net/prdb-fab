@@ -184,6 +184,25 @@ public sealed class CollectionScanTests : IDisposable
         Assert.Equal("Ready", (await context.CollectionPreparations.SingleAsync(Token)).Phase);
     }
 
+    [Fact]
+    public async Task Explicit_recheck_reprobes_unchanged_stamps_after_an_unreadable_file_is_repaired()
+    {
+        var path = Path.Combine(Existing, "repaired.mkv");
+        await File.WriteAllTextAsync(path, "fixture", Token);
+        var probe = new Probe();
+        await using var database = await TestDatabase.CreateAsync(also: services => services.AddSingleton<IProbeProcess>(probe));
+        await StartAsync(database);
+        for (var i = 0; i < 3; i++) await RunAsync(database);
+        Assert.Equal(1, probe.Read);
+        await using (var scope = database.Scope())
+        {
+            Assert.True((await scope.ServiceProvider.GetRequiredService<CollectionPreparation>().RetryAsync(Token)).Accepted);
+            Assert.Empty(await scope.ServiceProvider.GetRequiredService<FabDbContext>().ArrivingFiles.ToListAsync(Token));
+        }
+        for (var i = 0; i < 3; i++) await RunAsync(database);
+        Assert.Equal(2, probe.Read);
+    }
+
     private async Task StartAsync(TestDatabase database, string[]? directories = null)
     {
         await using var scope = database.Scope();

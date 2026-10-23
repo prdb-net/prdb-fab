@@ -11,7 +11,21 @@ public sealed class CollectionPreparation(FabDbContext context, TimeProvider tim
         if (!await context.CollectionPreparations.AnyAsync(cancellationToken)) return new(false, "Start collection preparation first.");
         if (await context.ArrivingFiles.AnyAsync(row => row.DownloadId == null && row.State == Core.Filing.ArrivingFileState.Filing, cancellationToken))
             return new(false, "A move is already in progress. It must finish or recover before rescanning.");
+        // Explicit rechecking rereads even unchanged stamps: permissions or
+        // Identification evidence may have been repaired without editing bytes.
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var files = await context.CollectionFiles.AsTracking().Where(file => file.LeftAt == null
+            && !context.ArrivingFiles.Any(arrival => arrival.Id == file.Id && arrival.State == Core.Filing.ArrivingFileState.Filed))
+            .ToListAsync(cancellationToken);
+        foreach (var file in files)
+        {
+            file.Probed = false;
+            file.PlannedPath = null;
+        }
+        var ids = files.Select(file => file.Id).ToArray();
+        await context.ArrivingFiles.Where(arrival => ids.Contains(arrival.Id)).ExecuteDeleteAsync(cancellationToken);
         await CollectionChanges.RescanAsync(context, "Rechecking the collection; previous unfinished approvals must be reviewed again.", cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return new(true, "The collection is being checked again.");
     }
 
