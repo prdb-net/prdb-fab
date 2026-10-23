@@ -1,34 +1,69 @@
+<div align="center">
+
 # prdb-fab
 
-Fetch and Build (FaB): find your favourite content on Usenet with prdb's help,
-download it through SABnzbd, and build a sorted library out of what arrives.
+**Find it. Fetch it. Build your library.**
 
-Self-hosted, Docker Compose, single user. A prdb API key is required.
+A self-hosted library manager for Adult videos, powered by prdb and SABnzbd.
 
-> **This is early software.** What is in the image today asks for a password,
-> takes you through setting up, checks every connection you give it against the
-> service it names, keeps local catalogues of what prdb and your indexers say,
-> identifies cached releases through prdb, and can submit an identified Release
-> to SABnzbd, follow it through completion, collect its Video Files and file
-> identified arrivals into a Jellyfin-compatible library. It exposes that
-> whole loop on Status and can report two separately enabled kinds of local
-> fact back to prdb. Permission rules can run that same Download path unattended
-> for matched Wanted Videos. Everything it holds that it cannot fetch again goes
-> into one portable file, and a fresh container can be started from that file
-> instead of from nothing.
+[![CI](https://github.com/prdb-net/prdb-fab/actions/workflows/ci.yml/badge.svg)](https://github.com/prdb-net/prdb-fab/actions/workflows/ci.yml)
+[![Docker Hub](https://img.shields.io/badge/Docker-prdbnet%2Fprdb--fab-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/prdbnet/prdb-fab)
+[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639)](LICENSE)
 
-## What you need
+[Get started](#get-started) · [Docker guide](docs/running-in-docker.md) · [What's new](CHANGELOG.md) · [Report an issue](https://github.com/prdb-net/prdb-fab/issues)
 
-- **A prdb account with an API key.** Not optional: without it there is no
-  identification, no wanted list, no artwork and no duplicate detection, and
-  setting up cannot be completed.
-- **Docker**, and storage you can mount into a container.
+</div>
 
-For downloading — which is the point, but not a condition of getting set up — a
-Usenet provider with a working SABnzbd, and at least one indexer with API
-access. Either can be skipped during setup and added later.
+prdb-fab turns Usenet downloads into a library you can browse in Jellyfin.
+Discover videos, choose what you want, and let it find releases, send them to
+SABnzbd and file the results with names, metadata and artwork.
 
-## Running it
+**FaB means Fetch and Build.** Run it alongside your downloader and media server
+on your NAS or home server. Configure it in your browser, then follow everything
+from the first search to the finished library.
+
+## From discovery to your library
+
+```mermaid
+flowchart LR
+    A["Discover with prdb"] --> B["Find releases on your indexers"]
+    B --> C["Download with SABnzbd"]
+    C --> D["Identify and file with prdb-fab"]
+    D --> E["Enjoy in Jellyfin"]
+```
+
+prdb identifies releases before downloading where it can, then identifies the
+files that arrive. When a file needs your decision, it waits in the **Review
+queue** with the reason and available evidence.
+
+## What you can do
+
+| Feature | What it does for you |
+| --- | --- |
+| **Discover what you want** | Browse new videos, Sites and Actors with artwork and previews. Manage your favourites and Wanted list through your prdb account. |
+| **Find and choose releases** | Search across your Newznab indexers, compare releases and see identification confidence before downloading. Download from a catalogue card or pick an exact release. |
+| **Let Wanted do the work** | Enable automation rules for your Wanted videos, with allowed indexers and release-size limits. Automation stays off until you enable a rule. |
+| **Follow every download** | Track SABnzbd progress and failures in one place. If a release fails, prdb-fab can try another within its retry limit. |
+| **Build a Jellyfin library** | Identified files move into organised folders with metadata and artwork. Metadata corrections from prdb keep the library up to date. |
+| **Keep control of your files** | Review unidentified files and duplicates before deciding what happens to them. Different qualities can share one library entry; duplicates are never silently deleted. |
+| **See what is happening** | Downloads, Status and the Operation log explain progress, waiting work and file changes. The browser interface adapts to desktop and mobile, with an SFW switch to blur artwork. |
+| **Take your setup with you** | Export settings and library records to one backup file, then restore on a fresh installation with new storage paths. |
+
+## Get started
+
+You need:
+
+- **A prdb account with a working API key** — required for setup and identification.
+- **Docker Compose** on a NAS or home server, with writable storage. Images are
+  built for `linux/amd64` and `linux/arm64`.
+- **SABnzbd connected to a Usenet provider**, plus at least one **Newznab indexer
+  with API access**, to download videos. You can add these during setup or later.
+- **Jellyfin** if you want to play your finished library.
+
+### 1. Create your Compose file
+
+Save this as `compose.yaml`, or use the repository's
+[Compose example](docker-compose.yml):
 
 ```yaml
 services:
@@ -47,219 +82,72 @@ services:
       - /srv/media:/media
 ```
 
-`docker compose up -d`, then open `http://your-host:8080`.
+Before starting, adjust these values for your NAS:
 
-The first thing it asks for is a password — there is no user name and no default
-credential, and the field to set one is offered only while no password exists.
-Whoever reaches the tool first sets it, so start it on a network you control.
-After that it walks you through your prdb key, SABnzbd, your indexers and your
-library root, checking each one against the real service before it stores it.
-Setting up ends on your wanted list while the ninety-day Catalogue and staged
-Indexer coverage fill in the background. Status shows each source's actual
-proof, starting with the Indexer 14-day minimum and 30-day initial target.
+- Set `PUID` and `PGID` to the user and group that can write to your media folders.
+- Keep `./data` on the host's local storage; the database must not live on an SMB
+  or NFS share.
+- Replace `/srv/media` with your media folder. Use separate download and library
+  directories inside it, for example `/media/downloads` and `/media/library`.
+  Mount downloads at the same container path in SABnzbd and prdb-fab where possible.
 
-**Over plain `http` the password travels across the network in the clear.** On a
-LAN you control that is the ordinary way to run this; reaching it from anywhere
-else wants TLS in front of it.
+The [Docker guide](docs/running-in-docker.md) covers permissions, NAS shares,
+path mapping and troubleshooting.
 
-The mounts, `PUID`/`PGID`, the log, updating, and what to do when the password is
-lost: **[docs/running-in-docker.md](docs/running-in-docker.md)**.
+### 2. Start and connect
 
-## What it does once it is set up
+```bash
+docker compose up -d
+```
 
-It reads prdb, on its own, and keeps what it reads: the videos prdb publishes,
-the sites and actors behind them, your wanted list and your favourites, and one
-picture per video. **What's new**, **Search**, **Sites**, **Actors** and
-**Wanted** show that catalogue. Wanted and Favourite actions are written to
-prdb through the same governed connection used by the background sync.
+Open `http://your-nas:8080` in your browser, replacing `your-nas` with your
+server's hostname or IP address. Set your password, connect prdb, SABnzbd and
+your indexers, choose the library folder, and review the preview-publishing
+choice. Connections and preferences can be changed later in **Settings**.
 
-Each enabled indexer is also walked continuously. Releases enter a local,
-disposable cache, are screened against the catalogue, and prdb is asked to
-identify their names. The Catalogue keeps ninety days prepared. Indexers prove
-14 days first, target 30 days, and extend optionally up to 90 only when budgets
-allow it; Identification follows that working set. All of this runs without a
-page first being opened. A shared **Releases** table opens from
-all four browse surfaces and shows the Indexer, size, first seen time,
-Identification State, Confidence and `matchedBy`. Ambiguous answers remain
-Candidates and a Site-Only Match remains a Site — neither is presented as a
-Video.
+Set the first password on a trusted network. Use HTTPS through a reverse proxy
+if you access the application remotely.
 
-The browser never turns a page load into an indexer query. **Search Indexers**
-is an explicit Video action: it records durable work, and the ordinary
-scheduler queries all enabled Indexers or one selected Indexer while the page
-shows progress. New results pass through prdb Identification before becoming
-downloadable. Every other page search and refresh reads only local state. Each Indexer Cache is
-bounded at **100,000 Releases**; the oldest examined Releases nothing points at
-are evicted first, while Recent Window, unseen or still-wanted rows are never
-discarded to hold the ceiling. The cache may exceed its ceiling when protecting
-those rows requires it.
+### 3. Choose your first video
 
-Each newly added Indexer starts with a **1,000-request Daily Query Budget**.
-Head polling every fifteen minutes and the measured cost of the newest **14
-days** have protected capacity. A fresh installation proves those 14 days first,
-then extends to its initial **30-day target**. Optional history up to 90 days
-runs only from surplus Indexer budget and downstream prdb capacity. Wanted Sweep
-and Manual Search take precedence over optional history, with reservations based
-on actual bounded search demand. Existing older cache rows are retained.
-Resumed pages overlap and verify a Release identity anchor because Newznab
-offsets move as its results change. An interrupted pass resumes; an absent
-anchor restarts its proof without dropping cached data.
+Open **What's new** or **Wanted** and choose a video. Use **Download** for the
+preferred available release, or open **Releases** to compare and choose one.
+The initial catalogue and indexer sync runs in the background; **Status** shows
+its progress. Use **Search Indexers** on a video to request a search.
 
-The prdb Governor reads both **hourly and rolling monthly account-wide budgets**,
-including use by other clients. Background Identification and repair are paced
-below essential account/file work; an oldest-slot expiry never resets a full
-allowance. Current inline Video details and exact-input answer reuse reduce
-metered requests. Identify answers survive interrupted detail reads. Catalogue
-scope remains ninety days: a resumable full-document baseline hands off to
-Video changes, avoiding repeated daily discovery while coverage is current.
-Older servers keep governed summary/detail repair. Retained Identification
-answers use optional server freshness proofs, with conservative fallback on
-expiry or missing support. Validation still costs ordinary quota; six-hour
-default proofs cannot avoid a 23-hour daily re-identification. Routine
-revalidation covers the 30-day Indexer
-working set and wanted older matches. Status shows actual 14/30/90 proofs,
-remaining distinct inputs, request/byte costs and the reason work waits. It
-reports an unsatisfied minimum or a measured capacity shortfall; incomplete
-optional history alone is healthy. See [the measurement recipe](docs/sync-measurements.md).
+When you are ready for unattended downloads, add a rule in
+**Settings → Automation**. Rules apply to Wanted videos and can immediately
+start matching downloads already found. See [how automation works](docs/automation.md).
 
-**Status** lays the whole unattended loop out as Sync (prdb), Sync (Indexers),
-Match, Decide, Download and File. Its headline counts only **Gaps** that need a
-repair. A **Brake** explains work that is deliberately held by a configured
-gate or budget and links to that choice without calling it broken. The liveness
-line shows the last file filed, Download started or Release cached. The page
-polls local state every five seconds; opening it never contacts prdb, an Indexer
-or SABnzbd.
+## A few things to know
 
-Every scheduled routine can be made due with **Run now** from Status. This is a
-request to the normal scheduler, not a second execution path: the Governor,
-daily Indexer query budget and empty work set still win, and the accepted,
-deferred or refused answer remains visible beside the routine.
+- **Files are moved into the library.** Across filesystems, prdb-fab verifies
+  the copy before removing the source. Keep downloads and the library on the
+  same filesystem for faster filing.
+- **Reporting is configurable.** The three reporting switches are on by
+  default: Wanted fulfilments, manually confirmed file assignments and published
+  previews. Preview publishing only starts after you save the explanation form;
+  previews can become public on prdb, and accepted submissions cannot be
+  retracted through prdb-fab. Review [what is sent](docs/privacy.md) during setup.
+- **Back up configuration and media separately.** The backup file includes
+  readable API keys and settings, but no video files. Store it securely and let
+  your backup software encrypt it.
+- **This is pre-1.0 software.** Pin a release, read the [changelog](CHANGELOG.md)
+  and copy `/data` before updating. Database migrations only go forward.
 
-On a Catalogue card, **Download** immediately chooses the preferred highest
-Quality available and submits it to SABnzbd; its overflow menu still opens the
-Video's Releases table for an exact choice. **Settings → Downloads** sets the
-highest Quality and lower-Quality fallback ladder used by that direct action.
-Because Newznab has no dependable Quality field, common Release-name tags are
-used as hints and an unlabelled Release is the final fallback. From the Releases
-table, **Download** fetches that exact NZB and submits it to the configured
-SABnzbd category. The choice is recorded before the remote write. prdb-fab then
-polls SABnzbd, shows its own Outstanding, Completed and Failed state under
-**Downloads**, and automatically tries the next ranked,
-unconsumed Release after a release failure. Each Video has a budget of three
-Download attempts; its Release view shows the spent attempts, the next choice,
-and a confirmed reset of that Video's local history.
+## Learn more
 
-**Settings → Automation** adds unordered permission rules over the Wanted list.
-A rule names its allowed enabled Indexers and optional minimum and maximum
-Release size. There is no global switch: with no enabled rule, automation is
-off. Enabling or changing a rule schedules a catch-up over already matched
-Wanted Releases without a preview; the configured cap on unfinished automatic
-Downloads (20 by default) bounds how much can be in SABnzbd at once, and the
-remainder waits durably. The before-download Identification gate, an open
-Review Queue entry, a held Library Video and the per-Video retry budget remain
-independent brakes. No rule uses a favourite or a Quality parsed from a Release
-name. See [docs/automation.md](docs/automation.md) for the complete safety and
-Wanted-removal behaviour.
+| I want to… | Start here |
+| --- | --- |
+| Install, update, back up or troubleshoot | [Running in Docker](docs/running-in-docker.md) |
+| Set up unattended downloads | [Automation](docs/automation.md) |
+| Understand reporting and preview publishing | [Privacy](docs/privacy.md) · [Publishing previews](docs/publishing-previews.md) |
+| Understand search, identification and filing | [How it works](docs/how-it-works.md) |
+| See recent changes | [Changelog](CHANGELOG.md) |
+| Contribute or run from source | [Contributing](CONTRIBUTING.md) · [Project vision](VISION.md) |
 
-When SABnzbd reports Completed, prdb-fab collects supported Video Files,
-identifies each one, and files allowed matches into
-`<Site>/<Site> - <date> - <Title>/`. Moves within one filesystem are renames;
-cross-filesystem moves copy to a hidden temporary file, compare every byte,
-rename it into place, and only then delete the source. The entry receives
-`movie.nfo` and cached `fanart.jpg`; catalogue repair keeps those two files up
-to date without renaming a recorded Video File.
+Found a bug or have an idea? [Open an issue](https://github.com/prdb-net/prdb-fab/issues)
+with your version, what you expected and what happened. Never attach a backup
+file or API keys. Code contributions are welcome too.
 
-Anything that cannot safely proceed waits in **Review queue** with its evidence
-and one reason. Every row can be dismissed or its exact Video File deleted;
-Unidentified, Duplicate and Entry Missing add only their reason-specific File
-as, Replace or File as only copy action. **Library** shows only held entries and
-their qualities, and **Operation log** exposes the immutable Filed, Replaced,
-Deleted and Tidied acts.
-
-After all Video Files in a directory-shaped SABnzbd storage have reached a
-decision, tidy-up removes only `.nfo`, `.par2`, `.sfv`, `.srr`, `.url`, `.txt`,
-`.jpg` and `.png`, then empty directories. The setting is enabled by default.
-Unknown files remain, and the parent directory of single-file storage is never
-tidied.
-
-Reporting under **Settings → Reporting** is on by default and has three
-independent switches. Fulfilment reporting sends a wanted Video id, whether it
-is held, when it was filed and the highest truthfully expressible quality.
-Confirmed-assignment reporting sends the exact file metadata a person approved
-in the Review Queue: Video id, osHash, size, filename, Release name and available
-runtime, dimensions and codec. Turning either switch off makes no outbound
-report for that channel; pending differences remain local, and reports prdb
-already accepted are not retracted. See
-[docs/privacy.md](docs/privacy.md).
-
-The third switch is the only one whose payload strangers see: **published
-previews** submits a scrubbing sheet generated from a filed Video File, which
-prdb shows under that Video after moderation. Nothing is generated or sent until
-the form saying what it publishes has been saved once, and prdb offers no
-retraction for a submission it has accepted. Only files filed from then on are
-published automatically; the Library you already hold is published only by
-asking, from **Settings → Reporting → Published previews**, which is also where
-an upload whose outcome could not be established is decided. See
-[docs/publishing-previews.md](docs/publishing-previews.md).
-
-The SABnzbd boundary remains exact: **prdb-fab never calls SABnzbd retry or
-delete**, and *Stop following* changes only the local record. Removing a Video
-from Wanted abandons its unfinished automatic Download locally, does not retry
-it, and leaves the SABnzbd job and anything already filed untouched.
-
-## Backup and restore
-
-**Settings → Backup** writes one file holding everything about your installation
-that the tool cannot fetch again: your settings, every indexer with its address
-and key, the SABnzbd connection and its path mapping, your prdb key, every
-automation rule, the review queue, and the local record of what was downloaded,
-what was filed where, which releases are used up and what has already been
-reported to prdb.
-
-What is *not* in it is everything that can be fetched again — the indexer cache,
-cached artwork, prdb's catalogue, and the video files themselves. It is a file
-rather than an archive of your library, and small enough to keep several of.
-
-**The file is plain JSON and the credentials in it are readable.** Nothing here
-encrypts it, deliberately: whatever you already back up with — restic, borg, an
-encrypted share — encrypts everything it carries under a key you manage, and a
-second passphrase underneath that is one more thing to lose at the moment you
-need the file most. So treat the file exactly as you treat the data volume, and
-put it somewhere that encrypts it. Being readable is also what makes it useful
-when a restore will not complete: you can open it and see what is in there.
-[ADR 0057](docs/adr/0057-the-backup-travels-in-the-clear-and-whatever-carries-it-encrypts-it.md)
-has the whole argument.
-
-Restoring runs on a container that holds nothing yet, before a password exists —
-the login credential is inside the file, so a fresh installation offers *Restore
-a backup* as the second way to begin. It asks once where your library and your
-downloads are mounted **in this container**, prefilled with wherever they were
-on the machine that wrote the file, and re-roots every recorded path to match. It
-refuses an installation that already holds an indexer, an automation rule or a
-library entry, and says which. There is nothing to merge into an installation you
-are already using.
-
-Afterwards, outstanding downloads are picked up at SABnzbd by their job id where
-it still knows them, and a background pass checks that the library is where the
-library says it is. Until it has, entries count as held, so automation will not
-decide to fetch them again — and nothing is deleted or re-fetched over a file
-that is missing, because a library mounted somewhere else looks exactly the same
-from here. What it could not confirm is a count on Status with a filter on the
-Library behind it.
-
-## Configuration
-
-Six environment variables, two mounts, one port — and that is the whole of it.
-Your prdb key, SABnzbd, your indexers and your library root are answered in the
-browser and kept by the tool, so changing an indexer key is a form rather than
-an edit to a YAML file and a restart.
-
-## Reading further
-
-- What it is for, and what it is deliberately not: [VISION.md](VISION.md).
-- What changed between versions: [CHANGELOG.md](CHANGELOG.md).
-- Why it is built the way it is: [docs/adr/](docs/adr/), one decision per file.
-- Working on it: [CONTRIBUTING.md](CONTRIBUTING.md).
-- How a release is proved and cut: [docs/releasing.md](docs/releasing.md).
-
-MIT licensed. See [LICENSE](LICENSE).
+prdb-fab is open source under the [MIT license](LICENSE).
