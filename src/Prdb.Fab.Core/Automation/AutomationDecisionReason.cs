@@ -4,6 +4,8 @@ namespace Prdb.Fab.Core.Automation;
 public enum AutomationDecisionReason
 {
     CollectionPreparation,
+    WantedBaseline,
+    OutsideRecentWanted,
     NotWanted,
     ConfidenceGate,
     Size,

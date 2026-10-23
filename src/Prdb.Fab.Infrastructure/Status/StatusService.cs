@@ -62,7 +62,7 @@ public sealed class StatusService(
             .Select(row => row.AutomationRuleId)
             .Distinct()
             .ToListAsync(cancellationToken);
-        foreach (var rule in automationRules.Where(rule => !rulesWithIndexers.Contains(rule.Id)))
+        foreach (var rule in automationRules.Where(rule => !rule.SuppliedWanted && !rulesWithIndexers.Contains(rule.Id)))
         {
             // A deleted last Indexer leaves the rule visible and off. This is
             // the observable safety state even for databases changed by an
