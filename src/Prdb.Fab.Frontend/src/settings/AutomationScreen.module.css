@@ -18,3 +18,8 @@
 .range { display: grid; gap: 0 1rem; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
 
 .sectionHeading > a { flex: none; white-space: nowrap; }
+
+.advanced { border-top: 1px solid var(--border); margin-top: 1.5rem; padding-top: .75rem; }
+.advanced > summary { color: var(--text-quiet); cursor: pointer; padding: .5rem 0; }
+/* These independent forms stay together; multiple sticky bars obscure their fields. */
+.advanced form > div:last-child { position: static; }
