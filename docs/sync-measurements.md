@@ -66,16 +66,19 @@ The committed [synthetic report](fixtures/sync-workload-report.json) records:
 | Additional detail requests, all matches | 1,978 | 0 |
 | Total metered Identification requests/day | 2,473 | 396 |
 | Mandatory ten-second gaps per daily working set | 4,940 seconds | none; bounded turns yield to the lane's one-second tick and Governor |
-| Monthly total including ordinary feeds and competing client | 203,670 | 141,360 |
+| Thirty-day demand including ordinary feeds and competing client | 203,700 | 141,390 |
 
 The old request counts are calculated from its 200-row Identify and 50-ID detail
-batches; the new schedule actually sends 13,860 background batches and 11,060
-feed requests over 35 simulated days. No feed waits for budget and no batch
-remains at the end. Account peaks are 242/hour and 158,405/month, both within the
-same configured limits. There are 580 background deferrals and 2,965 unmetered
-quota readings. The synthetic responses total 581,515,942 bytes; 27,885 HTTP
-samples each take the fixture's 100 ms (p50/p95 both 100 ms by construction).
-Inline payload size is a tradeoff, not a production byte-saving claim.
+batches. The adaptive schedule sends 13,860 background batches and 10,845 feed
+requests over 35 simulated days. All background batches finish. There are 215
+feed deferrals: the competing client can spend the protected 20% before old
+cohorts expire, and FaB waits rather than invading that reserve. Account peaks
+are 242/hour and 162,819/month (the latter includes the other client's use).
+There are 1,127 background deferrals and 2,935 unmetered quota readings. The
+synthetic responses total 581,505,663 bytes; 27,640 HTTP samples each take the
+fixture's 100 ms (p50/p95 both 100 ms by construction). The server now models
+the published 31-day window. Inline payload size is a tradeoff, not a production
+byte-saving claim.
 
 The Indexer demand model takes one page per simulated minute and uses 10-row
 resume overlap. It needs 414 minimum queries and 652 queries through the initial
@@ -150,3 +153,32 @@ and refs, a missing-proof input, bounded fallback, expired and unsupported
 operations, quota deferral after a replacement checkpoint, restart, unknown
 statuses, account changes during a response, stale acquisition gates and
 preservation of automatic decisions and Candidate edges on an unchanged answer.
+
+## Adaptive account budgets
+
+`AdaptiveBudgetTests` exercises the real SDK and Governor with the locally
+observed budget shape (1,000/hour, 200,000/31 days, 80,000 monthly remaining).
+At least 100 background requests can begin in the initial bounded block, enough
+for 18,700 distinct inputs at 200 per batch. It then verifies an actual pacing
+wait and resumed admission. This is an admission test, not a wall-clock promise;
+network responses, SQLite writes and other routines still take time.
+
+`Published_plans_keep_polling_and_background_progress_across_31_day_expiry`
+simulates 40 days for the repository defaults: Plus 100/1,000, Premium
+1,000/20,000 and Ultra 10,000/100,000. All recurring feeds must run repeatedly,
+background work must continue after rolling expiry, and observed account usage
+must stay within 80% of both limits. The socket expires requests after 31 days.
+These defaults are test inputs only: production always reads its actual quotas.
+
+### Local validation, 2026-10-23
+
+The running account reported Plus with overridden limits of 1,000/hour and
+200,000/31 days. After the local update at 11:22:51 UTC, the already-populated
+installation cleared its roughly 15,950 pending Release rows by 11:25:05 UTC.
+The process counters recorded 13,589 identified inputs and 2,352 reused answers;
+Status showed zero remaining rows and distinct inputs, zero quota deferrals,
+and zero consecutive Identification failures at completion. One 30-second
+Identify timeout was retried by the ordinary scheduler and recovered. The 79
+HTTP attempts included one unmetered budget read. This is an observed warm-cache
+backlog drain, not a controlled before/after benchmark or a promise about an
+empty installation, another network, or another account's competing traffic.

@@ -19,10 +19,10 @@ public sealed class RepairBudgetTests
     [Fact]
     public void A_small_plan_still_spends_one_request_a_run()
     {
-        // ADR 0014 holds repair back below half the limit, so a plan of ten an
-        // hour with five left has nothing to give it. It asks anyway; whether
+        // ADR 0014 holds repair back below twenty percent, so a plan of ten an
+        // hour with two left has nothing to give it. It asks anyway; whether
         // the request goes out is the governor's, and a deferral is a Brake.
-        Assert.Equal(1, RepairBudget.RequestsFor(new PrdbBudget(10, 5, TimeSpan.Zero)));
+        Assert.Equal(1, RepairBudget.RequestsFor(new PrdbBudget(10, 2, TimeSpan.Zero)));
         Assert.Equal(1, RepairBudget.RequestsFor(new PrdbBudget(10, 0, TimeSpan.Zero)));
     }
 
@@ -43,11 +43,11 @@ public sealed class RepairBudgetTests
     /// repair may spend.
     /// </summary>
     [Fact]
-    public void What_is_spent_is_what_holds_usage_under_half_the_limit()
+    public void What_is_spent_is_what_holds_usage_above_the_reserve_with_a_bounded_turn()
     {
-        var budget = new PrdbBudget(Limit: 20, Remaining: 16, TimeSpan.Zero);
+        var budget = new PrdbBudget(Limit: 20, Remaining: 10, TimeSpan.Zero);
 
-        // Ten are reserved, six are above the line.
+        // Four are reserved, six are above the line.
         Assert.Equal(6, RepairBudget.RequestsFor(budget));
         Assert.Equal(6 * RepairBudget.ABatch, RepairBudget.VideosFor(budget));
     }

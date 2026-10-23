@@ -16,20 +16,20 @@
   "after": {
     "identifyRequestsPerDay": 396,
     "detailRequestsPerDay": 0,
-    "feedSent": 11060,
-    "feedWaited": 0,
+    "feedSent": 10845,
+    "feedWaited": 215,
     "backgroundSent": 13860,
-    "backgroundWaited": 580,
+    "backgroundWaited": 1127,
     "remainingBatches": 0,
-    "metered": 24920,
-    "readings": 2965,
+    "metered": 24705,
+    "readings": 2935,
     "peakHourly": 242,
-    "peakMonthly": 158405,
+    "peakMonthly": 162819,
     "externalRefused": 0,
     "syntheticHttpLatencyMilliseconds": 100,
-    "payloadBytes": 581515942,
-    "httpMilliseconds": 2788500,
-    "oldestMonthCohortsExpired": 139557
+    "payloadBytes": 581505663,
+    "httpMilliseconds": 2764000,
+    "oldestMonthCohortsExpired": 134845
   },
   "indexer": {
     "minimumQueries": 414,
@@ -40,7 +40,7 @@
     "optionalPages": 612,
     "requiredShortfall": 0
   },
-  "ordinaryMonthlyDemand": 9480,
-  "baselineMonthlyDemandIncludingCompetition": 203670,
-  "optimizedMonthlyDemandIncludingCompetition": 141360
+  "ordinaryMonthlyDemand": 9510,
+  "baselineMonthlyDemandIncludingCompetition": 203700,
+  "optimizedMonthlyDemandIncludingCompetition": 141390
 }

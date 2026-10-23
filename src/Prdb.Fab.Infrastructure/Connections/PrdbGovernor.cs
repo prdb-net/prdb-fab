@@ -22,6 +22,8 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
     private DateTimeOffset backgroundDebitedAt;
     private double backgroundCredits;
     private int? refusedWith;
+    private string? subscriptions;
+    private DateTimeOffset? identityReadAt;
     private string? keyDigest;
 
     // Serial transport admission makes counters and debit atomic across lanes.
@@ -43,6 +45,20 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
             spentUntil, nextBackgroundAt > time.GetUtcNow() ? nextBackgroundAt : null);
     }
 
+    public string? Subscriptions { get { lock (gate) return subscriptions; } }
+    public DateTimeOffset? IdentityReadAt { get { lock (gate) return identityReadAt; } }
+
+    public void ObserveIdentity(UserIdentityResponse identity)
+    {
+        lock (gate)
+        {
+            subscriptions = identity.ActiveSubscriptions is { Count: > 0 } active
+                ? string.Join(", ", active.Select(item => item.PackageTitle ?? item.PackageIdentifier ?? "Unnamed subscription"))
+                : "No active subscription reported; API-reported limits still apply";
+            identityReadAt = time.GetUtcNow();
+        }
+    }
+
     internal void UseKey(string key)
     {
         var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
@@ -54,6 +70,10 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
             spentUntil = null;
             refusedWith = null;
             refreshAfter = default;
+            nextBackgroundAt = backgroundDebitedAt = default;
+            backgroundCredits = 0;
+            subscriptions = null;
+            identityReadAt = null;
             // A different key still has to read its remote account counters.
         }
     }
@@ -80,10 +100,13 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
 
             foreach (var (budget, window) in new[] { (hourly!, "hourly"), (monthly!, "rolling monthly") })
             {
-                var reserve = window == "hourly" ? budget.ReserveFor(work)
-                    : Math.Min(budget.ReserveFor(work), (int)Math.Ceiling(budget.Limit * 0.10));
-                if (window != "hourly" && Background(work))
-                    reserve = Math.Max(reserve, Math.Min(budget.Limit, (int)Math.Ceiling(IdleProfile.RequestsInThirtyDays)));
+                var reserve = budget.ReserveFor(work);
+                if (Background(work))
+                {
+                    var recurring = IdleProfile.ReservedPerWindow(hourly!.Limit, monthly!.Limit);
+                    reserve += (int)Math.Ceiling(window == "hourly"
+                        ? recurring / (24 * IdleProfile.WindowDays) : recurring / IdleProfile.WindowDays);
+                }
                 if (budget.Remaining <= reserve)
                     return GovernorVerdict.Defer(WaitForReading(budget),
                         $"{budget.Remaining} of {budget.Limit} account requests remain in the {window} window; {work} preserves {reserve}");
@@ -102,12 +125,18 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
             if (work == PrdbWork.BudgetReading) return;
             if (Background(work) && hourly is { } hour && monthly is { } month)
             {
-                // Spend at most 80% of observed remaining monthly capacity over
-                // another rolling 30 days; no assumption about oldest-slot size.
-                var seconds = Math.Max(3600d / Math.Max(1, hour.Limit * .5),
-                    TimeSpan.FromDays(30).TotalSeconds / Math.Max(1, (month.Remaining - IdleProfile.RequestsInThirtyDays) * .8));
+                // Rate comes from the reported plan, not an ever-shrinking
+                // fraction of its remaining balance. Admission still checks the
+                // actual shared balance before every request.
+                var recurring = IdleProfile.ReservedPerWindow(hour.Limit, month.Limit);
+                var available = Math.Max(0, month.Remaining - month.ReserveFor(work) - recurring);
+                var seconds = Math.Max(3600d / Math.Max(1, hour.Limit * .8 - recurring / (24 * IdleProfile.WindowDays)),
+                    TimeSpan.FromDays(IdleProfile.WindowDays).TotalSeconds
+                    / Math.Max(1, month.Limit * .8 - recurring));
                 var now = time.GetUtcNow();
-                var capacity = Math.Clamp(hour.Limit / 100, 1, 20);
+                // A useful, bounded initial turn; subsequent credit is earned at
+                // the sustainable rate. Restart cannot bypass remote reserves.
+                var capacity = Math.Max(1, Math.Min(200, Math.Min(hour.Limit * .2, available * .02)));
                 backgroundCredits = backgroundDebitedAt == default ? capacity
                     : Math.Min(capacity, backgroundCredits + (now - backgroundDebitedAt).TotalSeconds / seconds);
                 backgroundCredits = Math.Max(0, backgroundCredits - 1);

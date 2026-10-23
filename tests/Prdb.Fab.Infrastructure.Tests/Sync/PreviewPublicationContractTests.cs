@@ -187,12 +187,10 @@ public sealed class PreviewPublicationContractTests
     /// uploads out of <c>Writes</c>.
     /// </summary>
     [Fact]
-    public async Task A_short_budget_defers_an_upload_while_a_write_still_goes()
+    public async Task A_short_budget_defers_an_upload_and_protects_the_account_reserve()
     {
-        // Thirty-eight per cent of the hour left: above the five a write is
-        // held back at, above the thirty-five the read half of this population
-        // is held back at, and below the forty an upload is.
-        var prdb = new FakePrdbApi { Hourly = (Limit: 100, Remaining: 38, ResetInSeconds: 60) }
+        // Twenty percent of the hour remains: the shared account reserve.
+        var prdb = new FakePrdbApi { Hourly = (Limit: 100, Remaining: 20, ResetInSeconds: 60) }
             .AnswersCreated(Submissions, Accepted());
 
         await using var database = await TestDatabase.CreateAsync(prdb: prdb);
@@ -205,9 +203,9 @@ public sealed class PreviewPublicationContractTests
 
         Assert.Equal(PrdbWork.Publications, deferred.Work);
 
-        // The small queued obligations are untouched, which is the point.
-        Assert.True(new PrdbBudget(100, 38, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Writes));
-        Assert.True(new PrdbBudget(100, 38, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Identification));
+        // Queued obligations also preserve the account reserve.
+        Assert.False(new PrdbBudget(100, 20, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Writes));
+        Assert.False(new PrdbBudget(100, 20, TimeSpan.FromSeconds(60)).Admits(PrdbWork.Identification));
     }
 
     private static Task<SubmitVideoUserImageResponse?> SubmitAsync(

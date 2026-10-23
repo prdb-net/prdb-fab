@@ -118,7 +118,9 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
         Assert.True(socket.Metered > initialMetered);
         if (monthLimit >= 200000 && hourLimit >= 1000 && otherDaily <= 4000)
         {
-            Assert.Equal(0, feedWaited);
+            // Other clients can spend the protected reserve. With 58% already
+            // used, transient feed waits before old cohorts expire are honest.
+            Assert.Equal(0, socket.Refused);
             Assert.Equal(0, dailyWorkRemaining);
         }
         if (days > 30) Assert.True(socket.MonthExpired > 0);
@@ -133,6 +135,59 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
         var demand = IndexerDemand(400, 98872);
         Assert.True(demand.RequiredShortfall > 0);
         Assert.Equal(0, demand.OptionalPages);
+    }
+
+    [Theory]
+    [InlineData(100, 1000)]
+    [InlineData(1000, 20000)]
+    [InlineData(10000, 100000)]
+    public async Task Published_plans_keep_polling_and_background_progress_across_31_day_expiry(int hourLimit, int monthLimit)
+    {
+        var socket = new RollingAccountSocket(hourLimit, monthLimit);
+        await using var database = await TestDatabase.CreateAsync(also: services =>
+            services.AddHttpClient(FabTransports.Prdb).ConfigurePrimaryHttpMessageHandler(() => socket));
+        socket.Time = database.Time;
+        await using var scope = database.Scope();
+        var gateway = scope.ServiceProvider.GetRequiredService<PrdbGateway>();
+        var start = database.Time.GetUtcNow();
+        var multiplier = IdleProfile.CadenceMultiplier(hourLimit, monthLimit);
+        // The production cadences, plus an interested preview feed and account check.
+        double[] intervals = [15, 30, 30, 60, 60, 60, 60, 360, 60, 60, 1440];
+        var due = intervals.Select(_ => start).ToArray();
+        var polls = new int[intervals.Length];
+        var background = 0;
+        var afterExpiry = 0;
+        for (var minute = 0; minute < 40 * 1440; minute += 5)
+        {
+            var now = database.Time.GetUtcNow();
+            for (var feed = 0; feed < intervals.Length; feed++)
+            {
+                if (due[feed] > now) continue;
+                try
+                {
+                    await gateway.AskAsync("synthetic", PrdbWork.UserFeeds,
+                        (client, token) => client.UserIdentity.GetAsync(cancellationToken: token), TestContext.Current.CancellationToken);
+                    polls[feed]++;
+                    due[feed] = now + TimeSpan.FromMinutes(intervals[feed] * multiplier);
+                }
+                catch (PrdbDeferredException) { }
+            }
+            try
+            {
+                await gateway.AskAsync("synthetic", PrdbWork.ReleaseIdentification,
+                    (client, token) => client.UserIdentity.GetAsync(cancellationToken: token), TestContext.Current.CancellationToken);
+                background++;
+                if (minute >= 32 * 1440) afterExpiry++;
+            }
+            catch (PrdbDeferredException) { }
+            database.Time.Advance(TimeSpan.FromMinutes(5));
+        }
+        Assert.All(polls, count => Assert.True(count >= 2));
+        Assert.True(background > 0);
+        Assert.True(afterExpiry > 0);
+        Assert.True(socket.PeakHourly <= hourLimit * .8);
+        Assert.True(socket.PeakMonthly <= monthLimit * .8);
+        Assert.True(socket.MonthExpired > 0);
     }
 
     private static IndexerReport IndexerDemand(int dailyBudget, int rows)
@@ -210,6 +265,7 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
         public int PeakMonthly { get; private set; }
         public int MonthExpired { get; private set; }
         public int ExternalRefused { get; private set; }
+        public int Refused { get; private set; }
         public void External(int count, DateTimeOffset at)
         {
             for (var i = 0; i < count; i++)
@@ -236,7 +292,7 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
             {
                 Readings++;
                 return Task.FromResult(Json(JsonSerializer.Serialize(new
-                    { hourly = Window(hour, hourlyLimit, TimeSpan.FromHours(1)), monthly = Window(month, monthlyLimit, TimeSpan.FromDays(30)) })));
+                    { hourly = Window(hour, hourlyLimit, TimeSpan.FromHours(1)), monthly = Window(month, monthlyLimit, TimeSpan.FromDays(31)) })));
             }
             var refused = hour.Count >= hourlyLimit || month.Count >= monthlyLimit;
             if (!refused) { hour.Enqueue(now); month.Enqueue(now); Metered++; }
@@ -245,10 +301,11 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
             var response = Json(request.RequestUri.AbsolutePath == "/videos/identify" ? identify : "{\"userHash\":\"synthetic-account\"}");
             if (refused)
             {
+                Refused++;
                 response.StatusCode = HttpStatusCode.TooManyRequests;
                 response.Headers.TryAddWithoutValidation("Retry-After", "60");
             }
-            foreach (var (suffix, queue, limit, size) in new[] { ("Hour", hour, hourlyLimit, TimeSpan.FromHours(1)), ("Month", month, monthlyLimit, TimeSpan.FromDays(30)) })
+            foreach (var (suffix, queue, limit, size) in new[] { ("Hour", hour, hourlyLimit, TimeSpan.FromHours(1)), ("Month", month, monthlyLimit, TimeSpan.FromDays(31)) })
             {
                 response.Headers.TryAddWithoutValidation("X-RateLimit-Limit-" + suffix, limit.ToString());
                 response.Headers.TryAddWithoutValidation("X-RateLimit-Remaining-" + suffix, Math.Max(0, limit - queue.Count).ToString());
@@ -259,7 +316,7 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
         private void Expire(DateTimeOffset now)
         {
             while (hour.TryPeek(out var at) && at <= now.AddHours(-1)) hour.Dequeue();
-            while (month.TryPeek(out var at) && at <= now.AddDays(-30)) { month.Dequeue(); MonthExpired++; }
+            while (month.TryPeek(out var at) && at <= now.AddDays(-31)) { month.Dequeue(); MonthExpired++; }
         }
         private HttpResponseMessage Json(string body)
         {

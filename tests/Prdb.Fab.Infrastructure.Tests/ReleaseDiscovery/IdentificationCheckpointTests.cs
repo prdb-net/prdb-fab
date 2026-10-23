@@ -19,7 +19,7 @@ public sealed partial class IdentificationCutTests
     {
         var socket = new FakePrdbApi().Answers("/videos/identify", IdentifyAnswer());
         if (!quota) socket.IsUnreachable("/videos/batch");
-        if (quota) socket.Hourly = (1000, 500, 60);
+        if (quota) socket.Hourly = (1000, 200, 60);
         await using var database = await TestDatabase.CreateAsync(prdb: socket);
         await SeedIndexerAsync(database, IndexerId);
         await SetPrdbKeyAsync(database);

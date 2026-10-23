@@ -47,7 +47,7 @@ public sealed class ThePlanTests
             .Cast<IRoutine>()
             .ToList();
 
-        Assert.Equal(9, onAClock.Count);
+        Assert.Equal(10, onAClock.Count);
 
         var anHour = onAClock.Sum(routine => 1 / routine.Cadence.TotalHours);
 
@@ -77,7 +77,7 @@ public sealed class ThePlanTests
 
         var row = await RowAsync(database);
 
-        Assert.Equal(at + TimeSpan.FromHours(24), row.DueAt);
+        Assert.Equal(at + IdleProfile.Adapt(TimeSpan.FromHours(6), 6, 200000), row.DueAt);
         Assert.Equal(1, prdb.Requests);
     }
 

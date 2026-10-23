@@ -289,8 +289,8 @@ public sealed class RepairTests
         Assert.True(budget.Admits(PrdbWork.Actors));
         Assert.True(budget.Admits(PrdbWork.Sites));
 
-        // Five requests above the half line, which is what the next run spends.
-        Assert.Equal(5, RepairBudget.RequestsFor(budget));
+        // Eight requests above the reserve; the Governor also protects feed demand.
+        Assert.Equal(8, RepairBudget.RequestsFor(budget));
     }
 
     /// <summary>
