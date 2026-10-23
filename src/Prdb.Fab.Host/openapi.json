@@ -3860,6 +3860,7 @@
       },
       "AutomationDecisionReason": {
         "enum": [
+          "CollectionPreparation",
           "NotWanted",
           "ConfidenceGate",
           "Size",

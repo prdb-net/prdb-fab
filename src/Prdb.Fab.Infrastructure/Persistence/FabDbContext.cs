@@ -1081,6 +1081,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
         builder.Entity<CollectionWalkRow>(entity =>
         {
             entity.ToTable("collection_walk");
+            entity.Property(row => row.LastWriteAt).HasConversion(UtcTimestamp);
             entity.HasKey(row => row.Path);
             entity.Declares(AccountClass.AccountFree);
         });

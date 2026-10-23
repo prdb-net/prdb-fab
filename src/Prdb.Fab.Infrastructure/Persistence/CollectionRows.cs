@@ -24,6 +24,8 @@ public sealed class CollectionWalkRow
     public Guid RootId { get; set; }
     public string? AfterName { get; set; }
     public bool Completed { get; set; }
+    public bool Verified { get; set; }
+    public DateTimeOffset? LastWriteAt { get; set; }
 }
 
 /// <summary>Scan provenance and approval for the Arriving File with the same id.</summary>

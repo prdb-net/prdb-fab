@@ -942,8 +942,14 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Completed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("LastWriteAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid>("RootId")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("Verified")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Path");
 

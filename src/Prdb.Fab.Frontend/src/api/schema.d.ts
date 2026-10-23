@@ -3998,7 +3998,7 @@ export interface components {
             detail: string;
         };
         /** @enum {unknown} */
-        AutomationDecisionReason: "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
+        AutomationDecisionReason: "CollectionPreparation" | "NotWanted" | "ConfidenceGate" | "Size" | "IndexerNotAllowed" | "HeldVideo" | "OpenReviewQueue" | "AutomaticDownloadCap" | "RetryBudgetSpent" | "NoReleasesLeft" | "DownloadInFlight" | "SiteIgnored" | "VideoUnavailable" | null;
         AutomationIndexer: {
             /** Format: uuid */
             id: string;

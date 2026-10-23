@@ -20,6 +20,10 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
     {
         if (releases.Count == 0) return new Dictionary<long, AutomaticReleaseEligibility>();
 
+        if (await context.CollectionPreparations.AnyAsync(row => row.Phase != "Ready", cancellationToken))
+            return releases.ToDictionary(release => release.Id,
+                _ => AutomaticReleaseEligibility.Waiting(AutomationDecisionReason.CollectionPreparation));
+
         var localVideoId = await context.CatalogueVideos
             .Where(row => row.PrdbId == videoId)
             .Select(row => (long?)row.Id)
