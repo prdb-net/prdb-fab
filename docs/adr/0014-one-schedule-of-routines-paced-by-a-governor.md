@@ -289,7 +289,8 @@ identification is claimed merely because a wait is deliberate.
 
 The hourly Wanted target is superseded by thirty minutes for Basic/Plus,
 fifteen minutes for Premium and five minutes for Ultra. Stable package
-identifiers from `/user-identity` select this target, never numeric quotas;
+identifiers from `/user-identity` select this target, never numeric quotas.
+The part before a billing suffix such as `-monthly` or `-yearly` names the tier;
 unknown or missing packages use thirty minutes. When several packages are
 active, the fastest target wins. Key verification, the daily account routine
 and its startup refresh update the selection; a changed key clears it.
