@@ -83,7 +83,7 @@ public sealed class IdentificationSettings(FabDbContext context)
 
         foreach (var arrival in waiting)
         {
-            var accepted = afterAdmissions.Contains(arrival.Confidence!.Value);
+            var accepted = AfterDownloadGate.Admits(arrival.VideoId, arrival.Confidence, arrival.MatchedBy, afterAdmissions);
             arrival.State = accepted
                 ? ArrivingFileState.AwaitingFiling
                 : ArrivingFileState.AwaitingIdentification;

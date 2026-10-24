@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 
+using Prdb.Fab.Core.Automation;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 
@@ -57,11 +58,25 @@ public sealed class FilingRulesTests
         var exact = AfterDownloadGate.Admissions(AfterDownloadGateChoice.ExactOnly);
         var ordinary = AfterDownloadGate.Admissions(AfterDownloadGateChoice.ExactAndStrong);
 
-        Assert.True(AfterDownloadGate.Admits(video, IdentificationConfidence.Exact, exact));
-        Assert.False(AfterDownloadGate.Admits(video, IdentificationConfidence.Strong, exact));
-        Assert.True(AfterDownloadGate.Admits(video, IdentificationConfidence.Strong, ordinary));
-        Assert.False(AfterDownloadGate.Admits(video, IdentificationConfidence.Ambiguous, ordinary));
-        Assert.False(AfterDownloadGate.Admits(null, IdentificationConfidence.Exact, ordinary));
+        Assert.True(AfterDownloadGate.Admits(video, IdentificationConfidence.Exact, IdentificationRung.OsHash, exact));
+        Assert.False(AfterDownloadGate.Admits(video, IdentificationConfidence.Strong, IdentificationRung.OsHash, exact));
+        Assert.True(AfterDownloadGate.Admits(video, IdentificationConfidence.Strong, IdentificationRung.OsHash, ordinary));
+        Assert.False(AfterDownloadGate.Admits(video, IdentificationConfidence.Ambiguous, IdentificationRung.OsHash, ordinary));
+        Assert.False(AfterDownloadGate.Admits(null, IdentificationConfidence.Exact, IdentificationRung.OsHash, ordinary));
+    }
+
+    [Fact]
+    public void A_rung_prdb_added_later_is_named_but_never_acted_on()
+    {
+        var video = Guid.NewGuid();
+        var ordinary = AfterDownloadGate.Admissions(AfterDownloadGateChoice.ExactAndStrong);
+
+        Assert.True(AfterDownloadGate.Admits(video, IdentificationConfidence.Exact, IdentificationRung.Md5, ordinary));
+        Assert.False(AfterDownloadGate.Admits(video, IdentificationConfidence.Exact, IdentificationRung.Unrecognised, ordinary));
+
+        var before = BeforeDownloadGate.Admissions(BeforeDownloadGateChoice.ThroughProbable);
+        Assert.True(BeforeDownloadGate.Admits(video, IdentificationConfidence.Probable, IdentificationRung.SiteDateTitle, before));
+        Assert.False(BeforeDownloadGate.Admits(video, IdentificationConfidence.Probable, IdentificationRung.Unrecognised, before));
     }
 
     [Fact]

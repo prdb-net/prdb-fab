@@ -346,7 +346,6 @@ public sealed class ReleaseIdentificationRoutine(
     {
         if (answer.VideoId is null) return;
         _ = Confidence(answer.Confidence);
-        _ = Rung(answer.MatchedBy);
         if (answer.Video?.Id is { } inlineId && inlineId != answer.VideoId)
             throw new InvalidOperationException("prdb returned inline details for a different Video.");
     }
@@ -495,6 +494,8 @@ public sealed class ReleaseIdentificationRoutine(
         2 => IdentificationRung.Filename,
         3 => IdentificationRung.ReleaseName,
         4 => IdentificationRung.Site,
-        _ => throw new InvalidOperationException("prdb returned an unknown Identification rung."),
+        5 => IdentificationRung.Md5,
+        6 => IdentificationRung.SiteDateTitle,
+        _ => IdentificationRung.Unrecognised,
     };
 }

@@ -21,6 +21,12 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ### Fixed
 
+- prdb answers matched by its `Md5` or `SiteDateTitle` rung no longer stop
+  Identification with an error. A fresh scene-group Release that prdb names
+  from Site, release date and title at Probable Confidence passes the
+  default BeforeDownload Gate. A rung prdb adds later is shown as
+  `Unrecognised` with its Video and Confidence, and neither gate acts on it
+  until the tool knows the rung.
 - Completed Downloads whose SABnzbd storage path was missing are queried again
   by their job identity, so collecting resumes when SABnzbd supplies the path.
   Missing or failed history reads do not reopen or fail a completed Download.
