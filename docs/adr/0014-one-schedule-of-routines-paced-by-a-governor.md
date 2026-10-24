@@ -307,3 +307,18 @@ admission, the 20% reserve or Retry-After. In particular, a 1,000-request monthl
 Plus allowance cannot sustain even the 1,488 Wanted polls implied by thirty
 minutes across 31 days, before any other work. Backlog continuations still
 resume after ten seconds through the governed scheduler.
+
+## Amendment: compact browse Sync controls
+
+Wanted, Actors and Sites offer a manual Sync through the same Run now path.
+Actors includes its Favourite feed and uses the bootstrap routine while it
+exists; Sites includes Favourites and Ignored Sites. Reading their indicators
+only reads local rows. Completion refreshes the affected browse queries.
+
+Each change-feed cursor records whether the last valid page had more work and
+when a complete response was last applied. A nonempty final page can prove
+completion even though its cursor still carries a UUID. Partial or invalid
+responses never manufacture freshness. The compact green check requires all
+feeds behind the surface to be complete, within their scheduled cadence, and
+free of pending requests, failures and active deferrals. Waiting and failure
+states retain the time of the last complete sync and link to Status.

@@ -1339,6 +1339,63 @@
         }
       }
     },
+    "/api/catalogue/sync": {
+      "get": {
+        "tags": [
+          "Catalogue"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogueSyncState"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogue/{surface}/sync": {
+      "post": {
+        "tags": [
+          "Catalogue"
+        ],
+        "parameters": [
+          {
+            "name": "surface",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunNowVerdict"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/catalogue/whats-new": {
       "get": {
         "tags": [
@@ -4783,6 +4840,53 @@
           "Favourites",
           "All"
         ]
+      },
+      "CatalogueSyncOutcome": {
+        "enum": [
+          "Pending",
+          "Scheduled",
+          "Current",
+          "Deferred",
+          "Failed"
+        ]
+      },
+      "CatalogueSyncState": {
+        "required": [
+          "surface",
+          "outcome",
+          "lastSyncedAt",
+          "detail",
+          "retryAt"
+        ],
+        "type": "object",
+        "properties": {
+          "surface": {
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CatalogueSyncOutcome"
+          },
+          "lastSyncedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retryAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
       },
       "CatalogueVideoFilter": {
         "enum": [

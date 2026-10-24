@@ -1,6 +1,8 @@
 using Prdb.Fab.Core.Catalogue;
 using Prdb.Fab.Infrastructure.Sync;
 using Prdb.Fab.Infrastructure.Acquisition;
+using Prdb.Fab.Infrastructure.Status;
+using Prdb.Fab.Core.Scheduling;
 
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -21,6 +23,19 @@ public static class CatalogueEndpoints
     public static void MapCatalogue(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/catalogue").WithTags("Catalogue");
+
+        group.MapGet("/sync", async (CatalogueSync sync, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await sync.ReadAsync(cancellationToken)));
+        group.MapPost("/{surface}/sync", async Task<Results<Ok<IReadOnlyList<RunNowVerdict>>, NotFound>> (
+            string surface, CatalogueSync sync, StatusService status, CancellationToken cancellationToken) =>
+        {
+            var names = await sync.RoutineNamesAsync(surface, cancellationToken);
+            if (names.Count == 0) return TypedResults.NotFound();
+            var verdicts = new List<RunNowVerdict>();
+            foreach (var name in names)
+                verdicts.Add(await status.RunNowAsync(new StatusRunNowRequest(name, null), cancellationToken));
+            return TypedResults.Ok<IReadOnlyList<RunNowVerdict>>(verdicts);
+        });
 
         group.MapGet("/whats-new", async (
             CatalogueBrowse browse,
