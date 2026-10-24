@@ -18,7 +18,7 @@ public static class IdleProfile
     public const double RecurringShare = 0.40;
 
     public static TimeSpan WantedCadenceFor(IEnumerable<string?> packages) =>
-        packages.Select(package => package?.ToLowerInvariant() switch
+        packages.Select(package => package?.Split('-', 2)[0].ToLowerInvariant() switch
         {
             "ultra" => TimeSpan.FromMinutes(5),
             "premium" => TimeSpan.FromMinutes(15),

@@ -31,6 +31,12 @@ public sealed class ThePlanTests
     [InlineData("premium", 15)]
     [InlineData("ultra", 5)]
     [InlineData("unknown", 30)]
+    [InlineData("plus-monthly", 30)]
+    [InlineData("plus-yearly", 30)]
+    [InlineData("premium-monthly", 15)]
+    [InlineData("premium-yearly", 15)]
+    [InlineData("ultra-monthly", 5)]
+    [InlineData("ultra-yearly", 5)]
     public async Task The_package_sets_Wanted_cadence_and_the_full_idle_profile(string package, int minutes)
     {
         var prdb = new FakePrdb { Packages = [package], Hourly = (10000, 10000, 600) };
