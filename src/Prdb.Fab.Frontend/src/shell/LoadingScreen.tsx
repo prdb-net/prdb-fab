@@ -1,10 +1,11 @@
+import { BrandLogo } from '../ui/BrandLogo.tsx'
 import styles from './LoadingScreen.module.css'
 
 export function AppLoading() {
   return (
     <main className="initialLoading" aria-busy="true">
       <div className="initialLoadingBrand" aria-hidden="true">
-        <span className="initialLoadingMark">pf</span>
+        <BrandLogo />
         <strong>prdb-fab</strong>
       </div>
       <p className="initialLoadingStatus" role="status">

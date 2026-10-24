@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router'
 
 import { readAccessState, readReviewQueueCount } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
+import { BrandLogo } from '../ui/BrandLogo.tsx'
 import { useSfwMode } from './useSfwMode.ts'
 import styles from './Chrome.module.css'
 
@@ -269,7 +270,7 @@ function SfwButton({ enabled, onToggle }: { enabled: boolean; onToggle: () => vo
 function Brand() {
   return (
     <Link className={styles.brand} to="/">
-      <span className={styles.brandMark}>pf</span>
+      <BrandLogo />
       <span>prdb-fab</span>
     </Link>
   )

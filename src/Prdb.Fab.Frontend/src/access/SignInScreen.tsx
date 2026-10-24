@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { signIn } from '../api/client.ts'
+import { BrandLogo } from '../ui/BrandLogo.tsx'
 import { accessStateKey } from './state.ts'
 import styles from './Access.module.css'
 
@@ -48,7 +49,7 @@ export function SignInScreen() {
 
   return (
     <main className={`${styles.screen} ${styles.signInScreen}`}>
-      <span className={styles.brandMark} aria-hidden="true">pf</span>
+      <BrandLogo className={styles.brandMark} />
       <h1>prdb-fab</h1>
       <p className={styles.lede}>Your next find. Your own Library.</p>
 

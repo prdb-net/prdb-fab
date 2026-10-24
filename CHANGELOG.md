@@ -19,6 +19,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Changed
+
+- prdb-fab has a logo. It replaces the "pf" mark in the header, on the sign-in
+  page and while the app loads, and the browser tab shows it as the favicon.
+
 ### Fixed
 
 - prdb answers matched by its `Md5` or `SiteDateTitle` rung no longer stop

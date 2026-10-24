@@ -147,5 +147,5 @@
 .signInScreen .lede { margin-top: 0; margin-bottom: 1.25rem; }
 .signInScreen .field { background: var(--surface); min-height: 48px; }
 .signInScreen .button { min-height: 48px; background: var(--accent); color: var(--surface); font-weight: 700; }
-.brandMark { display: inline-flex; width: 48px; height: 48px; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 800; border: 1px solid var(--accent); border-radius: 13px; color: var(--accent); background: var(--accent-soft); }
+.screen .brandMark { width: 80px; height: 80px; padding: 10px; border-radius: 18px; }
 @media (max-width: 480px) { .signInScreen { margin: 2rem 1rem; padding: 1.5rem; } }
