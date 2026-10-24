@@ -42,7 +42,7 @@ export function SabnzbdForm({
   const [url, setUrl] = useState(stored?.url ?? '')
   const [apiKey, setApiKey] = useState('')
   const [category, setCategory] = useState('')
-  const [downloadDirectory, setDownloadDirectory] = useState(stored?.downloadDirectory ?? '')
+  const [downloadDirectoryOverride, setDownloadDirectory] = useState<string | null>(stored?.downloadDirectory ?? null)
   const [listing, setListing] = useState<SabnzbdCategoriesVerdict | null>(null)
   const [verdict, setVerdict] = useState<SabnzbdConnectionVerdict | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
@@ -80,6 +80,11 @@ export function SabnzbdForm({
     onError: () => setFailure('Could not load SABnzbd categories. Check the connection details and try again.'),
   })
 
+  const chosen = listing?.categories.find((candidate) => candidate.name === category)
+  // Follow the selected category's path until a person supplies a mapping.
+  // Stored mappings and edits, including clearing the field, stay untouched.
+  const downloadDirectory = downloadDirectoryOverride ?? chosen?.completedRoot ?? ''
+
   const save = useMutation({
     mutationFn: () => saveSabnzbd({ url, apiKey, category, downloadDirectory }),
     onSuccess: async (answer) => {
@@ -93,7 +98,6 @@ export function SabnzbdForm({
     onError: () => setFailure('Could not confirm the SABnzbd connection was saved. Check your connection to fab and try again.'),
   })
 
-  const chosen = listing?.categories.find((candidate) => candidate.name === category)
   const answered = listing?.outcome === 'Saved'
   const saved = verdict?.outcome === 'Saved'
   const busy = ask.isPending || save.isPending
@@ -204,7 +208,7 @@ export function SabnzbdForm({
 
           <Field
             label="Completed-download path in this container"
-            hint="Use the same completed-download folder as seen inside this container."
+            hint="Change this only if this container sees the folder at a different path."
             help="This path can differ from the path SABnzbd sees. It is checked before saving to ensure completed Downloads can be found."
           >
             {(id) => (

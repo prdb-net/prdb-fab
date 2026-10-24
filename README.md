@@ -87,8 +87,9 @@ Before starting, adjust these values for your NAS:
 - Set `PUID` and `PGID` to the user and group that can write to your media folders.
 - Keep `./data` on the host's local storage; the database must not live on an SMB
   or NFS share.
-- Replace `/srv/media` with your media folder. Use separate download and library
+- Replace `/srv/media` with your media folder. Create separate download and library
   directories inside it, for example `/media/downloads` and `/media/library`.
+  Onboarding suggests `/media/library`; change it if your Library is mounted elsewhere.
   Mount downloads at the same container path in SABnzbd and prdb-fab where possible.
 
 The [Docker guide](docs/running-in-docker.md) covers permissions, NAS shares,
