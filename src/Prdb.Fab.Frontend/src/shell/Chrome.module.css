@@ -9,7 +9,7 @@
 
 /* Include background-based Sprite Sheets as well as every artwork image.
    No hover reveal or filter transition: SFW takes effect immediately. */
-.sfw img,
+.sfw img:not([data-brand-logo]),
 .sfw [data-sfw-image] {
   filter: blur(24px);
   clip-path: inset(0);
@@ -78,20 +78,6 @@
   font-weight: 700;
   gap: 0.65rem;
   text-decoration: none;
-}
-
-.brandMark {
-  align-items: center;
-  background: var(--accent);
-  border-radius: var(--radius);
-  color: #09131d;
-  display: inline-flex;
-  font-size: 0.72rem;
-  font-weight: 800;
-  height: 1.8rem;
-  justify-content: center;
-  letter-spacing: -0.03em;
-  width: 1.8rem;
 }
 
 .navGroup {

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="440" viewBox="-28 0 440 440" role="img" aria-labelledby="logo-title logo-description">
+  <title id="logo-title">prdb-fab</title>
+  <desc id="logo-description">A coral lowercase f with a downward arrow above an aubergine receiving tray.</desc>
+  <rect x="-28" width="440" height="440" rx="80" fill="#F6F1E8"/>
+  <g fill="#FF796C">
+    <path id="upper-hook" d="M102 155Q98 155 98 151C98 76 165 16 240 16H346Q350 16 350 20V71C350 91 339 102 319 102H254C225 102 198 123 198 151Q198 155 194 155Z"/>
+    <path id="crossbar-and-arrow" d="M94 169H287Q292 169 292 174V250Q292 256 287 256H220Q216 256 216 260V271Q216 276 221 276H237C249 276 254 286 246 295L193 347Q184 356 175 347L123 295C115 287 120 276 132 276H148Q152 276 152 272V260Q152 256 148 256H96C65 256 43 267 21 286Q16 290 16 284V245C16 203 53 169 94 169Z"/>
+  </g>
+  <path id="receiving-tray" fill="#493750" d="M30 308H80Q93 308 93 321V362Q93 372 103 372H282Q292 372 292 362V321Q292 308 305 308H354Q368 308 368 322V373C368 405 348 425 318 425H66C36 425 16 404 16 374V322Q16 308 30 308Z"/>
+</svg>
