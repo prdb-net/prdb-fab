@@ -20,14 +20,14 @@ export function LibraryRootForm({
 }: {
   submitLabel?: string
   /**
-   * What the field opens with. Empty in onboarding, where there is no answer
-   * yet; the root in force in the settings, where there is one and a field that
-   * does not name it is a field offering to replace something unnamed.
+   * The configured root in settings. Without one, suggest the separate Library
+   * directory from the Docker guide; the suggestion still needs verification
+   * and saving, so initialPath remains the baseline for dirty tracking.
    */
   initialPath?: string
   onSaved?: () => void
 }) {
-  const [path, setPath] = useState(initialPath)
+  const [path, setPath] = useState(initialPath || '/media/library')
   const [verdict, setVerdict] = useState<LibraryRootVerdict | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   const queries = useQueryClient()
@@ -67,7 +67,7 @@ export function LibraryRootForm({
     >
       <Field
         label="Library root"
-        hint="Use the path inside this container."
+        hint="The Docker setup uses /media/library. Change it if your Library is mounted elsewhere."
         help="The directory must be writable by the user the container runs as. Use the mount path for your Library."
       >
         {(id) => (
@@ -75,7 +75,7 @@ export function LibraryRootForm({
             id={id}
             className={formStyles.field}
             type="text"
-            placeholder="/library"
+            placeholder="/media/library"
             autoComplete="off"
             spellCheck={false}
             value={path}
