@@ -1,3 +1,4 @@
+import { SyncControl } from './SyncControl.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
@@ -57,7 +58,7 @@ export function DirectoryView({
 }) {
   return (
     <main className={styles.screen}>
-      <Heading title={title} total={total} noun={noun} />
+      <Heading title={title} total={total} noun={noun} syncSurface={noun === 'Actor' ? 'actors' : 'sites'} />
       <div className={styles.browseFilters}>
         <nav className={styles.scope} aria-label={`${title} scope`}>
           <button type="button" aria-pressed={scope === 'Favourites'} onClick={() => setScope('Favourites')}>
@@ -235,7 +236,7 @@ function DirectoryIcon({ name }: { name: 'library' | 'releases' }) {
   )
 }
 
-function Heading({ title, total, noun }: { title: string; total: number; noun: string }) {
+function Heading({ title, total, noun, syncSurface }: { title: string; total: number; noun: string; syncSurface?: 'actors' | 'sites' }) {
   return (
     <div className={styles.heading}>
       <h1>{title}</h1>
@@ -244,6 +245,7 @@ function Heading({ title, total, noun }: { title: string; total: number; noun: s
           {total} {noun}{total === 1 ? '' : 's'}
         </span>
       )}
+      {syncSurface && <SyncControl surface={syncSurface} />}
     </div>
   )
 }

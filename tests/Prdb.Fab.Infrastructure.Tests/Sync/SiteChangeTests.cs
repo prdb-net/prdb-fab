@@ -26,12 +26,18 @@ public sealed class SiteChangeTests
         {
             var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
             Assert.False(await context.FeedCursors.AnyAsync(c => c.Feed == Feed.SiteChangesBaseline, Token));
+            var progress = await context.FeedCursors.SingleAsync(c => c.Feed == Feed.SiteChanges, Token);
+            Assert.True(progress.HasMore);
+            Assert.Null(progress.LastSyncedAt);
             Assert.True(await context.Routines.AnyAsync(r => r.Name == SiteListRoutine.RoutineName, Token));
         }
         await RunAsync(db);
         await using var after = db.Scope();
         var rows = after.ServiceProvider.GetRequiredService<FabDbContext>();
         Assert.True(await rows.FeedCursors.AnyAsync(c => c.Feed == Feed.SiteChangesBaseline, Token));
+        var complete = await rows.FeedCursors.SingleAsync(c => c.Feed == Feed.SiteChanges, Token);
+        Assert.False(complete.HasMore);
+        Assert.Equal(db.Time.GetUtcNow(), complete.LastSyncedAt);
         Assert.False(await rows.Routines.AnyAsync(r => r.Name == SiteListRoutine.RoutineName, Token));
         Assert.Equal("Corrected", (await rows.CatalogueSites.SingleAsync(Token)).Title);
         Assert.Contains(Site.ToString(), api.AskedFor("/sites/changes")[1].Query);

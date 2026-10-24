@@ -284,3 +284,18 @@ polling multiplier. Adapting to a small plan is a Brake rather than a Gap. A
 pending Release Identification backlog is also a Brake with its visible count;
 failed routines still independently raise Gaps. No complete coverage or completed
 identification is claimed merely because a wait is deliberate.
+
+## Amendment: compact browse Sync controls
+
+Wanted, Actors and Sites offer a manual Sync through the same Run now path.
+Actors includes its Favourite feed and uses the bootstrap routine while it
+exists; Sites includes Favourites and Ignored Sites. Reading their indicators
+only reads local rows. Completion refreshes the affected browse queries.
+
+Each change-feed cursor records whether the last valid page had more work and
+when a complete response was last applied. A nonempty final page can prove
+completion even though its cursor still carries a UUID. Partial or invalid
+responses never manufacture freshness. The compact green check requires all
+feeds behind the surface to be complete, within their scheduled cadence, and
+free of pending requests, failures and active deferrals. Waiting and failure
+states retain the time of the last complete sync and link to Status.

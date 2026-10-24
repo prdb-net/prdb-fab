@@ -104,7 +104,7 @@ public sealed class VideoFeed(FabDbContext context, PrdbGateway prdb, CatalogueR
         }
         if (checkpoint)
         {
-            await new FeedCursors(Context).SaveAsync(Feed.VideoChanges, next!, cancellationToken);
+            await new FeedCursors(Context, time).SaveAsync(Feed.VideoChanges, next!, cancellationToken);
             if (!page.HasMore!.Value && page.ServerTimeUtc is { } caughtUp && caughtUp >= from.At)
             {
                 await new VideoChangeCoverage(Context, time).CaughtUpAsync(caughtUp, cancellationToken);

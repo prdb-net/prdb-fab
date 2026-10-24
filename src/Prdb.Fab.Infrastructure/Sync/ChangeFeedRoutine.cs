@@ -129,6 +129,8 @@ public abstract class ChangeFeedRoutine(
 
         var next = takingTheClock ? StartingNow(page) : page.Next();
 
+        await Cursors.SavePageAsync(Source.Feed, next, page.HasMore, cancellationToken);
+
         if (next is null)
         {
             // prdb answered without anything a position can be built from. The
@@ -139,8 +141,6 @@ public abstract class ChangeFeedRoutine(
 
             return RunResult.Handled(page.Applied);
         }
-
-        await Cursors.SaveAsync(Source.Feed, next, cancellationToken);
 
         Logger.LogDebug(
             "The {Feed} feed applied {Count} change(s) and stands at {Position}.",
