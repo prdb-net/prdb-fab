@@ -89,7 +89,7 @@ public sealed class AutomaticEligibility(FabDbContext context, IgnoredSites igno
                 result[release.Id] = AutomaticReleaseEligibility.Waiting(AutomationDecisionReason.OpenReviewQueue);
                 continue;
             }
-            if (!BeforeDownloadGate.Admits(videoId, release.Confidence, admitted))
+            if (!BeforeDownloadGate.Admits(videoId, release.Confidence, release.MatchedBy, admitted))
             {
                 result[release.Id] = AutomaticReleaseEligibility.Refused(AutomationDecisionReason.ConfidenceGate);
                 continue;

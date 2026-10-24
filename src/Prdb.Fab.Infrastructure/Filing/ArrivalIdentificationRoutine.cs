@@ -174,9 +174,7 @@ public sealed class ArrivalIdentificationRoutine(
             await catalogue.SiteAsync(siteId, answer.Site.Title, network: null, cancellationToken);
         }
 
-        var mayFile = arrival.VideoId is not null
-            && arrival.Confidence is { } confidence
-            && admitted.Contains(confidence);
+        var mayFile = AfterDownloadGate.Admits(arrival.VideoId, arrival.Confidence, arrival.MatchedBy, admitted);
         arrival.State = mayFile
             ? ArrivingFileState.AwaitingFiling
             : ArrivingFileState.AwaitingIdentification;
@@ -226,6 +224,8 @@ public sealed class ArrivalIdentificationRoutine(
         2 => IdentificationRung.Filename,
         3 => IdentificationRung.ReleaseName,
         4 => IdentificationRung.Site,
-        _ => throw new InvalidOperationException("prdb returned an unknown Identification rung."),
+        5 => IdentificationRung.Md5,
+        6 => IdentificationRung.SiteDateTitle,
+        _ => IdentificationRung.Unrecognised,
     };
 }

@@ -5943,7 +5943,10 @@
           "Filename",
           "ReleaseName",
           "Site",
+          "Md5",
+          "SiteDateTitle",
           "PreviewHash",
+          "Unrecognised",
           null
         ]
       },
@@ -8001,6 +8004,16 @@
               },
               {
                 "$ref": "#/components/schemas/ReleaseExclusion"
+              }
+            ]
+          },
+          "matchedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IdentificationRung"
               }
             ]
           }

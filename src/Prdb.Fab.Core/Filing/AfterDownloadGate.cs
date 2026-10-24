@@ -18,8 +18,12 @@ public static class AfterDownloadGate
     public static bool Admits(
         Guid? videoId,
         IdentificationConfidence? confidence,
+        IdentificationRung? matchedBy,
         IReadOnlySet<IdentificationConfidence> admissions) =>
-        videoId is not null && confidence is { } named && admissions.Contains(named);
+        videoId is not null
+        && matchedBy is not IdentificationRung.Unrecognised
+        && confidence is { } named
+        && admissions.Contains(named);
 
     private static readonly HashSet<IdentificationConfidence> ExactOnly =
         [IdentificationConfidence.Exact];

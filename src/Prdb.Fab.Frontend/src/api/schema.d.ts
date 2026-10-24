@@ -4711,7 +4711,7 @@ export interface components {
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
         };
         /** @enum {unknown} */
-        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | "PreviewHash" | null;
+        IdentificationRung: "OsHash" | "PHash" | "Filename" | "ReleaseName" | "Site" | "Md5" | "SiteDateTitle" | "PreviewHash" | "Unrecognised" | null;
         IdentificationSettingsRequest: {
             beforeDownload: components["schemas"]["BeforeDownloadGateChoice"];
             afterDownload: components["schemas"]["AfterDownloadGateChoice"];
@@ -5209,6 +5209,7 @@ export interface components {
             /** Format: int32 */
             position: null | number | string;
             exclusion: null | components["schemas"]["ReleaseExclusion"];
+            matchedBy?: null | components["schemas"]["IdentificationRung"];
         };
         ReleaseContext: {
             kind: components["schemas"]["ReleaseContextKind"];

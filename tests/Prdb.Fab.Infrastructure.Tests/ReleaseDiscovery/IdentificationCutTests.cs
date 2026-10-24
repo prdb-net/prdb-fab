@@ -234,6 +234,50 @@ public sealed partial class IdentificationCutTests
     }
 
     [Fact]
+    public async Task A_site_date_title_answer_is_matched_and_a_rung_added_later_is_kept_without_failing()
+    {
+        var prdb = new FakePrdbApi()
+            .Answers("/videos/identify", $$"""
+                {
+                  "results": [
+                    { "ref": "1", "videoId": "{{MatchedVideo}}", "confidence": 2, "matchedBy": 6, "candidates": [] },
+                    { "ref": "2", "videoId": "{{FirstCandidate}}", "confidence": 4, "matchedBy": 42, "candidates": [] }
+                  ]
+                }
+                """)
+            .Answers("/videos/batch", VideoDetailsAnswer());
+        await using var database = await TestDatabase.CreateAsync(prdb: prdb);
+        await SeedIndexerAsync(database, IndexerId);
+        await SetPrdbKeyAsync(database);
+
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.Releases.AddRange(
+                Release("site-date-title", "OnlyFans.26.09.29.A.Title.XXX.1080p.MP4-P2P", IdentificationState.Awaiting, database.Time.GetUtcNow()),
+                Release("later-rung", "Later.Rung.mkv", IdentificationState.Awaiting, database.Time.GetUtcNow()));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var scope = database.Scope())
+        {
+            var result = await scope.ServiceProvider.GetRequiredService<ReleaseIdentificationRoutine>()
+                .RunAsync(null, TestContext.Current.CancellationToken);
+            Assert.Equal(2, result.ItemsHandled);
+        }
+
+        await using var check = database.Scope();
+        var rows = await check.ServiceProvider.GetRequiredService<FabDbContext>().Releases
+            .ToDictionaryAsync(row => row.DerivedReleaseId, TestContext.Current.CancellationToken);
+        Assert.Equal(IdentificationState.Matched, rows["site-date-title"].IdentificationState);
+        Assert.Equal(IdentificationConfidence.Probable, rows["site-date-title"].Confidence);
+        Assert.Equal(IdentificationRung.SiteDateTitle, rows["site-date-title"].MatchedBy);
+        Assert.Equal(IdentificationState.Matched, rows["later-rung"].IdentificationState);
+        Assert.Equal(IdentificationConfidence.Exact, rows["later-rung"].Confidence);
+        Assert.Equal(IdentificationRung.Unrecognised, rows["later-rung"].MatchedBy);
+    }
+
+    [Fact]
     public async Task A_recent_settled_release_is_identified_again_when_due_but_not_before()
     {
         var prdb = new FakePrdbApi()

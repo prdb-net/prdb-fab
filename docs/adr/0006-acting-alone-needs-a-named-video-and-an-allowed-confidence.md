@@ -67,3 +67,8 @@ itself on the sync status page.
 - Every release and file shows what it was identified as, how strongly and by
   which rung, and a refusal to act is stated as a sentence rather than an
   absence.
+- The rung is shown, not gated on, with one exception: a rung prdb returns
+  that this tool does not know yet is stored as `Unrecognised` and never acted
+  on, whatever its confidence. Acting alone on evidence nobody here has read
+  about is the case this decision exists to exclude; naming the rung is a code
+  change, made when prdb adds one (as with `Md5` and `SiteDateTitle`).

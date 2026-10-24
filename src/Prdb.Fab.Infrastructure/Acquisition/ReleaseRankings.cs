@@ -141,7 +141,8 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
         row.Size,
         row.Confidence,
         position,
-        exclusion);
+        exclusion,
+        row.MatchedBy);
 
     private static string Key(Guid indexerId, string releaseId) => $"{indexerId:N}\0{releaseId}";
 }
@@ -167,4 +168,5 @@ public sealed record ReleaseChoice(
     long? Size,
     IdentificationConfidence? Confidence,
     int? Position,
-    ReleaseExclusion? Exclusion);
+    ReleaseExclusion? Exclusion,
+    IdentificationRung? MatchedBy = null);
