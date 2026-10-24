@@ -630,6 +630,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             // positions over one stream with nothing to say which is behind.
             cursor.HasKey(row => row.Feed);
             cursor.Property(row => row.Feed).HasConversion<string>();
+            cursor.Property(row => row.LastSyncedAt).HasConversion(UtcTimestamp);
 
             // The one table whose account class is a property of the row. What
             // makes that a declaration rather than a shrug is Feeds.AccountClassOf,

@@ -1,3 +1,4 @@
+import { SyncControl } from './SyncControl.tsx'
 import { AutopilotPanel } from '../settings/AutopilotPanel.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
@@ -70,6 +71,7 @@ export function WantedScreen() {
       <div className={styles.heading}>
         <h1>Wanted</h1>
         {total > 0 && <span className={styles.count}>{total} videos</span>}
+        <SyncControl surface="wanted" />
       </div>
 
       <AutopilotPanel />

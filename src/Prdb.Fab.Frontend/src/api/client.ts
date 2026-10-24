@@ -42,6 +42,7 @@ export type AutomationRuleDeletePreview = Schema['AutomationRuleDeletePreview']
 export type AutomationRuleDeleteVerdict = Schema['AutomationRuleDeleteVerdict']
 export type AutomationCapVerdict = Schema['AutomationCapVerdict']
 export type AutomationRetryBudgetVerdict = Schema['AutomationRetryBudgetVerdict']
+export type CatalogueSyncState = Schema['CatalogueSyncState']
 export type StatusState = Schema['StatusState']
 export type StatusCondition = Schema['StatusCondition']
 export type RunNowVerdict = Schema['RunNowVerdict']
@@ -337,6 +338,14 @@ export async function deleteAutomationRule(id: string): Promise<AutomationRuleDe
   return post<AutomationRuleDeleteVerdict>(
     `/api/settings/automation/rules/${segment(id)}/delete`,
   )
+}
+
+export async function readCatalogueSync(): Promise<CatalogueSyncState[]> {
+  return json<CatalogueSyncState[]>(await fetch('/api/catalogue/sync'))
+}
+
+export async function syncCatalogue(surface: 'wanted' | 'actors' | 'sites'): Promise<RunNowVerdict[]> {
+  return post<RunNowVerdict[]>(`/api/catalogue/${surface}/sync`, {})
 }
 
 export async function readStatus(): Promise<StatusState> {

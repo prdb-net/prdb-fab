@@ -16,7 +16,7 @@ namespace Prdb.Fab.Infrastructure.Sync;
 /// somebody else's token or this tool's own writing rather than a value the
 /// schema has an opinion about.
 /// </remarks>
-public sealed class FeedCursors(FabDbContext context)
+public sealed class FeedCursors(FabDbContext context, TimeProvider time)
 {
     /// <summary>Where <paramref name="feed"/> has come to, or null before it has run.</summary>
     public async Task<FeedPosition?> PositionAsync(Feed feed, CancellationToken cancellationToken) =>
@@ -39,6 +39,22 @@ public sealed class FeedCursors(FabDbContext context)
             .Where(row => row.Feed == feed)
             .Select(row => row.Cursor)
             .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task SavePageAsync(Feed feed, FeedPosition? position, bool hasMore, CancellationToken cancellationToken)
+    {
+        var row = await context.FeedCursors.AsTracking()
+            .SingleOrDefaultAsync(stored => stored.Feed == feed, cancellationToken);
+        if (row is null && position is null) return;
+        if (row is null)
+        {
+            row = new FeedCursorRow { Feed = feed };
+            context.FeedCursors.Add(row);
+        }
+        if (position is not null) row.Cursor = position.Stored;
+        row.HasMore = hasMore || position is null;
+        if (!row.HasMore) row.LastSyncedAt = time.GetUtcNow();
+        await context.SaveChangesAsync(cancellationToken);
+    }
 
     public Task SaveAsync(Feed feed, FeedPosition position, CancellationToken cancellationToken) =>
         SaveAsync(feed, position.Stored, cancellationToken);

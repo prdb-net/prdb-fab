@@ -1,0 +1,98 @@
+.control {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-left: auto;
+}
+
+.status {
+  align-items: center;
+  color: var(--text-quiet);
+  display: inline-flex;
+  font-size: 0.75rem;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.statusText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.35;
+}
+
+.last {
+  font-size: 0.65rem;
+}
+
+.status a {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.current svg {
+  color: var(--ok);
+}
+
+.control svg {
+  fill: none;
+  flex: 0 0 auto;
+  height: 14px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  width: 14px;
+}
+
+.button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-quiet);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.75rem;
+  gap: 0.35rem;
+  min-height: 30px;
+  padding: 0.25rem 0.55rem;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: var(--text-quiet);
+  color: var(--text);
+}
+
+.button:focus-visible,
+.status a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.spinning {
+  animation: spin 1.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinning { animation: none; }
+  .button { transition: none; }
+}
+
+@media (max-width: 480px) {
+  .control { gap: 0.45rem; }
+}

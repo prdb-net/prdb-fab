@@ -47,6 +47,7 @@ public static class SyncServiceCollectionExtensions
         // is what the routines above write, and there is nothing else to it —
         // it holds no state and reaches nothing.
         services.AddScoped<CatalogueBrowse>();
+        services.AddScoped<CatalogueSync>();
         services.AddScoped<AccountPreferences>();
         services.AddScoped<IgnoredSites>();
         services.AddScoped<IgnoredSiteFeed>();

@@ -31,4 +31,9 @@ public sealed class FeedCursorRow
     /// to hand back unread. Null before the first pass.
     /// </summary>
     public string? Cursor { get; set; }
+
+    /// <summary>Last complete, valid change-feed response; partial pages keep this history.</summary>
+    public DateTimeOffset? LastSyncedAt { get; set; }
+
+    public bool HasMore { get; set; }
 }

@@ -1170,6 +1170,12 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<string>("Cursor")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("HasMore")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastSyncedAt")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Feed");
 
                     b.ToTable("feed_cursor", (string)null);

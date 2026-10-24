@@ -49,7 +49,7 @@ public sealed class WantedAutopilot(FabDbContext context, TimeProvider time, Aut
         var baseline = await context.AutopilotBaselines.SingleOrDefaultAsync(row => row.UserHash == account, token);
         // An empty authoritative page proves the initial account feed is complete.
         // Nonempty final pages retain their tie-breaker and are followed once more.
-        var position = await new FeedCursors(context).PositionAsync(Feed.WantedVideos, token);
+        var position = await new FeedCursors(context, time).PositionAsync(Feed.WantedVideos, token);
         if (position is null || position.Unfinished != null || position.At == DateTimeOffset.MinValue) return 0;
         var wanted = await context.WantedVideos.Include(row => row.Video).ThenInclude(video => video!.Site).ToListAsync(token);
         if (baseline is null && wanted.Any(row => row.Video!.Available && row.Video.LastReadAt == default)) return 0;
