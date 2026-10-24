@@ -12,6 +12,14 @@ picture per video. **What's new**, **Search**, **Sites**, **Actors** and
 **Wanted** show that catalogue. Wanted and Favourite actions are written to
 prdb through the same governed connection used by the background sync.
 
+Wanted changes are checked at a target interval of **30 minutes on Basic/Plus**,
+**15 minutes on Premium**, and **5 minutes on Ultra**. The active package is read
+from prdb at key verification and refreshed daily and after restart. Unknown or
+missing packages use thirty minutes; multiple packages use the fastest target.
+Polling is slowed automatically when the API-reported hourly or rolling monthly
+budget cannot sustain the schedule. Status shows both the target and the
+budget-adapted Wanted interval. Backlog pages continue after ten seconds.
+
 ## Indexer search and identification
 
 Each enabled indexer is also walked continuously. Releases enter a local,

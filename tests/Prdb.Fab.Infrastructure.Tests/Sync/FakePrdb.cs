@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 
 namespace Prdb.Fab.Infrastructure.Tests.Sync;
 
@@ -27,6 +28,7 @@ internal sealed class FakePrdb : HttpMessageHandler
     public (int Limit, int Remaining, int ResetInSeconds)? Hourly { get; set; }
 
     public int Requests { get; private set; }
+    public string[] Packages { get; set; } = [];
 
     protected override Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
@@ -35,7 +37,11 @@ internal sealed class FakePrdb : HttpMessageHandler
         Requests++;
 
         var response = Answers is HttpStatusCode.OK
-            ? Json(HttpStatusCode.OK, """{"userHash":"5b1f0c2e9a7d4f3b8c6e1a0d2f4b6a8c","activeSubscriptions":[]}""", "application/json")
+            ? Json(HttpStatusCode.OK, JsonSerializer.Serialize(new
+            {
+                userHash = "5b1f0c2e9a7d4f3b8c6e1a0d2f4b6a8c",
+                activeSubscriptions = Packages.Select(package => new { packageIdentifier = package }),
+            }), "application/json")
             : Json(
                 Answers,
                 $$"""{"type":"about:blank","title":"{{Answers}}","status":{{(int)Answers}}}""",

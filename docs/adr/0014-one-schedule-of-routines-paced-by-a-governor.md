@@ -285,6 +285,29 @@ pending Release Identification backlog is also a Brake with its visible count;
 failed routines still independently raise Gaps. No complete coverage or completed
 identification is claimed merely because a wait is deliberate.
 
+## Amendment: Wanted cadence follows the active subscription
+
+The hourly Wanted target is superseded by thirty minutes for Basic/Plus,
+fifteen minutes for Premium and five minutes for Ultra. Stable package
+identifiers from `/user-identity` select this target, never numeric quotas;
+unknown or missing packages use thirty minutes. When several packages are
+active, the fastest target wins. Key verification, the daily account routine
+and its startup refresh update the selection; a changed key clears it.
+
+This reopens the earlier rule that subscriptions only describe the account.
+Wanted intent is the input a person waits on for automatic acquisition, so a
+higher subscription should bring it in sooner. Favourites and the other feeds
+keep their existing targets. There is still no interval setting.
+
+The idle-demand forecast, polling multiplier, background reservation and Status
+all include the selected Wanted cadence. The same hourly and rolling 31-day
+budget adaptation remains in effect: these are target intervals, and small or
+overridden account limits can require slower polling. No package name bypasses
+admission, the 20% reserve or Retry-After. In particular, a 1,000-request monthly
+Plus allowance cannot sustain even the 1,488 Wanted polls implied by thirty
+minutes across 31 days, before any other work. Backlog continuations still
+resume after ten seconds through the governed scheduler.
+
 ## Amendment: compact browse Sync controls
 
 Wanted, Actors and Sites offer a manual Sync through the same Run now path.

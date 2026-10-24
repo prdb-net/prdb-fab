@@ -12,11 +12,15 @@ public sealed class IdleProfileTests
     [InlineData(6, 1000)]
     public void All_published_plans_fit_recurring_polls_and_leave_room_for_work(int hourly, int monthly)
     {
-        var multiplier = IdleProfile.CadenceMultiplier(hourly, monthly);
-        Assert.True(multiplier >= 1);
-        Assert.True(IdleProfile.ScheduledRequestsAnHour / multiplier <= hourly * .4 + .00001);
-        Assert.True(IdleProfile.ScheduledRequestsPerWindow / multiplier <= monthly * .4 + .00001);
-        Assert.True(IdleProfile.ReservedPerWindow(hourly, monthly) + monthly * .2 < monthly);
+        foreach (var minutes in new[] { 30, 15, 5 })
+        {
+            var wanted = TimeSpan.FromMinutes(minutes);
+            var multiplier = IdleProfile.CadenceMultiplier(hourly, monthly, wanted);
+            Assert.True(multiplier >= 1);
+            Assert.True(IdleProfile.ScheduledRequestsAnHourFor(wanted) / multiplier <= hourly * .4 + .00001);
+            Assert.True(IdleProfile.ScheduledRequestsPerWindowFor(wanted) / multiplier <= monthly * .4 + .00001);
+            Assert.True(IdleProfile.ReservedPerWindow(hourly, monthly, wanted) + monthly * .2 < monthly);
+        }
     }
 
     [Fact]

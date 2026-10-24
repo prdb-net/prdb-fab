@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 using Prdb.Fab.Core.Sync;
+using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 
 namespace Prdb.Fab.Infrastructure.Sync;
@@ -51,25 +52,24 @@ public sealed class VideoImageFeedRoutine(
 }
 
 /// <summary>
-/// ADR 0014's cadence for the wanted list: one hour.
+/// The wanted list's target cadence follows the account's active package.
 /// </summary>
 /// <remarks>
-/// The one of the three user feeds a person notices, because ADR 0010 ends
-/// onboarding on the list this fills. An hour is what ADR 0014 fixed and not a
-/// setting: ADR 0020 admits a control only where the tool cannot know the
-/// answer, and this number follows from a budget the tool reads for itself.
+/// Basic/Plus targets thirty minutes, Premium fifteen, and Ultra five.
+/// The schedule still adapts these targets to the API-reported budget.
 /// </remarks>
 public sealed class WantedVideoFeedRoutine(
     WantedVideoFeed feed,
     FeedCursors cursors,
     FabDbContext context,
+    PrdbGovernor governor,
     ILogger<WantedVideoFeedRoutine> logger) : ChangeFeedRoutine(feed, cursors, context, logger), ISpendsPrdbBudget
 {
     public const string RoutineName = "prdb.wanted-videos";
 
     public override string Name => RoutineName;
 
-    public override TimeSpan Cadence => TimeSpan.FromHours(1);
+    public override TimeSpan Cadence => governor.WantedCadence;
 
     public PrdbWork Spends => Source.Work;
 }
