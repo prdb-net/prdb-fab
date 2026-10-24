@@ -23,6 +23,7 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
     private double backgroundCredits;
     private int? refusedWith;
     private string? subscriptions;
+    private TimeSpan wantedCadence = TimeSpan.FromMinutes(30);
     private DateTimeOffset? identityReadAt;
     private string? keyDigest;
 
@@ -46,12 +47,15 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
     }
 
     public string? Subscriptions { get { lock (gate) return subscriptions; } }
+    public TimeSpan WantedCadence { get { lock (gate) return wantedCadence; } }
     public DateTimeOffset? IdentityReadAt { get { lock (gate) return identityReadAt; } }
 
     public void ObserveIdentity(UserIdentityResponse identity)
     {
         lock (gate)
         {
+            wantedCadence = IdleProfile.WantedCadenceFor(
+                identity.ActiveSubscriptions?.Select(item => item.PackageIdentifier) ?? []);
             subscriptions = identity.ActiveSubscriptions is { Count: > 0 } active
                 ? string.Join(", ", active.Select(item => item.PackageTitle ?? item.PackageIdentifier ?? "Unnamed subscription"))
                 : "No active subscription reported; API-reported limits still apply";
@@ -73,6 +77,7 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
             nextBackgroundAt = backgroundDebitedAt = default;
             backgroundCredits = 0;
             subscriptions = null;
+            wantedCadence = TimeSpan.FromMinutes(30);
             identityReadAt = null;
             // A different key still has to read its remote account counters.
         }
@@ -103,7 +108,7 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
                 var reserve = budget.ReserveFor(work);
                 if (Background(work))
                 {
-                    var recurring = IdleProfile.ReservedPerWindow(hourly!.Limit, monthly!.Limit);
+                    var recurring = IdleProfile.ReservedPerWindow(hourly!.Limit, monthly!.Limit, wantedCadence);
                     reserve += (int)Math.Ceiling(window == "hourly"
                         ? recurring / (24 * IdleProfile.WindowDays) : recurring / IdleProfile.WindowDays);
                 }
@@ -128,7 +133,7 @@ public sealed class PrdbGovernor(TimeProvider time, ILogger<PrdbGovernor> logger
                 // Rate comes from the reported plan, not an ever-shrinking
                 // fraction of its remaining balance. Admission still checks the
                 // actual shared balance before every request.
-                var recurring = IdleProfile.ReservedPerWindow(hour.Limit, month.Limit);
+                var recurring = IdleProfile.ReservedPerWindow(hour.Limit, month.Limit, wantedCadence);
                 var available = Math.Max(0, month.Remaining - month.ReserveFor(work) - recurring);
                 var seconds = Math.Max(3600d / Math.Max(1, hour.Limit * .8 - recurring / (24 * IdleProfile.WindowDays)),
                     TimeSpan.FromDays(IdleProfile.WindowDays).TotalSeconds

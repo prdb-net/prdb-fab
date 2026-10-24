@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Sync;
+using Prdb.Fab.Infrastructure.Connections;
 using Prdb.Fab.Infrastructure.Persistence;
 using Prdb.Fab.Infrastructure.Scheduling;
 using Prdb.Fab.Infrastructure.Sync;
@@ -24,13 +25,26 @@ public sealed class ThePlanTests
     /// added later with a cadence that moves it fails here — which is the point
     /// of the test, and the reason the profile is a constant at all.
     /// </summary>
-    [Fact]
-    public async Task The_idle_profile_is_the_cadences_of_the_routines_that_spend_on_a_clock()
+    [Theory]
+    [InlineData("basic", 30)]
+    [InlineData("plus", 30)]
+    [InlineData("premium", 15)]
+    [InlineData("ultra", 5)]
+    [InlineData("unknown", 30)]
+    public async Task The_package_sets_Wanted_cadence_and_the_full_idle_profile(string package, int minutes)
     {
+        var prdb = new FakePrdb { Packages = [package], Hourly = (10000, 10000, 600) };
         await using var database = await TestDatabase.CreateAsync(
+            prdb: prdb,
             also: services => services.AddFabSync());
 
         await using var scope = database.Scope();
+        await scope.ServiceProvider.GetRequiredService<FabDbContext>().Installation
+            .ExecuteUpdateAsync(set => set.SetProperty(row => row.PrdbApiKey, "first"), TestContext.Current.CancellationToken);
+        await scope.ServiceProvider.GetRequiredService<PrdbGateway>()
+            .CheckAsync("first", TestContext.Current.CancellationToken);
+        var governor = database.Services.GetRequiredService<PrdbGovernor>();
+        var plan = scope.ServiceProvider.GetRequiredService<ThePlan>();
 
         var onAClock = scope.ServiceProvider
             .GetServices<IRoutine>()
@@ -51,10 +65,29 @@ public sealed class ThePlanTests
 
         var anHour = onAClock.Sum(routine => 1 / routine.Cadence.TotalHours);
 
-        Assert.Equal(IdleProfile.RequestsAnHour, anHour, precision: 6);
+        var wanted = Assert.Single(onAClock.OfType<WantedVideoFeedRoutine>());
+        Assert.Equal(TimeSpan.FromMinutes(minutes), wanted.Cadence);
+        Assert.Equal(wanted.Cadence, plan.CadenceFor(wanted));
+        Assert.Equal(IdleProfile.RequestsAnHourFor(wanted.Cadence), anHour, precision: 6);
 
-        // And it really is about nine, which is the sentence ADR 0014 uses.
-        Assert.InRange(anHour, 13, 14);
+        // A scheduled identity refresh can observe an upgrade or downgrade
+        // without recreating the routine or restarting the application.
+        prdb.Packages = ["ultra", "plus", "premium"];
+        await scope.ServiceProvider.GetRequiredService<PrdbAccountRoutine>()
+            .RunAsync(null, TestContext.Current.CancellationToken);
+        Assert.Equal(TimeSpan.FromMinutes(5), wanted.Cadence);
+        prdb.Packages = ["plus"];
+        await scope.ServiceProvider.GetRequiredService<PrdbAccountRoutine>()
+            .RunAsync(null, TestContext.Current.CancellationToken);
+        Assert.Equal(TimeSpan.FromMinutes(30), wanted.Cadence);
+        prdb.Packages = ["ultra"];
+        await scope.ServiceProvider.GetRequiredService<PrdbGateway>()
+            .CheckAsync("first", TestContext.Current.CancellationToken);
+        Assert.Equal(TimeSpan.FromMinutes(5), wanted.Cadence);
+        prdb.Packages = [];
+        await scope.ServiceProvider.GetRequiredService<PrdbGateway>()
+            .CheckAsync("second", TestContext.Current.CancellationToken);
+        Assert.Equal(TimeSpan.FromMinutes(30), wanted.Cadence);
     }
 
     /// <summary>

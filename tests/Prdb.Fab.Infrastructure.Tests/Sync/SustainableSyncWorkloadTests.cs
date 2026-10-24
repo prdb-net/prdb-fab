@@ -152,7 +152,7 @@ public sealed class SustainableSyncWorkloadTests(ITestOutputHelper output)
         var start = database.Time.GetUtcNow();
         var multiplier = IdleProfile.CadenceMultiplier(hourLimit, monthLimit);
         // The production cadences, plus an interested preview feed and account check.
-        double[] intervals = [15, 30, 30, 60, 60, 60, 60, 360, 60, 60, 1440];
+        double[] intervals = [15, 30, 30, 30, 60, 60, 60, 360, 60, 60, 1440];
         var due = intervals.Select(_ => start).ToArray();
         var polls = new int[intervals.Length];
         var background = 0;

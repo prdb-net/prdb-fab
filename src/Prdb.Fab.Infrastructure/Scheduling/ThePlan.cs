@@ -18,14 +18,14 @@ public sealed class ThePlan(
     private bool recorded;
 
     public bool Shedding => governor.Snapshot() is { Hourly: { } hour, Monthly: { } month }
-        ? IdleProfile.CadenceMultiplier(hour.Limit, month.Limit) > 1 : recorded;
+        ? IdleProfile.CadenceMultiplier(hour.Limit, month.Limit, governor.WantedCadence) > 1 : recorded;
 
     public bool CarriesTheSchedule => !Shedding;
 
     public TimeSpan CadenceFor(IRoutine routine) =>
         routine is ISpendsPrdbBudget and not IOneShot
             && (routine is not IWorkSetPaced || routine is UserPreviewFeedRoutine)
-            ? IdleProfile.Adapt(routine.Cadence, governor.Snapshot().Hourly?.Limit, governor.Snapshot().Monthly?.Limit)
+            ? IdleProfile.Adapt(routine.Cadence, governor.Snapshot().Hourly?.Limit, governor.Snapshot().Monthly?.Limit, governor.WantedCadence)
             : routine.Cadence;
 
     public async Task NoteAsync(CancellationToken cancellationToken)
@@ -42,7 +42,7 @@ public sealed class ThePlan(
             return;
         }
 
-        var carried = IdleProfile.CadenceMultiplier(reading.Limit, governor.Snapshot().Monthly?.Limit) <= 1;
+        var carried = IdleProfile.CadenceMultiplier(reading.Limit, governor.Snapshot().Monthly?.Limit, governor.WantedCadence) <= 1;
 
         if (carried == !recorded)
         {
@@ -69,8 +69,8 @@ public sealed class ThePlan(
             + "Recurring polls are automatically spaced to fit the plan with 20% account reserve.",
             governor.LastReading?.Limit,
             governor.Snapshot().Monthly?.Limit,
-            IdleProfile.ScheduledRequestsAnHour,
-            IdleProfile.ScheduledRequestsPerWindow);
+            IdleProfile.ScheduledRequestsAnHourFor(governor.WantedCadence),
+            IdleProfile.ScheduledRequestsPerWindowFor(governor.WantedCadence));
 
         await WriteAsync(time.GetUtcNow(), cancellationToken);
     }

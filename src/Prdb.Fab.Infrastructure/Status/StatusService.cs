@@ -397,7 +397,7 @@ public sealed class StatusService(
         if (installation.IndexersSkipped)
             conditions.Add(Gap("No Indexer is configured", "Release discovery has nowhere to search.", "sync-indexers", "/settings/connections"));
         var quota = governor.Snapshot();
-        var multiplier = IdleProfile.CadenceMultiplier(quota.Hourly?.Limit, quota.Monthly?.Limit);
+        var multiplier = IdleProfile.CadenceMultiplier(quota.Hourly?.Limit, quota.Monthly?.Limit, governor.WantedCadence);
         if (multiplier > 1)
             conditions.Add(Brake("prdb polling is adapted to this plan",
                 $"Recurring polls run {multiplier:F1} times less often to fit the reported limits. "
@@ -855,8 +855,9 @@ public sealed class StatusService(
                 ? $"{subscriptions}; observed {governor.IdentityReadAt:u}"
                 : "Waiting for the scheduled account check; limits are read independently", null));
             facts.Add(new("Automatic budget", "20% of both account windows is reserved. Limits come from prdb; no manual quota setting is needed.", null));
-            var multiplier = IdleProfile.CadenceMultiplier(quota.Hourly?.Limit, quota.Monthly?.Limit);
-            facts.Add(new("Recurring polling", $"{multiplier:F1}× the ordinary intervals; approximately {IdleProfile.ScheduledRequestsPerWindow / multiplier:F0} requests per 31 days including preview interest and account checks", null));
+            var multiplier = IdleProfile.CadenceMultiplier(quota.Hourly?.Limit, quota.Monthly?.Limit, governor.WantedCadence);
+            facts.Add(new("Recurring polling", $"{multiplier:F1}× the ordinary intervals; approximately {IdleProfile.ScheduledRequestsPerWindowFor(governor.WantedCadence) / multiplier:F0} requests per 31 days including preview interest and account checks", null));
+            facts.Add(new("Wanted polling", $"Target {governor.WantedCadence.TotalMinutes:0} minutes for this package; budget-adapted interval {governor.WantedCadence.TotalMinutes * multiplier:0.#} minutes", null));
             facts.Add(new("Hourly account budget", QuotaText(quota.Hourly, quota), null));
             facts.Add(new("Rolling monthly account budget", QuotaText(quota.Monthly, quota), null));
             var admission = governor.Ask(PrdbWork.ReleaseIdentification);
