@@ -905,3 +905,8 @@ export function switchAutopilot(enabled: boolean): Promise<Schema['CollectionAct
 export function readAutopilotSelection(page: number): Promise<Schema['AutopilotSelection']> {
   return fetch(`/api/settings/automation/autopilot/selection?page=${page}`).then(json<Schema['AutopilotSelection']>)
 }
+
+/** Explicit reveal; held only in the mounted key control, never in the query cache. */
+export async function revealConnectionKey(connection: string): Promise<Schema['ConnectionKey']> {
+  return post<Schema['ConnectionKey']>(`/api/connections/keys/${segment(connection)}`, {})
+}

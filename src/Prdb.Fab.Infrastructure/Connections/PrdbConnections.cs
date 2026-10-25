@@ -39,6 +39,11 @@ public sealed class PrdbConnections(
 
         if (check.Outcome is not PrdbConnectionOutcome.Saved || check.UserHash is not { } userHash)
         {
+            // A rejected replacement must not overwrite the stored key's evidence.
+            await context.Installation.Where(row => row.PrdbApiKey == key && row.PrdbApiKey != null)
+                .ExecuteUpdateAsync(u => u
+                    .SetProperty(row => row.PrdbLastCheckedAt, time.GetUtcNow())
+                    .SetProperty(row => row.PrdbLastCheckOutcome, check.Outcome), cancellationToken);
             return new PrdbSave(check.Outcome, check.RetryAfterSeconds);
         }
 
@@ -77,6 +82,9 @@ public sealed class PrdbConnections(
         await using var updating = await context.Database.BeginTransactionAsync(cancellationToken);
         installation.PrdbApiKey = key;
         installation.PrdbUserHash = userHash;
+        installation.PrdbLastCheckedAt = time.GetUtcNow();
+        installation.PrdbLastSuccessAt = installation.PrdbLastCheckedAt;
+        installation.PrdbLastCheckOutcome = PrdbConnectionOutcome.Saved;
 
         context.Installation.Update(installation);
         await context.SaveChangesAsync(cancellationToken);
@@ -125,8 +133,7 @@ public sealed class PrdbConnections(
     /// stored when the field came back empty.
     /// </summary>
     /// <remarks>
-    /// ADR 0020: keys are write-only. Nothing is ever returned to the browser,
-    /// so the field is empty with a marker saying one is set, and saving it
+    /// ADR 0020: edit fields start empty even when a key is stored; saving one
     /// empty means unchanged. With nothing stored there is nothing for an empty
     /// field to mean, and it goes on to be answered as the wrong key it is —
     /// which is what onboarding needs.

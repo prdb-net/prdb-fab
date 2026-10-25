@@ -34,10 +34,10 @@ public sealed class BackupContractTests : IDisposable
     /// change still restores.
     /// </summary>
     public static TheoryData<string> SupportedFormats() =>
-        ["format-1.json", "format-2.json", "format-3.json", "format-4.json", "format-5.json"];
+        ["format-1.json", "format-2.json", "format-3.json", "format-4.json", "format-5.json", "format-6.json"];
 
     /// <summary>The newest of them, which is the shape this build writes.</summary>
-    private const string TheCurrentFormat = "format-5.json";
+    private const string TheCurrentFormat = "format-6.json";
 
     private readonly string library = NewDirectory();
     private readonly string downloads = NewDirectory();

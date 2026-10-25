@@ -19,6 +19,9 @@ namespace Prdb.Fab.Host.Connections;
 /// </remarks>
 public static class ConnectionEndpoints
 {
+    private static string? KeyHint(string? key) => string.IsNullOrEmpty(key) ? null
+        : key.Length > 8 ? "•••• •••• " + key[^4..] : "•••• ••••";
+
     public static void MapConnections(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/connections").WithTags("Connections");
@@ -43,7 +46,32 @@ public static class ConnectionEndpoints
                 DownloadDirectory: installation.PathMappingTo,
                 IndexerCount: indexers,
                 IndexersSkipped: installation.IndexersSkipped,
-                LibraryRoot: installation.LibraryRoot));
+                LibraryRoot: installation.LibraryRoot,
+                PrdbKeyHint: KeyHint(installation.PrdbApiKey),
+                SabnzbdKeyHint: KeyHint(installation.SabnzbdApiKey),
+                PrdbLastCheckedAt: installation.PrdbLastCheckedAt,
+                PrdbLastSuccessAt: installation.PrdbLastSuccessAt,
+                PrdbLastCheckOutcome: installation.PrdbLastCheckOutcome,
+                SabnzbdLastCheckedAt: installation.SabnzbdLastCheckedAt,
+                SabnzbdLastSuccessAt: installation.SabnzbdLastSuccessAt,
+                SabnzbdLastCheckOutcome: installation.SabnzbdLastCheckOutcome));
+        });
+
+        // Explicit authenticated reveal, never included in overview responses.
+        group.MapPost("/keys/{connection}", async Task<Results<Ok<ConnectionKey>, NotFound>> (
+            string connection, FabDbContext context, HttpResponse response, CancellationToken cancellationToken) =>
+        {
+            response.Headers.CacheControl = "no-store";
+            var installation = await context.Installation.SingleAsync(cancellationToken);
+            var key = connection switch
+            {
+                "prdb" => installation.PrdbApiKey,
+                "sabnzbd" => installation.SabnzbdApiKey,
+                _ => Guid.TryParse(connection, out var id)
+                    ? await context.Indexers.Where(row => row.Id == id).Select(row => row.ApiKey).SingleOrDefaultAsync(cancellationToken)
+                    : null,
+            };
+            return key is null ? TypedResults.NotFound() : TypedResults.Ok(new ConnectionKey(key));
         });
 
         group.MapPost("/prdb", async (
@@ -246,7 +274,17 @@ public sealed record ConnectionsState(
     string? DownloadDirectory,
     int IndexerCount,
     bool IndexersSkipped,
-    string? LibraryRoot);
+    string? LibraryRoot,
+    string? PrdbKeyHint,
+    string? SabnzbdKeyHint,
+    DateTimeOffset? PrdbLastCheckedAt,
+    DateTimeOffset? PrdbLastSuccessAt,
+    PrdbConnectionOutcome? PrdbLastCheckOutcome,
+    DateTimeOffset? SabnzbdLastCheckedAt,
+    DateTimeOffset? SabnzbdLastSuccessAt,
+    SabnzbdConnectionOutcome? SabnzbdLastCheckOutcome);
+
+public sealed record ConnectionKey(string ApiKey);
 
 public sealed record PrdbConnectionRequest(string? ApiKey, bool ConfirmAnotherAccount);
 

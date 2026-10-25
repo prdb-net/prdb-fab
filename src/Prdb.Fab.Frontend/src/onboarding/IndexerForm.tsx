@@ -52,6 +52,7 @@ export function IndexerForm({
       setVerdict(answer)
 
       if (answer.outcome !== 'Saved') {
+        await queries.invalidateQueries({ queryKey: indexersKey })
         return
       }
 

@@ -46,7 +46,7 @@ public sealed class Indexers(
                 row.Rank,
                 row.DailyQueryBudget,
                 row.LastVerdict,
-                row.LastCheckedAt))
+                row.LastCheckedAt, row.LastSuccessAt))
             .ToListAsync(cancellationToken);
 
     /// <summary>
@@ -93,6 +93,7 @@ public sealed class Indexers(
             ApiKey = (apiKey ?? string.Empty).Trim(),
             Categories = string.Join(',', categories),
             LastVerdict = IndexerConnectionOutcome.Saved,
+            LastSuccessAt = time.GetUtcNow(),
             LastCheckedAt = now,
             Enabled = true,
             Rank = await context.Indexers.MaxAsync(row => (int?)row.Rank, cancellationToken) + 1 ?? 0,
@@ -161,6 +162,13 @@ public sealed class Indexers(
 
         if (check.Outcome is not IndexerConnectionOutcome.Saved)
         {
+            if (stored.Url == address && stored.ApiKey == key)
+            {
+                stored.LastVerdict = check.Outcome;
+                stored.LastCheckedAt = time.GetUtcNow();
+                context.Indexers.Update(stored);
+                await context.SaveChangesAsync(cancellationToken);
+            }
             return new IndexerSave(check.Outcome, check.Said, []);
         }
 
@@ -168,6 +176,13 @@ public sealed class Indexers(
 
         if (categories.Count == 0)
         {
+            if (stored.Url == address && stored.ApiKey == key)
+            {
+                stored.LastVerdict = IndexerConnectionOutcome.NoCategories;
+                stored.LastCheckedAt = time.GetUtcNow();
+                context.Indexers.Update(stored);
+                await context.SaveChangesAsync(cancellationToken);
+            }
             return new IndexerSave(IndexerConnectionOutcome.NoCategories, null, []);
         }
 
@@ -177,6 +192,7 @@ public sealed class Indexers(
         stored.Categories = string.Join(',', categories);
         stored.LastVerdict = IndexerConnectionOutcome.Saved;
         stored.LastCheckedAt = time.GetUtcNow();
+        stored.LastSuccessAt = stored.LastCheckedAt;
 
         context.Indexers.Update(stored);
         await context.SaveChangesAsync(cancellationToken);
@@ -398,7 +414,7 @@ public sealed record ConfiguredIndexer(
     int Rank,
     int DailyQueryBudget,
     IndexerConnectionOutcome LastVerdict,
-    DateTimeOffset LastCheckedAt);
+    DateTimeOffset LastCheckedAt, DateTimeOffset? LastSuccessAt);
 
 /// <summary>What happened to the indexer that was submitted.</summary>
 /// <param name="Said">The indexer's own wording, when it refused in its own words.</param>

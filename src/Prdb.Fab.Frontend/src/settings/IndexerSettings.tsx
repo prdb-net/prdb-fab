@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router'
 
 import {
   deleteIndexer,
+  editIndexer,
   listIndexers,
   previewDeleteIndexer,
   saveIndexerSettings,
@@ -19,6 +20,7 @@ import { SaveBar } from '../ui/SaveBar.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 import styles from './Settings.module.css'
+import { ConnectionSection, ConnectionStatus, StoredKey } from './ConnectionPanel.tsx'
 
 /** The number the backend stores for ADR 0020's unbounded daily budget. */
 const unbounded = 100000
@@ -69,6 +71,11 @@ function IndexerMask({ indexer }: { indexer: ConfiguredIndexer | undefined }) {
   const { search } = useLocation()
   const [editing, setEditing] = useState(false)
   const [saved, setSaved] = useState(false)
+  const queries = useQueryClient()
+  const check = useMutation({
+    mutationFn: () => editIndexer(indexer!.id, { name: indexer!.name, url: indexer!.url, apiKey: '' }),
+    onSuccess: () => queries.invalidateQueries({ queryKey: indexersKey }),
+  })
 
   return (
     <SettingsPage
@@ -78,16 +85,18 @@ function IndexerMask({ indexer }: { indexer: ConfiguredIndexer | undefined }) {
       back="/settings/connections/indexers"
       backLabel="Indexers"
     >
+      <ConnectionStatus configured={!!indexer} outcome={indexer?.lastVerdict === 'Saved' && !indexer.lastSuccessAt ? null : indexer?.lastVerdict} checkedAt={indexer?.lastCheckedAt} successAt={indexer?.lastSuccessAt} checking={check.isPending} onCheck={editing ? undefined : () => check.mutate()} />
+      {check.data && check.data.outcome !== 'Saved' && <Verdict tone="refusal">{check.data.detail}</Verdict>}
+      {check.isError && <Verdict tone="refusal">Could not check the Indexer. Try again.</Verdict>}
+      <ConnectionSection title="Connection details" description="Access to this Indexer and the categories searched." action={indexer && <button type="button" className={formStyles.button} disabled={check.isPending} onClick={() => { setSaved(false); setEditing(!editing); check.reset() }}>{editing ? 'Cancel' : 'Edit settings'}</button>}>
       {indexer && !editing && <>
         <dl className={styles.connectionSummary}>
           <dt>Address</dt><dd>{indexer.url}</dd>
-          <dt>API key</dt><dd>Stored</dd>
           <dt>Categories</dt><dd>{indexer.categories.split(',').join(', ')}</dd>
-          <dt>Last checked</dt><dd>{new Date(indexer.lastCheckedAt).toLocaleString()}</dd>
         </dl>
-        <button type="button" className={formStyles.button} onClick={() => { setSaved(false); setEditing(true) }}>Edit connection</button>
+        <StoredKey connection={indexer.id} />
       </>}
-      {(editing || !indexer) && <section aria-label="Connection">
+      {(editing || !indexer) && <>
       <IndexerForm
         indexer={indexer}
         onSaved={() => {
@@ -100,17 +109,18 @@ function IndexerMask({ indexer }: { indexer: ConfiguredIndexer | undefined }) {
           }
         }}
       />
-      {indexer && <button type="button" className={formStyles.button} onClick={() => setEditing(false)}>Cancel editing</button>}
-      </section>}
+      </>}
+      </ConnectionSection>
 
       {saved && <Verdict tone="done">Indexer connection saved.</Verdict>}
       {indexer && (
         <>
-          <h2 className={styles.heading}>How it is used</h2>
-          <RowSettings indexer={indexer} />
-
-          <h2 className={styles.heading}>Removing it</h2>
-          <Removal indexer={indexer} />
+          <ConnectionSection title="Search preferences" description="Control whether this Indexer is used and how many requests it can make.">
+            <RowSettings indexer={indexer} />
+          </ConnectionSection>
+          <ConnectionSection title="Remove Indexer">
+            <Removal indexer={indexer} />
+          </ConnectionSection>
         </>
       )}
     </SettingsPage>

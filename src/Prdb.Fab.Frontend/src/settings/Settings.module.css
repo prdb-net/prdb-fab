@@ -306,3 +306,41 @@
   .connectionSummary { grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
   .connectionSummary dd:not(:last-child) { margin-bottom: 0.8rem; }
 }
+
+/* Connection masks: status first, credentials second, behaviour in its own section. */
+.connectionStatus {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--text-quiet);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.connectionStatus[data-tone='success'] { border-top-color: #7bbfa0; }
+.connectionStatus[data-tone='attention'] { border-top-color: #e4b36b; }
+.statusHeading, .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.statusHeading h2 { font-size: 1.45rem; margin: .4rem 0 0; font-weight: 600; letter-spacing: -.025em; }
+.eyebrow { color: var(--text-quiet); font-size: .75rem; text-transform: uppercase; letter-spacing: .09em; }
+.statusDescription { color: var(--text-quiet); line-height: 1.55; margin: .75rem 0 1.25rem; }
+.checkTimes { border-top: 1px solid var(--border); padding-top: 1.1rem; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.checkTimes dt { color: var(--text-quiet); font-size: .8rem; margin-bottom: .4rem; }
+.checkTimes dd { margin: 0; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.connectionSection { border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin: 1.25rem 0; min-width: 0; }
+.sectionHeader { margin-bottom: 1.25rem; }
+.sectionHeader h2 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+.sectionHeader p { color: var(--text-quiet); font-size: .85rem; line-height: 1.5; margin: .4rem 0 0; }
+.sectionHeader button, .statusHeading button { flex-shrink: 0; }
+.connectionSection .connectionSummary { border: 0; background: transparent; padding: 0; margin: 0 0 1.3rem; font-size: .9rem; }
+.connectionSection .connectionSummary:last-child { margin-bottom: 0; }
+.keyLabel { display: flex; align-items: center; gap: .65rem; font-size: .85rem; margin-bottom: .65rem; }
+.storedBadge { color: #9ed6b7; background: #9ed6b710; border: 1px solid #9ed6b730; border-radius: 5px; font-size: .7rem; padding: .15rem .4rem; }
+.keyField { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .75rem; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); }
+.keyField code { overflow-wrap: anywhere; min-width: 0; font-size: .95rem; }
+.keyField button { flex-shrink: 0; }
+.connectionSection .detail { line-height: 1.5; margin-bottom: 0; }
+@media (max-width: 38rem) {
+  .connectionSection, .connectionStatus { padding: 1.1rem; }
+  .statusHeading { align-items: flex-start; flex-direction: column; }
+  .checkTimes { grid-template-columns: 1fr; }
+  .sectionHeader { flex-wrap: wrap; }
+}

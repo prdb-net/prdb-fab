@@ -979,6 +979,38 @@
         }
       }
     },
+    "/api/connections/keys/{connection}": {
+      "post": {
+        "tags": [
+          "Connections"
+        ],
+        "parameters": [
+          {
+            "name": "connection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionKey"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/connections/prdb": {
       "post": {
         "tags": [
@@ -5228,7 +5260,8 @@
           "rank",
           "dailyQueryBudget",
           "lastVerdict",
-          "lastCheckedAt"
+          "lastCheckedAt",
+          "lastSuccessAt"
         ],
         "type": "object",
         "properties": {
@@ -5270,6 +5303,24 @@
           "lastCheckedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ConnectionKey": {
+        "required": [
+          "apiKey"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
           }
         }
       },
@@ -5284,7 +5335,15 @@
           "downloadDirectory",
           "indexerCount",
           "indexersSkipped",
-          "libraryRoot"
+          "libraryRoot",
+          "prdbKeyHint",
+          "sabnzbdKeyHint",
+          "prdbLastCheckedAt",
+          "prdbLastSuccessAt",
+          "prdbLastCheckOutcome",
+          "sabnzbdLastCheckedAt",
+          "sabnzbdLastSuccessAt",
+          "sabnzbdLastCheckOutcome"
         ],
         "type": "object",
         "properties": {
@@ -5336,6 +5395,66 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "prdbKeyHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sabnzbdKeyHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "prdbLastCheckedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "prdbLastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "prdbLastCheckOutcome": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PrdbConnectionOutcome"
+              }
+            ]
+          },
+          "sabnzbdLastCheckedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sabnzbdLastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sabnzbdLastCheckOutcome": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SabnzbdConnectionOutcome"
+              }
             ]
           }
         }
@@ -7426,7 +7545,8 @@
           "NoApiAccess",
           "QuotaSpent",
           "NotRightNow",
-          "AnotherAccount"
+          "AnotherAccount",
+          null
         ]
       },
       "PrdbConnectionRequest": {
@@ -9318,7 +9438,8 @@
           "NotRightNow",
           "UnknownCategory",
           "DownloadDirectoryMissing",
-          "DownloadDirectoryUnreadable"
+          "DownloadDirectoryUnreadable",
+          null
         ]
       },
       "SabnzbdConnectionRequest": {

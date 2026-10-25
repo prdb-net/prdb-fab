@@ -23,9 +23,8 @@ export function PrdbForm({
 }: {
   submitLabel?: string
   /**
-   * ADR 0020: keys are write-only. Nothing is ever sent back to the browser, so
-   * this is all the form can say about the one that is stored — and leaving the
-   * field empty keeps it.
+   * Editing starts with an empty field; leaving it empty keeps the stored key.
+   * Settings offers explicit reveal in its separate stored-key control.
    */
   keyIsStored?: boolean
   /** What the step around this form does once the key is stored. Nothing, in the settings. */
@@ -41,8 +40,8 @@ export function PrdbForm({
     onSuccess: async (answer) => {
       setVerdict(answer)
 
+      await queries.invalidateQueries({ queryKey: connectionsKey })
       if (answer.outcome === 'Saved') {
-        await queries.invalidateQueries({ queryKey: connectionsKey })
         onSaved?.()
       }
     },

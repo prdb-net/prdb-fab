@@ -13,6 +13,7 @@ namespace Prdb.Fab.Infrastructure.Connections;
 public sealed class SabnzbdConnections(
     FabDbContext context,
     SabnzbdGateway sabnzbd,
+    TimeProvider time,
     ILogger<SabnzbdConnections> logger)
 {
     /// <summary>
@@ -52,8 +53,18 @@ public sealed class SabnzbdConnections(
 
         if (categories.Outcome is not SabnzbdConnectionOutcome.Saved)
         {
+            await context.Installation.Where(row => row.SabnzbdApiKey == key && row.SabnzbdUrl == url)
+                .ExecuteUpdateAsync(u => u
+                    .SetProperty(row => row.SabnzbdLastCheckedAt, time.GetUtcNow())
+                    .SetProperty(row => row.SabnzbdLastCheckOutcome, categories.Outcome), cancellationToken);
             return new SabnzbdSave(categories.Outcome, CompletedRoot: null);
         }
+
+        await context.Installation.Where(row => row.SabnzbdApiKey == key && row.SabnzbdUrl == url)
+            .ExecuteUpdateAsync(u => u
+                .SetProperty(row => row.SabnzbdLastCheckedAt, time.GetUtcNow())
+                .SetProperty(row => row.SabnzbdLastSuccessAt, time.GetUtcNow())
+                .SetProperty(row => row.SabnzbdLastCheckOutcome, categories.Outcome), cancellationToken);
 
         var chosen = categories.Categories.FirstOrDefault(candidate =>
             string.Equals(candidate.Name, category, StringComparison.Ordinal));
@@ -77,6 +88,9 @@ public sealed class SabnzbdConnections(
 
         var installation = await context.Installation.SingleAsync(cancellationToken);
 
+        installation.SabnzbdLastCheckedAt = time.GetUtcNow();
+        installation.SabnzbdLastSuccessAt = installation.SabnzbdLastCheckedAt;
+        installation.SabnzbdLastCheckOutcome = SabnzbdConnectionOutcome.Saved;
         installation.SabnzbdUrl = url!.Trim();
         installation.SabnzbdApiKey = key!;
         installation.SabnzbdCategory = chosen.Name;

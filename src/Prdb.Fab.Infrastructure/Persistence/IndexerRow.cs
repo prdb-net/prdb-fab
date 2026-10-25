@@ -66,6 +66,8 @@ public sealed class IndexerRow
 
     public DateTimeOffset LastCheckedAt { get; set; }
 
+    public DateTimeOffset? LastSuccessAt { get; set; }
+
     public bool Enabled { get; set; } = true;
 
     public int Rank { get; set; }
