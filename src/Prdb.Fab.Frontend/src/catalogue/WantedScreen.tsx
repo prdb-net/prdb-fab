@@ -69,20 +69,17 @@ export function WantedScreen() {
   return (
     <main className={styles.screen} aria-busy={wanted.isFetching}>
       <div className={styles.heading}>
-        <h1>Wanted</h1>
-        {total > 0 && <span className={styles.count}>{total} videos</span>}
+        <span className={styles.count}>{total} videos · Page {shownPage} of {pages}</span>
         <SyncControl surface="wanted" />
       </div>
 
-      <AutopilotPanel />
-      <p className={styles.lede}>
-        Your prdb Wanted list. Changes made here are written back to the connected account.
-      </p>
+      <AutopilotPanel compact />
 
       {total > 0 && (
         <details className={styles.guide}>
           <summary>How Wanted works</summary>
           <p>
+            Changes made here are written back to your connected prdb account.
             Videos you already have are marked <strong>In Library</strong>. For the rest,
             Download starts the best eligible Release at your preferred Quality or below,
             and Search opens the Release page to inspect or find one.
@@ -103,7 +100,7 @@ export function WantedScreen() {
         <div className={styles.empty}>{empty(wanted.data?.feedHasRun === true)}</div>
       ) : (
         <>
-          <Grid
+          <Grid compact
             videos={wanted.data?.videos ?? []}
             onOpen={(video) => openPreview(video.prdbId)}
             action={(video) => (

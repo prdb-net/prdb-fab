@@ -1,7 +1,7 @@
 .screen {
   margin: 0 auto;
   max-width: 1280px;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1rem 1rem 3rem;
 }
 
 .heading {
@@ -25,7 +25,7 @@
 .filter {
   display: flex;
   gap: 0.5rem;
-  margin: 1rem 0 1.5rem;
+  margin: .75rem 0;
 }
 
 .browseFilters {
@@ -33,7 +33,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .scope {
@@ -66,7 +66,7 @@
   border-radius: var(--radius);
   color: var(--text);
   flex: 1;
-  max-width: 28rem;
+  max-width: none;
   padding: 0.45rem 0.65rem;
 }
 
@@ -323,15 +323,15 @@
   }
 }
 
-.directory { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; border: 0; }
-.directory li { display: flex; flex-direction: column; align-items: stretch; gap: .75rem; border: 0; padding: 0 0 .75rem; min-width: 0; }
+.directory { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 1rem .85rem; border: 0; }
+.directory li { display: flex; flex-direction: column; align-items: stretch; gap: .3rem; border: 0; padding: 0; min-width: 0; }
 .directoryVisual { flex: none; display: block; color: inherit; text-decoration: none; }
-.directoryFrame { border: 0; border-radius: 12px; }
+.directoryFrame { border: 0; border-radius: 8px; }
 .directoryImage, .actorPortraitImage { object-position: center top; }
-.actorDirectory { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.actorDirectory { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .actorDirectory .directoryFrame { aspect-ratio: 4 / 5; }
 .directoryActions { margin: auto 0 0; justify-content: flex-end; }
-.itemTitle { color: var(--text); font-size: 1rem; text-decoration: none; }
+.itemTitle { color: var(--text); font-size: .88rem; text-decoration: none; }
 .itemTitle:hover { color: var(--accent); }
 .filter input { min-width: 0; font: inherit; }
 @media(max-width:600px) {
@@ -355,3 +355,15 @@
 .contextHeading .heading { min-width: 0; flex-wrap: wrap; }
 .contextHeading h1 { overflow-wrap: anywhere; }
 .contextHeading .directoryActions { flex-wrap: wrap; min-width: 0; }
+
+.browseFilters { gap: .5rem; }
+.browseFilters .filter { flex: 1 1 20rem; margin: 0; }
+.filter input, .filter button, .scope button, .heldFilter, .pager button { min-height: 44px; font-size: .85rem; }
+.filter button[type='submit'] { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+.filter :focus-visible, .scope button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.summary { align-items: center; display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; color: var(--text-quiet); font-size: .78rem; margin: .65rem 0 .9rem; }
+.itemDetail { font-size: .76rem; overflow-wrap: anywhere; }
+.itemTitle { overflow-wrap: anywhere; }
+.directoryActions { gap: .4rem; }
+.contextHeading h1 { font-size: 1.25rem; }
+@media (max-width: 420px) { .directory:not(.actorDirectory) { grid-template-columns: minmax(0, 1fr); } }

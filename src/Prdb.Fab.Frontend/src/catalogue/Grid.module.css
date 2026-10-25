@@ -188,7 +188,7 @@
 @keyframes artwork-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .artwork { transition: none; } .artworkLoading > span { animation: none; } }
 
-/* Search keeps the shared card controls in a denser artwork grid. */
+/* Compact browse surfaces share card density and responsive columns. */
 .compact { gap: 1rem .85rem; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); }
 .compact .card { gap: .3rem; padding: 0; }
 .compact .frame { border-radius: 8px; }

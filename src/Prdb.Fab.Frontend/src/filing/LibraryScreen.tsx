@@ -93,56 +93,32 @@ export function LibraryScreen() {
   }
 
   return (
-    <main className={browseStyles.screen} aria-busy={library.isFetching}>
-      <div className={browseStyles.heading}>
-        <h1>Library</h1>
-        {total > 0 && <span className={browseStyles.count}>{total} videos</span>}
-      </div>
-      <p className={browseStyles.lede}>
-        Your Videos, organised and ready for your media server.
-      </p>
+    <main className={styles.screen} aria-busy={library.isFetching}>
       {(hasHeldEntries || filtered) && <div className={styles.filters}>
-        <label className={styles.searchLabel}>
-          Title
-          <input id="library-title" name="search" type="search" autoComplete="off" className={`${styles.field} ${styles.searchField}`} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
-        </label>
-        <label>
-          Site
-          <select id="library-site" name="site" className={styles.field} value={site} onChange={(event) => setFilter('site', event.target.value)}>
-            <option value="">All Sites</option>
-            {data?.filters.sites.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-        </label>
-        <label>
-          Actor
-          <select id="library-actor" name="actor" className={styles.field} value={actor} onChange={(event) => setFilter('actor', event.target.value)}>
-            <option value="">All Actors</option>
-            {data?.filters.actors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-        </label>
-        <label>
-          Quality
-          <select id="library-quality" name="quality" className={styles.field} value={quality} onChange={(event) => setFilter('quality', event.target.value)}>
-            <option value="">All Qualities</option>
-            {data?.filters.qualities.map((item) => <option key={item}>{item}</option>)}
-          </select>
-        </label>
-        <label htmlFor="library-confirmed">
-          Verification
-          <select id="library-confirmed" name="confirmed" className={styles.field} value={confirmed} onChange={(event) => setFilter('confirmed', event.target.value)}>
-            <option value="">Everything held</option>
-            <option value="no">Not confirmed</option>
-            <option value="yes">Confirmed</option>
-          </select>
+        <input aria-label="Search Library" placeholder="Search Library…" id="library-title" name="search" type="search" autoComplete="off" className={`${styles.field} ${styles.searchField}`} value={searchInput} onChange={(event) => setSearchInput(event.target.value)} />
+        <select aria-label="Site" id="library-site" name="site" className={styles.field} value={site} onChange={(event) => setFilter('site', event.target.value)}>
+          <option value="">All Sites</option>
+          {data?.filters.sites.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select aria-label="Actor" id="library-actor" name="actor" className={styles.field} value={actor} onChange={(event) => setFilter('actor', event.target.value)}>
+          <option value="">All Actors</option>
+          {data?.filters.actors.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+        <select aria-label="Quality" id="library-quality" name="quality" className={styles.field} value={quality} onChange={(event) => setFilter('quality', event.target.value)}>
+          <option value="">All Qualities</option>
+          {data?.filters.qualities.map((item) => <option key={item}>{item}</option>)}
+        </select>
+        <select aria-label="Verification" id="library-confirmed" name="confirmed" className={styles.field} value={confirmed} onChange={(event) => setFilter('confirmed', event.target.value)}>
+          <option value="">Everything held</option>
+          <option value="no">Not confirmed</option>
+          <option value="yes">Confirmed</option>
+        </select>
 
-        </label>
-        <label htmlFor="library-sort">
-          Sort by
-          <select id="library-sort" name="sort" className={styles.field} value={sort} onChange={(event) => setFilter('sort', event.target.value)}>
-            {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
-          </select>
-        </label>
+        <select aria-label="Sort by" id="library-sort" name="sort" className={styles.field} value={sort} onChange={(event) => setFilter('sort', event.target.value)}>
+          {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
+        </select>
       </div>}
+      <div className={styles.summary}><span>{total} videos</span><span>Page {shownPage} of {pages}</span></div>
       <Loaded query={library} of="the Library">{() => null}</Loaded>
       <PageNotice page={page} pages={pages} pending={library.isFetching} previousPage={library.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
       {unavailable ? null : data?.entries.length === 0

@@ -1,7 +1,7 @@
 .screen {
   margin: 0 auto;
   max-width: 1280px;
-  padding: 1.5rem 1rem 3rem;
+  padding: 1rem 1rem 3rem;
 }
 
 .heading {
@@ -18,7 +18,7 @@
 
 .count {
   color: var(--text-quiet);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .lede {
@@ -28,7 +28,7 @@
 }
 
 .guide {
-  margin: 0 0 1.5rem;
+  margin: 0 0 .75rem;
   max-width: 70ch;
 }
 
@@ -79,7 +79,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-quiet);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   margin: 0.5rem 0 0;
   padding: 0.8rem 1rem;
 }
@@ -92,8 +92,8 @@
 .working {
   border-left: 2px solid var(--border);
   color: var(--text-quiet);
-  font-size: 0.9rem;
-  margin: 0 0 1.5rem;
+  font-size: 0.8rem;
+  margin: 0 0 .75rem;
   padding-left: 0.75rem;
 }
 
@@ -137,5 +137,5 @@
 
 .where {
   color: var(--text-quiet);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
