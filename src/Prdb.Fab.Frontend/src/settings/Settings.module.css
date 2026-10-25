@@ -278,3 +278,31 @@
 .settingConditions summary { cursor: pointer; }
 .settingConditions summary span { color: var(--text-quiet); font-size: .8rem; margin-left: .5rem; }
 @media (max-width: 600px) { .setupCards { grid-template-columns: 1fr; } }
+
+.railSection {
+  color: var(--text-quiet);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  margin: 1.2rem 0.6rem 0.35rem;
+  text-transform: uppercase;
+}
+
+.connectionSummary {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(0, 2fr);
+  gap: 1rem;
+  padding: 1.25rem;
+  margin: 0 0 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.connectionSummary dt { color: var(--text-quiet); }
+.connectionSummary dd { margin: 0; overflow-wrap: anywhere; }
+.connectionActions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
+
+@media (max-width: 34rem) {
+  .connectionSummary { grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+  .connectionSummary dd:not(:last-child) { margin-bottom: 0.8rem; }
+}

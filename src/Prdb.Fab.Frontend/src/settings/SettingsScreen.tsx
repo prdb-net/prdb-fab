@@ -23,7 +23,7 @@ export function SettingsScreen() {
     <Loaded query={connections} of="your connections">{(held) => <div className={styles.setupCards}>
       <Link to="/settings/connections/prdb"><strong>prdb</strong><span>{held.prdbConfigured ? 'Key stored' : 'Not configured'}</span></Link>
       <Link to="/settings/connections/sabnzbd"><strong>SABnzbd</strong><span>{held.sabnzbdConfigured ? `Configured · ${held.sabnzbdCategory}` : held.sabnzbdSkipped ? 'Skipped during setup' : 'Not configured'}</span></Link>
-      <Link to="/settings/connections"><strong>Indexers</strong><span>{held.indexerCount} configured</span></Link>
+      <Link to="/settings/connections/indexers"><strong>Indexers</strong><span>{held.indexerCount} configured</span></Link>
       <Link to="/settings/library"><strong>Library</strong><span>{held.libraryRoot ?? 'Not configured'}</span></Link>
     </div>}</Loaded>
     {routes.length > 0 && <section className={styles.settingConditions}>

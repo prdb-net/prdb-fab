@@ -1,67 +1,20 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router'
-
-import { readConnections } from '../api/client.ts'
-import { connectionsKey } from '../onboarding/state.ts'
+import { Link, Navigate, useLocation } from 'react-router'
 import { IndexerList } from '../onboarding/IndexerList.tsx'
+import { formStyles } from '../ui/Form.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
 import styles from './Settings.module.css'
 
-/**
- * ADR 0020's Connections group. It is a set of routes rather than one page,
- * because ADR 0018 has every Gap carrying a route to the form that fills it —
- * and a Gap saying SABnzbd is missing has to land on that form rather than
- * scroll a wall of everything else into view.
- */
-export function ConnectionsScreen() {
-  const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
-  const held = connections.data
+/** Keep old Status links working; each connection now has its own navigation entry. */
+export function ConnectionsScreen({ redirect = false }: { redirect?: boolean }) {
+  const { search } = useLocation()
+  if (redirect) return <Navigate to={{ pathname: '/settings/connections/indexers', search }} replace />
 
-  return (
-    <SettingsPage
-      title="Connections"
-      lede="Connect the services that find and download your Videos. Each connection is checked before saving."
-    >
-      <ul className={styles.groups}>
-        <li>
-          <Link to="/settings/connections/prdb">prdb</Link>
-          <br />
-          <span className={styles.detail}>
-            {!held ? 'Loading…' : held.prdbConfigured ? 'A key is stored.' : 'Not configured.'}
-          </span>
-        </li>
-        <li>
-          <Link to="/settings/connections/sabnzbd">SABnzbd</Link>
-          <br />
-          <span className={styles.detail}>
-            {!held ? 'Loading…' : held.sabnzbdConfigured
-              ? `${held.sabnzbdUrl}, category ${held.sabnzbdCategory}.`
-              : held?.sabnzbdSkipped
-                ? 'Skipped during setup. Connect SABnzbd to enable Downloads.'
-                : 'Not configured.'}
-          </span>
-        </li>
-      </ul>
-
-      <h2 className={styles.heading}>Indexers</h2>
-      <p className={styles.detail}>
-        {Number(held?.indexerCount ?? 0) > 0
-          ? 'Manage your Indexers and their priority below.'
-          : held?.indexersSkipped
-            ? 'Skipped during setup. Add an Indexer to find Releases.'
-            : 'No Indexers configured. Add one to find Releases.'}
-      </p>
-
-      <IndexerList under="/settings/connections/indexers" reorderable />
-
-      <p className={styles.detail}>
-        When Indexers offer the same Release, the one higher in this list is preferred.
-        Reordering saves immediately.
-      </p>
-
-      <p className={styles.note}>
-        <Link to="/settings/connections/indexers/new">Add an indexer</Link>
-      </p>
-    </SettingsPage>
-  )
+  return <SettingsPage title="Indexers" lede="Find Releases and choose which Indexers are preferred.">
+    <Link className={formStyles.button} to={{ pathname: '/settings/connections/indexers/new', search }}>Add an indexer</Link>
+    <IndexerList under="/settings/connections/indexers" reorderable />
+    <p className={styles.detail}>
+      When Indexers offer the same Release, the one higher in this list is preferred.
+      Reordering saves immediately. Each Indexer has its own connection, categories and daily query budget.
+    </p>
+  </SettingsPage>
 }

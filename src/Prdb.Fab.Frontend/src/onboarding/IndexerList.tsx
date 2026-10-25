@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 
 import { listIndexers, moveIndexer } from '../api/client.ts'
+import { Loaded } from '../ui/Loaded.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import { formStyles } from '../ui/Form.tsx'
 import { indexersKey } from './state.ts'
 import styles from './Onboarding.module.css'
@@ -24,6 +26,7 @@ import styles from './Onboarding.module.css'
 export function IndexerList({ under, reorderable = false }: { under?: string; reorderable?: boolean }) {
   const indexers = useQuery({ queryKey: indexersKey, queryFn: listIndexers })
   const queries = useQueryClient()
+  const { search } = useLocation()
 
   const move = useMutation({
     mutationFn: ({ id, up }: { id: string; up: boolean }) => moveIndexer(id, up),
@@ -33,19 +36,17 @@ export function IndexerList({ under, reorderable = false }: { under?: string; re
     },
   })
 
-  if (!indexers.data || indexers.data.length === 0) {
-    return null
-  }
-
-  const rows = indexers.data
-
-  return (
+  return <Loaded query={indexers} of="your Indexers">{rows => <>
+    {rows.length === 0 && <p>No Indexers configured. Add one to find Releases.</p>}
+    {move.isError && <Verdict tone="refusal">Could not reorder the Indexers. Try again.</Verdict>}
+    {move.data && <Verdict tone="done">{move.data.detail}</Verdict>}
     <ul className={styles.rows}>
       {rows.map((indexer, at) => (
         <li key={indexer.id}>
           <div className={styles.row}>
             <div className={styles.rowMain}>
-              {under ? <Link to={`${under}/${indexer.id}`}>{indexer.name}</Link> : indexer.name}
+              {reorderable && <span aria-label={`Priority ${at + 1}`}>{at + 1}. </span>}
+              {under ? <Link to={{ pathname: `${under}/${indexer.id}`, search }}>{indexer.name}</Link> : indexer.name}
               <br />
               <span className={styles.rowDetail}>
                 {indexer.enabled ? 'Enabled' : 'Disabled'} &mdash; {indexer.url} &mdash;{' '}
@@ -79,5 +80,5 @@ export function IndexerList({ under, reorderable = false }: { under?: string; re
         </li>
       ))}
     </ul>
-  )
+  </>}</Loaded>
 }

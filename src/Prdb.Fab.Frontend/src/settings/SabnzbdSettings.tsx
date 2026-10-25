@@ -1,79 +1,47 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-
-import { readConnections, type ConnectionsState } from '../api/client.ts'
+import { readConnections } from '../api/client.ts'
 import { connectionsKey } from '../onboarding/state.ts'
 import { SabnzbdForm } from '../onboarding/SabnzbdForm.tsx'
+import { Loaded } from '../ui/Loaded.tsx'
+import { formStyles } from '../ui/Form.tsx'
+import { Verdict } from '../ui/Verdict.tsx'
 import { SettingsPage } from './SettingsPage.tsx'
-import { PageLoading } from '../shell/LoadingScreen.tsx'
 import styles from './Settings.module.css'
 
-/**
- * ADR 0020: the same form as the onboarding step, and the same order within it
- * — the category is answered before the mapping, because it decides which of
- * SABnzbd's folders is being mapped.
- *
- * This is also the route a Gap lands on when SABnzbd was skipped during setting
- * up, which is why it is a route of its own rather than a section of the
- * Connections page.
- */
 export function SabnzbdSettings() {
   const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  if (connections.isPending) {
-    return <PageLoading label="Loading SABnzbd connection" />
-  }
-
-  const held = connections.data
-
-  return (
-    <SettingsPage
-      title="SABnzbd"
-      lede="Connect SABnzbd and locate its completed downloads."
-      help="SABnzbd downloads the Releases. fab needs access to its completed-download folder to find and file the Videos. The path is checked before saving."
-      back="/settings/connections"
-      backLabel="Connections"
-    >
-      <SabnzbdForm
-        submitLabel="Check and save"
-        stored={{
-          url: held?.sabnzbdUrl ?? null,
-          category: held?.sabnzbdCategory ?? null,
-          downloadDirectory: held?.downloadDirectory ?? null,
-          keyIsStored: held?.sabnzbdConfigured === true,
-        }}
-      />
-
-      <Stored connections={held} />
-    </SettingsPage>
-  )
-}
-
-/**
- * What is stored right now, which the form above cannot say for itself: the
- * category is chosen from a list that is only fetched once the address and the
- * key have been checked, so until then the page shows two filled fields and
- * nothing about the two answers behind them.
- *
- * It is read from the same query the form writes to, so a save moves it — which
- * is what tells the difference between a check that passed and a check that was
- * stored.
- */
-function Stored({ connections }: { connections: ConnectionsState | undefined }) {
-  if (connections?.sabnzbdConfigured !== true) {
-    return (
-      <p className={styles.note}>
-        {connections?.sabnzbdSkipped === true
-          ? 'SABnzbd was skipped during setup. Connect it to enable Downloads.'
-          : 'SABnzbd is not configured. Connect it to enable Downloads.'}
-      </p>
-    )
-  }
-
-  return (
-    <p className={styles.note}>
-      Stored: {connections.sabnzbdUrl}, category {connections.sabnzbdCategory}. SABnzbd
-      finishes that category in {connections.completedRoot}, which is{' '}
-      {connections.downloadDirectory} here.
-    </p>
-  )
+  return <SettingsPage title="SABnzbd" lede="Download Releases and collect the completed files.">
+    <Loaded query={connections} of="the SABnzbd connection">{held => <>
+      {held.sabnzbdConfigured && !editing && <>
+        <dl className={styles.connectionSummary}>
+          <dt>Address</dt><dd>{held.sabnzbdUrl}</dd>
+          <dt>API key</dt><dd>Stored</dd>
+        </dl>
+        <h2 className={styles.heading}>Download destination</h2>
+        <dl className={styles.connectionSummary}>
+          <dt>Category</dt><dd>{held.sabnzbdCategory}</dd>
+          <dt>SABnzbd folder</dt><dd><code>{held.completedRoot}</code></dd>
+          <dt>Same folder in fab</dt><dd><code>{held.downloadDirectory}</code></dd>
+        </dl>
+        <p className={styles.detail}>These two paths point to the same completed files.</p>
+      </>}
+      {held.sabnzbdConfigured && !editing && <button className={formStyles.button} type="button" onClick={() => { setSaved(false); setEditing(true) }}>Edit connection</button>}
+      {(editing || !held.sabnzbdConfigured) && <>
+        {!held.sabnzbdConfigured && <p className={styles.note}>Connect SABnzbd to enable Downloads.</p>}
+        <h2 className={styles.heading}>Connection → Category → Path mapping</h2>
+        <SabnzbdForm submitLabel="Check and save" stored={{
+          url: held.sabnzbdUrl ?? null,
+          category: held.sabnzbdCategory ?? null,
+          downloadDirectory: held.downloadDirectory ?? null,
+          keyIsStored: held.sabnzbdConfigured,
+        }} onSaved={() => { setEditing(false); setSaved(true) }} />
+        {held.sabnzbdConfigured && <button className={formStyles.button} type="button" onClick={() => setEditing(false)}>Cancel editing</button>}
+      </>}
+      {saved && <Verdict tone="done">SABnzbd connection saved.</Verdict>}
+    </>}</Loaded>
+  </SettingsPage>
 }

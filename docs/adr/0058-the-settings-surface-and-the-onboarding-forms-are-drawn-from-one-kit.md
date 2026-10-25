@@ -185,3 +185,21 @@ query and fragment. Status deep links can supply that destination through
 forms navigate within Settings. On phones, the shell's bottom navigation
 becomes the return link and a Settings button opening the existing navigation
 sheet. The overview is available at every viewport size.
+
+## Connections are three destinations
+
+Connections is a navigation heading with prdb, SABnzbd and Indexers beneath it.
+Each opens its own page; individual Indexers live in the Indexers list rather
+than extending the application sidebar. Their stable detail routes remain
+available to Status, and the Indexers navigation entry aggregates their Gap and
+Brake markers. The former `/settings/connections` route redirects to the
+Indexer list, preserving the return destination.
+
+Configured connections show stored values before offering an edit action.
+Credentials remain write-only; a stored key is a configuration fact, not a
+claim that the remote service is currently reachable. prdb also offers an
+explicit check of its stored key. SABnzbd shows its category and both sides of
+the Path Mapping together; editing still checks the connection, loads the
+categories, and verifies the mapping in that order. The forms remain shared
+with onboarding. Indexer usage settings remain independently editable so a
+broken connection can still be disabled without a successful connection check.

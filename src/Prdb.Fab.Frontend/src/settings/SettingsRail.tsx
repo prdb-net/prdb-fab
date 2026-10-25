@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { NavLink, useLocation } from 'react-router'
 
 import {
-  listIndexers,
   readAutomationSettings,
   readAutopilot,
   readConnections,
@@ -16,7 +15,7 @@ import {
   type ReportingSettingsState,
   type StatusState,
 } from '../api/client.ts'
-import { connectionsKey, indexersKey } from '../onboarding/state.ts'
+import { connectionsKey } from '../onboarding/state.ts'
 import { SettingsIcon, type SettingsIconName } from './SettingsIcon.tsx'
 import styles from './Settings.module.css'
 
@@ -36,7 +35,6 @@ import styles from './Settings.module.css'
  */
 export function SettingsRail({ compact = false }: { compact?: boolean }) {
   const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
-  const indexers = useQuery({ queryKey: indexersKey, queryFn: listIndexers })
   const autopilot = useQuery({ queryKey: ['autopilot'], queryFn: readAutopilot })
   const automation = useQuery({ queryKey: ['automation-settings'], queryFn: readAutomationSettings })
   const identification = useQuery({
@@ -55,32 +53,17 @@ export function SettingsRail({ compact = false }: { compact?: boolean }) {
   return (
     <nav className={`${styles.rail} ${compact ? styles.compact : ''}`} aria-label="Settings">
       <Group to="/settings" icon="overview" label="Overview" marks={pointedAt} />
-      <Group to="/settings/connections" icon="connections" label="Connections" marks={pointedAt}>
-        {held
-          ? [
-              held.prdbConfigured ? 'prdb key stored' : 'no prdb key',
-              held.sabnzbdConfigured
-                ? 'SABnzbd configured'
-                : held.sabnzbdSkipped
-                  ? 'SABnzbd skipped'
-                  : 'no SABnzbd',
-            ].join(' · ')
-          : null}
+      <span className={styles.railSection}>Connections</span>
+      <Group to="/settings/connections/prdb" icon="connections" label="prdb" marks={pointedAt}>
+        {held ? held.prdbConfigured ? 'API key stored' : 'Not configured' : null}
       </Group>
-
-      {/* ADR 0020 gives every Indexer its own address because Status points at
-          the row rather than at the list. Nested here for the same reason. */}
-      {(indexers.data ?? []).map((indexer) => (
-        <Group
-          key={indexer.id}
-          to={`/settings/connections/indexers/${indexer.id}`}
-          label={indexer.name}
-          marks={pointedAt}
-          nested
-        >
-          {indexer.enabled ? 'Enabled' : 'Disabled'}
-        </Group>
-      ))}
+      <Group to="/settings/connections/sabnzbd" icon="download" label="SABnzbd" marks={pointedAt}>
+        {held ? held.sabnzbdConfigured ? 'Configured' : 'Not configured' : null}
+      </Group>
+      <Group to="/settings/connections/indexers" icon="connections" label="Indexers" marks={pointedAt}>
+        {held ? `${held.indexerCount} configured` : null}
+      </Group>
+      <span className={styles.railSection}>Library &amp; behaviour</span>
 
       <Group to="/settings/automation" icon="automation" label="Automation" marks={pointedAt}>
         {autopilot.data && automation.data
@@ -161,7 +144,13 @@ function Group({
   children?: React.ReactNode
 }) {
   const location = useLocation()
-  const marked = marks.get(to)
+  const childMarks = to === '/settings/connections/indexers'
+    ? [...marks].filter(([path]) => path.startsWith(`${to}/`)).map(([, kind]) => kind)
+    : []
+  const directMark = marks.get(to)
+  const marked = directMark === 'Gap' || childMarks.includes('Gap')
+    ? 'Gap'
+    : directMark ?? childMarks[0]
 
   return (
     <NavLink
@@ -212,7 +201,8 @@ function conditionRoutes(status: StatusState | undefined): ReadonlyMap<string, '
     for (const condition of [...stage.gaps, ...stage.brakes]) {
       if (condition.cleared || !condition.route) continue
 
-      const path = condition.route.split('?')[0]
+      const target = condition.route.split('?')[0]
+      const path = target === '/settings/connections' ? '/settings/connections/indexers' : target
 
       if (path.startsWith('/settings') && routes.get(path) !== 'Gap') routes.set(path, condition.kind)
     }
