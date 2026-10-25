@@ -98,6 +98,7 @@ public sealed class ConnectionEvidenceTests
         var first = Assert.Single((await client.GetFromJsonAsync<List<ConfiguredIndexer>>("/api/connections/indexers", Json, token))!);
         Assert.NotNull(first.LastSuccessAt);
         remote.SearchStatus = HttpStatusCode.Unauthorized;
+        remote.SearchBody = FakeIndexer.Recorded("unauthorized.xml");
         await client.PostAsJsonAsync($"/api/connections/indexers/{first.Id}", request, token);
         var failed = Assert.Single((await client.GetFromJsonAsync<List<ConfiguredIndexer>>("/api/connections/indexers", Json, token))!);
         Assert.Equal(IndexerConnectionOutcome.WrongKey, failed.LastVerdict);
