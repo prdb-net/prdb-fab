@@ -166,6 +166,7 @@ public sealed class Indexers(
             {
                 stored.LastVerdict = check.Outcome;
                 stored.LastCheckedAt = time.GetUtcNow();
+                context.Indexers.Update(stored);
                 await context.SaveChangesAsync(cancellationToken);
             }
             return new IndexerSave(check.Outcome, check.Said, []);
@@ -179,6 +180,7 @@ public sealed class Indexers(
             {
                 stored.LastVerdict = IndexerConnectionOutcome.NoCategories;
                 stored.LastCheckedAt = time.GetUtcNow();
+                context.Indexers.Update(stored);
                 await context.SaveChangesAsync(cancellationToken);
             }
             return new IndexerSave(IndexerConnectionOutcome.NoCategories, null, []);
