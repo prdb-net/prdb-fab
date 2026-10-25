@@ -63,6 +63,38 @@ public sealed class ReleaseRankingTests
             result.Ranked.Select(item => item.Release.DerivedReleaseId));
     }
 
+    [Fact]
+    public void Cohorts_use_the_largest_size_as_anchor_and_exclude_the_exact_five_percent_boundary()
+    {
+        var result = ReleaseRanking.Order(
+        [
+            Release(1, "anchor", 1000, IdentificationConfidence.Exact, rank: 9),
+            Release(2, "within", 951, IdentificationConfidence.Strong, rank: 8),
+            Release(3, "boundary", 950, IdentificationConfidence.Exact, rank: 7),
+            Release(4, "second-cohort", 904, IdentificationConfidence.Strong, rank: 0),
+            Release(5, "third-cohort", 902, IdentificationConfidence.Exact, rank: 0),
+        ]);
+
+        Assert.Equal(["within", "anchor", "second-cohort", "boundary", "third-cohort"],
+            result.Ranked.Select(item => item.Release.DerivedReleaseId));
+        Assert.Equal(Enumerable.Range(1, 5), result.Ranked.Select(item => item.Position));
+    }
+
+    [Fact]
+    public void Zero_sizes_make_progress_and_form_a_cohort_before_unknown_sizes()
+    {
+        var result = ReleaseRanking.Order(
+        [
+            Release(1, "zero-b", 0, IdentificationConfidence.Exact, rank: 2),
+            Release(2, "known", 1, IdentificationConfidence.Exact, rank: 9),
+            Release(3, "zero-a", 0, IdentificationConfidence.Exact, rank: 1),
+            Release(4, "unknown", null, IdentificationConfidence.Exact, rank: 0),
+        ]);
+
+        Assert.Equal(["known", "zero-a", "zero-b", "unknown"],
+            result.Ranked.Select(item => item.Release.DerivedReleaseId));
+    }
+
     private static RankableRelease Release(
         long id,
         string identity,

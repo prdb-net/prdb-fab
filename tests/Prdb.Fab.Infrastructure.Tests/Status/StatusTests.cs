@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Prdb.Fab.Core.Connections;
+using Prdb.Fab.Core.Acquisition;
 using Prdb.Fab.Core.Automation;
+using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Core.Scheduling;
 using Prdb.Fab.Core.Sync;
@@ -16,6 +18,115 @@ namespace Prdb.Fab.Infrastructure.Tests.Status;
 
 public sealed class StatusTests
 {
+    [Fact]
+    public async Task Download_and_review_summaries_preserve_counts_and_only_flag_exhausted_all_failed_videos()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var now = database.Time.GetUtcNow();
+        var exhausted = Guid.NewGuid();
+        var mixed = Guid.NewGuid();
+        var belowBudget = Guid.NewGuid();
+        var oldestId = Guid.NewGuid();
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            foreach (var (videoId, count, state) in new[]
+                     {
+                         (exhausted, 3, DownloadState.Failed),
+                         (mixed, 3, DownloadState.Failed),
+                         (mixed, 1, DownloadState.Collected),
+                         (belowBudget, 2, DownloadState.Failed),
+                         (Guid.NewGuid(), 100, DownloadState.Collected),
+                     })
+                for (var index = 0; index < count; index++)
+                    context.Downloads.Add(new DownloadRow
+                    {
+                        Id = Guid.NewGuid(), VideoId = videoId, State = state,
+                        DerivedReleaseId = $"{state}-{index}", CreatedAt = now.AddDays(-10),
+                    });
+            context.Downloads.AddRange(
+                new DownloadRow
+                {
+                    Id = oldestId, VideoId = Guid.NewGuid(), State = DownloadState.Outstanding,
+                    OutstandingSince = now.AddHours(-2), LastSabnzbdStatus = "Downloading", CreatedAt = now,
+                },
+                new DownloadRow
+                {
+                    Id = Guid.NewGuid(), VideoId = Guid.NewGuid(), State = DownloadState.Outstanding,
+                    OutstandingSince = now.AddHours(-1), LastSabnzbdStatus = "Queued", CreatedAt = now,
+                });
+            for (var index = 0; index < 3; index++)
+                context.ArrivingFiles.Add(new ArrivingFileRow
+                {
+                    Id = Guid.NewGuid(), DownloadId = index < 2 ? oldestId : null,
+                    SourcePath = $"/incoming/review-{index}.mkv", Reason = ArrivingFileReason.Unidentified,
+                });
+            context.ArrivingFiles.AddRange(
+                new ArrivingFileRow
+                {
+                    Id = Guid.NewGuid(), State = ArrivingFileState.Filing, SourcePath = "/incoming/first.mkv",
+                    IntendedPath = "/library/first.mkv", LastAttemptedAt = now.AddMinutes(-2),
+                },
+                new ArrivingFileRow
+                {
+                    Id = Guid.NewGuid(), State = ArrivingFileState.Filing, SourcePath = "/incoming/second.mkv",
+                    IntendedPath = "/library/second.mkv", LastAttemptedAt = now.AddMinutes(-1),
+                });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+        var download = status.Stages.Single(stage => stage.Id == "download");
+        var brake = Assert.Single(download.Brakes, item => item.Title == "A Video's retry budget is spent");
+        Assert.Contains(exhausted.ToString("D"), brake.Route);
+        Assert.StartsWith("3 of 3", brake.Detail);
+        Assert.Equal($"2 Download(s); oldest since {now.AddHours(-2):u}; SABnzbd last said Downloading.",
+            Assert.Single(download.Facts, fact => fact.Label == "Outstanding").Value);
+        var file = status.Stages.Single(stage => stage.Id == "file");
+        Assert.Equal("3 open", Assert.Single(file.Facts, fact => fact.Label == "Review Queue").Value);
+        Assert.StartsWith("/library/first.mkv", Assert.Single(file.Facts, fact => fact.Label == "Filing now").Value);
+        var decisions = status.Stages.Single(stage => stage.Id == "decide").Brakes
+            .Where(item => item.Title == "An arriving Download needs a decision").ToArray();
+        Assert.Equal(2, decisions.Length);
+        Assert.Contains(decisions, item => item.Detail.StartsWith("2 file(s)", StringComparison.Ordinal));
+        Assert.Contains(decisions, item => item.Detail.StartsWith("1 file(s)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Diagnostic_counts_include_the_seven_day_boundary_and_keep_gates_separate()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var since = database.Time.GetUtcNow().AddDays(-7);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            context.IdentificationOutcomes.AddRange(
+                new IdentificationOutcomeRow { At = since, Gate = BeforeDownloadGate.Name, Outcome = "Unknown" },
+                new IdentificationOutcomeRow { At = since.AddDays(1), Gate = BeforeDownloadGate.Name, Outcome = "Unknown" },
+                new IdentificationOutcomeRow { At = since, Gate = AfterDownloadGate.Name, Outcome = "Unknown" },
+                new IdentificationOutcomeRow { At = since.AddTicks(-1), Gate = BeforeDownloadGate.Name, Outcome = "Unknown" });
+            context.ReleasesNotDownloaded.AddRange(
+                new ReleaseNotDownloadedRow { At = since, Reason = "Consumed" },
+                new ReleaseNotDownloadedRow { At = since.AddDays(1), Reason = "Consumed" },
+                new ReleaseNotDownloadedRow { At = since, Reason = "PasswordProtected" },
+                new ReleaseNotDownloadedRow { At = since.AddTicks(-1), Reason = "Consumed" });
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var status = await reading.ServiceProvider.GetRequiredService<StatusService>()
+            .ReadAsync(TestContext.Current.CancellationToken);
+        var decide = status.Stages.Single(stage => stage.Id == "decide");
+        Assert.Contains("Unknown 2", Assert.Single(decide.Facts,
+            fact => fact.Label == $"{BeforeDownloadGate.Name} outcomes (7 days)").Value);
+        Assert.Contains("Unknown 1", Assert.Single(status.Stages.Single(stage => stage.Id == "file").Facts,
+            fact => fact.Label == $"{AfterDownloadGate.Name} outcomes (7 days)").Value);
+        Assert.Equal("Consumed 2, PasswordProtected 1", Assert.Single(decide.Facts,
+            fact => fact.Label == "Releases not downloaded (7 days)").Value);
+    }
+
     [Fact]
     public async Task Deferral_causes_targets_and_retry_times_are_local_facts_and_expire_on_the_next_read()
     {

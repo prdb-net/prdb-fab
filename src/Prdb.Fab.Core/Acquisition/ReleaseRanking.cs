@@ -33,6 +33,9 @@ public sealed record ReleaseRankingResult(
 /// <summary>ADR 0008's fixed, title-free and total ordering.</summary>
 public static class ReleaseRanking
 {
+    public static bool HasUsableRelease(IEnumerable<RankableRelease> releases) =>
+        releases.Any(release => ExclusionOf(release) is null);
+
     public static ReleaseRankingResult Order(IEnumerable<RankableRelease> releases)
     {
         var usable = new List<RankableRelease>();
@@ -48,7 +51,7 @@ public static class ReleaseRanking
         var ordered = new List<RankableRelease>();
         foreach (var tier in usable.GroupBy(TierOf).OrderBy(group => group.Key))
         {
-            var remaining = tier
+            var bySize = tier
                 .OrderByDescending(release => release.Size.HasValue)
                 .ThenByDescending(release => release.Size)
                 .ThenBy(release => release.IndexerRank)
@@ -56,18 +59,20 @@ public static class ReleaseRanking
                 .ThenBy(release => release.DerivedReleaseId, StringComparer.Ordinal)
                 .ToList();
 
-            while (remaining.Count > 0)
+            // Size cohorts are contiguous in this order. Walk each once instead
+            // of scanning and removing from the entire remaining population.
+            for (var start = 0; start < bySize.Count;)
             {
-                var anchor = remaining[0].Size;
-                var cohort = remaining.Where(release => InCohort(release.Size, anchor)).ToList();
+                var anchor = bySize[start].Size;
+                var end = start + 1;
+                while (end < bySize.Count && InCohort(bySize[end].Size, anchor)) end++;
 
-                ordered.AddRange(cohort
+                ordered.AddRange(bySize.GetRange(start, end - start)
                     .OrderBy(release => release.IndexerRank)
                     .ThenBy(release => release.IndexerId)
                     .ThenBy(release => release.DerivedReleaseId, StringComparer.Ordinal));
 
-                var members = cohort.Select(release => release.Id).ToHashSet();
-                remaining.RemoveAll(release => members.Contains(release.Id));
+                start = end;
             }
         }
 
@@ -99,6 +104,8 @@ public static class ReleaseRanking
     {
         if (anchor is null) return size is null;
         if (size is null) return false;
+        // A reported zero size must still form a cohort and make progress.
+        if (anchor <= 0) return size == anchor;
 
         // Written without floating point: the difference is strictly below
         // five percent of the larger (the cohort anchor).
