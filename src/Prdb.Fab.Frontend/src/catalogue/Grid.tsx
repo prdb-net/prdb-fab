@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 
 import type { LibraryPage, VideoCard } from '../api/client.ts'
 import styles from './Grid.module.css'
+import { relativeDate } from '../ui/relativeDate.ts'
 
 type LibraryCard = LibraryPage['entries'][number]
 
@@ -19,7 +20,9 @@ export function Grid({
   videos,
   action,
   onOpen,
+  compact = false,
 }: {
+  compact?: boolean
   videos: readonly VideoCard[]
   /** What this surface offers on a card, if anything. */
   action?: (video: VideoCard) => ReactNode
@@ -31,9 +34,9 @@ export function Grid({
   onOpen?: (video: VideoCard) => void
 }) {
   return (
-    <ul className={styles.grid}>
+    <ul className={`${styles.grid} ${compact ? styles.compact : ''}`}>
       {videos.map((video) => (
-        <Card key={video.id} video={video} action={action} onOpen={onOpen} />
+        <Card key={video.id} video={video} action={action} onOpen={onOpen} compact={compact} />
       ))}
     </ul>
   )
@@ -55,10 +58,12 @@ export function LibraryGrid({
 }
 
 function Card({
+  compact,
   video,
   action,
   onOpen,
 }: {
+  compact?: boolean
   video: VideoCard
   action?: (video: VideoCard) => ReactNode
   onOpen?: (video: VideoCard) => void
@@ -85,7 +90,15 @@ function Card({
     artworkId={video.id}
     title={video.title}
     artworkLabel={video.site ?? undefined}
-    detail={describe(video)}
+    detail={compact ? <>
+      {video.site}
+      {video.site && video.releaseDate && ' · '}
+      {video.releaseDate && (
+        <time dateTime={video.releaseDate} title={`Released ${video.releaseDate}`}>
+          {relativeDate(video.releaseDate)}
+        </time>
+      )}
+    </> : describe(video)}
     status={statusOf(video).join(' · ')}
     badge={badge}
     action={action?.(video)}
@@ -131,7 +144,7 @@ function GridCard({
   artworkId: VideoCard['id']
   artworkLabel?: string
   title: string
-  detail: string
+  detail: ReactNode
   status: string
   badge: ReactNode
   action?: ReactNode

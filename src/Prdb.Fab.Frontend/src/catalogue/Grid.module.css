@@ -187,3 +187,18 @@
 .artworkLoading > span { border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; width: 1.2rem; height: 1.2rem; animation: artwork-spin 1s linear infinite; }
 @keyframes artwork-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .artwork { transition: none; } .artworkLoading > span { animation: none; } }
+
+/* Search keeps the shared card controls in a denser artwork grid. */
+.compact { gap: 1rem .85rem; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); }
+.compact .card { gap: .3rem; padding: 0; }
+.compact .frame { border-radius: 8px; }
+.compact .title { font-size: .88rem; }
+.compact .detail { font-size: .76rem; }
+.compact .cardActions { padding-top: .15rem; font-size: .8rem; }
+@media (max-width: 600px) {
+  .compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem .65rem; }
+  .compact .cardActions { font-size: .75rem; }
+}
+@media (max-width: 420px) {
+  .compact { grid-template-columns: minmax(0, 1fr); }
+}
