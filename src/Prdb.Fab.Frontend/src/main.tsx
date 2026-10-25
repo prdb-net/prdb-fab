@@ -95,7 +95,7 @@ function pageTitle(pathname: string): string {
   if (pathname === '/operation-log') return 'Operation log'
   if (pathname === '/status') return 'Status'
   if (pathname === '/settings') return 'Settings'
-  if (pathname === '/settings/connections') return 'Connections'
+  if (pathname === '/settings/connections' || pathname === '/settings/connections/indexers') return 'Indexers'
   if (pathname.startsWith('/settings/connections/indexers/')) return 'Indexer'
   if (pathname === '/settings/connections/prdb') return 'prdb connection'
   if (pathname === '/settings/connections/sabnzbd') return 'SABnzbd connection'
@@ -152,7 +152,8 @@ createRoot(document.getElementById('root')!).render(
                   down as well — every indexer has its own. */}
               <Route path="/settings" element={<SettingsGate />}>
                 <Route index element={<SettingsScreen />} />
-                <Route path="connections" element={<ConnectionsScreen />} />
+                <Route path="connections" element={<ConnectionsScreen redirect />} />
+                <Route path="connections/indexers" element={<ConnectionsScreen />} />
                 <Route path="connections/prdb" element={<PrdbSettings />} />
                 <Route path="connections/sabnzbd" element={<SabnzbdSettings />} />
                 <Route path="connections/indexers/new" element={<IndexerSettings />} />

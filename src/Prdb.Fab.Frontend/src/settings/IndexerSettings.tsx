@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 
 import {
   deleteIndexer,
@@ -48,17 +48,17 @@ export function IndexerSettings() {
           return (
             <SettingsPage
               title="Indexer not found"
-              back="/settings/connections"
-              backLabel="Connections"
+              back="/settings/connections/indexers"
+              backLabel="Indexers"
             >
               <Verdict tone="refusal">
-                This Indexer is no longer configured. Return to Connections to choose another.
+                This Indexer is no longer configured. Return to Indexers to choose another.
               </Verdict>
             </SettingsPage>
           )
         }
 
-        return <IndexerMask indexer={indexer} />
+        return <IndexerMask key={indexer?.id ?? "new"} indexer={indexer} />
       }}
     </Loaded>
   )
@@ -66,33 +66,46 @@ export function IndexerSettings() {
 
 function IndexerMask({ indexer }: { indexer: ConfiguredIndexer | undefined }) {
   const navigate = useNavigate()
+  const { search } = useLocation()
+  const [editing, setEditing] = useState(false)
+  const [saved, setSaved] = useState(false)
 
   return (
     <SettingsPage
       title={indexer ? indexer.name : 'Add an indexer'}
       lede="Connect an Indexer and set its query budget."
       help="Before saving, fab tests the API key with a search to verify that it can retrieve Releases."
-      back="/settings/connections"
-      backLabel="Connections"
+      back="/settings/connections/indexers"
+      backLabel="Indexers"
     >
+      {indexer && !editing && <>
+        <dl className={styles.connectionSummary}>
+          <dt>Address</dt><dd>{indexer.url}</dd>
+          <dt>API key</dt><dd>Stored</dd>
+          <dt>Categories</dt><dd>{indexer.categories.split(',').join(', ')}</dd>
+          <dt>Last checked</dt><dd>{new Date(indexer.lastCheckedAt).toLocaleString()}</dd>
+        </dl>
+        <button type="button" className={formStyles.button} onClick={() => { setSaved(false); setEditing(true) }}>Edit connection</button>
+      </>}
+      {(editing || !indexer) && <section aria-label="Connection">
       <IndexerForm
         indexer={indexer}
         onSaved={() => {
           // Adding one lands on the list it was added to; correcting one stays
           // where it is, showing what the check just came back with.
+          setEditing(false)
+          setSaved(true)
           if (!indexer) {
-            void navigate('/settings/connections')
+            void navigate({ pathname: '/settings/connections/indexers', search })
           }
         }}
       />
+      {indexer && <button type="button" className={formStyles.button} onClick={() => setEditing(false)}>Cancel editing</button>}
+      </section>}
 
+      {saved && <Verdict tone="done">Indexer connection saved.</Verdict>}
       {indexer && (
         <>
-          <p className={styles.note}>
-            Searching: {indexer.categories.split(',').join(', ')}. Last checked{' '}
-            {new Date(indexer.lastCheckedAt).toLocaleString()}.
-          </p>
-
           <h2 className={styles.heading}>How it is used</h2>
           <RowSettings indexer={indexer} />
 
@@ -202,6 +215,7 @@ function RowSettings({ indexer }: { indexer: ConfiguredIndexer }) {
 
 function Removal({ indexer }: { indexer: ConfiguredIndexer }) {
   const navigate = useNavigate()
+  const { search } = useLocation()
   const queries = useQueryClient()
   const [confirming, setConfirming] = useState<IndexerDeletePreview | null>(null)
 
@@ -219,7 +233,7 @@ function Removal({ indexer }: { indexer: ConfiguredIndexer }) {
       void queries.invalidateQueries({ queryKey: ['automation-settings'] })
       void queries.invalidateQueries({ queryKey: ['releases'] })
       void queries.invalidateQueries({ queryKey: ['status'] })
-      void navigate('/settings/connections')
+      void navigate({ pathname: '/settings/connections/indexers', search })
     },
   })
 
