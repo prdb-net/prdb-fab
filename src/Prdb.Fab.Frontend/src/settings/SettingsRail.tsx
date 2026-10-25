@@ -34,7 +34,7 @@ import styles from './Settings.module.css'
  * somebody then opens finds its data already there. One endpoint is the fallback
  * if this ever turns noisy; it is not worth a contract today.
  */
-export function SettingsRail() {
+export function SettingsRail({ compact = false }: { compact?: boolean }) {
   const connections = useQuery({ queryKey: connectionsKey, queryFn: readConnections })
   const indexers = useQuery({ queryKey: indexersKey, queryFn: listIndexers })
   const autopilot = useQuery({ queryKey: ['autopilot'], queryFn: readAutopilot })
@@ -53,7 +53,8 @@ export function SettingsRail() {
   const held = connections.data
 
   return (
-    <nav className={styles.rail} aria-label="Settings">
+    <nav className={`${styles.rail} ${compact ? styles.compact : ''}`} aria-label="Settings">
+      <Group to="/settings" icon="overview" label="Overview" marks={pointedAt} />
       <Group to="/settings/connections" icon="connections" label="Connections" marks={pointedAt}>
         {held
           ? [
@@ -170,7 +171,7 @@ function Group({
           .filter(Boolean)
           .join(' ')
       }
-      end={to === '/settings/connections' || to === '/settings/automation'}
+      end={to === '/settings' || to === '/settings/connections' || to === '/settings/automation'}
     >
       <span className={styles.railIcon}>{icon ? <SettingsIcon name={icon} /> : null}</span>
       <span className={styles.railLabel}>

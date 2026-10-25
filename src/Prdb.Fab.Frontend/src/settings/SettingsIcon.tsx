@@ -11,6 +11,7 @@ import styles from './Settings.module.css'
  * file has to know when the other changes a glyph.
  */
 export type SettingsIconName =
+  | 'overview'
   | 'account'
   | 'automation'
   | 'backup'
@@ -31,6 +32,7 @@ export function SettingsIcon({ name }: { name: SettingsIconName }) {
 
   return (
     <svg aria-hidden="true" className={styles.icon} viewBox="0 0 24 24">
+      {name === 'overview' && <path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" {...common} />}
       {name === 'connections' && <path d="M9.5 14.5 14.5 9.5m-4 8.5-1.8 1.8a3.5 3.5 0 0 1-5-5L5.5 13m8-7 1.8-1.8a3.5 3.5 0 0 1 5 5L18.5 11" {...common} />}
       {name === 'automation' && <path d="M12 3v3m0 12v3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M3 12h3m12 0h3M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" {...common} />}
       {name === 'identification' && <path d="M3 8V5a2 2 0 0 1 2-2h3m8 0h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3M8.5 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-2.5 6c0-1.7 1.1-2.8 2.5-2.8S11 15.3 11 17m2.5-6h4m-4 3.5h4" {...common} />}

@@ -171,3 +171,17 @@ redesign.
   stylesheet. That is the one duplication this decision accepts.
 - The six tickets after this one rework what individual masks contain. None of
   them adds a second way to draw a field.
+
+## Settings navigation uses the application shell
+
+While visiting `/settings`, its groups replace the ordinary application links
+in the existing sidebar. The form occupies the content area without a second
+navigation column. An Overview entry keeps the setup summary reachable, and
+Indexer and Automation Rule routes remain directly accessible.
+
+A single “Back to application” link returns to the entry page, including its
+query and fragment. Status deep links can supply that destination through
+`from`; direct visits otherwise return to the home page. Parent links inside
+forms navigate within Settings. On phones, the shell's bottom navigation
+becomes the return link and a Settings button opening the existing navigation
+sheet. The overview is available at every viewport size.

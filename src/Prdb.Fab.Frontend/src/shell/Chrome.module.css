@@ -320,3 +320,14 @@
     margin-left: auto;
   }
 }
+
+.settingsHeading {
+  color: var(--text-quiet);
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin: 1rem 0.65rem 0.5rem;
+}
+
+@media (max-width: 52rem) {
+  .settingsBottom { grid-template-columns: 1fr 1fr; }
+}

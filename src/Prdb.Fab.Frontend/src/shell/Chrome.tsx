@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router'
 
 import { readAccessState, readReviewQueueCount } from '../api/client.ts'
 import { accessStateKey } from '../access/state.ts'
+import { SettingsRail } from '../settings/SettingsRail.tsx'
 import { BrandLogo } from '../ui/BrandLogo.tsx'
 import { useSfwMode } from './useSfwMode.ts'
 import styles from './Chrome.module.css'
@@ -64,6 +65,16 @@ export function Chrome({ children }: { children: ReactNode }) {
     enabled: state.data?.nextStep === 'Complete',
   })
   const location = useLocation()
+  const inSettings = location.pathname === '/settings' || location.pathname.startsWith('/settings/')
+  const lastApplicationLocation = useRef('/')
+  const carriedFrom = new URLSearchParams(location.search).get('from')
+  const returnTo = carriedFrom?.startsWith('/') && !carriedFrom.startsWith('//') && !carriedFrom.includes('\\') && !/^\/settings(?:[/?#]|$)/.test(carriedFrom)
+    ? carriedFrom : lastApplicationLocation.current
+
+  useEffect(() => {
+    lastApplicationLocation.current = inSettings ? returnTo : location.pathname + location.search + location.hash
+  }, [inSettings, returnTo, location.pathname, location.search, location.hash])
+
   const contextDestination = releaseContextDestination(location.pathname, location.search)
   const [moreOpen, setMoreOpen] = useState(false)
   const closeButton = useRef<HTMLButtonElement>(null)
@@ -119,6 +130,11 @@ export function Chrome({ children }: { children: ReactNode }) {
           <Brand />
           <SfwButton enabled={sfw.enabled} onToggle={sfw.toggle} />
         </div>
+        {inSettings ? <>
+          <Link className={styles.navLink} to={returnTo}>← Back to application</Link>
+          <div className={styles.settingsHeading}>Settings</div>
+          <SettingsRail compact />
+        </> : <>
         <nav aria-label="Primary navigation">
           <NavigationGroup
             activeTo={contextDestination}
@@ -145,6 +161,7 @@ export function Chrome({ children }: { children: ReactNode }) {
             reviewCount={reviewCount}
           />
         </nav>
+        </>}
       </aside>
 
       <header className={styles.mobileTop}>
@@ -154,8 +171,8 @@ export function Chrome({ children }: { children: ReactNode }) {
 
       <div className={styles.content}>{children}</div>
 
-      <nav className={styles.mobileBottom} aria-label="Primary navigation">
-        {primaryMobile.map((destination) => (
+      <nav className={`${styles.mobileBottom} ${inSettings ? styles.settingsBottom : ''}`} aria-label={inSettings ? 'Settings controls' : 'Primary navigation'}>
+        {inSettings ? <Link className={styles.mobileLink} to={returnTo}>← Back to application</Link> : primaryMobile.map((destination) => (
           <DestinationLink
             destination={destination}
             activeTo={contextDestination}
@@ -174,9 +191,9 @@ export function Chrome({ children }: { children: ReactNode }) {
         >
           <span className={styles.mobileIcon}>
             <Icon name="more" />
-            {reviewCount > 0 && <span className={styles.mobileBadge}>{reviewCount}</span>}
+            {!inSettings && reviewCount > 0 && <span className={styles.mobileBadge}>{reviewCount}</span>}
           </span>
-          More
+          {inSettings ? 'Settings' : 'More'}
         </button>
       </nav>
 
@@ -200,7 +217,7 @@ export function Chrome({ children }: { children: ReactNode }) {
           >
             <div aria-hidden="true" className={styles.sheetHandle} />
             <header className={styles.sheetHeader}>
-              <strong>Go to</strong>
+              <strong>{inSettings ? 'Settings' : 'Go to'}</strong>
               <button
                 aria-label="Close navigation"
                 className={styles.closeButton}
@@ -214,7 +231,7 @@ export function Chrome({ children }: { children: ReactNode }) {
                 &times;
               </button>
             </header>
-            <nav className={styles.sheetGrid} aria-label="All destinations">
+            {inSettings ? <SettingsRail compact /> : <nav className={styles.sheetGrid} aria-label="All destinations">
               <SheetGroup
                 activeTo={contextDestination}
                 label="Discover"
@@ -240,7 +257,7 @@ export function Chrome({ children }: { children: ReactNode }) {
                 reviewCount={reviewCount}
                 sheet
               />
-            </nav>
+            </nav>}
           </div>
         </div>
       )}
@@ -354,7 +371,9 @@ function DestinationLink({
     <Link
       aria-current={routeActive ? 'page' : contextActive ? 'location' : undefined}
       className={`${className} ${active ? styles.active : ''}`}
-      to={destination.to}
+      to={destination.to === '/settings'
+        ? { pathname: destination.to, search: `?from=${encodeURIComponent(location.pathname + location.search + location.hash)}` }
+        : destination.to}
     >
       {mobile ? (
         <span className={styles.mobileIcon}>
