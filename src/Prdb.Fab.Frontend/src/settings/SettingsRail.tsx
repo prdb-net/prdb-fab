@@ -144,10 +144,13 @@ function Group({
   children?: React.ReactNode
 }) {
   const location = useLocation()
-  const marked = marks.get(to) ?? (to === '/settings/connections/indexers'
-    ? [...marks].filter(([path]) => path.startsWith(`${to}/`))
-      .map(([, kind]) => kind).sort((a) => a === 'Gap' ? -1 : 1)[0]
-    : undefined)
+  const childMarks = to === '/settings/connections/indexers'
+    ? [...marks].filter(([path]) => path.startsWith(`${to}/`)).map(([, kind]) => kind)
+    : []
+  const directMark = marks.get(to)
+  const marked = directMark === 'Gap' || childMarks.includes('Gap')
+    ? 'Gap'
+    : directMark ?? childMarks[0]
 
   return (
     <NavLink
@@ -198,7 +201,8 @@ function conditionRoutes(status: StatusState | undefined): ReadonlyMap<string, '
     for (const condition of [...stage.gaps, ...stage.brakes]) {
       if (condition.cleared || !condition.route) continue
 
-      const path = condition.route.split('?')[0]
+      const target = condition.route.split('?')[0]
+      const path = target === '/settings/connections' ? '/settings/connections/indexers' : target
 
       if (path.startsWith('/settings') && routes.get(path) !== 'Gap') routes.set(path, condition.kind)
     }
