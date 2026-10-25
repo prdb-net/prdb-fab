@@ -51,7 +51,7 @@ export function LibraryGrid({
   action?: (entry: LibraryCard) => ReactNode
 }) {
   return (
-    <ul className={styles.grid}>
+    <ul className={`${styles.grid} ${styles.compact}`}>
       {entries.map((entry) => <HeldCard action={action?.(entry)} entry={entry} key={entry.id} />)}
     </ul>
   )
@@ -113,7 +113,7 @@ function HeldCard({ entry, action }: { entry: LibraryCard; action?: ReactNode })
     artworkId={entry.artworkId}
     title={entry.title}
     artworkLabel={entry.site ?? undefined}
-    detail={[entry.site, entry.releaseDate].filter(Boolean).join(' · ')}
+    detail={<>{entry.site}{entry.site && entry.releaseDate && ' · '}{entry.releaseDate && <time dateTime={entry.releaseDate} title={`Released ${entry.releaseDate}`}>{relativeDate(entry.releaseDate)}</time>}</>}
     status={[describeCopies(entry.qualities), describeRuntime(entry.runtimeSeconds), entry.catalogueNotice].filter(Boolean).join(' · ')}
     badge={qualities.length > 0 && <span className={styles.held}>In Library · {qualities.join(', ')}</span>}
     to={`/library/${entry.id}`}

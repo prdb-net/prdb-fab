@@ -7,7 +7,7 @@ import { formStyles } from '../ui/Form.tsx'
 import { Verdict } from '../ui/Verdict.tsx'
 import styles from './AutopilotPanel.module.css'
 
-export function AutopilotPanel({ controls = false }: { controls?: boolean }) {
+export function AutopilotPanel({ controls = false, compact = false }: { controls?: boolean; compact?: boolean }) {
   const queries = useQueryClient()
   const navigate = useNavigate()
   const location = useLocation()
@@ -32,6 +32,14 @@ export function AutopilotPanel({ controls = false }: { controls?: boolean }) {
     : held.phase === 'Setup' ? { to: held.actionRoute, label: 'Finish setup' }
     : held.phase === 'WantedBaseline' ? { to: '/status', label: 'View sync status' }
     : { to: '/settings/automation', label: held.present ? 'Manage automatic downloads' : 'Set up automatic downloads' }
+
+  if (compact && !controls) return <details className={styles.compact}>
+    <summary>Automatic Wanted downloads <span className={styles.badge}>{phaseLabel}</span></summary>
+    <p role="status">{held.detail}</p>
+    <Link to={action.to === location.pathname ? '/settings/automation' : action.to}>
+      {action.to === location.pathname ? 'Manage automatic downloads' : action.label}
+    </Link>
+  </details>
 
   return <section className={styles.panel} aria-label="Automatic Wanted downloads">
     <div className={styles.heading}>

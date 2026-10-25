@@ -58,8 +58,8 @@ export function DirectoryView({
 }) {
   return (
     <main className={styles.screen}>
-      <Heading title={title} total={total} noun={noun} syncSurface={noun === 'Actor' ? 'actors' : 'sites'} />
       <div className={styles.browseFilters}>
+        <Filter value={search} placeholder={`Search ${title.toLowerCase()}…`} apply={setFilter} />
         <nav className={styles.scope} aria-label={`${title} scope`}>
           <button type="button" aria-pressed={scope === 'Favourites'} onClick={() => setScope('Favourites')}>
             Favourites
@@ -81,7 +81,10 @@ export function DirectoryView({
           </button>
         )}
       </div>
-      <Filter value={search} placeholder={`Filter ${title.toLowerCase()}…`} apply={setFilter} />
+      <div className={styles.summary}>
+        <span>{total} {total === 1 ? noun : title} · Page {page} of {pages}</span>
+        <SyncControl surface={noun === 'Actor' ? 'actors' : 'sites'} />
+      </div>
 
       <PageNotice page={page} pages={pages} />
       {page > pages ? null : items.length === 0 ? (
@@ -203,7 +206,7 @@ export function VideoContextView({
       {page > pages ? null : videos.length === 0 ? (
         <p className={styles.empty}>No videos match this filter.</p>
       ) : (
-        <Grid
+        <Grid compact
           videos={videos}
           onOpen={(video) => openPreview(video.prdbId)}
           action={(video) => <span className={gridStyles.actions}>{videoAction(video)}</span>}
@@ -265,9 +268,9 @@ function Filter({
   }
 
   return (
-    <form className={styles.filter} onSubmit={submit} key={value}>
+    <form role="search" className={styles.filter} onSubmit={submit} key={value}>
       <input aria-label={placeholder.replace(/…$/, '')} name="search" type="search" defaultValue={value} placeholder={placeholder} />
-      <button type="submit">Apply</button>
+      <button type="submit">Search</button>
       {value && (
         <button type="button" onClick={() => apply('')}>
           Clear
