@@ -203,3 +203,14 @@ the Path Mapping together; editing still checks the connection, loads the
 categories, and verifies the mapping in that order. The forms remain shared
 with onboarding. Indexer usage settings remain independently editable so a
 broken connection can still be disabled without a successful connection check.
+
+## Connection masks make their evidence visible
+
+A status panel precedes credentials: latest check outcome, last check time and
+last successful check time, with an explicit Test connection action. It says
+when the check worked rather than promising current reachability. Unknown is
+shown as unknown, including after upgrading an installation without recorded
+checks. Credentials occupy a separate section with a Stored badge, masked key
+and explicit Show action (ADR 0020's amendment). Connection details, completed
+Download paths and Indexer search preferences have separate titled sections.
+The edit forms still come from the shared onboarding components.

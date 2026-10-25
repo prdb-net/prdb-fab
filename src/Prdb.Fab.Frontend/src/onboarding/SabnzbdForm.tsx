@@ -90,8 +90,8 @@ export function SabnzbdForm({
     onSuccess: async (answer) => {
       setVerdict(answer)
 
+      await queries.invalidateQueries({ queryKey: connectionsKey })
       if (answer.outcome === 'Saved') {
-        await queries.invalidateQueries({ queryKey: connectionsKey })
         onSaved?.()
       }
     },

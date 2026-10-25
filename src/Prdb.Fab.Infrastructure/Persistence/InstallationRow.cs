@@ -41,6 +41,13 @@ public sealed class InstallationRow
     /// <summary>ADR 0037: stored as it was typed. There is nowhere to put a key.</summary>
     public string? PrdbApiKey { get; set; }
 
+    public DateTimeOffset? PrdbLastCheckedAt { get; set; }
+    public DateTimeOffset? PrdbLastSuccessAt { get; set; }
+    public Prdb.Fab.Core.Connections.PrdbConnectionOutcome? PrdbLastCheckOutcome { get; set; }
+    public DateTimeOffset? SabnzbdLastCheckedAt { get; set; }
+    public DateTimeOffset? SabnzbdLastSuccessAt { get; set; }
+    public Prdb.Fab.Core.Connections.SabnzbdConnectionOutcome? SabnzbdLastCheckOutcome { get; set; }
+
     /// <summary>
     /// Stable per prdb account, so a key entered later that belongs to a
     /// different one can be recognised (ADR 0010) and scopes what was reported

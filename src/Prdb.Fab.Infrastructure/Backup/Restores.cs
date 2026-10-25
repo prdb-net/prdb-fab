@@ -327,6 +327,12 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
         installation.PreviewPublicationExplainedAt = carried.PreviewPublicationExplainedAt;
 
         installation.WhatsNewObservedAt = carried.WhatsNewObservedAt;
+        installation.PrdbLastCheckedAt = carried.PrdbLastCheckedAt;
+        installation.PrdbLastSuccessAt = carried.PrdbLastSuccessAt;
+        installation.PrdbLastCheckOutcome = carried.PrdbLastCheckOutcome;
+        installation.SabnzbdLastCheckedAt = carried.SabnzbdLastCheckedAt;
+        installation.SabnzbdLastSuccessAt = carried.SabnzbdLastSuccessAt;
+        installation.SabnzbdLastCheckOutcome = carried.SabnzbdLastCheckOutcome;
 
         // ADR 0033's translation, and there is nothing to translate back into:
         // the Catalogue is cache and this container has none yet. What's New
@@ -357,6 +363,7 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
             Categories = row.Categories,
             LastVerdict = row.LastVerdict,
             LastCheckedAt = row.LastCheckedAt,
+            LastSuccessAt = row.LastSuccessAt,
             Enabled = row.Enabled,
             Rank = row.Rank,
             DailyQueryBudget = row.DailyQueryBudget,

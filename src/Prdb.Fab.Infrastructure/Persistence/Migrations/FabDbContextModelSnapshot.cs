@@ -1335,6 +1335,9 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("LastCheckedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("LastSuccessAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LastVerdict")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1532,6 +1535,15 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<string>("PrdbApiKey")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("PrdbLastCheckOutcome")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PrdbLastCheckedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PrdbLastSuccessAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PrdbUserHash")
                         .HasColumnType("TEXT");
 
@@ -1562,6 +1574,15 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SabnzbdCategory")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SabnzbdLastCheckOutcome")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SabnzbdLastCheckedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SabnzbdLastSuccessAt")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("SabnzbdSkipped")

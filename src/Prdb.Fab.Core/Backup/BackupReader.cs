@@ -120,6 +120,9 @@ public static class BackupReader
                 envelope["formatVersion"] = 5;
             },
 
+            // Optional check evidence is unknown in older documents.
+            [5] = envelope => envelope["formatVersion"] = 6,
+
             [3] = envelope =>
             {
                 envelope["previewPublications"] = new JsonArray();

@@ -266,3 +266,21 @@ gaps and duplicates appear and then need a resolution rule nobody asked for.
 adds a supplied bounded Wanted permission after a previewed collection import.
 It describes the setup, controls and fair search ordering that amend this
 ADR; existing custom permissions and their safety checks remain in force.
+
+## Amendment: explicitly reveal a stored credential
+
+Connection settings now allow the signed-in owner to reveal a stored API key.
+The overview response carries only a masked hint; the full key is fetched by a
+separate authenticated POST with `Cache-Control: no-store`, only when Show is
+pressed. The browser holds it in the mounted control, not the query cache, and
+hides it after thirty seconds or when the window loses focus. This supersedes
+the write-only rule above. Empty edit fields still mean keep the stored key.
+
+The connection mask separates configured credentials from evidence that a check
+succeeded. prdb and SABnzbd retain the last check result and timestamp, and the
+last successful check separately. A failure of the stored connection keeps its
+last success; a rejected replacement does not change the stored connection's
+evidence. Indexers retain their last successful check alongside their existing
+verdict. These observations travel in Backup with the Connection, as optional fields
+for older documents. Installations and Backups predating these fields show
+unknown until checked.

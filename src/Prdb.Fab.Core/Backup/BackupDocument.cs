@@ -120,7 +120,13 @@ public sealed record BackupInstallation(
     bool PublishGeneratedPreviews,
     DateTimeOffset? PreviewPublicationExplainedAt,
     DateTimeOffset? WhatsNewObservedAt,
-    Guid? WhatsNewObservedVideo);
+    Guid? WhatsNewObservedVideo,
+    DateTimeOffset? PrdbLastCheckedAt = null,
+    DateTimeOffset? PrdbLastSuccessAt = null,
+    PrdbConnectionOutcome? PrdbLastCheckOutcome = null,
+    DateTimeOffset? SabnzbdLastCheckedAt = null,
+    DateTimeOffset? SabnzbdLastSuccessAt = null,
+    SabnzbdConnectionOutcome? SabnzbdLastCheckOutcome = null);
 
 /// <summary>ADR 0006's two admission sets, as the rows that are their form.</summary>
 public sealed record BackupGateAdmission(string Gate, IdentificationConfidence Confidence);
@@ -206,7 +212,8 @@ public sealed record BackupIndexer(
     DateTimeOffset LastCheckedAt,
     bool Enabled,
     int Rank,
-    int DailyQueryBudget);
+    int DailyQueryBudget,
+    DateTimeOffset? LastSuccessAt = null);
 
 public sealed record BackupAutomationRule(
     Guid Id,

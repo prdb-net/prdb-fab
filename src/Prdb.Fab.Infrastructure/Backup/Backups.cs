@@ -86,7 +86,7 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 row.LastCheckedAt,
                 row.Enabled,
                 row.Rank,
-                row.DailyQueryBudget))
+                row.DailyQueryBudget, row.LastSuccessAt))
             .ToListAsync(cancellationToken);
 
         var automationRules = await context.AutomationRules
@@ -279,7 +279,9 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 installation.PublishGeneratedPreviews,
                 installation.PreviewPublicationExplainedAt,
                 installation.WhatsNewObservedAt,
-                observedVideo),
+                observedVideo,
+                installation.PrdbLastCheckedAt, installation.PrdbLastSuccessAt, installation.PrdbLastCheckOutcome,
+                installation.SabnzbdLastCheckedAt, installation.SabnzbdLastSuccessAt, installation.SabnzbdLastCheckOutcome),
             gateAdmissions,
             indexers,
             automationRules,

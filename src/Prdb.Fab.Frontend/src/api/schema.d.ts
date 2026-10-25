@@ -1190,6 +1190,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/connections/keys/{connection}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    connection: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectionKey"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/connections/prdb": {
         parameters: {
             query?: never;
@@ -4620,6 +4664,11 @@ export interface components {
             lastVerdict: components["schemas"]["IndexerConnectionOutcome"];
             /** Format: date-time */
             lastCheckedAt: string;
+            /** Format: date-time */
+            lastSuccessAt: null | string;
+        };
+        ConnectionKey: {
+            apiKey: string;
         };
         ConnectionsState: {
             prdbConfigured: boolean;
@@ -4633,6 +4682,18 @@ export interface components {
             indexerCount: number | string;
             indexersSkipped: boolean;
             libraryRoot: null | string;
+            prdbKeyHint: null | string;
+            sabnzbdKeyHint: null | string;
+            /** Format: date-time */
+            prdbLastCheckedAt: null | string;
+            /** Format: date-time */
+            prdbLastSuccessAt: null | string;
+            prdbLastCheckOutcome: null | components["schemas"]["PrdbConnectionOutcome"];
+            /** Format: date-time */
+            sabnzbdLastCheckedAt: null | string;
+            /** Format: date-time */
+            sabnzbdLastSuccessAt: null | string;
+            sabnzbdLastCheckOutcome: null | components["schemas"]["SabnzbdConnectionOutcome"];
         };
         /** @enum {unknown} */
         DownloadCause: "Rejected" | "Failed" | "Unusable" | "Vanished" | "Abandoned" | "Empty" | null;
@@ -5128,7 +5189,7 @@ export interface components {
             total: number | string;
         };
         /** @enum {unknown} */
-        PrdbConnectionOutcome: "Saved" | "WrongKey" | "NoApiAccess" | "QuotaSpent" | "NotRightNow" | "AnotherAccount";
+        PrdbConnectionOutcome: "Saved" | "WrongKey" | "NoApiAccess" | "QuotaSpent" | "NotRightNow" | "AnotherAccount" | null;
         PrdbConnectionRequest: {
             apiKey: null | string;
             confirmAnotherAccount: boolean;
@@ -5555,7 +5616,7 @@ export interface components {
             completedRoot: string;
         };
         /** @enum {unknown} */
-        SabnzbdConnectionOutcome: "Saved" | "WrongKey" | "AccessDenied" | "NotSabnzbd" | "NotRightNow" | "UnknownCategory" | "DownloadDirectoryMissing" | "DownloadDirectoryUnreadable";
+        SabnzbdConnectionOutcome: "Saved" | "WrongKey" | "AccessDenied" | "NotSabnzbd" | "NotRightNow" | "UnknownCategory" | "DownloadDirectoryMissing" | "DownloadDirectoryUnreadable" | null;
         SabnzbdConnectionRequest: {
             url: null | string;
             apiKey: null | string;
