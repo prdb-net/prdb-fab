@@ -1,73 +1,20 @@
 .screen {
   margin: 0 auto;
   max-width: 1280px;
-  padding: 1.5rem 1rem 3rem;
-}
-
-.heading {
-  align-items: baseline;
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-}
-
-.heading h1,
-.heading p {
-  margin: 0 0 0.35rem;
-}
-
-.heading p,
-.heading span,
-.empty {
-  color: var(--text-quiet);
+  padding: 1rem 1rem 3rem;
 }
 
 .controls {
-  align-items: end;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(22rem, 1fr) minmax(12rem, auto) minmax(12rem, auto);
-  margin: 1.25rem 0;
-  padding: 0.9rem;
+  grid-template-columns: minmax(15rem, 1fr) auto auto;
+  gap: .5rem;
+  align-items: center;
 }
 
-.controls label,
-.search {
-  color: var(--text-quiet);
-  display: flex;
-  flex-direction: column;
-  font-size: 0.85rem;
-  font-weight: 700;
-  gap: 0.35rem;
-}
-
-.search span {
-  display: flex;
-  gap: 0.5rem;
-}
+.search { display: flex; gap: .5rem; min-width: 0; }
 
 .controls input,
-.controls select {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  min-height: 2.6rem;
-  padding: 0.65rem 0.8rem;
-}
-
-.controls input {
-  flex: 1;
-  min-width: 8rem;
-}
-
-.controls select {
-  min-width: 12rem;
-}
-
+.controls select,
 .controls button,
 .empty button,
 .pager button {
@@ -75,68 +22,26 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text);
-  cursor: pointer;
-  padding: 0.55rem 0.8rem;
+  font: inherit;
+  font-size: .85rem;
+  min-height: 44px;
+  padding: .5rem .7rem;
 }
 
-.controls button[type='submit'] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--surface);
-  font-weight: 700;
-}
+.controls input { flex: 1; min-width: 0; width: 100%; }
+.controls select { max-width: 100%; }
+.controls button, .empty button, .pager button { cursor: pointer; }
+.controls button[type='submit'] { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 700; }
+.controls :focus-visible, .empty button:focus-visible, .pager button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pager button:disabled { cursor: default; opacity: .5; }
 
-.summary {
-  color: var(--text-quiet);
-  font-size: 0.9rem;
-  margin: -0.5rem 0 1.25rem;
-}
-
-.empty {
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-}
-
-.empty p {
-  margin-top: 0;
-}
-
-.pager {
-  align-items: center;
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-top: 2rem;
-}
+.summary { display: flex; justify-content: space-between; color: var(--text-quiet); font-size: .78rem; margin: .65rem 0 .9rem; }
+.empty { color: var(--text-quiet); border: 1px dashed var(--border); border-radius: var(--radius); padding: 1.5rem; }
+.empty p { margin-top: 0; }
+.pager { align-items: center; display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; font-size: .85rem; }
 
 @media (max-width: 850px) {
-  .controls { grid-template-columns: 1fr 1fr; }
+  .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .search { grid-column: 1 / -1; }
+  .controls select { width: 100%; min-width: 0; }
 }
-
-@media (max-width: 620px) {
-  .screen { padding-top: 1rem; }
-  .heading { align-items: start; gap: .5rem; }
-  .heading span { white-space: nowrap; font-size: .8rem; padding-top: .5rem; }
-  .heading p { font-size: .85rem; }
-  .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: .65rem; gap: .65rem; margin: 1rem 0; }
-  .controls label { min-width: 0; }
-  .search { grid-column: 1 / -1; }
-  .search input { min-width: 0; width: 100%; }
-  .controls select { min-width: 0; width: 100%; padding: .6rem .3rem; }
-  .summary { font-size: .8rem; margin-bottom: 1rem; }
-}
-.controls button, .pager button { min-height: 44px; }
-
-@media (max-width: 620px) {
-  .heading { position: relative; }
-  .heading > div { width: 100%; }
-  .heading h1 { padding-right: 8rem; }
-  .heading p { font-size: .8rem; }
-  .heading > span { position: absolute; right: 0; top: .5rem; padding: 0; }
-}
-
-.heading > div:first-child { flex: 1; min-width: 0; width: auto; }
-.heading h1 { padding-right: 0; }
-.heading > span { position: static; flex: none; padding-top: .6rem; }

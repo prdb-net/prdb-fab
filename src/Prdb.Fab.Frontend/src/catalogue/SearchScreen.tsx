@@ -1,4 +1,3 @@
-import { InfoHelp } from '../ui/InfoHelp.tsx'
 import { Loaded } from '../ui/Loaded.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
@@ -19,9 +18,9 @@ import { usePreview } from './preview.ts'
 import styles from './SearchScreen.module.css'
 
 const filters: readonly CatalogueVideoFilter[] = [
-  'Available',
-  'All',
   'DownloadReady',
+  'All',
+  'Available',
   'NeedsSearch',
   'Wanted',
   'Held',
@@ -41,7 +40,7 @@ export function SearchScreen() {
   const [parameters, setParameters] = useSearchParams()
   const location = useLocation()
   const search = parameters.get('search') ?? ''
-  const filter = choice(parameters.get('filter'), filters, 'Available')
+  const filter = choice(parameters.get('filter'), filters, 'DownloadReady')
   const availableSorts = search ? (['Relevance', ...sorts] as const) : sorts
   const sort = choice(
     parameters.get('sort'),
@@ -73,7 +72,7 @@ export function SearchScreen() {
   const setChoice = (name: 'filter' | 'sort', value: string) => {
     const next = new URLSearchParams(parameters)
     const isDefault = name === 'filter'
-      ? value === 'Available'
+      ? value === 'DownloadReady'
       : value === (search ? 'Relevance' : 'ReleaseDateDescending')
     if (isDefault) next.delete(name)
     else next.set(name, value)
@@ -101,35 +100,22 @@ export function SearchScreen() {
 
   return (
     <main className={styles.screen} aria-busy={videos.isFetching}>
-      <div className={styles.heading}>
-        <div>
-          <InfoHelp label="Catalogue search" heading={<h1>Search</h1>}>Search reads the locally synced Catalogue. To find more Releases for a Video, open its Release page and choose Search Indexers.</InfoHelp>
-          <p>Find Videos in your Catalogue.</p>
-        </div>
-        {total > 0 && <span>{total.toLocaleString('en')} videos</span>}
-      </div>
-
       <div className={styles.controls}>
-        <form className={styles.search} onSubmit={apply} key={search}>
-          <label htmlFor="catalogue-search">Video title</label>
-          <span>
-            <input id="catalogue-search" name="search" type="search" defaultValue={search} placeholder="Search Video titles…" />
-            <button type="submit">Search</button>
-            {search && <button type="button" onClick={clearSearch}>Clear</button>}
-          </span>
+        <form className={styles.search} onSubmit={apply} key={search} role="search">
+          <input aria-label="Search Video titles" id="catalogue-search" name="search" type="search" defaultValue={search} placeholder="Search videos…" />
+          <button type="submit">Search</button>
+          {search && <button type="button" onClick={clearSearch}>Clear</button>}
         </form>
-        <label>
-          Show
-          <select value={filter} onChange={(event) => setChoice('filter', event.target.value)}>
-            {filters.map((value) => <option value={value} key={value}>{filterLabel(value)}</option>)}
-          </select>
-        </label>
-        <label>
-          Sort by
-          <select value={sort} onChange={(event) => setChoice('sort', event.target.value)}>
-            {availableSorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
-          </select>
-        </label>
+        <select aria-label="Show videos" value={filter} onChange={(event) => setChoice('filter', event.target.value)}>
+          {filters.map((value) => <option value={value} key={value}>{filterLabel(value)}</option>)}
+        </select>
+        <select aria-label="Sort videos" value={sort} onChange={(event) => setChoice('sort', event.target.value)}>
+          {availableSorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
+        </select>
+      </div>
+      <div className={styles.summary} role="status">
+        {videos.isFetching ? 'Updating…' : `${total.toLocaleString('en')} videos`}
+        {pages > 1 && <span>Page {shownPage} of {pages}</span>}
       </div>
 
       <PageNotice page={page} pages={pages} pending={videos.isFetching} previousPage={videos.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />
@@ -145,6 +131,7 @@ export function SearchScreen() {
         </div>
       ) : (
         <Grid
+          compact
           videos={videos.data?.videos ?? []}
           onOpen={(video) => openPreview(video.prdbId)}
           action={(video) => (
@@ -176,7 +163,7 @@ function choice<T extends string>(supplied: string | null, choices: readonly T[]
 
 function filterLabel(filter: CatalogueVideoFilter): string {
   const labels: Record<CatalogueVideoFilter, string> = {
-    Available: 'Available',
+    Available: 'Not held or downloading',
     All: 'All Videos',
     DownloadReady: 'Download ready',
     NeedsSearch: 'Needs search',
