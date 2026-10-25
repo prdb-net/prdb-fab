@@ -1,38 +1,14 @@
-/*
-  ADR 0058: two panes. A persistent rail of ADR 0020's groups on the left, the
-  mask on the right — still routes rather than anchors, because ADR 0020 refused
-  one long page for the reason that every Gap and Brake has to land on a form
-  rather than scroll it into view.
-
-  The surface used to be a 34rem column beside a 15.5rem sidebar, where Status
-  uses 74rem and Downloads 1500px. The two panes together now use the width the
-  rest of the application uses; the mask keeps a readable measure inside it.
-*/
+/* Settings use the shell sidebar; forms retain a readable measure. */
 .surface {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr);
   margin: 0 auto;
   max-width: 74rem;
   padding: 1.5rem 1rem 4rem;
-}
-
-.railPane,
-.railPaneAside {
-  min-width: 0;
-}
-
-.maskPane,
-.maskPaneOnlyWide {
-  min-width: 0;
 }
 
 .rail {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  position: sticky;
-  top: 1.5rem;
 }
 
 /*
@@ -201,29 +177,11 @@
   border-bottom: none;
 }
 
-/*
-  Below this the rail is the `/settings` page and a mask replaces it, which is
-  what keeps a phone from carrying two panes at 400px — and what gives the mask
-  its own header something to be the top of.
-*/
+/* Summaries live on the overview and forms; the shell stays easy to scan. */
+.compact .railHolds { display: none; }
+
 @media (max-width: 52rem) {
-  .surface {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-  }
-
-  .rail {
-    position: static;
-  }
-
-  .railPaneAside,
-  .maskPaneOnlyWide {
-    display: none;
-  }
-
-  .screen {
-    max-width: none;
-  }
+  .screen { max-width: none; }
 }
 
 /* The Connections mask's own two rows, which are routes rather than a corridor:
