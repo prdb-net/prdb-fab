@@ -44,6 +44,9 @@ public sealed class StatusService(
     /// </remarks>
     private const string PublicationsRoute = "/settings/reporting/publications";
 
+    private sealed record ReviewCount(Guid? DownloadId, int Count);
+    private sealed record OutstandingDownload(int Count, DateTimeOffset Since, string? Status);
+
     public async Task<StatusState> ReadAsync(CancellationToken cancellationToken = default)
     {
         var now = time.GetUtcNow();
@@ -120,13 +123,12 @@ public sealed class StatusService(
 
         var admissions = await context.GateAdmissions.ToListAsync(cancellationToken);
         var gateTallies = await GateTalliesAsync(sevenDaysAgo, admissions, cancellationToken);
-        var notDownloadedReasons = await context.ReleasesNotDownloaded
+        var notDownloadedCounts = await context.ReleasesNotDownloaded
             .Where(row => row.At >= sevenDaysAgo)
-            .Select(row => row.Reason)
-            .ToListAsync(cancellationToken);
-        var notDownloaded = notDownloadedReasons
-            .GroupBy(reason => reason, StringComparer.Ordinal)
+            .GroupBy(row => row.Reason)
             .Select(group => new StatusNamedCount(group.Key, group.Count()))
+            .ToListAsync(cancellationToken);
+        var notDownloaded = notDownloadedCounts
             .OrderBy(item => item.Name, StringComparer.Ordinal)
             .ToArray();
         AddGateBrakes(conditions, gateTallies, admissions);
@@ -138,13 +140,21 @@ public sealed class StatusService(
             .ToListAsync(cancellationToken);
         AddAutomationBrakes(conditions, automaticDecisions);
 
-        var downloads = await context.Downloads.ToListAsync(cancellationToken);
-        var review = await context.ArrivingFiles.Where(row => row.Reason != null).ToListAsync(cancellationToken);
+        var outstanding = context.Downloads.Where(row => row.State == DownloadState.Outstanding);
+        var oldestOutstanding = await outstanding.OrderBy(row => row.OutstandingSince)
+            // Count and oldest status share one database snapshot, without
+            // loading the potentially large SABnzbd stage logs.
+            .Select(row => new OutstandingDownload(outstanding.Count(), row.OutstandingSince, row.LastSabnzbdStatus))
+            .FirstOrDefaultAsync(cancellationToken);
+        var review = await context.ArrivingFiles.Where(row => row.Reason != null)
+            .GroupBy(row => row.DownloadId)
+            .Select(group => new ReviewCount(group.Key, group.Count()))
+            .ToListAsync(cancellationToken);
         var filing = await context.ArrivingFiles
             .Where(row => row.State == ArrivingFileState.Filing)
             .OrderBy(row => row.LastAttemptedAt)
-            .ToListAsync(cancellationToken);
-        AddDownloadBrakes(conditions, downloads, review, installation.RetryBudget);
+            .FirstOrDefaultAsync(cancellationToken);
+        await AddDownloadBrakesAsync(conditions, review, installation.RetryBudget, cancellationToken);
         await AddLibraryVerificationGapAsync(conditions, cancellationToken);
         AddPublicationBrakes(conditions, publishing);
 
@@ -156,7 +166,7 @@ public sealed class StatusService(
             walkStates,
             gateTallies,
             notDownloaded,
-            downloads,
+            oldestOutstanding,
             review,
             filing,
             installation,
@@ -780,29 +790,32 @@ public sealed class StatusService(
         }
     }
 
-    private static void AddDownloadBrakes(
+    private async Task AddDownloadBrakesAsync(
         ICollection<StatusCondition> conditions,
-        IReadOnlyList<DownloadRow> downloads,
-        IReadOnlyList<ArrivingFileRow> review,
-        int retryBudget)
+        IReadOnlyList<ReviewCount> review,
+        int retryBudget,
+        CancellationToken cancellationToken)
     {
-        foreach (var group in downloads.GroupBy(row => row.VideoId)
-                     .Where(group => group.Count() >= retryBudget && group.All(row => row.State == DownloadState.Failed)))
+        var spent = await context.Downloads.GroupBy(row => row.VideoId)
+            .Where(group => group.Count() >= retryBudget && group.All(row => row.State == DownloadState.Failed))
+            .Select(group => new { VideoId = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+        foreach (var group in spent)
         {
             conditions.Add(Brake(
                 "A Video's retry budget is spent",
-                $"{group.Count()} of {retryBudget} Download attempts have been recorded. A person must choose what happens next.",
+                $"{group.Count} of {retryBudget} Download attempts have been recorded. A person must choose what happens next.",
                 "download",
-                $"/releases?video={group.Key:D}&from=/status"));
+                $"/releases?video={group.VideoId:D}&from=/status"));
         }
 
-        foreach (var group in review.GroupBy(row => row.DownloadId))
+        foreach (var group in review)
         {
             conditions.Add(Brake(
                 "An arriving Download needs a decision",
-                $"{group.Count()} file(s) are held in the Review Queue; automation is deliberately stopped for them.",
+                $"{group.Count} file(s) are held in the Review Queue; automation is deliberately stopped for them.",
                 "decide",
-                $"/review-queue?download={group.Key:D}"));
+                $"/review-queue?download={group.DownloadId:D}"));
         }
     }
 
@@ -811,7 +824,10 @@ public sealed class StatusService(
         IReadOnlyList<GateAdmissionRow> admissions,
         CancellationToken cancellationToken)
     {
-        var observed = await context.IdentificationOutcomes.Where(row => row.At >= since).ToListAsync(cancellationToken);
+        var observed = await context.IdentificationOutcomes.Where(row => row.At >= since)
+            .GroupBy(row => new { row.Gate, row.Outcome })
+            .Select(group => new { group.Key.Gate, group.Key.Outcome, Count = group.Count() })
+            .ToListAsync(cancellationToken);
         var names = Enum.GetNames<IdentificationConfidence>().Concat(["SiteOnly", "Unknown"]).Distinct().ToArray();
         return new[] { BeforeDownloadGate.Name, AfterDownloadGate.Name }.Select(gate =>
         {
@@ -819,8 +835,8 @@ public sealed class StatusService(
             var allowed = admissions.Where(row => row.Gate == gate)
                 .Select(row => row.Confidence.ToString())
                 .ToHashSet(StringComparer.Ordinal);
-            return new StatusGateTally(gate, rows.Length,
-                names.Select(name => new StatusNamedCount(name, rows.Count(row => row.Outcome == name), allowed.Contains(name))).ToArray());
+            return new StatusGateTally(gate, rows.Sum(row => row.Count),
+                names.Select(name => new StatusNamedCount(name, rows.Where(row => row.Outcome == name).Sum(row => row.Count), allowed.Contains(name))).ToArray());
         }).ToArray();
     }
 
@@ -832,9 +848,9 @@ public sealed class StatusService(
         IReadOnlyList<IndexerWalkStateRow> walkStates,
         IReadOnlyList<StatusGateTally> gateTallies,
         IReadOnlyList<StatusNamedCount> notDownloaded,
-        IReadOnlyList<DownloadRow> downloads,
-        IReadOnlyList<ArrivingFileRow> review,
-        IReadOnlyList<ArrivingFileRow> filing,
+        OutstandingDownload? oldestOutstanding,
+        IReadOnlyList<ReviewCount> review,
+        ArrivingFileRow? filing,
         InstallationRow installation,
         IReadOnlyList<AutomationRuleRow> automationRules,
         IReadOnlyList<StatusAutomaticDecision> automaticDecisions,
@@ -997,15 +1013,14 @@ public sealed class StatusService(
         if (id == "download")
         {
             facts.Add(new("SABnzbd connection", installation.SabnzbdUrl is null ? "Not configured" : "Configured", "/settings/connections/sabnzbd"));
-            var outstanding = downloads.Where(row => row.State == DownloadState.Outstanding).ToArray();
-            var oldest = outstanding.OrderBy(row => row.OutstandingSince).FirstOrDefault();
-            facts.Add(new("Outstanding", oldest is null ? "No Downloads are outstanding." : $"{outstanding.Length} Download(s); oldest since {oldest.OutstandingSince:u}; SABnzbd last said {oldest.LastSabnzbdStatus ?? "nothing yet"}.", "/downloads"));
+            var oldest = oldestOutstanding;
+            facts.Add(new("Outstanding", oldest is null ? "No Downloads are outstanding." : $"{oldest.Count} Download(s); oldest since {oldest.Since:u}; SABnzbd last said {oldest.Status ?? "nothing yet"}.", "/downloads"));
             facts.Add(new("Retry budget", installation.RetryBudget.ToString(), null));
         }
         if (id == "file")
         {
-            facts.Add(new("Review Queue", $"{review.Count} open", "/review-queue"));
-            var active = filing.FirstOrDefault();
+            facts.Add(new("Review Queue", $"{review.Sum(group => group.Count)} open", "/review-queue"));
+            var active = filing;
             facts.Add(new(
                 "Filing now",
                 active is null

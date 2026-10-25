@@ -89,7 +89,18 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
             .Where(row => row.VideoId.HasValue
                 && localIds.Contains(row.VideoId.Value)
                 && row.IdentificationState == IdentificationState.Matched)
-            .Include(row => row.Indexer)
+            // Read only eligibility inputs. A card needs no order, Indexer
+            // details, identification payload or other Release metadata.
+            .Select(row => new ReleaseRow
+            {
+                Id = row.Id,
+                VideoId = row.VideoId,
+                IndexerId = row.IndexerId,
+                DerivedReleaseId = row.DerivedReleaseId,
+                Confidence = row.Confidence,
+                Password = row.Password,
+                DownloadUrl = row.DownloadUrl,
+            })
             .ToListAsync(cancellationToken);
         var downloads = await context.Downloads
             .AsNoTracking()
@@ -109,7 +120,7 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
                 .Select(row => Key(row.IndexerId, row.DerivedReleaseId))
                 .ToHashSet(StringComparer.Ordinal);
             if (downloadsByVideo[video.PrdbId].Count() < budget
-                && Rank(releasesByVideo[video.Id], consumed).Ranked.Count > 0)
+                && ReleaseRanking.HasUsableRelease(Rankable(releasesByVideo[video.Id], consumed)))
             {
                 ready.Add(video.PrdbId);
             }
@@ -121,7 +132,12 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
     private static ReleaseRankingResult Rank(
         IEnumerable<ReleaseRow> releases,
         IReadOnlySet<string> consumedKeys) =>
-        ReleaseRanking.Order(releases.Select(row => new RankableRelease(
+        ReleaseRanking.Order(Rankable(releases, consumedKeys));
+
+    private static IEnumerable<RankableRelease> Rankable(
+        IEnumerable<ReleaseRow> releases,
+        IReadOnlySet<string> consumedKeys) =>
+        releases.Select(row => new RankableRelease(
             row.Id,
             row.IndexerId,
             row.DerivedReleaseId,
@@ -130,7 +146,7 @@ public sealed class ReleaseRankings(FabDbContext context, TimeProvider time)
             row.Indexer?.Rank ?? int.MaxValue,
             row.Password is not null && row.Password != "0",
             consumedKeys.Contains(Key(row.IndexerId, row.DerivedReleaseId)),
-            !string.IsNullOrWhiteSpace(row.DownloadUrl))));
+            !string.IsNullOrWhiteSpace(row.DownloadUrl)));
 
     private static ReleaseChoice Choice(ReleaseRow row, int? position, ReleaseExclusion? exclusion) => new(
         row.Id,

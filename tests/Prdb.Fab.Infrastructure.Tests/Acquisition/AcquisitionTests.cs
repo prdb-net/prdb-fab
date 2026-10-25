@@ -122,6 +122,42 @@ public sealed class AcquisitionTests
         }
     }
 
+    [Theory]
+    [InlineData(IdentificationConfidence.Exact, null, "https://indexer.invalid/nzb", false, true)]
+    [InlineData(IdentificationConfidence.Strong, "0", "https://indexer.invalid/nzb", false, true)]
+    [InlineData(IdentificationConfidence.Probable, null, "https://indexer.invalid/nzb", false, true)]
+    [InlineData(IdentificationConfidence.Ambiguous, null, "https://indexer.invalid/nzb", false, false)]
+    [InlineData(null, null, "https://indexer.invalid/nzb", false, false)]
+    [InlineData(IdentificationConfidence.Exact, "1", "https://indexer.invalid/nzb", false, false)]
+    [InlineData(IdentificationConfidence.Exact, "", "https://indexer.invalid/nzb", false, false)]
+    [InlineData(IdentificationConfidence.Exact, null, "", false, false)]
+    [InlineData(IdentificationConfidence.Exact, null, "\t\r\n\u2003", false, false)]
+    [InlineData(IdentificationConfidence.Exact, null, "https://indexer.invalid/nzb", true, false)]
+    public async Task Card_readiness_preserves_every_ranking_exclusion(
+        IdentificationConfidence? confidence, string? password, string url, bool consumed, bool expected)
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var seeded = await SeedAsync(database);
+        await using (var scope = database.Scope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
+            var release = Release(seeded, "candidate", 1000, confidence ?? IdentificationConfidence.Exact, password);
+            release.Confidence = confidence;
+            release.DownloadUrl = url;
+            context.Releases.Add(release);
+            if (consumed) context.Downloads.Add(Download(database, seeded.VideoId, seeded.IndexerId, "candidate"));
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var reading = database.Scope();
+        var rankings = reading.ServiceProvider.GetRequiredService<ReleaseRankings>();
+        var ready = await rankings.ReadyVideosAsync([seeded.VideoId, Guid.NewGuid()], TestContext.Current.CancellationToken);
+        var full = await rankings.ForVideoAsync(seeded.VideoId, false, TestContext.Current.CancellationToken);
+        Assert.Equal(expected, ready.Contains(seeded.VideoId));
+        Assert.Equal(expected ? 1 : 0, ready.Count);
+        Assert.Equal(expected, full!.Ranked.Count > 0);
+    }
+
     [Fact]
     public async Task A_spent_budget_and_no_releases_left_are_distinct_plans()
     {
