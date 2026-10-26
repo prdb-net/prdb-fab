@@ -10,6 +10,7 @@ namespace Prdb.Fab.Infrastructure.Filing;
 public sealed class LibraryEntryDeletion(
     FabDbContext context,
     TimeProvider time,
+    ContentMutationLock content,
     ILogger<LibraryEntryDeletion> logger)
 {
     public async Task<LibraryEntryDeletePreview?> PreviewAsync(
@@ -55,6 +56,9 @@ public sealed class LibraryEntryDeletion(
         IReadOnlyCollection<Guid> videoFileIds,
         CancellationToken cancellationToken = default)
     {
+        using var lease = await content.EnterAsync(cancellationToken);
+        if (await context.CollectionUndos.AnyAsync(row => row.VideoId == videoId && row.CompletedAt == null, cancellationToken))
+            return Changed("An approved collection return still uses this Library Entry. Let it finish before deleting.");
         var expected = videoFileIds.Distinct().ToHashSet();
         var entry = await context.LibraryEntries
             .AsTracking()

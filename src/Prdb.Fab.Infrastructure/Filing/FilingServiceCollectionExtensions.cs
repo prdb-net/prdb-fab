@@ -10,6 +10,10 @@ public static class FilingServiceCollectionExtensions
 {
     public static IServiceCollection AddFabFiling(this IServiceCollection services)
     {
+        services.TryAddSingleton<ContentMutationLock>();
+        services.AddScoped<CollectionUndo>();
+        services.AddScoped<CollectionUndoRoutine>();
+        services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectionUndoRoutine>());
         services.TryAddScoped<IProbeProcess, FfprobeProcess>();
         services.TryAddScoped<IContactSheetProcess, FfmpegContactSheetProcess>();
         services.TryAddScoped<ArtworkStore>();
@@ -49,6 +53,7 @@ public static class FilingServiceCollectionExtensions
         services.AddScoped<VideoFileMover>();
         services.AddScoped<FilingRoutine>();
         services.AddScoped<TidyUpRoutine>();
+        services.AddScoped<LibraryVerificationRequests>();
         services.AddScoped<LibraryVerificationRoutine>();
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<CollectingRoutine>());
         services.AddScoped<IRoutine>(provider => provider.GetRequiredService<ArrivalIdentificationRoutine>());

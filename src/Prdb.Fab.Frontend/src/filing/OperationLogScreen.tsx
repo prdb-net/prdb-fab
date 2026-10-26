@@ -9,7 +9,7 @@ import { readOperationLog } from '../api/client.ts'
 import { OperationList } from './OperationLogList.tsx'
 import styles from './Filing.module.css'
 
-const acts = ['Filed', 'Relabelled', 'Replaced', 'Deleted', 'Tidied'] as const
+const acts = ['Filed', 'Relabelled', 'Replaced', 'Deleted', 'Tidied', 'Returned'] as const
 
 export function OperationLogScreen() {
   const [parameters, setParameters] = useSearchParams()

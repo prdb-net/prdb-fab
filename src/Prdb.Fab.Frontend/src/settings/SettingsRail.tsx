@@ -117,6 +117,10 @@ export function SettingsRail({ compact = false }: { compact?: boolean }) {
         {publications.data ? publishing(publications.data) : null}
       </Group>
 
+      <Group to="/settings/notifications" label="Notifications" marks={pointedAt}>
+        Grouped attention and recovery messages
+      </Group>
+
       <Group to="/settings/backup" icon="backup" label="Backup" marks={pointedAt}>
         Export settings and credentials
       </Group>

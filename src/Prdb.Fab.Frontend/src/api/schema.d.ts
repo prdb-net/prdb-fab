@@ -818,6 +818,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationSettingsState"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationSettingsVerdict"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/status": {
         parameters: {
             query?: never;
@@ -3017,6 +3075,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/collection/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number | string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionUndoPreview"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CollectionUndoRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collection/undo/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CollectionUndoResumeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CollectionAct"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/collection": {
         parameters: {
             query?: never;
@@ -3709,6 +3866,64 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibraryVerificationProgress"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LibraryVerificationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LibraryVerificationProgress"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4646,9 +4861,62 @@ export interface components {
             /** Format: int32 */
             left: number | string;
             files: components["schemas"]["CollectionPreviewFile"][];
+            storage: components["schemas"]["CollectionStorageSpace"];
         };
         CollectionStartRequest: {
             directories: string[];
+        };
+        CollectionStorageSpace: {
+            /** Format: int64 */
+            requiredCopyBytes: number | string;
+            /** Format: int64 */
+            availableBytes: null | number | string;
+            insufficient: boolean;
+        };
+        CollectionUndoPreview: {
+            /** Format: int64 */
+            revision: number | string;
+            evidence: string;
+            phase: string;
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            available: number | string;
+            files: components["schemas"]["CollectionUndoPreviewFile"][];
+            /** Format: int32 */
+            requested: number | string;
+            /** Format: int32 */
+            completed: number | string;
+            progress: components["schemas"]["CollectionUndoProgress"][];
+        };
+        CollectionUndoPreviewFile: {
+            /** Format: uuid */
+            id: string;
+            sourcePath: string;
+            destinationPath: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            conflict: null | string;
+        };
+        CollectionUndoProgress: {
+            /** Format: uuid */
+            id: string;
+            sourcePath: string;
+            destinationPath: string;
+            state: string;
+            error: null | string;
+        };
+        CollectionUndoRequest: {
+            /** Format: int64 */
+            revision: number | string;
+            evidence: string;
+            ids: string[];
+            all: boolean;
+        };
+        CollectionUndoResumeRequest: {
+            confirmRestoredReturns: boolean;
         };
         ConfiguredIndexer: {
             /** Format: uuid */
@@ -5072,6 +5340,17 @@ export interface components {
             libraryRoot: null | string;
             deleteLeftovers: boolean;
         };
+        LibraryVerificationProgress: {
+            /** Format: int32 */
+            total: number | string;
+            /** Format: int32 */
+            pending: number | string;
+            /** Format: int32 */
+            unconfirmed: number | string;
+        };
+        LibraryVerificationRequest: {
+            onlyUnconfirmed: boolean;
+        };
         /** @enum {unknown} */
         ManualSearchIndexerState: "Queued" | "Searching" | "Deferred" | "Searched" | "Failed";
         ManualSearchIndexerView: {
@@ -5148,6 +5427,21 @@ export interface components {
             active: boolean;
             indexers: components["schemas"]["ManualSearchIndexerView"][];
             results: components["schemas"]["ManualSearchResultCounts"];
+        };
+        NotificationSettingsRequest: {
+            enabled: boolean;
+            webhookUrl: null | string;
+        };
+        NotificationSettingsState: {
+            enabled: boolean;
+            configured: boolean;
+            /** Format: date-time */
+            lastDeliveredAt: null | string;
+            error: null | string;
+        };
+        NotificationSettingsVerdict: {
+            accepted: boolean;
+            detail: string;
         };
         /** @enum {unknown} */
         OnboardingOutcome: "Taken" | "Skipped" | "NotTheCurrentStep" | "NotConfigured" | "NotSkippable";

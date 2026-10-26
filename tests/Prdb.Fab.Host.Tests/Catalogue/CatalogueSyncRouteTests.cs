@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Prdb.Fab.Infrastructure.Persistence;
 using Xunit;
 
@@ -17,11 +18,12 @@ public sealed class CatalogueSyncRouteTests
     [InlineData("sites", new[] { "prdb.sites.changes", "prdb.favourite-sites", "prdb.ignored-sites" })]
     public async Task A_sync_schedules_only_the_relevant_feeds_and_duplicate_clicks_do_not_add_work(string surface, string[] names)
     {
-        await using var app = new FabApplication();
+        var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var app = new FabApplication().WithTime(time);
         using var client = await app.SignedInClientAsync();
         await using var scope = app.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<FabDbContext>();
-        var later = DateTimeOffset.UtcNow.AddHours(12);
+        var later = time.GetUtcNow().AddHours(12);
         await context.Routines.ExecuteUpdateAsync(u => u.SetProperty(row => row.DueAt, later), Token);
         var before = await context.Routines.CountAsync(Token);
 

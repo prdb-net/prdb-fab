@@ -246,6 +246,7 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 row.Blocked))
             .ToListAsync(cancellationToken);
 
+        var collectionUndos = await context.CollectionUndos.ToListAsync(cancellationToken);
         var collectionPreparations = await context.CollectionPreparations.AsNoTracking().ToListAsync(cancellationToken);
         var collectionRoots = await context.CollectionRoots.AsNoTracking().ToListAsync(cancellationToken);
         var collectionFiles = await context.CollectionFiles.AsNoTracking().ToListAsync(cancellationToken);
@@ -281,7 +282,8 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
                 installation.WhatsNewObservedAt,
                 observedVideo,
                 installation.PrdbLastCheckedAt, installation.PrdbLastSuccessAt, installation.PrdbLastCheckOutcome,
-                installation.SabnzbdLastCheckedAt, installation.SabnzbdLastSuccessAt, installation.SabnzbdLastCheckOutcome),
+                installation.SabnzbdLastCheckedAt, installation.SabnzbdLastSuccessAt, installation.SabnzbdLastCheckOutcome,
+                installation.NotificationsEnabled, installation.NotificationWebhookUrl),
             gateAdmissions,
             indexers,
             automationRules,
@@ -352,6 +354,9 @@ public sealed class Backups(FabDbContext context, TimeProvider time)
             [.. collectionRoots.Select(row => new BackupCollectionRoot(row.Id, roots.Relative(row.Path), row.IsLibrary))],
             [.. collectionFiles.Select(row => new BackupCollectionFile(row.Id, row.RootId, roots.Relative(row.SourcePath), row.SizeBytes, row.LastWriteAt, row.Probed, row.ApprovedAt, row.LeftAt, row.PlannedPath is null ? null : roots.Relative(row.PlannedPath), row.ApprovedEvidence, row.PreviewEvidence, row.PreviewDetail, row.ValidatedAt))],
             [.. autopilotBaselines.Select(row => new BackupAutopilotBaseline(row.UserHash, row.BaselineAt))],
-            [.. autopilotMemberships.Select(row => new BackupAutopilotMembership(row.UserHash, row.VideoId, row.WantedSinceAt, row.Admitted, row.InitialBatch))]);
+            [.. autopilotMemberships.Select(row => new BackupAutopilotMembership(row.UserHash, row.VideoId, row.WantedSinceAt, row.Admitted, row.InitialBatch))],
+            [.. collectionUndos.Select(row => new BackupCollectionUndo(row.Id, row.CollectionFileId, row.VideoFileId, row.VideoId,
+                roots.Relative(row.SourcePath), roots.Relative(row.DestinationPath), roots.Relative(row.SourceRoot), roots.Relative(row.DestinationRoot),
+                row.SizeBytes, row.OsHash, row.ContentHash, row.Approved, row.RequestedAt, row.StartedAt, row.AttemptedAt, row.CompletedAt, row.Error))]);
     }
 }

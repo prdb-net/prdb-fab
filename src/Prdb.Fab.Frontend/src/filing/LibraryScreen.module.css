@@ -5,3 +5,6 @@
 .field:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .summary { display: flex; justify-content: space-between; color: var(--text-quiet); font-size: .78rem; margin: .65rem 0 .9rem; }
 @media (max-width: 850px) { .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.verification { margin: 1rem 0; padding: 1rem; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius); }
+.verification p { margin: 0 0 .65rem; }

@@ -4,11 +4,17 @@ using Prdb.Fab.Infrastructure.Persistence;
 namespace Prdb.Fab.Infrastructure.Filing;
 
 /// <summary>Starts explicit collection work. Reading a page never starts a scan.</summary>
-public sealed class CollectionPreparation(FabDbContext context, TimeProvider time)
+public sealed class CollectionPreparation(FabDbContext context, TimeProvider time, ContentMutationLock content)
 {
     public async Task<CollectionAct> RetryAsync(CancellationToken cancellationToken = default)
     {
-        if (!await context.CollectionPreparations.AnyAsync(cancellationToken)) return new(false, "Start collection preparation first.");
+        using var lease = await content.EnterAsync(cancellationToken);
+        if (await context.CollectionUndos.AnyAsync(row => row.CompletedAt == null, cancellationToken))
+            return new(false, "Finish the approved collection returns before rescanning.");
+        var preparation = await context.CollectionPreparations.SingleOrDefaultAsync(cancellationToken);
+        if (preparation is null) return new(false, "Start collection preparation first.");
+        if (preparation.Phase is "Undoing" or "UndoComplete")
+            return new(false, "Review collection returns and explicitly resume automatic acquisition before rescanning.");
         if (await context.ArrivingFiles.AnyAsync(row => row.DownloadId == null && row.State == Core.Filing.ArrivingFileState.Filing, cancellationToken))
             return new(false, "A move is already in progress. It must finish or recover before rescanning.");
         // Explicit rechecking rereads even unchanged stamps: permissions or

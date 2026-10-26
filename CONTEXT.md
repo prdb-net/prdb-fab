@@ -597,3 +597,10 @@ The supplied permission for recent Wanted Videos: a frozen initial selection
 of at most 100 missing Videos, then new recent Wanted intent. Its 90-date
 Release Date interval is independent of Catalogue and Indexer coverage.
 Disabling it does not disable a separate custom Automation Rule.
+
+**Collection Return**:
+An explicitly approved move of one imported Video File back to its recorded
+original path. Its durable plan carries full-file recovery evidence and remains
+separate from the immutable Operation Log. Completion removes that file from the
+Library and records a Returned act. Automatic acquisition waits until explicitly
+resumed after all approved returns finish.

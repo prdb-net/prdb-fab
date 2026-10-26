@@ -29,6 +29,8 @@ public sealed class InstallationRow
     public const int TheOnlyRow = 1;
 
     public int Id { get; set; } = TheOnlyRow;
+    public bool NotificationsEnabled { get; set; }
+    public string? NotificationWebhookUrl { get; set; }
 
     /// <summary>
     /// ADR 0010's single secret, hashed with <c>PasswordHasher</c>. Null until

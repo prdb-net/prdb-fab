@@ -14,6 +14,12 @@ public static class FilingEndpoints
     public static void MapFiling(this IEndpointRouteBuilder routes)
     {
         var collection = routes.MapGroup("/api/collection").WithTags("Filing");
+        collection.MapGet("/undo", async (CollectionUndo undo, CancellationToken cancellationToken, int page = 1) =>
+            TypedResults.Ok(await undo.ReadAsync(page, cancellationToken)));
+        collection.MapPost("/undo", async (CollectionUndoRequest request, CollectionUndo undo, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await undo.RequestAsync(request.Revision, request.Evidence, request.Ids, request.All, cancellationToken)));
+        collection.MapPost("/undo/resume", async (CollectionUndoResumeRequest request, CollectionUndo undo, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await undo.ResumeAsync(request.ConfirmRestoredReturns, cancellationToken)));
         collection.MapGet("/", async (CollectionPreview preview, CancellationToken cancellationToken, int page = 1) =>
             TypedResults.Ok(await preview.ReadAsync(page, cancellationToken)));
         collection.MapPost("/retry", (CollectionPreparation preparation, CancellationToken cancellationToken) => preparation.RetryAsync(cancellationToken));
@@ -124,6 +130,10 @@ public static class FilingEndpoints
             bool? confirmed = null) =>
             TypedResults.Ok(await browse.ReadAsync(
                 search, site, actor, quality, page, sort, confirmed, cancellationToken)));
+        libraryEntries.MapGet("/verification", async (LibraryVerificationRequests requests, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await requests.ReadAsync(cancellationToken)));
+        libraryEntries.MapPost("/verification", async (LibraryVerificationRequest request, LibraryVerificationRequests requests, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await requests.RequestAsync(request.OnlyUnconfirmed, cancellationToken)));
         libraryEntries.MapGet("/{videoId:guid}", ReadLibraryEntryAsync);
         libraryEntries.MapPost("/{videoId:guid}/delete/preview", PreviewLibraryEntryDeleteAsync);
         libraryEntries.MapPost("/{videoId:guid}/delete", DeleteLibraryEntryAsync);
@@ -202,3 +212,8 @@ public sealed record ReviewQueueCount(int Open);
 public sealed record CollectionStartRequest(IReadOnlyList<string> Directories);
 public sealed record CollectionApprovalRequest(long Revision, IReadOnlyList<Guid> MoveIds,
     IReadOnlyList<Guid> LeaveIds, bool AllReady, bool LeaveUnresolved);
+
+public sealed record LibraryVerificationRequest(bool OnlyUnconfirmed);
+
+public sealed record CollectionUndoRequest(long Revision, string Evidence, IReadOnlyList<Guid> Ids, bool All);
+public sealed record CollectionUndoResumeRequest(bool ConfirmRestoredReturns);

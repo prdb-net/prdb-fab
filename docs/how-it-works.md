@@ -178,3 +178,47 @@ it, and leaves the SABnzbd job and anything already filed untouched.
 - [Sync measurements](sync-measurements.md).
 - [Domain glossary](../CONTEXT.md) and [architecture decisions](adr/).
 - [Contributing and local development](../CONTRIBUTING.md).
+
+
+## Checking and returning Library files
+
+The Library offers **Recheck unconfirmed files** and **Recheck all Library
+files**. The existing background pass works through the files and updates the
+counts. A file remains held during and after an unsuccessful check: a missing
+mount never triggers replacement Downloads.
+
+Under **Settings → Library → Collection preparation**, the storage estimate
+counts remaining cross-filesystem copies (and unknown filesystems) conservatively.
+It is a current capacity hint, not a reservation. Copying checks capacity again;
+ordinary write failures still wait and retry without losing the source.
+
+**Return imported files** previews current paths and the recorded original
+paths. Choose files or approve the entire preview across its pages. Each return
+is verified again, never overwrites an occupied path, and continues after a
+restart. Resolve conflicts at the original path to let waiting returns retry.
+The Operation Log records each completed return. Other qualities remain held;
+prdb Fulfilment is not automatically retracted.
+
+Automatic acquisition waits throughout returns and remains paused afterwards.
+Use **Resume automatic acquisition** only when ready: returned Wanted Videos may
+then be downloaded again. After restoring a Backup, review every unfinished
+return path and use **Confirm restored return paths** before processing resumes.
+Scan Directory paths outside the two configured storage roots remain absolute
+in the Backup and must still be mounted at those paths.
+
+## Notifications
+
+**Settings → Notifications** accepts an HTTP(S) webhook URL. Notifications are
+off until enabled. The receiver must accept JSON POSTs, for example:
+
+```json
+{"source":"prdb-fab","state":"Attention needed","stages":[{"stage":"download","gaps":1}],"reviewFiles":3}
+```
+
+The state becomes `Recovered` when no current Gaps or Review Queue files remain.
+Brakes are excluded. Only changed states are delivered, with at least 30 minutes
+between successful messages. Failure is visible in Settings and Status and is
+retried. A crash after the receiver accepts a message can cause a duplicate;
+receivers may use the `Idempotency-Key` header to suppress it. No Video titles,
+Indexer names, file paths, artwork or API keys are included. The configured URL
+is sensitive and is carried in the Backup. Restore observes conditions anew.

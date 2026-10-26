@@ -12,6 +12,7 @@ public sealed class VideoFileMover
         CancellationToken cancellationToken)
     {
         File.Delete(temporary);
+        StorageSpace.RequireCopyCapacity(temporary, new FileInfo(source).Length);
 
         try
         {

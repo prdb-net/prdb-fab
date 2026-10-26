@@ -73,6 +73,7 @@ public sealed class CatalogueSchemaTests
                 "collection_file",
                 "collection_preparation",
                 "collection_root",
+                "collection_undo",
                 "confirmed_assignment",
                 "download",
                 "download_origin_rule",

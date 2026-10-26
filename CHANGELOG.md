@@ -19,8 +19,24 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+### Added
+
+- Recheck unconfirmed files or the entire Library, with background progress and
+  no automatic replacement Downloads.
+- Collection import previews show remaining copy space and available capacity.
+  Copies wait and retry when the destination lacks space.
+- Optional grouped JSON webhook notifications for Gaps and Review Queue work,
+  with recovery messages and persistent duplicate suppression.
+- Preview and approve returning imported files to their original paths, with
+  conflict checks, restart recovery and an explicit acquisition resume step.
+  Restore requires renewed confirmation of unfinished return paths.
+- Backup format 7 carries notification settings and collection return plans;
+  formats 1–6 remain readable.
+
+
 ### Changed
 
+- Overlapping Status polls share a local snapshot for up to five seconds.
 - prdb-fab has a logo. It replaces the "pf" mark in the header, on the sign-in
   page and while the app loads, and the browser tab shows it as the favicon.
 

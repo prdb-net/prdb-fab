@@ -736,6 +736,52 @@
         }
       }
     },
+    "/api/settings/notifications": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsState"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Status"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettingsVerdict"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/status": {
       "get": {
         "tags": [
@@ -2567,6 +2613,96 @@
         }
       }
     },
+    "/api/collection/undo": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionUndoPreview"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionUndoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collection/undo/resume": {
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionUndoResumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionAct"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/collection": {
       "get": {
         "tags": [
@@ -3180,6 +3316,52 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LibraryPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/verification": {
+      "get": {
+        "tags": [
+          "Filing"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryVerificationProgress"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Filing"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LibraryVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryVerificationProgress"
                 }
               }
             }
@@ -5151,7 +5333,8 @@
           "unresolved",
           "approved",
           "left",
-          "files"
+          "files",
+          "storage"
         ],
         "type": "object",
         "properties": {
@@ -5233,6 +5416,9 @@
             "items": {
               "$ref": "#/components/schemas/CollectionPreviewFile"
             }
+          },
+          "storage": {
+            "$ref": "#/components/schemas/CollectionStorageSpace"
           }
         }
       },
@@ -5247,6 +5433,229 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "CollectionStorageSpace": {
+        "required": [
+          "requiredCopyBytes",
+          "availableBytes",
+          "insufficient"
+        ],
+        "type": "object",
+        "properties": {
+          "requiredCopyBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "availableBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "insufficient": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionUndoPreview": {
+        "required": [
+          "revision",
+          "evidence",
+          "phase",
+          "page",
+          "pageSize",
+          "available",
+          "files",
+          "requested",
+          "completed",
+          "progress"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "page": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pageSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "available": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionUndoPreviewFile"
+            }
+          },
+          "requested": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "progress": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionUndoProgress"
+            }
+          }
+        }
+      },
+      "CollectionUndoPreviewFile": {
+        "required": [
+          "id",
+          "sourcePath",
+          "destinationPath",
+          "sizeBytes",
+          "conflict"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcePath": {
+            "type": "string"
+          },
+          "destinationPath": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "conflict": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CollectionUndoProgress": {
+        "required": [
+          "id",
+          "sourcePath",
+          "destinationPath",
+          "state",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcePath": {
+            "type": "string"
+          },
+          "destinationPath": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CollectionUndoRequest": {
+        "required": [
+          "revision",
+          "evidence",
+          "ids",
+          "all"
+        ],
+        "type": "object",
+        "properties": {
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "all": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CollectionUndoResumeRequest": {
+        "required": [
+          "confirmRestoredReturns"
+        ],
+        "type": "object",
+        "properties": {
+          "confirmRestoredReturns": {
+            "type": "boolean"
           }
         }
       },
@@ -7051,6 +7460,51 @@
           }
         }
       },
+      "LibraryVerificationProgress": {
+        "required": [
+          "total",
+          "pending",
+          "unconfirmed"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pending": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unconfirmed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LibraryVerificationRequest": {
+        "required": [
+          "onlyUnconfirmed"
+        ],
+        "type": "object",
+        "properties": {
+          "onlyUnconfirmed": {
+            "type": "boolean"
+          }
+        }
+      },
       "ManualSearchIndexerState": {
         "enum": [
           "Queued",
@@ -7358,6 +7812,69 @@
           },
           "results": {
             "$ref": "#/components/schemas/ManualSearchResultCounts"
+          }
+        }
+      },
+      "NotificationSettingsRequest": {
+        "required": [
+          "enabled",
+          "webhookUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "webhookUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "NotificationSettingsState": {
+        "required": [
+          "enabled",
+          "configured",
+          "lastDeliveredAt",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "lastDeliveredAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "NotificationSettingsVerdict": {
+        "required": [
+          "accepted",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
           }
         }
       },

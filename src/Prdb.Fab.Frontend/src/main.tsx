@@ -21,9 +21,11 @@ import { IdentificationScreen } from './settings/IdentificationScreen.tsx'
 import { PrdbSettings } from './settings/PrdbSettings.tsx'
 import { SabnzbdSettings } from './settings/SabnzbdSettings.tsx'
 import { SettingsGate } from './settings/SettingsPage.tsx'
+import { NotificationsScreen } from './settings/NotificationsScreen.tsx'
 import { SettingsScreen } from './settings/SettingsScreen.tsx'
 import { ReportingScreen } from './settings/ReportingScreen.tsx'
 import { PublicationsScreen } from './settings/PublicationsScreen.tsx'
+import { CollectionUndoScreen } from './settings/CollectionUndoScreen.tsx'
 import { CollectionScreen } from './settings/CollectionScreen.tsx'
 import { AutomationScreen } from './settings/AutomationScreen.tsx'
 import { DownloadSettingsScreen } from './settings/DownloadSettingsScreen.tsx'
@@ -104,6 +106,9 @@ function pageTitle(pathname: string): string {
   if (pathname === '/settings/downloads') return 'Download settings'
   if (pathname === '/settings/automation') return 'Automation'
   if (pathname.startsWith('/settings/automation/rules/')) return 'Automation rule'
+  if (pathname === '/settings/notifications') return 'Notifications'
+  if (pathname === '/settings/library/collection/undo') return 'Return imported files'
+  if (pathname === '/settings/library/collection') return 'Collection preparation'
   if (pathname === '/settings/library') return 'Library settings'
   if (pathname === '/settings/reporting') return 'Reporting settings'
   if (pathname === '/settings/reporting/publications') return 'Published previews'
@@ -164,6 +169,8 @@ createRoot(document.getElementById('root')!).render(
                 <Route path="automation" element={<AutomationScreen />} />
                 <Route path="automation/rules/:id" element={<AutomationScreen />} />
                 <Route path="library" element={<LibrarySettingsScreen />} />
+                <Route path="notifications" element={<NotificationsScreen />} />
+                <Route path="library/collection/undo" element={<CollectionUndoScreen />} />
                 <Route path="library/collection" element={<CollectionScreen />} />
                 <Route path="reporting" element={<ReportingScreen />} />
                 <Route path="reporting/publications" element={<PublicationsScreen />} />

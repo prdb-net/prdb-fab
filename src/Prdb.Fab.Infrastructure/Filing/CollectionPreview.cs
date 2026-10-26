@@ -6,6 +6,7 @@ using Prdb.Fab.Core;
 using Prdb.Fab.Core.Filing;
 using Prdb.Fab.Core.ReleaseDiscovery;
 using Prdb.Fab.Infrastructure.Persistence;
+using Prdb.Fab.Infrastructure.Connections;
 
 namespace Prdb.Fab.Infrastructure.Filing;
 
@@ -34,12 +35,22 @@ public sealed class CollectionPreview(FabDbContext context, TimeProvider time)
                     : file.ApprovedAt != null ? "Approved" : file.PreviewDetail ?? "Waiting for preparation",
                 file.ApprovedAt != null, file.LeftAt != null);
         }).ToArray();
+        var library = await context.Installation.Select(row => row.LibraryRoot).SingleAsync(cancellationToken);
+        var roots = await context.CollectionRoots.ToDictionaryAsync(row => row.Id, row => row.Path, cancellationToken);
+        var sizes = await files.Where(row => row.LeftAt == null && row.PlannedPath != null
+                && !context.ArrivingFiles.Any(arrival => arrival.Id == row.Id && arrival.State == ArrivingFileState.Filed))
+            .GroupBy(row => row.RootId).Select(group => new { Root = group.Key, Bytes = group.Sum(row => row.SizeBytes) })
+            .ToListAsync(cancellationToken);
+        var required = sizes.Where(row => library == null || !roots.TryGetValue(row.Root, out var source)
+                || Directories.OnTheSameFilesystem(source, library) != true).Sum(row => row.Bytes);
+        var available = library == null ? null : StorageSpace.AvailableAt(library);
+        var space = new CollectionStorageSpace(required, available, StorageSpace.IsInsufficient(required, available));
         return new(preparation?.Phase ?? "NotStarted", preparation?.Revision ?? 0, preparation?.Error,
             wanted, PageSize, await files.CountAsync(cancellationToken),
             await files.CountAsync(row => row.PreviewEvidence != null && row.PlannedPath != null && row.LeftAt == null, cancellationToken),
             await files.CountAsync(row => row.Probed && row.PreviewEvidence != null && row.PlannedPath == null && row.LeftAt == null, cancellationToken),
             await files.CountAsync(row => row.ApprovedAt != null && row.LeftAt == null, cancellationToken),
-            await files.CountAsync(row => row.LeftAt != null, cancellationToken), entries);
+            await files.CountAsync(row => row.LeftAt != null, cancellationToken), entries, space);
     }
 
     public async Task<CollectionAct> ApproveAsync(long revision, IReadOnlyCollection<Guid> moveIds,
@@ -114,4 +125,5 @@ public sealed record CollectionPreviewFile(Guid Id, string SourcePath, long Size
     string? Title, IdentificationConfidence? Confidence, string? Quality, string? Destination,
     string Detail, bool Approved, bool Left);
 public sealed record CollectionPreviewPage(string Phase, long Revision, string? Error, int Page, int PageSize,
-    int Total, int Ready, int Unresolved, int Approved, int Left, IReadOnlyList<CollectionPreviewFile> Files);
+    int Total, int Ready, int Unresolved, int Approved, int Left, IReadOnlyList<CollectionPreviewFile> Files, CollectionStorageSpace Storage);
+public sealed record CollectionStorageSpace(long RequiredCopyBytes, long? AvailableBytes, bool Insufficient);

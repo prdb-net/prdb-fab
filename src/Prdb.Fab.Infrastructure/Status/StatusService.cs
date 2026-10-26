@@ -81,10 +81,11 @@ public sealed class StatusService(
             indexerBudgets[indexer.Id] = await indexerSearch.BudgetAsync(indexer.Id, cancellationToken);
 
         var workSets = await WorkSetsAsync(routines, reportingState, cancellationToken);
+        var runsByRoutine = runs.ToLookup(run => run.RoutineId);
         var routineFacts = routines.Select(row => DescribeRoutine(
             row,
             indexers,
-            runs.Where(run => run.RoutineId == row.Id).ToArray(),
+            runsByRoutine[row.Id].ToArray(),
             workSets.GetValueOrDefault(Key(row.Name, row.Target)))).ToArray();
 
         // ADR 0064's publishing side, read once: the Brakes below and the facts
@@ -103,6 +104,11 @@ public sealed class StatusService(
             conditions.Add(autopilot.Phase == "Connections"
                 ? Gap("Wanted autopilot is waiting for a Connection", autopilot.Detail, "decide", autopilot.ActionRoute)
                 : Brake("Wanted autopilot is waiting for its baseline", autopilot.Detail, "decide", autopilot.ActionRoute));
+        var blockedReturns = await context.CollectionUndos.CountAsync(row => row.CompletedAt == null && row.Error != null, cancellationToken);
+        if (blockedReturns > 0)
+            conditions.Add(Gap($"{blockedReturns} collection return(s) need attention", "Check the return preview for conflicting or unavailable paths. Files remain held until safely returned.", "file", "/settings/library/collection/undo"));
+        if (preparation?.Phase is "Undoing" or "UndoComplete")
+            conditions.Add(Brake("Collection returns hold automatic acquisition", "Review return progress, then explicitly resume automatic acquisition when ready.", "decide", "/settings/library/collection/undo"));
         AddInstallationGaps(conditions, installation, governor);
         AddRecentWindowGaps(conditions, installation, recentCoverage);
         AddRoutineGaps(conditions, routines, runs, indexers);
@@ -1128,6 +1134,8 @@ public sealed class StatusService(
         SabnzbdRoutine.RoutineName or DownloadFollowingRoutine.RoutineName or CollectingRoutine.RoutineName => "/settings/connections/sabnzbd",
         AutomaticDecisionRoutine.RoutineName or WantedAutopilotRoutine.RoutineName => "/settings/automation",
         CollectionScanRoutine.RoutineName or CollectionPlanningRoutine.RoutineName or CollectionImportRoutine.RoutineName => "/settings/library/collection",
+        CollectionUndoRoutine.RoutineName => "/settings/library/collection/undo",
+        NotificationRoutine.RoutineName => "/settings/notifications",
         _ => null,
     };
 }

@@ -19,6 +19,7 @@ export function SettingsScreen() {
       <h1>Settings</h1>
       <p className={styles.lede}>Make it yours. Changes take effect without a restart.</p>
     </header>
+    <p><Link to="/settings/notifications">Notifications</Link></p>
     <h2 className={styles.heading}>Your setup</h2>
     <Loaded query={connections} of="your connections">{(held) => <div className={styles.setupCards}>
       <Link to="/settings/connections/prdb"><strong>prdb</strong><span>{held.prdbConfigured ? 'Key stored' : 'Not configured'}</span></Link>

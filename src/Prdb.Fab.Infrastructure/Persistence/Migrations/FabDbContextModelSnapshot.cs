@@ -940,6 +940,78 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                         .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
                 });
 
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.CollectionUndoRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Approved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AttemptedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CollectionFileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DestinationPath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DestinationRoot")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OsHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourcePath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceRoot")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("VideoFileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("VideoId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CollectionFileId")
+                        .IsUnique();
+
+                    b.HasIndex("CompletedAt", "Approved", "AttemptedAt");
+
+                    b.ToTable("collection_undo", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.Exported);
+                });
+
             modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.CollectionWalkRow", b =>
                 {
                     b.Property<string>("Path")
@@ -1516,6 +1588,12 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.Property<string>("LibraryRoot")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("NotificationWebhookUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("NotificationsEnabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OnboardingStep")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -1615,6 +1693,7 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                             AutomaticDownloadCap = 20,
                             DeleteLeftovers = false,
                             IndexersSkipped = false,
+                            NotificationsEnabled = false,
                             OnboardingStep = "Password",
                             PreferredDownloadQuality = "P2160",
                             PublishGeneratedPreviews = true,
@@ -1756,6 +1835,30 @@ namespace Prdb.Fab.Infrastructure.Persistence.Migrations
                     b.HasIndex("VideoId", "RequestedAt");
 
                     b.ToTable("manual_search", (string)null);
+
+                    b
+                        .HasAnnotation("Fab:AccountClass", "AccountFree")
+                        .HasAnnotation("PrdbFab:ExportClass", ExportClass.NotExported);
+                });
+
+            modelBuilder.Entity("Prdb.Fab.Infrastructure.Persistence.NotificationDeliveryRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Fingerprint")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("notification_delivery", (string)null);
 
                     b
                         .HasAnnotation("Fab:AccountClass", "AccountFree")
