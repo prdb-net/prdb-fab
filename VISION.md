@@ -339,6 +339,22 @@ reports the paths it sees, and this tool has to open them; where the two agree,
 the translation between them is nothing at all, and the most common way for a
 finished download to go nowhere stops existing.
 
+## Maintenance and collection returns
+
+Library files can be checked again explicitly after a mount or permissions have
+been repaired. Checks are durable and bounded, keep files held, and show progress.
+Collection previews show space needed for remaining copies, and copying checks
+available capacity again immediately before writing.
+
+An optional webhook reports grouped Gaps and Review Queue counts, followed by
+recovery when no attention remains. Unchanged conditions do not repeat, and
+messages disclose no Video titles, file paths or keys (ADR 0066).
+
+Imported files can be returned to their original paths after a concrete preview
+and approval, individually or across the whole import. Occupied paths are never
+overwritten; interrupted returns resume with full-file verification. Automatic
+acquisition waits until the person explicitly resumes it afterwards (ADR 0067).
+
 ## Backup, from the first release
 
 Everything that would be painful to lose is small: settings, indexer URLs and
@@ -369,8 +385,9 @@ about content: clearing a `.par2` file out of a download directory is not what
 it protects against. Cross-filesystem moves are copy-verify-delete, nothing is
 filed on a failed lookup, and every move and every deletion is logged with what
 it was and why. That log is readable from the first release, because a tool that
-moves files unattended has to be able to say what it moved; the undo it also
-makes possible remains a later extension; collection import currently requires a concrete preview and approval. A button is easier
+moves files unattended has to be able to say what it moved; approved collection returns can put imported files back at their recorded
+original paths, with durable recovery and no overwriting (ADR 0067); collection
+import requires a concrete preview and approval. A button is easier
 to press than a command is to type, so a web UI raises the stakes rather than
 lowering them.
 
@@ -456,12 +473,6 @@ Deliberately after that, not before:
   release files what identifies well enough to act on and queues the rest for
   the user; lowering that bar until nothing is left over is the later step.
   Filing itself, and the layout it files into, are in the first release.
-- **Bulk undo for collection imports.** Scan directories now have bounded
-  inventory, a concrete preview, explicit approval and the ordinary safe Filing
-  pipeline (ADR 0065). A general undo across thousands of moves remains later
-  work; the Operation Log records every completed move.
-- **Notifications**, so an unattended tool can say something went wrong without
-  the user thinking to look.
 - **Perceptual hashes and thumbnails for unknown files**, optionally submitted
   to prdb — which is how recognition gets better for everyone. A perceptual
   hash decodes 25 frames, so it belongs in a background queue that never holds

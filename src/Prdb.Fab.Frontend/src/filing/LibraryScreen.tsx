@@ -1,11 +1,12 @@
+import { formStyles } from '../ui/Form.tsx'
 import { Loaded } from '../ui/Loaded.tsx'
 import { PageNotice } from '../ui/PageNotice.tsx'
 import { readPage } from '../ui/paging.ts'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 
-import { type LibraryEntrySort, readLibrary } from '../api/client.ts'
+import { type LibraryEntrySort, readLibrary, readLibraryVerification, requestLibraryVerification } from '../api/client.ts'
 import browseStyles from '../catalogue/BrowseScreen.module.css'
 import { LibraryGrid } from '../catalogue/Grid.tsx'
 import { PageLoading } from '../shell/LoadingScreen.tsx'
@@ -29,6 +30,23 @@ const sorts: readonly LibraryEntrySort[] = [
 ]
 
 export function LibraryScreen() {
+  const cache = useQueryClient()
+  const verification = useQuery({
+    queryKey: ['library-verification'],
+    queryFn: readLibraryVerification,
+    refetchInterval: (query) => Number(query.state.data?.pending ?? 0) > 0 ? 2000 : 10000,
+  })
+  const recheck = useMutation({
+    mutationFn: requestLibraryVerification,
+    onSuccess: async (progress) => {
+      cache.setQueryData(['library-verification'], progress)
+      await cache.invalidateQueries({ queryKey: ['library'] })
+    },
+  })
+  const pendingVerification = Number(verification.data?.pending ?? 0)
+  useEffect(() => {
+    void cache.invalidateQueries({ queryKey: ['library'] })
+  }, [cache, pendingVerification])
   const location = useLocation()
   const [parameters, setParameters] = useSearchParams()
   const search = parameters.get('search') ?? ''
@@ -118,6 +136,15 @@ export function LibraryScreen() {
           {sorts.map((value) => <option value={value} key={value}>{sortLabel(value)}</option>)}
         </select>
       </div>}
+      {verification.data && Number(verification.data.total) > 0 && <section className={styles.verification} aria-label="Library verification">
+        <p role="status">{pendingVerification > 0
+          ? `Checking Library files: ${Number(verification.data.total) - pendingVerification} of ${verification.data.total} checked. ${verification.data.unconfirmed} not confirmed.`
+          : `Library check complete. ${verification.data.unconfirmed} files not confirmed.`}</p>
+        <p>Checks run in the background. Files remain held and do not trigger replacement Downloads.</p>
+        <button className={formStyles.button} type="button" disabled={recheck.isPending || pendingVerification > 0} onClick={() => recheck.mutate(true)}>Recheck unconfirmed files</button>{' '}
+        <button className={formStyles.button} type="button" disabled={recheck.isPending || pendingVerification > 0} onClick={() => recheck.mutate(false)}>Recheck all Library files</button>
+      </section>}
+      {(verification.isError || recheck.isError) && <p role="alert">The Library check could not be read or requested. Please try again.</p>}
       <div className={styles.summary}><span>{total} videos</span><span>Page {shownPage} of {pages}</span></div>
       <Loaded query={library} of="the Library">{() => null}</Loaded>
       <PageNotice page={page} pages={pages} pending={library.isFetching} previousPage={library.isPlaceholderData ? shownPage : undefined} unavailable={unavailable} />

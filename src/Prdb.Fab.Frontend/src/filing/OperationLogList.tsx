@@ -182,6 +182,7 @@ function operationDescription(entry: Operation, leftoverCount: number): string {
   if (entry.act === 'Replaced') return 'Replaced the held Video File'
   if (entry.act === 'Relabelled') return 'Added its Quality label'
   if (entry.act === 'Tidied') return `${leftoverCount} leftover ${leftoverCount === 1 ? 'file' : 'files'} removed`
+  if (entry.act === 'Returned') return 'Returned to its original path'
   if (entry.act === 'Filed') return 'Moved into the Library'
   return 'Changed content'
 }

@@ -22,7 +22,8 @@ public static class BackupFormat
 {
     /// <summary>
     /// Raised when the document changes shape, never when the database does.
-    /// Version 6 adds connection check outcomes and last-success timestamps.
+    /// Version 7 adds notifications and approved collection returns.
+    /// Version 6 added connection check outcomes and last-success timestamps.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -50,5 +51,5 @@ public static class BackupFormat
     /// never flagged anything — so nothing here refuses one.
     /// </para>
     /// </remarks>
-    public const int Version = 6;
+    public const int Version = 7;
 }

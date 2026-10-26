@@ -17,6 +17,7 @@ public sealed class FilingRoutine(
     UserPreviews userPreviews,
     PreviewPublications publications,
     TimeProvider time,
+    ContentMutationLock content,
     ILogger<FilingRoutine> logger) : IRoutine
 {
     public const string RoutineName = "Filing";
@@ -27,8 +28,10 @@ public sealed class FilingRoutine(
 
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
+        using var lease = await content.EnterAsync(cancellationToken);
         var arrival = await context.ArrivingFiles
             .AsTracking()
+            .Where(row => !context.CollectionUndos.Any(undo => undo.VideoId == row.VideoId && undo.CompletedAt == null))
             .Where(row => row.DownloadId != null || context.CollectionFiles.Any(file =>
                 file.Id == row.Id && file.ApprovedAt != null && file.LeftAt == null)
                 && context.CollectionPreparations.Any(preparation => preparation.Phase == "Importing"))
@@ -85,7 +88,7 @@ public sealed class FilingRoutine(
         catch (Exception error) when (arrival.DownloadId is null && error is IOException or UnauthorizedAccessException)
         {
             var preparation = await context.CollectionPreparations.AsTracking().SingleAsync(cancellationToken);
-            preparation.Error = "An approved file could not be moved safely. Restore source/destination access; Filing will retry. Recheck the preview if its destination changed.";
+            preparation.Error = error is InsufficientStorageException ? error.Message : "An approved file could not be moved safely. Restore source/destination access; Filing will retry. Recheck the preview if its destination changed.";
             await context.SaveChangesAsync(cancellationToken);
             return RunResult.Failed(preparation.Error);
         }

@@ -23,6 +23,7 @@ namespace Prdb.Fab.Host.Tests;
 public sealed class FabApplication : WebApplicationFactory<Program>
 {
     private readonly Dictionary<string, string> settings;
+    private TimeProvider? clock;
 
     /// <summary>
     /// ADR 0042: the network is replaced at the socket and never at an
@@ -65,6 +66,13 @@ public sealed class FabApplication : WebApplicationFactory<Program>
         new(dataDirectory, ownsDataDirectory: true, settings: null);
 
     public string DataDirectory { get; }
+
+    /// <summary>ADR 0042's controlled clock, with the real workers and schedule still wired.</summary>
+    public FabApplication WithTime(TimeProvider time)
+    {
+        clock = time;
+        return this;
+    }
 
     /// <summary>
     /// Points the composed application at a local prdb stand-in. The SDK still
@@ -155,6 +163,7 @@ public sealed class FabApplication : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            if (clock is not null) services.AddSingleton(clock);
             foreach (var (transport, handler) in transports)
             {
                 // The primary handler, so everything the application layers on

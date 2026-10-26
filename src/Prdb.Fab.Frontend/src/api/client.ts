@@ -910,3 +910,30 @@ export function readAutopilotSelection(page: number): Promise<Schema['AutopilotS
 export async function revealConnectionKey(connection: string): Promise<Schema['ConnectionKey']> {
   return post<Schema['ConnectionKey']>(`/api/connections/keys/${segment(connection)}`, {})
 }
+
+export async function readLibraryVerification(): Promise<Schema['LibraryVerificationProgress']> {
+  return json<Schema['LibraryVerificationProgress']>(await fetch('/api/library/verification'))
+}
+
+export async function requestLibraryVerification(onlyUnconfirmed: boolean): Promise<Schema['LibraryVerificationProgress']> {
+  return post<Schema['LibraryVerificationProgress']>('/api/library/verification', { onlyUnconfirmed })
+}
+
+export type NotificationSettingsState = Schema['NotificationSettingsState']
+export async function readNotificationSettings(): Promise<NotificationSettingsState> {
+  return json<NotificationSettingsState>(await fetch('/api/settings/notifications'))
+}
+export async function saveNotificationSettings(enabled: boolean, webhookUrl: string | null): Promise<Schema['NotificationSettingsVerdict']> {
+  return post<Schema['NotificationSettingsVerdict']>('/api/settings/notifications', { enabled, webhookUrl })
+}
+
+export type CollectionUndoPreview = Schema['CollectionUndoPreview']
+export async function readCollectionUndo(page: number): Promise<CollectionUndoPreview> {
+  return json<CollectionUndoPreview>(await fetch(`/api/collection/undo?page=${page}`))
+}
+export async function requestCollectionUndo(revision: CollectionUndoPreview['revision'], evidence: string, ids: string[], all: boolean): Promise<Schema['CollectionAct']> {
+  return post<Schema['CollectionAct']>('/api/collection/undo', { revision, evidence, ids, all })
+}
+export async function resumeCollectionUndo(confirmRestoredReturns: boolean): Promise<Schema['CollectionAct']> {
+  return post<Schema['CollectionAct']>('/api/collection/undo/resume', { confirmRestoredReturns })
+}

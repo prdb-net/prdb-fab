@@ -26,6 +26,8 @@ public static class SchedulingServiceCollectionExtensions
         services.AddScoped<RoutineRegistrar>();
         services.AddScoped<RunLog>();
         services.AddScoped<StatusService>();
+        services.AddSingleton<StatusSnapshot>();
+        services.AddFabNotifications();
 
         return services;
     }

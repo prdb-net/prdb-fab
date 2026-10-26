@@ -123,6 +123,17 @@ public static class BackupReader
             // Optional check evidence is unknown in older documents.
             [5] = envelope => envelope["formatVersion"] = 6,
 
+            [6] = envelope =>
+            {
+                envelope["collectionUndos"] = new JsonArray();
+                if (envelope["installation"] is JsonObject installation)
+                {
+                    installation["notificationsEnabled"] = false;
+                    installation["notificationWebhookUrl"] = null;
+                }
+                envelope["formatVersion"] = 7;
+            },
+
             [3] = envelope =>
             {
                 envelope["previewPublications"] = new JsonArray();

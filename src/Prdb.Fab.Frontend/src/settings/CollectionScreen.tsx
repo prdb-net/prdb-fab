@@ -94,6 +94,14 @@ export function CollectionScreen() {
           <button className={formStyles.button} disabled={page * Number(held.pageSize) >= Number(held.total)} onClick={() => { setPage(page + 1); setSelected(new Set()) }}>More files</button>
         </nav>}
       </>}
+      <p><Link to="/settings/library/collection/undo">Review or return imported files to their original paths</Link></p>
+      {held && <section aria-label="Import storage">
+        <h2>Storage for the remaining import</h2>
+        <p>Up to {(Number(held.storage.requiredCopyBytes) / 1024 ** 3).toFixed(2)} GiB of additional space for copies.
+          {held.storage.availableBytes == null ? ' Free space could not be determined.' : ` ${(Number(held.storage.availableBytes) / 1024 ** 3).toFixed(2)} GiB available on the Library filesystem.`}</p>
+        <p>Moves on a known shared filesystem do not need a second video copy. Unknown filesystems are counted as copies. Space is checked again before copying; other applications may use it meanwhile.</p>
+        {held.storage.insufficient && <Verdict tone="refusal">There is not enough space for the remaining copies. Free space or extend the Library storage. Approved work waits and retries automatically.</Verdict>}
+      </section>}
       {retry.data && <Verdict tone={retry.data.accepted ? 'done' : 'refusal'}>{retry.data.detail}</Verdict>}
       {start.data && <Verdict tone={start.data.accepted ? 'done' : 'refusal'}>{start.data.detail}</Verdict>}
       {approve.data && <Verdict tone={approve.data.accepted ? 'done' : 'refusal'}>{approve.data.detail}</Verdict>}

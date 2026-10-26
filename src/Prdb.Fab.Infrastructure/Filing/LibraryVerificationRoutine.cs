@@ -86,6 +86,7 @@ public sealed class LibraryVerificationRoutine(
 
         foreach (var file in unanswered)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var verification = LibraryVerifications.Of(file.OsHash, Read(file.FiledPath));
 
             context.LibraryVerifications.Add(new LibraryVerificationRow

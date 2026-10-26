@@ -18,7 +18,7 @@ public sealed class CollectionScanRoutine(FabDbContext context, VideoProbe probe
     public async Task<RunResult> RunAsync(string? target, CancellationToken cancellationToken)
     {
         var preparation = await context.CollectionPreparations.AsTracking().SingleOrDefaultAsync(cancellationToken);
-        if (preparation is null || preparation.Phase is "Ready" or "Importing" or "Preview" or "Planning" or "Validating") return RunResult.NothingToDo;
+        if (preparation?.Phase is not ("Inventory" or "Probing" or "Identifying")) return RunResult.NothingToDo;
         var roots = await context.CollectionRoots.ToListAsync(cancellationToken);
         if (roots.Count == 0) return RunResult.Failed("Collection preparation has no Scan Directories.");
         try

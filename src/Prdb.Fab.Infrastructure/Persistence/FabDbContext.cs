@@ -19,6 +19,9 @@ namespace Prdb.Fab.Infrastructure.Persistence;
 /// </summary>
 public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbContext(options)
 {
+    public DbSet<CollectionUndoRow> CollectionUndos => Set<CollectionUndoRow>();
+    public DbSet<NotificationDeliveryRow> NotificationDeliveries => Set<NotificationDeliveryRow>();
+
     public DbSet<CollectionPreparationRow> CollectionPreparations => Set<CollectionPreparationRow>();
     public DbSet<CollectionRootRow> CollectionRoots => Set<CollectionRootRow>();
     public DbSet<CollectionWalkRow> CollectionWalks => Set<CollectionWalkRow>();
@@ -1116,6 +1119,27 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             entity.Property(row => row.WantedSinceAt).HasConversion(UtcTimestamp);
         });
 
+        builder.Entity<CollectionUndoRow>(entity =>
+        {
+            entity.ToTable("collection_undo");
+            entity.HasKey(row => row.Id);
+            entity.Declares(AccountClass.AccountFree);
+            entity.HasIndex(row => row.CollectionFileId).IsUnique();
+            entity.HasIndex(row => new { row.CompletedAt, row.Approved, row.AttemptedAt });
+            entity.Property(row => row.RequestedAt).HasConversion(UtcTimestamp);
+            entity.Property(row => row.StartedAt).HasConversion(UtcTimestamp);
+            entity.Property(row => row.AttemptedAt).HasConversion(UtcTimestamp);
+            entity.Property(row => row.CompletedAt).HasConversion(UtcTimestamp);
+        });
+
+        builder.Entity<NotificationDeliveryRow>(entity =>
+        {
+            entity.ToTable("notification_delivery");
+            entity.HasKey(row => row.Id);
+            entity.Declares(AccountClass.AccountFree);
+            entity.Property(row => row.DeliveredAt).HasConversion(UtcTimestamp);
+        });
+
         // Exportability is table-wide. Cache is the safe default; the two
         // tables that contain irreplaceable configuration opt into the backup.
         foreach (var entity in builder.Model.GetEntityTypes())
@@ -1123,6 +1147,7 @@ public sealed class FabDbContext(DbContextOptions<FabDbContext> options) : DbCon
             entity.SetAnnotation(ExportClassDeclarations.Annotation, ExportClass.NotExported);
         }
 
+        builder.Entity<CollectionUndoRow>().Declares(ExportClass.Exported);
         builder.Entity<CollectionPreparationRow>().Declares(ExportClass.Exported);
         builder.Entity<CollectionRootRow>().Declares(ExportClass.Exported);
         builder.Entity<CollectionFileRow>().Declares(ExportClass.Exported);

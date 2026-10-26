@@ -76,7 +76,8 @@ public sealed record BackupDocument(
     IReadOnlyList<BackupCollectionRoot>? CollectionRoots = null,
     IReadOnlyList<BackupCollectionFile>? CollectionFiles = null,
     IReadOnlyList<BackupAutopilotBaseline>? AutopilotBaselines = null,
-    IReadOnlyList<BackupAutopilotMembership>? AutopilotMemberships = null);
+    IReadOnlyList<BackupAutopilotMembership>? AutopilotMemberships = null,
+    IReadOnlyList<BackupCollectionUndo>? CollectionUndos = null);
 
 /// <summary>
 /// The one Installation row. Its key is not in the document: ADR 0033 leaves
@@ -126,7 +127,9 @@ public sealed record BackupInstallation(
     PrdbConnectionOutcome? PrdbLastCheckOutcome = null,
     DateTimeOffset? SabnzbdLastCheckedAt = null,
     DateTimeOffset? SabnzbdLastSuccessAt = null,
-    SabnzbdConnectionOutcome? SabnzbdLastCheckOutcome = null);
+    SabnzbdConnectionOutcome? SabnzbdLastCheckOutcome = null,
+    bool NotificationsEnabled = false,
+    string? NotificationWebhookUrl = null);
 
 /// <summary>ADR 0006's two admission sets, as the rows that are their form.</summary>
 public sealed record BackupGateAdmission(string Gate, IdentificationConfidence Confidence);
@@ -414,3 +417,8 @@ public sealed record BackupAutopilotMembership(
     DateTimeOffset WantedSinceAt,
     bool Admitted,
     bool InitialBatch);
+
+public sealed record BackupCollectionUndo(Guid Id, Guid CollectionFileId, Guid VideoFileId, Guid VideoId,
+    BackupPath SourcePath, BackupPath DestinationPath, BackupPath SourceRoot, BackupPath DestinationRoot,
+    long SizeBytes, string? OsHash, string? ContentHash, bool Approved, DateTimeOffset RequestedAt,
+    DateTimeOffset? StartedAt, DateTimeOffset? AttemptedAt, DateTimeOffset? CompletedAt, string? Error);

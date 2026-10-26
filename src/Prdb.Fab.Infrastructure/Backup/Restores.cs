@@ -294,6 +294,8 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
 
         var carried = document.Installation;
 
+        installation.NotificationsEnabled = carried.NotificationsEnabled;
+        installation.NotificationWebhookUrl = carried.NotificationWebhookUrl;
         installation.PasswordHash = carried.PasswordHash;
         installation.PrdbApiKey = carried.PrdbApiKey;
         installation.PrdbUserHash = carried.PrdbUserHash;
@@ -438,10 +440,20 @@ public sealed class Restores(FabDbContext context, ILogger<Restores> logger)
                 RuleName = row.RuleName,
             }));
 
+        context.CollectionUndos.AddRange((document.CollectionUndos ?? []).Select(row => new CollectionUndoRow
+        {
+            Id = row.Id, CollectionFileId = row.CollectionFileId, VideoFileId = row.VideoFileId, VideoId = row.VideoId,
+            SourcePath = roots.Absolute(row.SourcePath)!, DestinationPath = roots.Absolute(row.DestinationPath)!,
+            SourceRoot = roots.Absolute(row.SourceRoot)!, DestinationRoot = roots.Absolute(row.DestinationRoot)!,
+            SizeBytes = row.SizeBytes, OsHash = row.OsHash, ContentHash = row.ContentHash,
+            Approved = false, RequestedAt = row.RequestedAt, StartedAt = row.StartedAt,
+            AttemptedAt = null, CompletedAt = row.CompletedAt, Error = row.Error,
+        }));
         context.CollectionPreparations.AddRange((document.CollectionPreparations ?? []).Select(row => new CollectionPreparationRow
         {
             Id = row.Id,
-            Phase = "Inventory",
+            Phase = (document.CollectionUndos ?? []).Any(undo => undo.CompletedAt == null) ? "Undoing"
+                : row.Phase == "UndoComplete" ? "UndoComplete" : "Inventory",
             Revision = row.Revision + 1,
             StartedAt = row.StartedAt,
             Error = row.Error,

@@ -38,7 +38,7 @@ public sealed class BackupTests
     public void Every_exported_table_has_a_section_and_every_section_a_table()
     {
         Assert.Empty(BackupSections.Unaccounted(TheModel()));
-        Assert.Equal(22, BackupSections.Carried.Count);
+        Assert.Equal(23, BackupSections.Carried.Count);
     }
 
     /// <summary>
@@ -157,6 +157,7 @@ public sealed class BackupTests
                 "collectionFiles",
                 "autopilotBaselines",
                 "autopilotMemberships",
+                "collectionUndos",
             ],
             sections);
     }
