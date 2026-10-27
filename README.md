@@ -68,7 +68,7 @@ Save this as `compose.yaml`, or use the repository's
 ```yaml
 services:
   prdb-fab:
-    image: prdbnet/prdb-fab:0.23.0
+    image: prdbnet/prdb-fab:0.24.0
     container_name: prdb-fab
     restart: unless-stopped
     ports:
