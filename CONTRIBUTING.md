@@ -87,8 +87,8 @@ docker buildx build --load --tag prdb-fab:local .
 docker/smoke-test.sh prdb-fab:local
 ```
 
-What that smoke test covers, what has to be checked by hand against real
-services before a release, and how a release is cut:
+What that smoke test covers, how CI validates a release, and how a release is
+cut (live-service tests are optional):
 **[docs/releasing.md](docs/releasing.md)**.
 
 ## What the tests are for
