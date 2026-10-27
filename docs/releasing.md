@@ -1,7 +1,6 @@
 # Releasing
 
-What a release of this tool is, what proves it works, and what a machine cannot
-prove for us.
+How CI validates a release and how to publish it.
 
 ## What CI already holds
 
@@ -31,45 +30,18 @@ docker buildx build --load --tag prdb-fab:local .
 docker/smoke-test.sh prdb-fab:local
 ```
 
-## What a machine cannot hold
+## Release validation
 
-Three of the four outside services this tool sits between are somebody's
-account: prdb, an indexer, a Usenet provider behind SABnzbd. Nothing in a public
-CI can have them, and a suite that faked them would be proving something about
-the fakes. So the following is checked by hand, once, against real services,
-before a release is tagged — and it is the shortest list that still covers the
-loop end to end.
+Successful CI is the required release validation. Manual tests against live
+prdb, indexers or SABnzbd are not required before tagging or publishing a
+release. No exception or additional approval to omit them is needed.
 
-Start from an **empty data directory** on the tag being released.
-
-1. **Onboarding completes.** The prdb key is accepted; a wrong one is refused
-   with a sentence that distinguishes a bad key from an account whose tier has
-   no API access. SABnzbd's path mapping verifies against a directory this
-   container can actually open. One indexer is accepted on a real search.
-   Setting up ends on the wanted list with the first sync visibly running.
-2. **A manual download, all the way.** Find a wanted video, open its releases,
-   send one to SABnzbd, and watch it through Downloads to Collected — then find
-   the file in the library in the Jellyfin layout, with its `movie.nfo` and
-   `fanart.jpg` beside it, and the move recorded in the operation log.
-3. **An automatic download.** Add one permission rule over the wanted list, and
-   confirm a matched release is fetched without being asked, that Status names
-   the rule that permitted it, and that removing the video from Wanted abandons
-   the download locally without touching the SABnzbd job.
-4. **A visible failure at each stage.** Turn off SABnzbd and confirm Status says
-   so rather than the queue going quiet; give an indexer a wrong key and confirm
-   the gap names it; point the library root at a directory the container cannot
-   write and confirm it is refused before it is stored.
-5. **Backup and restore against real content.** Export, start a second container
-   with the same library mounted at a *different* path, restore, answer the two
-   roots with the new paths, and confirm the library reads the same and the
-   verification pass confirms rather than counts. Then do it once with the
-   library deliberately not mounted, and confirm nothing is deleted, nothing is
-   downloaded again, and Status carries the count.
-
-Step 5's second half is the one worth not skipping. It is the only check that a
-mis-mounted library reads as *held and unconfirmed* rather than as an empty
-library, and an empty library under an automation rule is a standing instruction
-to fetch the collection again.
+CI covers the application contracts, migrations, backup and restore, and
+container startup on both supported architectures. It does not prove that a
+particular user's external accounts, network or storage mounts are configured
+correctly. Live checks may be useful for investigating a specific problem, but
+are optional and are performed only when explicitly requested. They do not gate
+routine releases.
 
 ## Cutting the release
 
@@ -79,9 +51,11 @@ to fetch the collection again.
 2. `VersionPrefix` in `Directory.Build.props`, and the pinned tag in
    `README.md`, `docker-compose.yml` and `docs/running-in-docker.md`, all move
    together.
-3. Merge, then tag `vX.Y.Z` and publish a GitHub release. The publish workflow
+3. Confirm that all required CI checks pass, then merge. Tag `vX.Y.Z` and publish a GitHub release. The publish workflow
    builds both architectures from the tag and pushes `X.Y.Z` beside the commit
    SHA and `latest`.
+4. Verify that the publish workflow succeeds and that the versioned image is
+   available for both architectures before reporting the release complete.
 
 Before 1.0 a minor version may change behaviour, and the changelog says so at
 the top. The version names the user-facing contract — the settings, the API the
