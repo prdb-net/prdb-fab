@@ -19,8 +19,17 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-27
+
+Library maintenance, safer collection imports and returns, and a more compact
+interface make large collections easier to operate. This release also improves
+catalogue synchronisation and makes connection and automation setup clearer.
+
 ### Added
 
+- Guided Wanted automation setup and collection preparation with explicit approval.
+- Manual catalogue synchronisation controls and clearer progress and freshness information.
+- SFW mode to blur images across browsing surfaces.
 - Recheck unconfirmed files or the entire Library, with background progress and
   no automatic replacement Downloads.
 - Collection import previews show remaining copy space and available capacity.
@@ -36,6 +45,11 @@ before changing the tag — the backup file is deliberately not the whole of it.
 
 ### Changed
 
+- More compact, responsive browsing for search, Sites, Actors, Wanted and Library;
+  search shows download-ready results by default.
+- Reworked settings and connection forms with clearer help and check results.
+- Faster initial catalogue synchronisation, quota-aware scheduling and lower
+  database costs for catalogue, Status and Release ranking.
 - Overlapping Status polls share a local snapshot for up to five seconds.
 - prdb-fab has a logo. It replaces the "pf" mark in the header, on the sign-in
   page and while the app loads, and the browser tab shows it as the favicon.
